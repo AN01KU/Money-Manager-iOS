@@ -16,13 +16,13 @@ A personal money manager iOS app for tracking daily and monthly expenses with bu
 ## Screenshots
 
 ### Overview Screen
-![Overview Screen](screenshots/overview.png)
+<img src="screenshots/overview.png" alt="Overview Screen" width="300">
 
 ### Budgets Screen
-![Budgets Screen](screenshots/budgets.png)
+<img src="screenshots/budgets.png" alt="Budgets Screen" width="300">
 
 ### Add Expense Screen
-![Add Expense Screen](screenshots/add-expense.png)
+<img src="screenshots/add-expense.png" alt="Add Expense Screen" width="300">
 
 ## Requirements
 
