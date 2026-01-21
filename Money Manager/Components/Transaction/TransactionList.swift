@@ -13,7 +13,7 @@ struct TransactionList: View {
     
     var groupedExpenses: [(String, [Expense])] {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let _ = calendar.startOfDay(for: Date())
         
         var grouped: [String: [Expense]] = [:]
         
@@ -53,10 +53,12 @@ struct TransactionList: View {
                         .padding(.leading, 4)
                     
                     ForEach(section.1) { expense in
-                        TransactionRow(expense: expense)
-                            .onTapGesture {
-                                selectedExpense = expense
-                            }
+                        Button(action: {
+                            selectedExpense = expense
+                        }) {
+                            TransactionRow(expense: expense)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
             }

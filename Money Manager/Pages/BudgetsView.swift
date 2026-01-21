@@ -122,16 +122,6 @@ struct BudgetsView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Budgets")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showBudgetSheet = true
-                    }) {
-                        Image(systemName: currentBudget == nil ? "plus" : "pencil")
-                            .foregroundColor(.teal)
-                    }
-                }
-            }
             .sheet(isPresented: $showBudgetSheet) {
                 BudgetSheet(selectedMonth: selectedMonth)
             }

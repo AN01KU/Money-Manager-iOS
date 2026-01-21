@@ -49,9 +49,15 @@ struct AddExpenseView: View {
                             .fontWeight(.semibold)
                         
                         HStack(spacing: 12) {
-                            QuickAmountButton(amount: 100, action: { amount = "100" })
-                            QuickAmountButton(amount: 500, action: { amount = "500" })
-                            QuickAmountButton(amount: 1000, action: { amount = "1000" })
+                            QuickAmountButton(amount: 100) {
+                                amount = "100"
+                            }
+                            QuickAmountButton(amount: 500) {
+                                amount = "500"
+                            }
+                            QuickAmountButton(amount: 1000) {
+                                amount = "1000"
+                            }
                         }
                     }
                     .padding(.vertical, 8)
@@ -106,10 +112,12 @@ struct AddExpenseView: View {
                         }
                         
                         HStack(spacing: 12) {
-                            QuickDateButton(label: "Today", action: { selectedDate = Date() })
-                            QuickDateButton(label: "Yesterday", action: {
+                            QuickDateButton(label: "Today") {
+                                selectedDate = Date()
+                            }
+                            QuickDateButton(label: "Yesterday") {
                                 selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-                            })
+                            }
                         }
                     }
                     .padding(.vertical, 8)
@@ -280,16 +288,20 @@ struct QuickAmountButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            action()
+        }) {
             Text("₹\(amount)")
                 .font(.subheadline)
                 .fontWeight(.medium)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color.teal.opacity(0.1))
                 .foregroundColor(.teal)
                 .cornerRadius(8)
         }
+        .buttonStyle(.borderless)
     }
 }
 
@@ -298,16 +310,20 @@ struct QuickDateButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            action()
+        }) {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color.teal.opacity(0.1))
                 .foregroundColor(.teal)
                 .cornerRadius(8)
         }
+        .buttonStyle(.borderless)
     }
 }
 

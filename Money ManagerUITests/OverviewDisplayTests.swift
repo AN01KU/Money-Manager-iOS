@@ -53,20 +53,21 @@ final class OverviewDisplayTests: XCTestCase {
     /// Critical for user understanding of spending timeline - most recent first
     func testTransactionsChronologicalOrder() throws {
         app.tabBars.buttons["Overview"].tap()
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         
         // Add first expense
         addExpense(amount: "100", category: "Food & Dining")
         
         // Wait for transaction to appear
-        let firstTransaction = app.staticTexts["Food & Dining"]
-        XCTAssertTrue(firstTransaction.waitForExistence(timeout: 3), "First transaction should appear")
+        let firstTransaction = app.staticTexts["Food & Dining"].firstMatch
+        XCTAssertTrue(firstTransaction.waitForExistence(timeout: 5), "First transaction should appear")
         
         // Add second expense
         addExpense(amount: "200", category: "Transport")
         
         // Verify both transactions appear
-        let secondTransaction = app.staticTexts["Transport"]
-        XCTAssertTrue(secondTransaction.waitForExistence(timeout: 3), "Second transaction should appear")
+        let secondTransaction = app.staticTexts["Transport"].firstMatch
+        XCTAssertTrue(secondTransaction.waitForExistence(timeout: 5), "Second transaction should appear")
         
         // Verify transactions are visible (order verification would require more complex logic)
         XCTAssertTrue(firstTransaction.exists, "First transaction should still be visible")
@@ -77,19 +78,14 @@ final class OverviewDisplayTests: XCTestCase {
     /// Important UX feature for organizing expenses by date
     func testTransactionDateGrouping() throws {
         app.tabBars.buttons["Overview"].tap()
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         
         // Add an expense
         addExpense(amount: "200", category: "Transport")
         
         // Verify transaction appears
-        let transportTransaction = app.staticTexts["Transport"]
-        XCTAssertTrue(transportTransaction.waitForExistence(timeout: 3), "Transaction should be visible")
-        
-        // Check for date headers (TODAY, date labels, etc.)
-        let dateHeader = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'TODAY' OR label CONTAINS 'DECEMBER' OR label CONTAINS 'JANUARY' OR label CONTAINS 'FEBRUARY' OR label CONTAINS 'MARCH' OR label CONTAINS 'APRIL' OR label CONTAINS 'MAY' OR label CONTAINS 'JUNE' OR label CONTAINS 'JULY' OR label CONTAINS 'AUGUST' OR label CONTAINS 'SEPTEMBER' OR label CONTAINS 'OCTOBER' OR label CONTAINS 'NOVEMBER'")).firstMatch
-        
-        // Date headers may exist for grouping, but transactions should be visible regardless
-        XCTAssertTrue(transportTransaction.exists, "Transaction should be visible regardless of date grouping")
+        let transportTransaction = app.staticTexts["Transport"].firstMatch
+        XCTAssertTrue(transportTransaction.waitForExistence(timeout: 5), "Transaction should be visible")
     }
     
     // MARK: - Category Chart Display Tests
@@ -98,19 +94,18 @@ final class OverviewDisplayTests: XCTestCase {
     /// Critical visualization feature - helps users understand spending patterns
     func testCategoryChartDisplay() throws {
         app.tabBars.buttons["Overview"].tap()
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         
         // Add expenses in different categories
         addExpense(amount: "500", category: "Food & Dining")
         addExpense(amount: "300", category: "Transport")
         
-        // Verify categories are displayed
-        let foodCategory = app.staticTexts["Food & Dining"]
-        let transportCategory = app.staticTexts["Transport"]
+        // Verify categories are displayed in transaction list
+        let foodCategory = app.staticTexts["Food & Dining"].firstMatch
+        let transportCategory = app.staticTexts["Transport"].firstMatch
         
-        XCTAssertTrue(foodCategory.waitForExistence(timeout: 3), "Food & Dining category should be displayed")
-        XCTAssertTrue(transportCategory.waitForExistence(timeout: 3), "Transport category should be displayed")
-        
-        // Chart visualization may exist (hard to test visually, but categories should be present)
+        XCTAssertTrue(foodCategory.waitForExistence(timeout: 5), "Food & Dining category should be displayed")
+        XCTAssertTrue(transportCategory.waitForExistence(timeout: 5), "Transport category should be displayed")
     }
     
     // MARK: - Month Selector Tests
@@ -119,6 +114,7 @@ final class OverviewDisplayTests: XCTestCase {
     /// Basic navigation feature - allows users to view different months
     func testMonthSelectorDisplay() throws {
         app.tabBars.buttons["Overview"].tap()
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         
         // Check for month selector
         let monthNames = ["January", "February", "March", "April", "May", "June",
@@ -146,32 +142,30 @@ final class OverviewDisplayTests: XCTestCase {
     /// Critical financial information - users rely on accurate totals
     func testTotalSpendingCalculation() throws {
         app.tabBars.buttons["Overview"].tap()
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         
         // Add multiple expenses
         addExpense(amount: "1000", category: "Food & Dining")
         addExpense(amount: "500", category: "Shopping")
         
-        // Verify total is displayed
-        // Total should be ₹1500 (1000 + 500)
-        let totalText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS '₹' AND (label CONTAINS '1,500' OR label CONTAINS '1500')")).firstMatch
-        
-        // Also check for any currency display
+        // Verify total is displayed - check for any currency display
         let anyCurrencyDisplay = app.staticTexts.matching(NSPredicate(format: "label CONTAINS '₹'")).firstMatch
         
-        XCTAssertTrue(anyCurrencyDisplay.waitForExistence(timeout: 3), "Total spending should be displayed")
+        XCTAssertTrue(anyCurrencyDisplay.waitForExistence(timeout: 5), "Total spending should be displayed")
     }
     
     /// Test: Spending updates correctly when expenses are added
     /// Ensures real-time updates of spending totals
     func testSpendingUpdatesWithNewExpenses() throws {
         app.tabBars.buttons["Overview"].tap()
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         
         // Add first expense
         addExpense(amount: "500", category: "Food & Dining")
         
         // Verify spending is displayed
         let spendingAfterFirst = app.staticTexts.matching(NSPredicate(format: "label CONTAINS '₹'")).firstMatch
-        XCTAssertTrue(spendingAfterFirst.waitForExistence(timeout: 3), "Spending should be displayed after first expense")
+        XCTAssertTrue(spendingAfterFirst.waitForExistence(timeout: 5), "Spending should be displayed after first expense")
         
         // Add second expense
         addExpense(amount: "300", category: "Transport")
@@ -188,9 +182,18 @@ final class OverviewDisplayTests: XCTestCase {
         // Find and tap Add Expense button
         let addButton = app.buttons.matching(identifier: "Add Expense").firstMatch
         if !addButton.exists {
-            let fabButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'plus'")).firstMatch
+            let fabButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'plus' OR label CONTAINS '+'")).firstMatch
             if fabButton.waitForExistence(timeout: 2) {
                 fabButton.tap()
+            } else {
+                // Try toolbar button
+                let navBar = app.navigationBars["Overview"]
+                if navBar.waitForExistence(timeout: 2) {
+                    let toolbarButtons = navBar.buttons
+                    if toolbarButtons.count > 0 {
+                        toolbarButtons.element(boundBy: toolbarButtons.count - 1).tap()
+                    }
+                }
             }
         } else {
             addButton.tap()
@@ -198,12 +201,18 @@ final class OverviewDisplayTests: XCTestCase {
         
         // Wait for Add Expense screen
         let addExpenseNavBar = app.navigationBars["Add Expense"]
-        guard addExpenseNavBar.waitForExistence(timeout: 2) else { return }
+        guard addExpenseNavBar.waitForExistence(timeout: 3) else {
+            XCTFail("Add Expense screen did not appear")
+            return
+        }
         
         // Fill amount
         let amountField = app.textFields["0.00"]
         if amountField.waitForExistence(timeout: 2) {
             amountField.tap()
+            if let currentValue = amountField.value as? String, currentValue != "0.00" {
+                amountField.clearText()
+            }
             amountField.typeText(amount)
         }
         
@@ -225,6 +234,6 @@ final class OverviewDisplayTests: XCTestCase {
         
         // Wait for Overview to return
         let overviewNavBar = app.navigationBars["Overview"]
-        _ = overviewNavBar.waitForExistence(timeout: 3)
+        XCTAssertTrue(overviewNavBar.waitForExistence(timeout: 5), "Should return to Overview after saving expense")
     }
 }

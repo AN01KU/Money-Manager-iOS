@@ -42,24 +42,21 @@ struct CategorySpendingRow: View {
     let spending: CategorySpending
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Circle()
                 .fill(spending.category.color)
-                .frame(width: 12, height: 12)
+                .frame(width: 14, height: 14)
             
             Text(spending.category.rawValue)
-                .font(.body)
+                .font(.subheadline)
                 .foregroundColor(.primary)
-            
-            Text("\(spending.percentage)%")
-                .font(.body)
-                .foregroundColor(.secondary)
+                .lineLimit(1)
             
             Spacer()
             
-            Text(CurrencyFormatter.format(spending.amount))
-                .font(.body)
-                .fontWeight(.medium)
+            Text("\(spending.percentage)%")
+                .font(.subheadline)
+                .fontWeight(.semibold)
                 .foregroundColor(.primary)
         }
     }

@@ -47,6 +47,7 @@ struct TransactionRow: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(16)
+        .contentShape(Rectangle())
     }
     
     private func formatTime(_ date: Date) -> String {

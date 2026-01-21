@@ -14,10 +14,7 @@ final class ExpenseFlowTests: XCTestCase {
     var app: XCUIApplication!
     
     override func setUpWithError() throws {
-        // Stop immediately if a test fails
         continueAfterFailure = false
-        
-        // Launch app with UI testing flag for isolated test data
         app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launch()
@@ -44,7 +41,7 @@ final class ExpenseFlowTests: XCTestCase {
         
         // Verify Add Expense screen appears
         let addExpenseNavBar = app.navigationBars["Add Expense"]
-        XCTAssertTrue(addExpenseNavBar.waitForExistence(timeout: 2), "Add Expense screen should appear")
+        XCTAssertTrue(addExpenseNavBar.waitForExistence(timeout: 3), "Add Expense screen should appear")
         
         // Fill amount
         let amountField = app.textFields["0.00"]
@@ -78,12 +75,12 @@ final class ExpenseFlowTests: XCTestCase {
         saveButton.tap()
         
         // Verify we're back on Overview
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3), 
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 5), 
                      "Should return to Overview after saving")
         
         // Verify expense appears in list
-        let expenseText = app.staticTexts["Food & Dining"]
-        XCTAssertTrue(expenseText.waitForExistence(timeout: 3), "Expense should appear in transaction list")
+        let expenseText = app.staticTexts["Food & Dining"].firstMatch
+        XCTAssertTrue(expenseText.waitForExistence(timeout: 5), "Expense should appear in transaction list")
         
         // Verify amount is displayed
         let amountText = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '₹450' OR label CONTAINS '450'")).firstMatch
@@ -101,7 +98,7 @@ final class ExpenseFlowTests: XCTestCase {
         addButton.tap()
         
         // Verify Add Expense screen appears
-        XCTAssertTrue(app.navigationBars["Add Expense"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.navigationBars["Add Expense"].waitForExistence(timeout: 3))
         
         // Verify Save button is disabled without required fields
         let saveButton = app.buttons["Save"]
@@ -156,24 +153,34 @@ final class ExpenseFlowTests: XCTestCase {
         try testAddCompleteExpense()
         
         // Tap on the expense in the list
-        let expenseRow = app.staticTexts["Food & Dining"].firstMatch
-        XCTAssertTrue(expenseRow.waitForExistence(timeout: 3), "Expense should exist in list")
-        expenseRow.tap()
+        let categoryText = app.staticTexts["Food & Dining"].firstMatch
+        XCTAssertTrue(categoryText.waitForExistence(timeout: 5), "Expense should exist in list")
         
-        // Verify detail screen appears
+        // Try tapping the text directly - with contentShape it should work
+        categoryText.tap()
+        
+        // If that doesn't work, try tapping the amount text as fallback
+        if !app.navigationBars["Transaction Details"].waitForExistence(timeout: 2) {
+            let amountText = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '₹450' OR label CONTAINS '450'")).firstMatch
+            if amountText.exists {
+                amountText.tap()
+            }
+        }
+        
+        // Wait for sheet animation
+        sleep(2)
+        
+        // Verify detail screen appears - check for "Transaction Details" navigation title
         let detailNavBar = app.navigationBars["Transaction Details"]
-        let detailExists = detailNavBar.waitForExistence(timeout: 2) ||
-                          app.navigationBars.matching(identifier: "Details").firstMatch.exists
-        
-        XCTAssertTrue(detailExists, "Transaction detail screen should appear")
+        XCTAssertTrue(detailNavBar.waitForExistence(timeout: 5), "Transaction detail screen should appear")
         
         // Verify expense details are displayed
         let amountText = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '₹'")).firstMatch
-        XCTAssertTrue(amountText.exists, "Expense amount should be displayed in detail view")
+        XCTAssertTrue(amountText.waitForExistence(timeout: 3), "Expense amount should be displayed in detail view")
         
         // Verify category is displayed
-        let categoryText = app.staticTexts["Food & Dining"]
-        XCTAssertTrue(categoryText.exists, "Category should be displayed in detail view")
+        let categoryTextInDetail = app.staticTexts["Food & Dining"].firstMatch
+        XCTAssertTrue(categoryTextInDetail.waitForExistence(timeout: 3), "Category should be displayed in detail view")
     }
     
     // MARK: - Edit Expense Tests
@@ -185,34 +192,70 @@ final class ExpenseFlowTests: XCTestCase {
         try testAddCompleteExpense()
         
         // Tap to view details
-        app.staticTexts["Food & Dining"].firstMatch.tap()
+        let categoryText = app.staticTexts["Food & Dining"].firstMatch
+        XCTAssertTrue(categoryText.waitForExistence(timeout: 5), "Expense should exist")
+        categoryText.tap()
+        
+        // Wait for sheet animation
+        sleep(2)
+        
+        // Verify detail screen appears
+        let detailNavBar = app.navigationBars["Transaction Details"]
+        XCTAssertTrue(detailNavBar.waitForExistence(timeout: 5), "Detail screen should appear")
         
         // Tap Edit button
         let editButton = app.buttons["Edit"]
-        if editButton.waitForExistence(timeout: 2) {
-            editButton.tap()
-            
-            // Modify amount
-            let amountField = app.textFields.firstMatch
-            XCTAssertTrue(amountField.exists, "Amount field should exist in edit mode")
+        XCTAssertTrue(editButton.waitForExistence(timeout: 3), "Edit button should exist")
+        editButton.tap()
+        
+        // Wait for edit sheet to appear
+        sleep(1)
+        
+        // Verify Add Expense screen appears (edit mode uses AddExpenseView)
+        let addExpenseNavBar = app.navigationBars["Add Expense"]
+        XCTAssertTrue(addExpenseNavBar.waitForExistence(timeout: 3), "Edit screen should appear")
+        
+        // Modify amount - find the amount field
+        let amountField = app.textFields["0.00"]
+        if !amountField.exists {
+            // Try first text field if "0.00" placeholder doesn't exist
+            let firstTextField = app.textFields.firstMatch
+            if firstTextField.exists {
+                firstTextField.tap()
+                firstTextField.clearText()
+                firstTextField.typeText("500")
+            }
+        } else {
             amountField.tap()
-            amountField.clearText()
+            if let currentValue = amountField.value as? String, currentValue != "0.00" {
+                amountField.clearText()
+            }
             amountField.typeText("500")
-            
-            // Save changes
-            let saveButton = app.buttons["Save"]
-            XCTAssertTrue(saveButton.waitForExistence(timeout: 2), "Save button should exist")
-            XCTAssertTrue(saveButton.isEnabled, "Save button should be enabled")
-            saveButton.tap()
-            
-            // Verify changes are saved and we're back on Overview
-            XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3),
-                         "Should return to Overview after editing")
-            
-            // Verify updated amount appears
-            let updatedAmount = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '₹500' OR label CONTAINS '500'")).firstMatch
-            XCTAssertTrue(updatedAmount.exists, "Updated amount should be displayed")
         }
+        
+        // Save changes
+        let saveButton = app.buttons["Save"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 2), "Save button should exist")
+        XCTAssertTrue(saveButton.isEnabled, "Save button should be enabled")
+        saveButton.tap()
+        
+        // Wait for edit sheet to dismiss (goes back to detail view)
+        sleep(1)
+        
+        // After saving, we're back on detail view, need to dismiss it
+        let doneButton = app.buttons["Done"]
+        if doneButton.waitForExistence(timeout: 3) {
+            doneButton.tap()
+            sleep(1) // Wait for sheet dismissal
+        }
+        
+        // Verify we're back on Overview
+        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 5),
+                     "Should return to Overview after editing")
+        
+        // Verify updated amount appears
+        let updatedAmount = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '₹500' OR label CONTAINS '500'")).firstMatch
+        XCTAssertTrue(updatedAmount.waitForExistence(timeout: 5), "Updated amount should be displayed")
     }
     
     // MARK: - Delete Expense Tests
@@ -224,26 +267,45 @@ final class ExpenseFlowTests: XCTestCase {
         try testAddCompleteExpense()
         
         // Navigate to detail view
-        app.staticTexts["Food & Dining"].firstMatch.tap()
+        let categoryText = app.staticTexts["Food & Dining"].firstMatch
+        XCTAssertTrue(categoryText.waitForExistence(timeout: 5), "Expense should exist")
+        categoryText.tap()
+        
+        // Wait for sheet animation
+        sleep(2)
+        
+        // Verify detail screen appears
+        let detailNavBar = app.navigationBars["Transaction Details"]
+        XCTAssertTrue(detailNavBar.waitForExistence(timeout: 5), "Detail screen should appear")
         
         // Tap Delete button
         let deleteButton = app.buttons["Delete"]
-        XCTAssertTrue(deleteButton.waitForExistence(timeout: 2), "Delete button should exist")
+        XCTAssertTrue(deleteButton.waitForExistence(timeout: 3), "Delete button should exist")
         deleteButton.tap()
+        
+        // Wait for alert to appear
+        sleep(1)
         
         // Confirm deletion in alert
         let confirmButton = app.alerts.buttons["Delete"]
-        if confirmButton.waitForExistence(timeout: 2) {
-            confirmButton.tap()
-            
-            // Verify we're back on Overview
-            XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3),
-                         "Should return to Overview after deletion")
-            
-            // Verify expense is removed from list
-            let expenseStillExists = app.staticTexts["Food & Dining"].firstMatch.exists
-            XCTAssertFalse(expenseStillExists, "Expense should be removed after deletion")
-        }
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 3), "Delete confirmation button should exist")
+        confirmButton.tap()
+        
+        // Wait for deletion and sheet dismissal
+        sleep(2)
+        
+        // Verify we're back on Overview
+        let overviewNavBar = app.navigationBars["Overview"]
+        XCTAssertTrue(overviewNavBar.waitForExistence(timeout: 5),
+                     "Should return to Overview after deletion")
+        
+        // Wait a bit more for UI to update
+        sleep(1)
+        
+        // Verify expense is removed from list (it might still exist but be marked as deleted)
+        // Check that the expense is no longer visible or accessible
+        let expenseStillExists = app.staticTexts["Food & Dining"].firstMatch.exists
+        XCTAssertFalse(expenseStillExists, "Expense should be removed after deletion")
     }
     
     // MARK: - Helper Methods
@@ -260,6 +322,15 @@ final class ExpenseFlowTests: XCTestCase {
         let fabButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'plus' OR label CONTAINS '+'")).firstMatch
         if fabButton.exists {
             return fabButton
+        }
+        
+        // Try toolbar button in navigation bar
+        let navBar = app.navigationBars["Overview"]
+        if navBar.waitForExistence(timeout: 1) {
+            let toolbarButtons = navBar.buttons
+            if toolbarButtons.count > 0 {
+                return toolbarButtons.element(boundBy: toolbarButtons.count - 1)
+            }
         }
         
         // Fallback: try any button with "Add" in label

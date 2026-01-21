@@ -21,19 +21,16 @@ struct ViewTypeSelector: View {
                 Button(action: {
                     selectedView = viewType
                 }) {
-                    HStack {
-                        Text(viewType.rawValue)
-                            .font(.body)
-                            .fontWeight(.medium)
-                        Image(systemName: "chevron.down")
-                            .font(.caption)
-                    }
-                    .foregroundColor(selectedView == viewType ? .teal : .secondary)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                    Text(viewType.rawValue)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundColor(selectedView == viewType ? .teal : .secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(selectedView == viewType ? Color.teal.opacity(0.1) : Color(.systemGray6))
+                        .cornerRadius(12)
                 }
+                .buttonStyle(.borderless)
             }
             Spacer()
         }

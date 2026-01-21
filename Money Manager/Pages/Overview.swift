@@ -14,35 +14,50 @@ struct Overview: View {
     @Query private var budgets: [MonthlyBudget]
     
     @State private var selectedView: ViewType = .daily
-    @State private var selectedMonth: Date = Date()
+    @State private var selectedDate: Date = Date()
+    @State private var filterMode: FilterMode = .monthly
     @State private var showAddExpense = false
     @State private var showBudgetSheet = false
     
-    private var currentMonthExpenses: [Expense] {
+    private var filteredExpenses: [Expense] {
         let calendar = Calendar.current
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth))!
-        let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
         
-        return allExpenses.filter { expense in
-            !expense.isDeleted &&
-            expense.date >= startOfMonth &&
-            expense.date <= endOfMonth
+        if filterMode == .daily {
+            // Filter by selected day
+            let startOfDay = calendar.startOfDay(for: selectedDate)
+            let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay)!
+            
+            return allExpenses.filter { expense in
+                !expense.isDeleted &&
+                expense.date >= startOfDay &&
+                expense.date <= endOfDay
+            }
+        } else {
+            // Filter by selected month
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate))!
+            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
+            
+            return allExpenses.filter { expense in
+                !expense.isDeleted &&
+                expense.date >= startOfMonth &&
+                expense.date <= endOfMonth
+            }
         }
     }
     
     private var currentBudget: MonthlyBudget? {
         let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
+        let year = calendar.component(.year, from: selectedDate)
+        let month = calendar.component(.month, from: selectedDate)
         return budgets.first { $0.year == year && $0.month == month }
     }
     
     private var totalSpent: Double {
-        currentMonthExpenses.reduce(0) { $0 + $1.amount }
+        filteredExpenses.reduce(0) { $0 + $1.amount }
     }
     
     private var categorySpending: [CategorySpending] {
-        let grouped = Dictionary(grouping: currentMonthExpenses, by: { $0.category })
+        let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
         let total = totalSpent
         
         guard total > 0 else { return [] }
@@ -63,7 +78,7 @@ struct Overview: View {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        MonthSelector(selectedMonth: $selectedMonth)
+                        DateFilterSelector(selectedDate: $selectedDate, filterMode: $filterMode)
                             .padding(.horizontal)
                         
                         if let budget = currentBudget {
@@ -73,7 +88,7 @@ struct Overview: View {
                             )
                             .padding(.horizontal)
                         } else {
-                            NoBudgetCard(selectedMonth: selectedMonth) {
+                            NoBudgetCard(selectedMonth: selectedDate) {
                                 showBudgetSheet = true
                             }
                             .padding(.horizontal)
@@ -82,17 +97,24 @@ struct Overview: View {
                         ViewTypeSelector(selectedView: $selectedView)
                             .padding(.horizontal)
                         
-                        if !categorySpending.isEmpty {
-                            CategoryChart(categorySpending: categorySpending)
-                                .padding(.horizontal)
-                        }
-                        
-                        if currentMonthExpenses.isEmpty {
-                            EmptyStateView()
-                                .padding(.horizontal)
+                        if selectedView == .categories {
+                            // Show category chart view
+                            if !categorySpending.isEmpty {
+                                CategoryChart(categorySpending: categorySpending)
+                                    .padding(.horizontal)
+                            } else {
+                                EmptyStateView()
+                                    .padding(.horizontal)
+                            }
                         } else {
-                            TransactionList(expenses: currentMonthExpenses)
-                                .padding(.horizontal)
+                            // Show daily transaction list
+                            if filteredExpenses.isEmpty {
+                                EmptyStateView()
+                                    .padding(.horizontal)
+                            } else {
+                                TransactionList(expenses: filteredExpenses)
+                                    .padding(.horizontal)
+                            }
                         }
                     }
                     .padding(.vertical)
@@ -119,7 +141,7 @@ struct Overview: View {
                 AddExpenseView()
             }
             .sheet(isPresented: $showBudgetSheet) {
-                BudgetSheet(selectedMonth: selectedMonth)
+                BudgetSheet(selectedMonth: selectedDate)
             }
         }
     }
