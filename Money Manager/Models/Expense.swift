@@ -26,6 +26,9 @@ final class Expense {
     var recurringExpenseId: UUID?
     var isRecurring: Bool
     
+    var groupId: UUID?
+    var groupName: String?
+    
     init(
         amount: Double,
         category: String,
@@ -33,7 +36,9 @@ final class Expense {
         time: Date? = nil,
         expenseDescription: String? = nil,
         notes: String? = nil,
-        recurringExpenseId: UUID? = nil
+        recurringExpenseId: UUID? = nil,
+        groupId: UUID? = nil,
+        groupName: String? = nil
     ) {
         self.id = UUID()
         self.amount = amount
@@ -47,5 +52,7 @@ final class Expense {
         self.updatedAt = Date()
         self.isDeleted = false
         self.isRecurring = recurringExpenseId != nil
+        self.groupId = groupId
+        self.groupName = groupName
     }
 }

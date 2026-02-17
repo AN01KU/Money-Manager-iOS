@@ -15,15 +15,62 @@ struct TransactionDetailView: View {
     let expense: Expense
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
+    @State private var selectedGroup: SplitGroup?
     
     var category: PredefinedCategory? {
         PredefinedCategory.allCases.first { $0.rawValue == expense.category }
+    }
+    
+    var isGroupExpense: Bool {
+        expense.groupId != nil && expense.groupName != nil
     }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
+                    // Group Badge (if applicable)
+                    if isGroupExpense {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Image(systemName: "person.2.fill")
+                                    .foregroundColor(.teal)
+                                Text("Group Expense")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.teal)
+                                Spacer()
+                            }
+                            
+                            NavigationLink(value: getGroupForNavigation()) { 
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(expense.groupName ?? "Unknown Group")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+                                        
+                                        Text("Tap to view group details")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding()
+                                .background(Color.teal.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(16)
+                    }
+                    
                     // Header
                     VStack(spacing: 8) {
                         ZStack {
@@ -117,6 +164,9 @@ struct TransactionDetailView: View {
             }
             .navigationTitle("Transaction Details")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: SplitGroup.self) { group in
+                GroupDetailView(group: group)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
@@ -148,6 +198,16 @@ struct TransactionDetailView: View {
         } catch {
             print("Error deleting expense: \(error)")
         }
+    }
+    
+    private func getGroupForNavigation() -> SplitGroup? {
+        guard let groupId = expense.groupId, let groupName = expense.groupName else { return nil }
+        return SplitGroup(
+            id: groupId,
+            name: groupName,
+            createdBy: UUID(),
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
     }
     
     private func formatAmount(_ amount: Double) -> String {

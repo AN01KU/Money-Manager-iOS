@@ -67,64 +67,58 @@ struct BudgetsView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Month Selector
-                    MonthSelector(selectedMonth: $selectedMonth)
-                        .padding(.horizontal)
-                        .padding(.top)
+        ScrollView {
+            VStack(spacing: 20) {
+                MonthSelector(selectedMonth: $selectedMonth)
+                    .padding(.horizontal)
+                    .padding(.top)
+                
+                if let budget = currentBudget {
+                    BudgetCard(
+                        budget: budget,
+                        spent: totalSpent,
+                        remaining: remainingBudget,
+                        percentage: budgetPercentage,
+                        daysRemaining: daysRemaining,
+                        dailyAverage: dailyAverage,
+                        onEdit: {
+                            showBudgetSheet = true
+                        }
+                    )
+                    .padding(.horizontal)
                     
-                    if let budget = currentBudget {
-                        // Budget Overview Card
-                        BudgetCard(
-                            budget: budget,
-                            spent: totalSpent,
-                            remaining: remainingBudget,
-                            percentage: budgetPercentage,
-                            daysRemaining: daysRemaining,
-                            dailyAverage: dailyAverage,
-                            onEdit: {
-                                showBudgetSheet = true
-                            }
-                        )
-                        .padding(.horizontal)
-                        
-                        // Status Banner
-                        BudgetStatusBanner(
-                            spent: totalSpent,
-                            limit: budget.limit,
-                            percentage: budgetPercentage
-                        )
-                        .padding(.horizontal)
-                        
-                    } else {
-                        // No Budget Set
-                        NoBudgetCard(
-                            selectedMonth: selectedMonth,
-                            onSetBudget: {
-                                showBudgetSheet = true
-                            }
-                        )
-                        .padding(.horizontal)
-                    }
+                    BudgetStatusBanner(
+                        spent: totalSpent,
+                        limit: budget.limit,
+                        percentage: budgetPercentage
+                    )
+                    .padding(.horizontal)
                     
-                    // Spending Summary
-                    if !currentMonthExpenses.isEmpty {
-                        SpendingSummaryCard(
-                            totalSpent: totalSpent,
-                            transactionCount: currentMonthExpenses.count
-                        )
-                        .padding(.horizontal)
-                    }
+                } else {
+                    NoBudgetCard(
+                        selectedMonth: selectedMonth,
+                        onSetBudget: {
+                            showBudgetSheet = true
+                        }
+                    )
+                    .padding(.horizontal)
                 }
-                .padding(.bottom, 100) // Space for tab bar
+                
+                if !currentMonthExpenses.isEmpty {
+                    SpendingSummaryCard(
+                        totalSpent: totalSpent,
+                        transactionCount: currentMonthExpenses.count
+                    )
+                    .padding(.horizontal)
+                }
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Budgets")
-            .sheet(isPresented: $showBudgetSheet) {
-                BudgetSheet(selectedMonth: selectedMonth)
-            }
+            .padding(.bottom, 40)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Budgets")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showBudgetSheet) {
+            BudgetSheet(selectedMonth: selectedMonth)
         }
     }
 }

@@ -330,16 +330,45 @@ struct QuickDateButton: View {
 struct CategoryPickerView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedCategory: String
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    
+    private var visibleCustom: [CustomCategory] {
+        customCategories.filter { !$0.isHidden }
+    }
     
     var body: some View {
         NavigationStack {
             List {
-                Section("Predefined Categories") {
+                if !visibleCustom.isEmpty {
+                    Section("Your Categories") {
+                        ForEach(visibleCustom) { category in
+                            Button {
+                                selectedCategory = category.name
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Image(systemName: category.icon)
+                                        .foregroundColor(Color(hex: category.color))
+                                        .frame(width: 30)
+                                    Text(category.name)
+                                    Spacer()
+                                    if selectedCategory == category.name {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.teal)
+                                    }
+                                }
+                            }
+                            .foregroundColor(.primary)
+                        }
+                    }
+                }
+                
+                Section("Default Categories") {
                     ForEach(PredefinedCategory.allCases) { category in
-                        Button(action: {
+                        Button {
                             selectedCategory = category.rawValue
                             dismiss()
-                        }) {
+                        } label: {
                             HStack {
                                 Image(systemName: category.icon)
                                     .foregroundColor(category.color)

@@ -13,6 +13,7 @@ struct BudgetSheet: View {
     @Environment(\.modelContext) private var modelContext
     
     let selectedMonth: Date
+    @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
     @FocusState private var isAmountFocused: Bool
     
@@ -85,6 +86,8 @@ struct BudgetSheet: View {
             }
         )).first {
             budgetAmount = String(format: "%.0f", existing.limit)
+        } else if defaultBudgetLimit > 0 {
+            budgetAmount = String(format: "%.0f", defaultBudgetLimit)
         }
     }
     
@@ -110,6 +113,8 @@ struct BudgetSheet: View {
             )
             modelContext.insert(budget)
         }
+        
+        defaultBudgetLimit = amount
         
         do {
             try modelContext.save()
