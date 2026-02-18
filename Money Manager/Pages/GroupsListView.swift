@@ -382,6 +382,8 @@ struct CreateGroupSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var groupName = ""
     @State private var isLoading = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     
     var onCreate: (SplitGroup) -> Void
     
@@ -409,33 +411,53 @@ struct CreateGroupSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
-                        createGroup()
+                    if isLoading {
+                        ProgressView()
+                    } else {
+                        Button("Create") {
+                            createGroup()
+                        }
+                        .fontWeight(.semibold)
+                        .disabled(groupName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
-                    .fontWeight(.semibold)
-                    .disabled(groupName.trimmingCharacters(in: .whitespaces).isEmpty || isLoading)
                 }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
         }
     }
     
     private func createGroup() {
         isLoading = true
+        let trimmedName = groupName.trimmingCharacters(in: .whitespaces)
+        
         Task {
-            if MockData.useDummyData {
-                try? await Task.sleep(for: .milliseconds(300))
-                let newGroup = SplitGroup(
-                    id: UUID(),
-                    name: groupName.trimmingCharacters(in: .whitespaces),
-                    createdBy: MockData.currentUser.id,
-                    createdAt: ISO8601DateFormatter().string(from: Date())
-                )
-                onCreate(newGroup)
-            } else {
-                // TODO: Call APIService.shared.createGroup
+            do {
+                let group: SplitGroup
+                
+                if MockData.useDummyData {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    group = SplitGroup(
+                        id: UUID(),
+                        name: trimmedName,
+                        createdBy: MockData.currentUser.id,
+                        createdAt: ISO8601DateFormatter().string(from: Date())
+                    )
+                } else {
+                    group = try await APIService.shared.createGroup(name: trimmedName)
+                }
+                
+                onCreate(group)
+                isLoading = false
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+                isLoading = false
             }
-            isLoading = false
-            dismiss()
         }
     }
 }

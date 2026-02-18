@@ -26,6 +26,7 @@ struct AddExpenseView: View {
     @State private var showTimePicker = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var isSaving = false
     
     var expenseToEdit: Expense?
     
@@ -168,11 +169,15 @@ struct AddExpenseView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveExpense()
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            saveExpense()
+                        }
+                        .fontWeight(.semibold)
+                        .disabled(!isValid)
                     }
-                    .fontWeight(.semibold)
-                    .disabled(!isValid)
                 }
             }
             .sheet(isPresented: $showCategoryPicker) {
@@ -217,6 +222,8 @@ struct AddExpenseView: View {
             return
         }
         
+        isSaving = true
+        
         let calendar = Calendar.current
         var expenseDate = calendar.startOfDay(for: selectedDate)
         
@@ -228,34 +235,43 @@ struct AddExpenseView: View {
                                        of: selectedDate) ?? selectedDate
         }
         
-        if let expense = expenseToEdit {
-            // Update existing expense
-            expense.amount = amountValue
-            expense.category = selectedCategory
-            expense.date = expenseDate
-            expense.time = hasTime ? selectedTime : nil
-            expense.expenseDescription = description.isEmpty ? nil : description
-            expense.notes = notes.isEmpty ? nil : notes
-            expense.updatedAt = Date()
-        } else {
-            // Create new expense
-            let expense = Expense(
-                amount: amountValue,
-                category: selectedCategory,
-                date: expenseDate,
-                time: hasTime ? selectedTime : nil,
-                expenseDescription: description.isEmpty ? nil : description,
-                notes: notes.isEmpty ? nil : notes
-            )
-            modelContext.insert(expense)
-        }
-        
-        do {
-            try modelContext.save()
-            dismiss()
-        } catch {
-            errorMessage = "Failed to save expense: \(error.localizedDescription)"
-            showError = true
+        Task {
+            do {
+                // Save to backend if not using dummy data
+                if !MockData.useDummyData {
+                    let iso8601Formatter = ISO8601DateFormatter()
+                    let expenseDateString = iso8601Formatter.string(from: expenseDate)
+                    
+                    let request = CreatePersonalExpenseRequest(
+                        categoryId: nil,
+                        amount: String(format: "%.2f", amountValue),
+                        description: description.isEmpty ? nil : description,
+                        notes: notes.isEmpty ? nil : notes,
+                        expenseDate: expenseDateString
+                    )
+                    
+                    _ = try await APIService.shared.createPersonalExpense(request)
+                }
+                
+                // Also save to local SwiftData for offline access
+                let expense = Expense(
+                    amount: amountValue,
+                    category: selectedCategory,
+                    date: expenseDate,
+                    time: hasTime ? selectedTime : nil,
+                    expenseDescription: description.isEmpty ? nil : description,
+                    notes: notes.isEmpty ? nil : notes
+                )
+                modelContext.insert(expense)
+                try modelContext.save()
+                
+                isSaving = false
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+                isSaving = false
+            }
         }
     }
     

@@ -117,6 +117,9 @@ struct AddCategorySheet: View {
     @State private var name = ""
     @State private var selectedIcon = "tag.circle.fill"
     @State private var selectedColor = "#4ECDC4"
+    @State private var isSaving = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     
     private let iconOptions = [
         "tag.circle.fill", "cart.circle.fill", "heart.circle.fill",
@@ -212,25 +215,57 @@ struct AddCategorySheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Add") {
-                        saveCategory()
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Add") {
+                            saveCategory()
+                        }
+                        .fontWeight(.semibold)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
-                    .fontWeight(.semibold)
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
         }
     }
     
     private func saveCategory() {
-        let category = CustomCategory(
-            name: name.trimmingCharacters(in: .whitespaces),
-            icon: selectedIcon,
-            color: selectedColor
-        )
-        modelContext.insert(category)
-        try? modelContext.save()
-        dismiss()
+        isSaving = true
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        
+        Task {
+            do {
+                // Save to backend if not using dummy data
+                if !MockData.useDummyData {
+                    _ = try await APIService.shared.createCategory(
+                        name: trimmedName,
+                        color: selectedColor,
+                        icon: selectedIcon
+                    )
+                }
+                
+                // Also save to local SwiftData for offline access
+                let category = CustomCategory(
+                    name: trimmedName,
+                    icon: selectedIcon,
+                    color: selectedColor
+                )
+                modelContext.insert(category)
+                try modelContext.save()
+                
+                isSaving = false
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+                isSaving = false
+            }
+        }
     }
 }
 

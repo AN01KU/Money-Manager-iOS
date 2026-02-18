@@ -95,3 +95,107 @@ struct CreateSettlementRequest: Encodable {
     let toUser: UUID
     let amount: String
 }
+// MARK: - Budget Models
+
+struct BudgetResponse: Decodable, Identifiable {
+    let id: UUID
+    let userId: UUID
+    let amount: String
+    let month: Int
+    let year: Int
+    let createdAt: String
+    let updatedAt: String
+}
+
+struct SetBudgetRequest: Encodable {
+    let amount: String
+    let month: Int
+    let year: Int
+}
+
+// MARK: - Category Models
+
+struct CategoryResponse: Decodable, Identifiable {
+    let id: UUID
+    let userId: UUID
+    let name: String
+    let color: String
+    let icon: String
+    let createdAt: String
+}
+
+struct CreateCategoryRequest: Encodable {
+    let name: String
+    let color: String
+    let icon: String
+}
+
+struct UpdateCategoryRequest: Encodable {
+    let name: String?
+    let color: String?
+    let icon: String?
+}
+
+// MARK: - Personal Expense Models
+
+struct PersonalExpenseResponse: Decodable, Identifiable {
+    let id: UUID
+    let userId: UUID
+    let categoryId: UUID?
+    let amount: String
+    let description: String?
+    let notes: String?
+    let expenseDate: String
+    let createdAt: String
+    let updatedAt: String
+}
+
+struct CreatePersonalExpenseRequest: Encodable {
+    let categoryId: UUID?
+    let amount: String
+    let description: String?
+    let notes: String?
+    let expenseDate: String
+}
+
+struct UpdatePersonalExpenseRequest: Encodable {
+    let amount: String?
+    let description: String?
+    let notes: String?
+}
+
+struct PaginatedPersonalExpensesResponse: Decodable {
+    let expenses: [PersonalExpenseResponse]
+    let pagination: Pagination
+}
+
+// MARK: - Dashboard Models
+
+struct DashboardResponse: Decodable {
+    let month: Int
+    let year: Int
+    let budget: String?
+    let totalSpent: String
+    let remainingBudget: String?
+    let daysInMonth: Int
+    let daysElapsed: Int
+    let daysRemaining: Int
+    let dailyAverageSpent: String
+    let projectedSpending: String
+    let isOverBudget: Bool
+    let expenseCount: Int
+    let categoryBreakdown: [CategoryBreakdown]
+}
+
+struct CategoryBreakdown: Decodable {
+    let categoryId: UUID?
+    let categoryName: String?
+    let totalAmount: String
+    let expenseCount: Int
+}
+
+// MARK: - Utility Models
+
+struct MessageResponse: Decodable {
+    let message: String
+}

@@ -15,6 +15,9 @@ struct BudgetSheet: View {
     let selectedMonth: Date
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
+    @State private var isSaving = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     @FocusState private var isAmountFocused: Bool
     
     var body: some View {
@@ -59,12 +62,21 @@ struct BudgetSheet: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveBudget()
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            saveBudget()
+                        }
+                        .fontWeight(.semibold)
+                        .disabled(budgetAmount.isEmpty || Double(budgetAmount) == nil || Double(budgetAmount)! <= 0)
                     }
-                    .fontWeight(.semibold)
-                    .disabled(budgetAmount.isEmpty || Double(budgetAmount) == nil || Double(budgetAmount)! <= 0)
                 }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
             .onAppear {
                 loadExistingBudget()
@@ -94,33 +106,49 @@ struct BudgetSheet: View {
     private func saveBudget() {
         guard let amount = Double(budgetAmount), amount > 0 else { return }
         
+        isSaving = true
         let calendar = Calendar.current
         let year = calendar.component(.year, from: selectedMonth)
         let month = calendar.component(.month, from: selectedMonth)
         
-        if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
-            predicate: #Predicate<MonthlyBudget> { budget in
-                budget.year == year && budget.month == month
+        Task {
+            do {
+                // Save to backend if not using dummy data
+                if !MockData.useDummyData {
+                    _ = try await APIService.shared.setBudget(
+                        amount: amount,
+                        month: month,
+                        year: year
+                    )
+                }
+                
+                // Also save to local SwiftData for offline access
+                if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
+                    predicate: #Predicate<MonthlyBudget> { budget in
+                        budget.year == year && budget.month == month
+                    }
+                )).first {
+                    existing.limit = amount
+                    existing.updatedAt = Date()
+                } else {
+                    let budget = MonthlyBudget(
+                        year: year,
+                        month: month,
+                        limit: amount
+                    )
+                    modelContext.insert(budget)
+                }
+                
+                defaultBudgetLimit = amount
+                
+                try modelContext.save()
+                isSaving = false
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+                isSaving = false
             }
-        )).first {
-            existing.limit = amount
-            existing.updatedAt = Date()
-        } else {
-            let budget = MonthlyBudget(
-                year: year,
-                month: month,
-                limit: amount
-            )
-            modelContext.insert(budget)
-        }
-        
-        defaultBudgetLimit = amount
-        
-        do {
-            try modelContext.save()
-            dismiss()
-        } catch {
-            print("Error saving budget: \(error)")
         }
     }
     
