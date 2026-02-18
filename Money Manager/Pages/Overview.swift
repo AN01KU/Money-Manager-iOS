@@ -14,9 +14,9 @@ struct Overview: View {
     @State private var showAddExpense = false
     @State private var showBudgetSheet = false
     @State private var searchText = ""
-    @State private var testDataInitialized = false
     @State private var scrollOffset: CGFloat = 0
     @State private var showSearchBar = false
+    @State private var testDataLoaded = false
     
     private var filteredExpenses: [Expense] {
         let calendar = Calendar.current
@@ -181,70 +181,33 @@ struct Overview: View {
                 ensureBudgetExists()
             }
             .task {
-                loadTestData()
+                loadTestDataIfNeeded()
             }
         }
     }
     
-    private func loadTestData() {
-        // Prevent reloading
-        guard !testDataInitialized else { return }
-        testDataInitialized = true
+    private func loadTestDataIfNeeded() {
+        guard !testDataLoaded, useTestData else { return }
+        testDataLoaded = true
         
-        // Clear existing data for fresh test experience
-        deleteAllExpenses()
-        deleteAllBudgets()
-        deleteAllRecurring()
+        try? modelContext.delete(model: Expense.self)
+        try? modelContext.delete(model: MonthlyBudget.self)
+        try? modelContext.delete(model: RecurringExpense.self)
         
-        // Load personal expenses
-        let personalExpenses = TestData.generatePersonalExpenses()
-        for expense in personalExpenses {
+        for expense in TestData.generatePersonalExpenses() {
             modelContext.insert(expense)
         }
-        
-        // Load group expenses
-        let groupExpenses = TestData.getGroupExpensesForOverview()
-        for expense in groupExpenses {
+        for expense in TestData.getGroupExpensesForOverview() {
             modelContext.insert(expense)
         }
-        
-        // Load budgets
-        let testBudgets = TestData.generateBudgets()
-        for budget in testBudgets {
+        for budget in TestData.generateBudgets() {
             modelContext.insert(budget)
         }
-        
-        // Load recurring expenses
-        let recurring = TestData.generateRecurringExpenses()
-        for rec in recurring {
-            modelContext.insert(rec)
+        for recurring in TestData.generateRecurringExpenses() {
+            modelContext.insert(recurring)
         }
         
         try? modelContext.save()
-    }
-    
-    private func deleteAllExpenses() {
-        do {
-            try modelContext.delete(model: Expense.self)
-        } catch {
-            print("Error clearing expenses: \(error)")
-        }
-    }
-    
-    private func deleteAllBudgets() {
-        do {
-            try modelContext.delete(model: MonthlyBudget.self)
-        } catch {
-            print("Error clearing budgets: \(error)")
-        }
-    }
-    
-    private func deleteAllRecurring() {
-        do {
-            try modelContext.delete(model: RecurringExpense.self)
-        } catch {
-            print("Error clearing recurring: \(error)")
-        }
     }
     
     private func ensureBudgetExists() {
@@ -266,7 +229,74 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
     }
 }
 
-#Preview {
+// MARK: - Preview Helpers
+
+private func previewContainer(
+    expenses: [Expense] = [],
+    budgets: [MonthlyBudget] = []
+) -> ModelContainer {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Expense.self, MonthlyBudget.self, RecurringExpense.self, CustomCategory.self,
+        configurations: config
+    )
+    let context = container.mainContext
+    for expense in expenses { context.insert(expense) }
+    for budget in budgets { context.insert(budget) }
+    try? context.save()
+    return container
+}
+
+#Preview("With Expenses & Budget") {
+    let calendar = Calendar.current
+    let today = Date()
+    let year = calendar.component(.year, from: today)
+    let month = calendar.component(.month, from: today)
+
+    let expenses = [
+        Expense(amount: 450, category: "Food & Dining", date: today, expenseDescription: "Lunch at cafe"),
+        Expense(amount: 120, category: "Food & Dining", date: today, expenseDescription: "Morning coffee"),
+        Expense(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, expenseDescription: "Fuel"),
+        Expense(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, expenseDescription: "New shirt"),
+        Expense(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, expenseDescription: "Phone bill"),
+        Expense(amount: 649, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, expenseDescription: "Netflix"),
+    ]
+    let budget = MonthlyBudget(year: year, month: month, limit: 50000)
+
     Overview()
-        .modelContainer(for: [Expense.self, MonthlyBudget.self])
+        .modelContainer(previewContainer(expenses: expenses, budgets: [budget]))
+}
+
+#Preview("Empty State") {
+    Overview()
+        .modelContainer(previewContainer())
+}
+
+#Preview("Over Budget") {
+    let calendar = Calendar.current
+    let today = Date()
+    let year = calendar.component(.year, from: today)
+    let month = calendar.component(.month, from: today)
+
+    let expenses = [
+        Expense(amount: 15000, category: "Travel", date: today, expenseDescription: "Flight tickets"),
+        Expense(amount: 8000, category: "Shopping", date: calendar.date(byAdding: .day, value: -1, to: today)!, expenseDescription: "Electronics"),
+        Expense(amount: 5000, category: "Food & Dining", date: calendar.date(byAdding: .day, value: -2, to: today)!, expenseDescription: "Party dinner"),
+        Expense(amount: 3000, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, expenseDescription: "Concert tickets"),
+    ]
+    let budget = MonthlyBudget(year: year, month: month, limit: 10000)
+
+    Overview()
+        .modelContainer(previewContainer(expenses: expenses, budgets: [budget]))
+}
+
+#Preview("No Budget Set") {
+    let today = Date()
+    let expenses = [
+        Expense(amount: 350, category: "Food & Dining", date: today, expenseDescription: "Dinner"),
+        Expense(amount: 80, category: "Transport", date: today, expenseDescription: "Auto ride"),
+    ]
+
+    Overview()
+        .modelContainer(previewContainer(expenses: expenses))
 }

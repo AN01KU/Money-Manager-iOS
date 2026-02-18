@@ -1,7 +1,15 @@
 import SwiftUI
 
 struct GroupsListView: View {
+    var initialGroups: [SplitGroup]?
+    var initialBalances: [UUID: [UserBalance]] = [:]
+    var initialExpenses: [UUID: [SharedExpense]] = [:]
+    var initialMembers: [UUID: [APIUser]] = [:]
+    
     @State private var groups: [SplitGroup] = []
+    @State private var groupBalances: [UUID: [UserBalance]] = [:]
+    @State private var groupExpenses: [UUID: [SharedExpense]] = [:]
+    @State private var groupMembers: [UUID: [APIUser]] = [:]
     @State private var showCreateGroup = false
     @State private var isLoading = false
     @State private var selectedTab: ViewTab = .groups
@@ -12,6 +20,13 @@ struct GroupsListView: View {
         case activities
     }
     
+    private var currentUserId: UUID? {
+        if useTestData || initialGroups != nil {
+            return TestData.currentUser.id
+        }
+        return APIService.shared.currentUser?.id
+    }
+    
     private var filteredGroups: [SplitGroup] {
         if searchText.isEmpty {
             return groups
@@ -20,12 +35,11 @@ struct GroupsListView: View {
     }
     
     private var netBalance: Double {
-        let currentUserId = MockData.useDummyData ? MockData.currentUser.id : APIService.shared.currentUser?.id
         guard let userId = currentUserId else { return 0 }
         
         var total = 0.0
         for group in groups {
-            if let balances = MockData.balances[group.id],
+            if let balances = groupBalances[group.id],
                let userBalance = balances.first(where: { $0.userId == userId }) {
                 total += Double(userBalance.amount) ?? 0
             }
@@ -171,7 +185,11 @@ struct GroupsListView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(filteredGroups) { group in
                         NavigationLink(value: group) {
-                            GroupRow(group: group)
+                            GroupRow(
+                                group: group,
+                                memberCount: groupMembers[group.id]?.count ?? 0,
+                                userBalance: userBalance(for: group.id)
+                            )
                         }
                         .buttonStyle(.plain)
                         
@@ -217,7 +235,7 @@ struct GroupsListView: View {
     private var recentActivity: [(expense: SharedExpense, groupName: String)] {
         var all: [(expense: SharedExpense, groupName: String)] = []
         for group in groups {
-            if let expenses = MockData.expenses[group.id] {
+            if let expenses = groupExpenses[group.id] {
                 for expense in expenses {
                     all.append((expense: expense, groupName: group.name))
                 }
@@ -256,7 +274,7 @@ struct GroupsListView: View {
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                             
-                            Text(MockData.nameForUser(item.expense.paidBy) + " paid")
+                            Text(nameForUser(item.expense.paidBy) + " paid")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -295,34 +313,48 @@ struct GroupsListView: View {
         return "\(weeks)w ago"
     }
     
+    private func userBalance(for groupId: UUID) -> Double {
+        guard let userId = currentUserId,
+              let balances = groupBalances[groupId],
+              let balance = balances.first(where: { $0.userId == userId }) else { return 0 }
+        return Double(balance.amount) ?? 0
+    }
+    
+    private func nameForUser(_ userId: UUID) -> String {
+        for members in groupMembers.values {
+            if let user = members.first(where: { $0.id == userId }) {
+                return user.email.components(separatedBy: "@").first?.capitalized ?? user.email
+            }
+        }
+        return "Unknown"
+    }
+    
     private func loadGroups() async {
         isLoading = true
-        if MockData.useDummyData {
+        
+        if let initialGroups {
+            groups = initialGroups
+            groupBalances = initialBalances
+            groupExpenses = initialExpenses
+            groupMembers = initialMembers
+        } else if useTestData {
             try? await Task.sleep(for: .milliseconds(400))
-            groups = MockData.groups
+            groups = TestData.testGroups
+            groupBalances = TestData.testBalances
+            groupExpenses = TestData.testSharedExpenses
+            groupMembers = TestData.testGroupMembers
         } else {
             // TODO: Fetch from API when backend is ready
         }
+        
         isLoading = false
     }
 }
 
 struct GroupRow: View {
     let group: SplitGroup
-    
-    private var memberCount: Int {
-        MockData.groupMembers[group.id]?.count ?? 0
-    }
-    
-    private var userBalance: Double {
-        let userId = MockData.useDummyData ? MockData.currentUser.id : APIService.shared.currentUser?.id
-        guard let userId else { return 0 }
-        if let balances = MockData.balances[group.id],
-           let balance = balances.first(where: { $0.userId == userId }) {
-            return Double(balance.amount) ?? 0
-        }
-        return 0
-    }
+    var memberCount: Int = 0
+    var userBalance: Double = 0
     
     var body: some View {
         HStack(spacing: 14) {
@@ -438,12 +470,12 @@ struct CreateGroupSheet: View {
             do {
                 let group: SplitGroup
                 
-                if MockData.useDummyData {
+                if useTestData {
                     try? await Task.sleep(for: .milliseconds(300))
                     group = SplitGroup(
                         id: UUID(),
                         name: trimmedName,
-                        createdBy: MockData.currentUser.id,
+                        createdBy: TestData.currentUser.id,
                         createdAt: ISO8601DateFormatter().string(from: Date())
                     )
                 } else {
@@ -462,6 +494,27 @@ struct CreateGroupSheet: View {
     }
 }
 
-#Preview {
-    GroupsListView()
+// MARK: - Previews
+
+#Preview("With Groups") {
+    GroupsListView(
+        initialGroups: TestData.testGroups,
+        initialBalances: TestData.testBalances,
+        initialExpenses: TestData.testSharedExpenses,
+        initialMembers: TestData.testGroupMembers
+    )
+}
+
+#Preview("Empty State") {
+    GroupsListView(initialGroups: [])
+}
+
+#Preview("Single Group") {
+    let group = TestData.testGroups[0]
+    GroupsListView(
+        initialGroups: [group],
+        initialBalances: [group.id: TestData.testBalances[group.id] ?? []],
+        initialExpenses: [group.id: TestData.testSharedExpenses[group.id] ?? []],
+        initialMembers: [group.id: TestData.testGroupMembers[group.id] ?? []]
+    )
 }

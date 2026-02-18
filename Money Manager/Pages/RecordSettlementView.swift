@@ -47,7 +47,7 @@ struct RecordSettlementView: View {
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(MockData.nameForUser(member.id))
+                                        Text(displayName(for: member))
                                             .foregroundColor(.primary)
                                         
                                         let owes = Double(balances.first(where: { $0.userId == member.id })?.amount ?? "0") ?? 0
@@ -58,13 +58,8 @@ struct RecordSettlementView: View {
                                     
                                     Spacer()
                                     
-                                    if fromUserId == member.id {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.teal)
-                                    } else {
-                                        Image(systemName: "circle")
-                                            .foregroundColor(.secondary)
-                                    }
+                                    Image(systemName: fromUserId == member.id ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(fromUserId == member.id ? .teal : .secondary)
                                 }
                             }
                         }
@@ -83,7 +78,7 @@ struct RecordSettlementView: View {
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(MockData.nameForUser(member.id))
+                                        Text(displayName(for: member))
                                             .foregroundColor(.primary)
                                         
                                         let owed = abs(Double(balances.first(where: { $0.userId == member.id })?.amount ?? "0") ?? 0)
@@ -94,13 +89,8 @@ struct RecordSettlementView: View {
                                     
                                     Spacer()
                                     
-                                    if toUserId == member.id {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.teal)
-                                    } else {
-                                        Image(systemName: "circle")
-                                            .foregroundColor(.secondary)
-                                    }
+                                    Image(systemName: toUserId == member.id ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(toUserId == member.id ? .teal : .secondary)
                                 }
                             }
                         }
@@ -131,7 +121,7 @@ struct RecordSettlementView: View {
                     Section("Summary") {
                         HStack {
                             VStack {
-                                Text(MockData.nameForUser(fromId))
+                                Text(displayName(forId: fromId))
                                     .font(.headline)
                                 Text("pays")
                                     .font(.caption)
@@ -147,7 +137,7 @@ struct RecordSettlementView: View {
                             Spacer()
                             
                             VStack {
-                                Text(MockData.nameForUser(toId))
+                                Text(displayName(forId: toId))
                                     .font(.headline)
                                 Text("receives")
                                     .font(.caption)
@@ -197,6 +187,17 @@ struct RecordSettlementView: View {
         return true
     }
     
+    private func displayName(for member: APIUser) -> String {
+        member.email.components(separatedBy: "@").first?.capitalized ?? member.email
+    }
+    
+    private func displayName(forId userId: UUID) -> String {
+        if let member = members.first(where: { $0.id == userId }) {
+            return displayName(for: member)
+        }
+        return "Unknown"
+    }
+    
     private func updateSuggestedAmount() {
         if let suggested = suggestedAmount, suggested > 0 {
             amount = String(format: "%.2f", suggested)
@@ -208,7 +209,7 @@ struct RecordSettlementView: View {
         
         isLoading = true
         Task {
-            if MockData.useDummyData {
+            if useTestData {
                 try? await Task.sleep(for: .milliseconds(300))
                 let settlement = Settlement(
                     id: UUID(),
@@ -242,10 +243,24 @@ struct RecordSettlementView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("With Balances") {
+    let group = TestData.testGroups[0]
     RecordSettlementView(
-        group: MockData.groups[0],
-        members: MockData.groupMembers[MockData.groups[0].id]!,
-        balances: MockData.balances[MockData.groups[0].id]!
+        group: group,
+        members: TestData.testGroupMembers[group.id] ?? [],
+        balances: TestData.testBalances[group.id] ?? []
+    ) { _ in }
+}
+
+#Preview("All Settled") {
+    let group = TestData.testGroups[0]
+    let members = TestData.testGroupMembers[group.id] ?? []
+    let settledBalances = members.map { UserBalance(userId: $0.id, amount: "0.00") }
+    RecordSettlementView(
+        group: group,
+        members: members,
+        balances: settledBalances
     ) { _ in }
 }

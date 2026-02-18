@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+let useTestData: Bool = CommandLine.arguments.contains("useTestData")
+
 struct ContentView: View {
     @ObservedObject private var apiService = APIService.shared
     

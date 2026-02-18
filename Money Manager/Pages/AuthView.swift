@@ -129,9 +129,9 @@ struct AuthView: View {
         isLoading = true
         
         Task {
-            if MockData.useDummyData {
+            if useTestData {
                 try? await Task.sleep(for: .milliseconds(500))
-                apiService.currentUser = MockData.currentUser
+                apiService.currentUser = TestData.currentUser
                 apiService.isAuthenticated = true
             } else {
                 do {
@@ -150,6 +150,6 @@ struct AuthView: View {
     }
 }
 
-#Preview {
+#Preview("Login") {
     AuthView()
 }

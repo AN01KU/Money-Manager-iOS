@@ -2,6 +2,9 @@ import SwiftUI
 
 struct GroupDetailView: View {
     let group: SplitGroup
+    var initialExpenses: [SharedExpense]?
+    var initialBalances: [UserBalance]?
+    var initialMembers: [APIUser]?
     
     @State private var selectedSection: GroupSection = .expenses
     @State private var expenses: [SharedExpense] = []
@@ -71,10 +74,10 @@ struct GroupDetailView: View {
         .navigationTitle(group.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddExpense) {
-            AddSharedExpenseView(group: group, members: members) { newExpense in
+            AddExpenseView(mode: .shared(group: group, members: members) { newExpense in
                 expenses.insert(newExpense, at: 0)
                 recalculateBalances()
-            }
+            })
         }
         .sheet(isPresented: $showSettlement) {
             RecordSettlementView(group: group, members: members, balances: balances) { _ in
@@ -167,7 +170,7 @@ struct GroupDetailView: View {
                 List {
                     Section {
                         ForEach(balances, id: \.userId) { balance in
-                            BalanceRow(balance: balance)
+                            BalanceRow(balance: balance, members: members)
                         }
                     }
                     
@@ -211,11 +214,16 @@ struct GroupDetailView: View {
     
     private func loadData() async {
         isLoading = true
-        if MockData.useDummyData {
+        
+        if let initialExpenses, let initialBalances, let initialMembers {
+            expenses = initialExpenses
+            balances = initialBalances
+            members = initialMembers
+        } else if useTestData {
             try? await Task.sleep(for: .milliseconds(300))
-            expenses = MockData.expenses[group.id] ?? []
-            balances = MockData.balances[group.id] ?? []
-            members = MockData.groupMembers[group.id] ?? []
+            expenses = TestData.testSharedExpenses[group.id] ?? []
+            balances = TestData.testBalances[group.id] ?? []
+            members = TestData.testGroupMembers[group.id] ?? []
         } else {
             do {
                 async let fetchedExpenses = APIService.shared.getGroupExpenses(groupId: group.id)
@@ -226,30 +234,29 @@ struct GroupDetailView: View {
                 // Handle error
             }
         }
+        
         isLoading = false
     }
     
     private func recalculateBalances() {
-        if MockData.useDummyData {
-            var balanceMap: [UUID: Double] = [:]
-            for member in members {
-                balanceMap[member.id] = 0
-            }
-            for expense in expenses {
-                let paidBy = expense.paidBy
-                let total = Double(expense.totalAmount) ?? 0
-                balanceMap[paidBy, default: 0] += total
-                
-                if let splits = expense.splits {
-                    for split in splits {
-                        let amt = Double(split.amount) ?? 0
-                        balanceMap[split.userId, default: 0] -= amt
-                    }
+        var balanceMap: [UUID: Double] = [:]
+        for member in members {
+            balanceMap[member.id] = 0
+        }
+        for expense in expenses {
+            let paidBy = expense.paidBy
+            let total = Double(expense.totalAmount) ?? 0
+            balanceMap[paidBy, default: 0] += total
+            
+            if let splits = expense.splits {
+                for split in splits {
+                    let amt = Double(split.amount) ?? 0
+                    balanceMap[split.userId, default: 0] -= amt
                 }
             }
-            balances = balanceMap.map { UserBalance(userId: $0.key, amount: String(format: "%.2f", $0.value)) }
-                .sorted { abs(Double($0.amount) ?? 0) > abs(Double($1.amount) ?? 0) }
         }
+        balances = balanceMap.map { UserBalance(userId: $0.key, amount: String(format: "%.2f", $0.value)) }
+            .sorted { abs(Double($0.amount) ?? 0) > abs(Double($1.amount) ?? 0) }
     }
 }
 
@@ -258,6 +265,10 @@ struct GroupDetailView: View {
 struct MemberRow: View {
     let member: APIUser
     let isAdmin: Bool
+    
+    private var displayName: String {
+        member.email.components(separatedBy: "@").first?.capitalized ?? member.email
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -272,7 +283,7 @@ struct MemberRow: View {
             }
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(MockData.nameForUser(member.id))
+                Text(displayName)
                     .font(.body)
                     .fontWeight(.medium)
                 Text(member.email)
@@ -306,7 +317,8 @@ struct ExpenseRow: View {
     }
     
     private var paidByName: String {
-        MockData.nameForUser(expense.paidBy)
+        members.first(where: { $0.id == expense.paidBy })?.email
+            .components(separatedBy: "@").first?.capitalized ?? "Unknown"
     }
     
     private var splitCount: Int {
@@ -361,13 +373,15 @@ struct ExpenseRow: View {
 
 struct BalanceRow: View {
     let balance: UserBalance
+    var members: [APIUser] = []
     
     private var amount: Double {
         Double(balance.amount) ?? 0
     }
     
     private var userName: String {
-        MockData.nameForUser(balance.userId)
+        members.first(where: { $0.id == balance.userId })?.email
+            .components(separatedBy: "@").first?.capitalized ?? "Unknown"
     }
     
     private var isOwed: Bool {
@@ -414,8 +428,41 @@ struct BalanceRow: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("With Expenses") {
+    let group = TestData.testGroups[0]
     NavigationStack {
-        GroupDetailView(group: MockData.groups[0])
+        GroupDetailView(
+            group: group,
+            initialExpenses: TestData.testSharedExpenses[group.id] ?? [],
+            initialBalances: TestData.testBalances[group.id] ?? [],
+            initialMembers: TestData.testGroupMembers[group.id] ?? []
+        )
+    }
+}
+
+#Preview("Empty Group") {
+    NavigationStack {
+        GroupDetailView(
+            group: SplitGroup(id: UUID(), name: "New Trip", createdBy: UUID(), createdAt: ISO8601DateFormatter().string(from: Date())),
+            initialExpenses: [],
+            initialBalances: [],
+            initialMembers: []
+        )
+    }
+}
+
+#Preview("All Settled") {
+    let group = TestData.testGroups[0]
+    let members = TestData.testGroupMembers[group.id] ?? []
+    let settledBalances = members.map { UserBalance(userId: $0.id, amount: "0.00") }
+    NavigationStack {
+        GroupDetailView(
+            group: group,
+            initialExpenses: TestData.testSharedExpenses[group.id] ?? [],
+            initialBalances: settledBalances,
+            initialMembers: members
+        )
     }
 }
