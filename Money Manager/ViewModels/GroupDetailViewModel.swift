@@ -18,9 +18,9 @@ class GroupDetailViewModel: ObservableObject {
     @Published var showSettlement = false
     
     let group: SplitGroup
-    var initialExpenses: [SharedExpense]?
-    var initialBalances: [UserBalance]?
-    var initialMembers: [APIUser]?
+    var expensesParam: [SharedExpense]?
+    var balancesParam: [UserBalance]?
+    var membersParam: [APIUser]?
     
     var groupTotal: Double {
         expenses.compactMap { Double($0.totalAmount) }.reduce(0, +)
@@ -31,22 +31,22 @@ class GroupDetailViewModel: ObservableObject {
     }
     
     init(group: SplitGroup, 
-         initialExpenses: [SharedExpense]? = nil,
-         initialBalances: [UserBalance]? = nil,
-         initialMembers: [APIUser]? = nil) {
+         expenses: [SharedExpense]? = nil,
+         balances: [UserBalance]? = nil,
+         members: [APIUser]? = nil) {
         self.group = group
-        self.initialExpenses = initialExpenses
-        self.initialBalances = initialBalances
-        self.initialMembers = initialMembers
+        self.expensesParam = expenses
+        self.balancesParam = balances
+        self.membersParam = members
     }
     
     func loadData() async {
         isLoading = true
         
-        if let initialExpenses, let initialBalances, let initialMembers {
-            expenses = initialExpenses
-            balances = initialBalances
-            members = initialMembers
+        if let expensesParam, let balancesParam, let membersParam {
+            expenses = expensesParam
+            balances = balancesParam
+            members = membersParam
         } else if useTestData {
             try? await Task.sleep(for: .milliseconds(300))
             expenses = TestData.testSharedExpenses[group.id] ?? []

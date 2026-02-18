@@ -2,25 +2,25 @@ import SwiftUI
 
 struct GroupDetailView: View {
     let group: SplitGroup
-    var initialExpenses: [SharedExpense]?
-    var initialBalances: [UserBalance]?
-    var initialMembers: [APIUser]?
+    var expenses: [SharedExpense]?
+    var balances: [UserBalance]?
+    var members: [APIUser]?
     
     @StateObject private var viewModel: GroupDetailViewModel
     
     init(group: SplitGroup,
-         initialExpenses: [SharedExpense]? = nil,
-         initialBalances: [UserBalance]? = nil,
-         initialMembers: [APIUser]? = nil) {
+         expenses: [SharedExpense]? = nil,
+         balances: [UserBalance]? = nil,
+         members: [APIUser]? = nil) {
         self.group = group
-        self.initialExpenses = initialExpenses
-        self.initialBalances = initialBalances
-        self.initialMembers = initialMembers
+        self.expenses = expenses
+        self.balances = balances
+        self.members = members
         _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
             group: group,
-            initialExpenses: initialExpenses,
-            initialBalances: initialBalances,
-            initialMembers: initialMembers
+            expenses: expenses,
+            balances: balances,
+            members: members
         ))
     }
     
@@ -137,11 +137,7 @@ struct GroupDetailView: View {
     private var expensesSection: some View {
         Group {
             if viewModel.expenses.isEmpty {
-                EmptyStateView(
-                    icon: "receipt",
-                    title: "No expenses yet",
-                    message: "Tap + to add a shared expense"
-                )
+                EmptyStateView(icon: "receipt")
             } else {
                 List(viewModel.expenses) { expense in
                     ExpenseRow(expense: expense, members: viewModel.members)
@@ -154,11 +150,7 @@ struct GroupDetailView: View {
     private var balancesSection: some View {
         Group {
             if viewModel.balances.isEmpty {
-                EmptyStateView(
-                    icon: "scale.3d",
-                    title: "No balances",
-                    message: "Add expenses to see who owes what"
-                )
+                EmptyStateView(icon: "scale.3d")
             } else {
                 List {
                     Section {
@@ -373,9 +365,9 @@ struct BalanceRow: View {
     NavigationStack {
         GroupDetailView(
             group: group,
-            initialExpenses: TestData.testSharedExpenses[group.id] ?? [],
-            initialBalances: TestData.testBalances[group.id] ?? [],
-            initialMembers: TestData.testGroupMembers[group.id] ?? []
+            expenses: TestData.testSharedExpenses[group.id] ?? [],
+            balances: TestData.testBalances[group.id] ?? [],
+            members: TestData.testGroupMembers[group.id] ?? []
         )
     }
 }
@@ -384,9 +376,9 @@ struct BalanceRow: View {
     NavigationStack {
         GroupDetailView(
             group: SplitGroup(id: UUID(), name: "New Trip", createdBy: UUID(), createdAt: ISO8601DateFormatter().string(from: Date())),
-            initialExpenses: [],
-            initialBalances: [],
-            initialMembers: []
+            expenses: [],
+            balances: [],
+            members: []
         )
     }
 }
@@ -398,9 +390,9 @@ struct BalanceRow: View {
     NavigationStack {
         GroupDetailView(
             group: group,
-            initialExpenses: TestData.testSharedExpenses[group.id] ?? [],
-            initialBalances: settledBalances,
-            initialMembers: members
+            expenses: TestData.testSharedExpenses[group.id] ?? [],
+            balances: settledBalances,
+            members: members
         )
     }
 }

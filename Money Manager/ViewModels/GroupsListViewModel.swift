@@ -17,13 +17,13 @@ class GroupsListViewModel: ObservableObject {
     @Published var selectedTab: ViewTab = .groups
     @Published var searchText = ""
     
-    var initialGroups: [SplitGroup]?
-    var initialBalances: [UUID: [UserBalance]] = [:]
-    var initialExpenses: [UUID: [SharedExpense]] = [:]
-    var initialMembers: [UUID: [APIUser]] = [:]
+    var groupsParam: [SplitGroup]?
+    var balancesParam: [UUID: [UserBalance]] = [:]
+    var expensesParam: [UUID: [SharedExpense]] = [:]
+    var membersParam: [UUID: [APIUser]] = [:]
     
     var currentUserId: UUID? {
-        if useTestData || initialGroups != nil {
+        if useTestData || groupsParam != nil {
             return TestData.currentUser.id
         }
         return APIService.shared.currentUser?.id
@@ -64,14 +64,25 @@ class GroupsListViewModel: ObservableObject {
             .map { $0 }
     }
     
-    init(initialGroups: [SplitGroup]? = nil, 
-         initialBalances: [UUID: [UserBalance]] = [:],
-         initialExpenses: [UUID: [SharedExpense]] = [:],
-         initialMembers: [UUID: [APIUser]] = [:]) {
-        self.initialGroups = initialGroups
-        self.initialBalances = initialBalances
-        self.initialExpenses = initialExpenses
-        self.initialMembers = initialMembers
+    var filteredActivity: [(expense: SharedExpense, groupName: String)] {
+        if searchText.isEmpty {
+            return recentActivity
+        }
+        let query = searchText.lowercased()
+        return recentActivity.filter { item in
+            item.groupName.lowercased().contains(query) ||
+            item.expense.description.lowercased().contains(query)
+        }
+    }
+    
+    init(groups: [SplitGroup]? = nil, 
+         balances: [UUID: [UserBalance]] = [:],
+         expenses: [UUID: [SharedExpense]] = [:],
+         members: [UUID: [APIUser]] = [:]) {
+        self.groupsParam = groups
+        self.balancesParam = balances
+        self.expensesParam = expenses
+        self.membersParam = members
     }
     
     func userBalance(for groupId: UUID) -> Double {
@@ -109,11 +120,11 @@ class GroupsListViewModel: ObservableObject {
     func loadGroups() async {
         isLoading = true
         
-        if let initialGroups {
-            groups = initialGroups
-            groupBalances = initialBalances
-            groupExpenses = initialExpenses
-            groupMembers = initialMembers
+        if let groupsParam {
+            groups = groupsParam
+            groupBalances = balancesParam
+            groupExpenses = expensesParam
+            groupMembers = membersParam
         } else if useTestData {
             try? await Task.sleep(for: .milliseconds(400))
             groups = TestData.testGroups

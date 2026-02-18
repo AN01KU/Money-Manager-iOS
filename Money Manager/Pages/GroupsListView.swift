@@ -1,22 +1,22 @@
 import SwiftUI
 
 struct GroupsListView: View {
-    var initialGroups: [SplitGroup]?
-    var initialBalances: [UUID: [UserBalance]] = [:]
-    var initialExpenses: [UUID: [SharedExpense]] = [:]
-    var initialMembers: [UUID: [APIUser]] = [:]
+    var groups: [SplitGroup]?
+    var balances: [UUID: [UserBalance]] = [:]
+    var expenses: [UUID: [SharedExpense]] = [:]
+    var members: [UUID: [APIUser]] = [:]
     
     @StateObject private var viewModel: GroupsListViewModel
     
-    init(initialGroups: [SplitGroup]? = nil,
-         initialBalances: [UUID: [UserBalance]] = [:],
-         initialExpenses: [UUID: [SharedExpense]] = [:],
-         initialMembers: [UUID: [APIUser]] = [:]) {
+    init(groups: [SplitGroup]? = nil,
+         balances: [UUID: [UserBalance]] = [:],
+         expenses: [UUID: [SharedExpense]] = [:],
+         members: [UUID: [APIUser]] = [:]) {
         _viewModel = StateObject(wrappedValue: GroupsListViewModel(
-            initialGroups: initialGroups,
-            initialBalances: initialBalances,
-            initialExpenses: initialExpenses,
-            initialMembers: initialMembers
+            groups: groups,
+            balances: balances,
+            expenses: expenses,
+            members: members
         ))
     }
     
@@ -30,8 +30,6 @@ struct GroupsListView: View {
                     } else if viewModel.groups.isEmpty {
                         EmptyStateView(
                             icon: "person.3.fill",
-                            title: "No groups yet",
-                            message: "Split expenses with friends, roommates, or on trips",
                             actionTitle: "Create Group"
                         ) {
                             viewModel.showCreateGroup = true
@@ -55,11 +53,6 @@ struct GroupsListView: View {
                             .padding(.vertical)
                         }
                         .background(Color(.systemGroupedBackground))
-                        .onChange(of: viewModel.selectedTab) { _, newTab in
-                            if newTab == .groups {
-                                viewModel.searchText = ""
-                            }
-                        }
                     }
                 }
                 
@@ -72,7 +65,7 @@ struct GroupsListView: View {
                 }
             }
             .navigationTitle("Groups")
-            .searchable(text: $viewModel.searchText, prompt: "Search groups")
+            .searchable(text: $viewModel.searchText, prompt: viewModel.selectedTab == .groups ? "Search groups" : "Search activities")
             .navigationDestination(for: SplitGroup.self) { group in
                 GroupDetailView(group: group)
             }
@@ -181,17 +174,17 @@ struct GroupsListView: View {
     
     private var activitiesContent: some View {
         Group {
-            if viewModel.recentActivity.isEmpty {
+            if viewModel.filteredActivity.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "clock.badge.checkmark")
                         .font(.system(size: 40))
                         .foregroundColor(.teal)
                         .padding(.bottom, 8)
                     
-                    Text("No Activities Yet")
+                    Text(viewModel.searchText.isEmpty ? "No Activities Yet" : "No activities found")
                         .font(.headline)
                     
-                    Text("Recent activities will appear here")
+                    Text(viewModel.searchText.isEmpty ? "Recent activities will appear here" : "Try a different search term")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -212,7 +205,7 @@ struct GroupsListView: View {
                 .padding(.horizontal)
             
             VStack(spacing: 0) {
-                ForEach(Array(viewModel.recentActivity.enumerated()), id: \.element.expense.id) { index, item in
+                ForEach(Array(viewModel.filteredActivity.enumerated()), id: \.element.expense.id) { index, item in
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.groupName)
@@ -243,7 +236,7 @@ struct GroupsListView: View {
                     .padding(.vertical, 10)
                     .padding(.horizontal)
                     
-                    if index < viewModel.recentActivity.count - 1 {
+                    if index < viewModel.filteredActivity.count - 1 {
                         Divider()
                             .padding(.leading, 16)
                     }
@@ -402,23 +395,23 @@ struct CreateGroupSheet: View {
 
 #Preview("With Groups") {
     GroupsListView(
-        initialGroups: TestData.testGroups,
-        initialBalances: TestData.testBalances,
-        initialExpenses: TestData.testSharedExpenses,
-        initialMembers: TestData.testGroupMembers
+        groups: TestData.testGroups,
+        balances: TestData.testBalances,
+        expenses: TestData.testSharedExpenses,
+        members: TestData.testGroupMembers
     )
 }
 
 #Preview("Empty State") {
-    GroupsListView(initialGroups: [])
+    GroupsListView(groups: [])
 }
 
 #Preview("Single Group") {
     let group = TestData.testGroups[0]
     GroupsListView(
-        initialGroups: [group],
-        initialBalances: [group.id: TestData.testBalances[group.id] ?? []],
-        initialExpenses: [group.id: TestData.testSharedExpenses[group.id] ?? []],
-        initialMembers: [group.id: TestData.testGroupMembers[group.id] ?? []]
+        groups: [group],
+        balances: [group.id: TestData.testBalances[group.id] ?? []],
+        expenses: [group.id: TestData.testSharedExpenses[group.id] ?? []],
+        members: [group.id: TestData.testGroupMembers[group.id] ?? []]
     )
 }
