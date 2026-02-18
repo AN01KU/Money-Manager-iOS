@@ -6,29 +6,29 @@ struct GroupDetailView: View {
     var initialBalances: [UserBalance]?
     var initialMembers: [APIUser]?
     
-    @State private var selectedSection: GroupSection = .expenses
-    @State private var expenses: [SharedExpense] = []
-    @State private var balances: [UserBalance] = []
-    @State private var members: [APIUser] = []
-    @State private var isLoading = false
-    @State private var showAddExpense = false
-    @State private var showSettlement = false
+    @StateObject private var viewModel: GroupDetailViewModel
     
-    enum GroupSection: String, CaseIterable {
-        case expenses = "Expenses"
-        case balances = "Balances"
-        case members = "Members"
-    }
-    
-    private var groupTotal: Double {
-        expenses.compactMap { Double($0.totalAmount) }.reduce(0, +)
+    init(group: SplitGroup,
+         initialExpenses: [SharedExpense]? = nil,
+         initialBalances: [UserBalance]? = nil,
+         initialMembers: [APIUser]? = nil) {
+        self.group = group
+        self.initialExpenses = initialExpenses
+        self.initialBalances = initialBalances
+        self.initialMembers = initialMembers
+        _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
+            group: group,
+            initialExpenses: initialExpenses,
+            initialBalances: initialBalances,
+            initialMembers: initialMembers
+        ))
     }
     
     var body: some View {
         VStack(spacing: 0) {
             groupHeader
             
-            Picker("Section", selection: $selectedSection) {
+            Picker("Section", selection: $viewModel.selectedSection) {
                 ForEach(GroupSection.allCases, id: \.self) { section in
                     Text(section.rawValue).tag(section)
                 }
@@ -37,13 +37,13 @@ struct GroupDetailView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
             
-            if isLoading {
+            if viewModel.isLoading {
                 Spacer()
                 ProgressView()
                 Spacer()
             } else {
                 ZStack(alignment: .bottomTrailing) {
-                    switch selectedSection {
+                    switch viewModel.selectedSection {
                     case .expenses:
                         expensesSection
                     case .balances:
@@ -52,17 +52,17 @@ struct GroupDetailView: View {
                         membersSection
                     }
                     
-                    if selectedSection == .expenses {
+                    if viewModel.selectedSection == .expenses {
                         FloatingActionButton(icon: "plus") {
-                            showAddExpense = true
+                            viewModel.showAddExpense = true
                         }
                         .padding(.trailing, 24)
                         .padding(.bottom, 24)
                     }
                     
-                    if selectedSection == .balances && hasUnsettledBalances {
+                    if viewModel.selectedSection == .balances && viewModel.hasUnsettledBalances {
                         FloatingActionButton(icon: "arrow.left.arrow.right") {
-                            showSettlement = true
+                            viewModel.showSettlement = true
                         }
                         .padding(.trailing, 24)
                         .padding(.bottom, 24)
@@ -73,28 +73,25 @@ struct GroupDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(group.name)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showAddExpense) {
-            AddExpenseView(mode: .shared(group: group, members: members) { newExpense in
-                expenses.insert(newExpense, at: 0)
-                recalculateBalances()
+        .sheet(isPresented: $viewModel.showAddExpense) {
+            AddExpenseView(mode: .shared(group: group, members: viewModel.members) { newExpense in
+                viewModel.addExpense(newExpense)
             })
         }
-        .sheet(isPresented: $showSettlement) {
-            RecordSettlementView(group: group, members: members, balances: balances) { _ in
-                recalculateBalances()
+        .sheet(isPresented: $viewModel.showSettlement) {
+            RecordSettlementView(group: group, members: viewModel.members, balances: viewModel.balances) { _ in
+                viewModel.recalculateBalances()
             }
         }
         .task {
-            await loadData()
+            await viewModel.loadData()
         }
     }
-    
-    // MARK: - Header
     
     private var groupHeader: some View {
         HStack(spacing: 16) {
             VStack(spacing: 2) {
-                Text(CurrencyFormatter.format(groupTotal))
+                Text(CurrencyFormatter.format(viewModel.groupTotal))
                     .font(.system(.title3, design: .rounded))
                     .fontWeight(.bold)
                 Text("Total")
@@ -107,7 +104,7 @@ struct GroupDetailView: View {
                 .frame(height: 32)
             
             VStack(spacing: 2) {
-                Text("\(expenses.count)")
+                Text("\(viewModel.expenses.count)")
                     .font(.system(.title3, design: .rounded))
                     .fontWeight(.bold)
                 Text("Expenses")
@@ -120,7 +117,7 @@ struct GroupDetailView: View {
                 .frame(height: 32)
             
             VStack(spacing: 2) {
-                Text("\(members.count)")
+                Text("\(viewModel.members.count)")
                     .font(.system(.title3, design: .rounded))
                     .fontWeight(.bold)
                 Text("Members")
@@ -137,30 +134,26 @@ struct GroupDetailView: View {
         .padding(.bottom, 8)
     }
     
-    // MARK: - Expenses
-    
     private var expensesSection: some View {
         Group {
-            if expenses.isEmpty {
+            if viewModel.expenses.isEmpty {
                 EmptyStateView(
                     icon: "receipt",
                     title: "No expenses yet",
                     message: "Tap + to add a shared expense"
                 )
             } else {
-                List(expenses) { expense in
-                    ExpenseRow(expense: expense, members: members)
+                List(viewModel.expenses) { expense in
+                    ExpenseRow(expense: expense, members: viewModel.members)
                 }
                 .listStyle(.insetGrouped)
             }
         }
     }
     
-    // MARK: - Balances
-    
     private var balancesSection: some View {
         Group {
-            if balances.isEmpty {
+            if viewModel.balances.isEmpty {
                 EmptyStateView(
                     icon: "scale.3d",
                     title: "No balances",
@@ -169,15 +162,15 @@ struct GroupDetailView: View {
             } else {
                 List {
                     Section {
-                        ForEach(balances, id: \.userId) { balance in
-                            BalanceRow(balance: balance, members: members)
+                        ForEach(viewModel.balances, id: \.userId) { balance in
+                            BalanceRow(balance: balance, members: viewModel.members)
                         }
                     }
                     
-                    if hasUnsettledBalances {
+                    if viewModel.hasUnsettledBalances {
                         Section {
                             Button {
-                                showSettlement = true
+                                viewModel.showSettlement = true
                             } label: {
                                 HStack {
                                     Image(systemName: "arrow.left.arrow.right")
@@ -193,70 +186,15 @@ struct GroupDetailView: View {
         }
     }
     
-    private var hasUnsettledBalances: Bool {
-        balances.contains { (Double($0.amount) ?? 0) != 0 }
-    }
-    
-    // MARK: - Members
-    
     private var membersSection: some View {
         List {
             Section {
-                ForEach(members) { member in
+                ForEach(viewModel.members) { member in
                     MemberRow(member: member, isAdmin: member.id == group.createdBy)
                 }
             }
         }
         .listStyle(.insetGrouped)
-    }
-    
-    // MARK: - Data Loading
-    
-    private func loadData() async {
-        isLoading = true
-        
-        if let initialExpenses, let initialBalances, let initialMembers {
-            expenses = initialExpenses
-            balances = initialBalances
-            members = initialMembers
-        } else if useTestData {
-            try? await Task.sleep(for: .milliseconds(300))
-            expenses = TestData.testSharedExpenses[group.id] ?? []
-            balances = TestData.testBalances[group.id] ?? []
-            members = TestData.testGroupMembers[group.id] ?? []
-        } else {
-            do {
-                async let fetchedExpenses = APIService.shared.getGroupExpenses(groupId: group.id)
-                async let fetchedBalances = APIService.shared.getBalances(groupId: group.id)
-                expenses = try await fetchedExpenses
-                balances = try await fetchedBalances
-            } catch {
-                // Handle error
-            }
-        }
-        
-        isLoading = false
-    }
-    
-    private func recalculateBalances() {
-        var balanceMap: [UUID: Double] = [:]
-        for member in members {
-            balanceMap[member.id] = 0
-        }
-        for expense in expenses {
-            let paidBy = expense.paidBy
-            let total = Double(expense.totalAmount) ?? 0
-            balanceMap[paidBy, default: 0] += total
-            
-            if let splits = expense.splits {
-                for split in splits {
-                    let amt = Double(split.amount) ?? 0
-                    balanceMap[split.userId, default: 0] -= amt
-                }
-            }
-        }
-        balances = balanceMap.map { UserBalance(userId: $0.key, amount: String(format: "%.2f", $0.value)) }
-            .sorted { abs(Double($0.amount) ?? 0) > abs(Double($1.amount) ?? 0) }
     }
 }
 

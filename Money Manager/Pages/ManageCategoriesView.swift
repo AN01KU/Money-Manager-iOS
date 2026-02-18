@@ -5,15 +5,7 @@ struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
-    @State private var showAddCategory = false
-    
-    private var visibleCategories: [CustomCategory] {
-        customCategories.filter { !$0.isHidden }
-    }
-    
-    private var hiddenCategories: [CustomCategory] {
-        customCategories.filter { $0.isHidden }
-    }
+    @StateObject private var viewModel = ManageCategoriesViewModel()
     
     var body: some View {
         List {
@@ -44,9 +36,9 @@ struct ManageCategoriesView: View {
                 Text("Default categories cannot be edited or removed.")
             }
             
-            if !visibleCategories.isEmpty {
+            if !viewModel.visibleCategories.isEmpty {
                 Section("Your Categories") {
-                    ForEach(visibleCategories) { category in
+                    ForEach(viewModel.visibleCategories) { category in
                         HStack(spacing: 12) {
                             Image(systemName: category.icon)
                                 .foregroundColor(Color(hex: category.color))
@@ -58,18 +50,15 @@ struct ManageCategoriesView: View {
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            let category = visibleCategories[index]
-                            category.isHidden = true
-                            category.updatedAt = Date()
+                            viewModel.hideCategory(at: index)
                         }
-                        try? modelContext.save()
                     }
                 }
             }
             
-            if !hiddenCategories.isEmpty {
+            if !viewModel.hiddenCategories.isEmpty {
                 Section("Hidden Categories") {
-                    ForEach(hiddenCategories) { category in
+                    ForEach(viewModel.hiddenCategories) { category in
                         HStack(spacing: 12) {
                             Image(systemName: category.icon)
                                 .foregroundColor(Color(hex: category.color).opacity(0.5))
@@ -82,9 +71,7 @@ struct ManageCategoriesView: View {
                             Spacer()
                             
                             Button("Restore") {
-                                category.isHidden = false
-                                category.updatedAt = Date()
-                                try? modelContext.save()
+                                viewModel.restoreCategory(category)
                             }
                             .font(.caption)
                             .foregroundColor(.teal)
@@ -97,15 +84,18 @@ struct ManageCategoriesView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    showAddCategory = true
+                    viewModel.showAddCategory = true
                 } label: {
                     Image(systemName: "plus")
                         .foregroundColor(.teal)
                 }
             }
         }
-        .sheet(isPresented: $showAddCategory) {
+        .sheet(isPresented: $viewModel.showAddCategory) {
             AddCategorySheet()
+        }
+        .onAppear {
+            viewModel.configure(customCategories: customCategories, modelContext: modelContext)
         }
     }
 }
@@ -114,30 +104,7 @@ struct AddCategorySheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    @State private var name = ""
-    @State private var selectedIcon = "tag.circle.fill"
-    @State private var selectedColor = "#4ECDC4"
-    @State private var isSaving = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    
-    private let iconOptions = [
-        "tag.circle.fill", "cart.circle.fill", "heart.circle.fill",
-        "star.circle.fill", "flame.circle.fill", "drop.circle.fill",
-        "leaf.circle.fill", "pawprint.circle.fill", "cup.and.saucer.fill",
-        "tshirt.fill", "dumbbell.fill", "paintbrush.circle.fill",
-        "music.note", "film.circle.fill", "bicycle.circle.fill",
-        "bus.fill", "fuelpump.circle.fill", "wrench.and.screwdriver.fill",
-        "camera.circle.fill", "phone.circle.fill", "wifi.circle.fill",
-        "banknote.fill", "giftcard.fill", "stroller.fill"
-    ]
-    
-    private let colorOptions = [
-        "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4",
-        "#FFEAA7", "#DDA15E", "#BC6C25", "#8E44AD",
-        "#3498DB", "#E74C3C", "#F39C12", "#E91E63",
-        "#2ECC71", "#1ABC9C", "#9B59B6", "#34495E"
-    ]
+    @StateObject private var viewModel = AddCategoryViewModel()
     
     var body: some View {
         NavigationStack {
@@ -148,7 +115,7 @@ struct AddCategorySheet: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
-                        TextField("e.g., Subscriptions, Pets", text: $name)
+                        TextField("e.g., Subscriptions, Pets", text: $viewModel.name)
                             .textInputAutocapitalization(.words)
                     }
                     .padding(.vertical, 4)
@@ -156,15 +123,15 @@ struct AddCategorySheet: View {
                 
                 Section("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 16) {
-                        ForEach(iconOptions, id: \.self) { icon in
+                        ForEach(viewModel.iconOptions, id: \.self) { icon in
                             Button {
-                                selectedIcon = icon
+                                viewModel.selectedIcon = icon
                             } label: {
                                 Image(systemName: icon)
                                     .font(.title2)
-                                    .foregroundColor(selectedIcon == icon ? Color(hex: selectedColor) : .secondary)
+                                    .foregroundColor(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
                                     .frame(width: 44, height: 44)
-                                    .background(selectedIcon == icon ? Color(hex: selectedColor).opacity(0.12) : Color.clear)
+                                    .background(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor).opacity(0.12) : Color.clear)
                                     .cornerRadius(10)
                             }
                             .buttonStyle(.plain)
@@ -175,16 +142,16 @@ struct AddCategorySheet: View {
                 
                 Section("Color") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 12) {
-                        ForEach(colorOptions, id: \.self) { color in
+                        ForEach(viewModel.colorOptions, id: \.self) { color in
                             Button {
-                                selectedColor = color
+                                viewModel.selectedColor = color
                             } label: {
                                 Circle()
                                     .fill(Color(hex: color))
                                     .frame(width: 32, height: 32)
                                     .overlay(
                                         Circle()
-                                            .stroke(Color.primary, lineWidth: selectedColor == color ? 2.5 : 0)
+                                            .stroke(Color.primary, lineWidth: viewModel.selectedColor == color ? 2.5 : 0)
                                             .padding(-3)
                                     )
                             }
@@ -196,14 +163,14 @@ struct AddCategorySheet: View {
                 
                 Section("Preview") {
                     HStack(spacing: 12) {
-                        Image(systemName: selectedIcon)
+                        Image(systemName: viewModel.selectedIcon)
                             .font(.title2)
-                            .foregroundColor(Color(hex: selectedColor))
+                            .foregroundColor(Color(hex: viewModel.selectedColor))
                             .frame(width: 36)
                         
-                        Text(name.isEmpty ? "Category Name" : name)
+                        Text(viewModel.name.isEmpty ? "Category Name" : viewModel.name)
                             .font(.body)
-                            .foregroundColor(name.isEmpty ? .secondary : .primary)
+                            .foregroundColor(viewModel.name.isEmpty ? .secondary : .primary)
                     }
                     .padding(.vertical, 4)
                 }
@@ -215,55 +182,28 @@ struct AddCategorySheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if isSaving {
+                    if viewModel.isSaving {
                         ProgressView()
                     } else {
                         Button("Add") {
-                            saveCategory()
+                            Task {
+                                if await viewModel.save() {
+                                    dismiss()
+                                }
+                            }
                         }
                         .fontWeight(.semibold)
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(viewModel.name.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
             }
-            .alert("Error", isPresented: $showError) {
+            .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text(errorMessage)
+                Text(viewModel.errorMessage)
             }
-        }
-    }
-    
-    private func saveCategory() {
-        isSaving = true
-        let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
-        Task {
-            do {
-                // Save to backend if not using dummy data
-                if !MockData.useDummyData {
-                    _ = try await APIService.shared.createCategory(
-                        name: trimmedName,
-                        color: selectedColor,
-                        icon: selectedIcon
-                    )
-                }
-                
-                // Also save to local SwiftData for offline access
-                let category = CustomCategory(
-                    name: trimmedName,
-                    icon: selectedIcon,
-                    color: selectedColor
-                )
-                modelContext.insert(category)
-                try modelContext.save()
-                
-                isSaving = false
-                dismiss()
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
-                isSaving = false
+            .onAppear {
+                viewModel.configure(modelContext: modelContext)
             }
         }
     }

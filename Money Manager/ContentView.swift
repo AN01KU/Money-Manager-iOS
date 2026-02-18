@@ -55,6 +55,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 profileSection
+                syncSection
                 financeSection
                 preferencesSection
                 accountSection
@@ -101,6 +102,57 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 4)
             }
+        }
+    }
+    
+    // MARK: - Sync Status
+    
+    @ObservedObject private var syncService = SyncService.shared
+    
+    private var syncSection: some View {
+        Section("Sync") {
+            HStack {
+                Image(systemName: syncService.isConnected ? "wifi" : "wifi.slash")
+                    .foregroundColor(syncService.isConnected ? .green : .red)
+                Text(syncService.isConnected ? "Online" : "Offline")
+                    .foregroundColor(syncService.isConnected ? .primary : .secondary)
+                Spacer()
+            }
+            
+            if syncService.pendingCount > 0 {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundColor(.orange)
+                    Text("\(syncService.pendingCount) pending")
+                        .foregroundColor(.orange)
+                    Spacer()
+                }
+            }
+            
+            if let lastSync = syncService.lastSyncDate {
+                HStack {
+                    Text("Last synced")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(lastSync, style: .relative)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Button {
+                syncService.triggerManualSync()
+            } label: {
+                HStack {
+                    if syncService.isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    Text(syncService.isSyncing ? "Syncing..." : "Sync Now")
+                }
+            }
+            .disabled(!syncService.isConnected || syncService.isSyncing)
         }
     }
     

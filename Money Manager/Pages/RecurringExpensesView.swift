@@ -1,10 +1,3 @@
-//
-//  RecurringExpensesView.swift
-//  Money Manager
-//
-//  Created by Ankush Ganesh on 15/02/26.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -12,15 +5,11 @@ struct RecurringExpensesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecurringExpense.name) private var recurringExpenses: [RecurringExpense]
     
-    @State private var showAddSheet = false
-    
-    private var activeExpenses: [RecurringExpense] {
-        recurringExpenses.filter { $0.isActive }
-    }
+    @StateObject private var viewModel = RecurringExpensesViewModel()
     
     var body: some View {
         Group {
-            if activeExpenses.isEmpty {
+            if viewModel.activeExpenses.isEmpty {
                 EmptyStateView(
                     icon: "arrow.clockwise.circle.fill",
                     title: "No recurring expenses",
@@ -28,13 +17,12 @@ struct RecurringExpensesView: View {
                 )
             } else {
                 List {
-                    ForEach(activeExpenses) { expense in
+                    ForEach(viewModel.activeExpenses) { expense in
                         RecurringExpenseRow(expense: expense)
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            activeExpenses[index].isActive = false
-                            activeExpenses[index].updatedAt = Date()
+                            viewModel.deactivateExpense(at: index)
                         }
                     }
                 }
@@ -45,14 +33,17 @@ struct RecurringExpensesView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    showAddSheet = true
+                    viewModel.showAddSheet = true
                 }) {
                     Image(systemName: "plus")
                 }
             }
         }
-        .sheet(isPresented: $showAddSheet) {
+        .sheet(isPresented: $viewModel.showAddSheet) {
             AddRecurringExpenseSheet()
+        }
+        .onAppear {
+            viewModel.configure(recurringExpenses: recurringExpenses, modelContext: modelContext)
         }
     }
 }
@@ -125,21 +116,7 @@ struct AddRecurringExpenseSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    @State private var name: String = ""
-    @State private var amount: String = ""
-    @State private var selectedCategory: String = ""
-    @State private var frequency: String = "monthly"
-    @State private var startDate: Date = Date()
-    @State private var hasEndDate: Bool = false
-    @State private var endDate: Date = Date()
-    @State private var dayOfMonth: Int = 1
-    @State private var notes: String = ""
-    
-    @State private var showCategoryPicker = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    
-    private let frequencies = ["daily", "weekly", "monthly", "yearly"]
+    @StateObject private var viewModel = AddRecurringExpenseViewModel()
     
     var body: some View {
         NavigationStack {
@@ -150,7 +127,7 @@ struct AddRecurringExpenseSheet: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
-                        TextField("e.g., Netflix, Rent", text: $name)
+                        TextField("e.g., Netflix, Rent", text: $viewModel.name)
                             .textInputAutocapitalization(.sentences)
                     }
                     .padding(.vertical, 8)
@@ -160,20 +137,20 @@ struct AddRecurringExpenseSheet: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
-                        TextField("0.00", text: $amount)
+                        TextField("0.00", text: $viewModel.amount)
                             .keyboardType(.decimalPad)
                             .font(.title2)
                             .fontWeight(.semibold)
                         
                         HStack(spacing: 12) {
                             QuickAmountButton(amount: 100) {
-                                amount = "100"
+                                viewModel.amount = "100"
                             }
                             QuickAmountButton(amount: 500) {
-                                amount = "500"
+                                viewModel.amount = "500"
                             }
                             QuickAmountButton(amount: 1000) {
-                                amount = "1000"
+                                viewModel.amount = "1000"
                             }
                         }
                     }
@@ -185,16 +162,16 @@ struct AddRecurringExpenseSheet: View {
                             .foregroundColor(.secondary)
                         
                         Button(action: {
-                            showCategoryPicker = true
+                            viewModel.showCategoryPicker = true
                         }) {
                             HStack {
-                                if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == selectedCategory }) {
+                                if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
                                     Image(systemName: category.icon)
                                         .foregroundColor(category.color)
-                                    Text(selectedCategory)
+                                    Text(viewModel.selectedCategory)
                                 } else {
-                                    Text(selectedCategory.isEmpty ? "Select Category" : selectedCategory)
-                                        .foregroundColor(selectedCategory.isEmpty ? .secondary : .primary)
+                                    Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)
+                                        .foregroundColor(viewModel.selectedCategory.isEmpty ? .secondary : .primary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")
@@ -214,8 +191,8 @@ struct AddRecurringExpenseSheet: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
-                        Picker("Frequency", selection: $frequency) {
-                            ForEach(frequencies, id: \.self) { freq in
+                        Picker("Frequency", selection: $viewModel.frequency) {
+                            ForEach(viewModel.frequencies, id: \.self) { freq in
                                 Text(freq.capitalized).tag(freq)
                             }
                         }
@@ -223,27 +200,27 @@ struct AddRecurringExpenseSheet: View {
                     }
                     .padding(.vertical, 8)
                     
-                    if frequency == "monthly" {
-                        Picker("Day of Month", selection: $dayOfMonth) {
+                    if viewModel.frequency == "monthly" {
+                        Picker("Day of Month", selection: $viewModel.dayOfMonth) {
                             ForEach(1...28, id: \.self) { day in
                                 Text("\(day)").tag(day)
                             }
                         }
                     }
                     
-                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                    DatePicker("Start Date", selection: $viewModel.startDate, displayedComponents: .date)
                         .datePickerStyle(.compact)
                     
-                    Toggle("Set End Date", isOn: $hasEndDate)
+                    Toggle("Set End Date", isOn: $viewModel.hasEndDate)
                     
-                    if hasEndDate {
-                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    if viewModel.hasEndDate {
+                        DatePicker("End Date", selection: $viewModel.endDate, in: viewModel.startDate..., displayedComponents: .date)
                             .datePickerStyle(.compact)
                     }
                 }
                 
                 Section("Details") {
-                    TextField("Notes (optional)", text: $notes, axis: .vertical)
+                    TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                         .lineLimit(3...6)
                         .textInputAutocapitalization(.sentences)
                 }
@@ -259,68 +236,25 @@ struct AddRecurringExpenseSheet: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        saveRecurringExpense()
+                        if viewModel.save() {
+                            dismiss()
+                        }
                     }
                     .fontWeight(.semibold)
-                    .disabled(!isValid)
+                    .disabled(!viewModel.isValid)
                 }
             }
-            .sheet(isPresented: $showCategoryPicker) {
-                CategoryPickerView(selectedCategory: $selectedCategory)
+            .sheet(isPresented: $viewModel.showCategoryPicker) {
+                CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
-            .alert("Error", isPresented: $showError) {
+            .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text(errorMessage)
+                Text(viewModel.errorMessage)
             }
-        }
-    }
-    
-    private var isValid: Bool {
-        guard let amountValue = Double(amount), amountValue > 0 else {
-            return false
-        }
-        return !name.trimmingCharacters(in: .whitespaces).isEmpty && !selectedCategory.isEmpty
-    }
-    
-    private func saveRecurringExpense() {
-        guard let amountValue = Double(amount), amountValue > 0 else {
-            errorMessage = "Amount must be greater than 0"
-            showError = true
-            return
-        }
-        
-        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
-            errorMessage = "Please enter a name"
-            showError = true
-            return
-        }
-        
-        guard !selectedCategory.isEmpty else {
-            errorMessage = "Please select a category"
-            showError = true
-            return
-        }
-        
-        let recurring = RecurringExpense(
-            name: name.trimmingCharacters(in: .whitespaces),
-            amount: amountValue,
-            category: selectedCategory,
-            frequency: frequency,
-            startDate: startDate,
-            endDate: hasEndDate ? endDate : nil,
-            dayOfMonth: frequency == "monthly" ? dayOfMonth : nil
-        )
-        recurring.notes = notes.isEmpty ? nil : notes
-        
-        modelContext.insert(recurring)
-        
-        do {
-            try modelContext.save()
-            dismiss()
-        } catch {
-            errorMessage = "Failed to save: \(error.localizedDescription)"
-            showError = true
+            .onAppear {
+                viewModel.configure(modelContext: modelContext)
+            }
         }
     }
 }

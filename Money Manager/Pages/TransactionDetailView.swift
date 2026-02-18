@@ -1,10 +1,3 @@
-//
-//  TransactionDetailView.swift
-//  Money Manager
-//
-//  Created by Ankush Ganesh on 13/01/26.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -13,24 +6,18 @@ struct TransactionDetailView: View {
     @Environment(\.modelContext) private var modelContext
     
     let expense: Expense
-    @State private var showEditSheet = false
-    @State private var showDeleteAlert = false
-    @State private var selectedGroup: SplitGroup?
+    @StateObject private var viewModel: TransactionDetailViewModel
     
-    var category: PredefinedCategory? {
-        PredefinedCategory.allCases.first { $0.rawValue == expense.category }
-    }
-    
-    var isGroupExpense: Bool {
-        expense.groupId != nil && expense.groupName != nil
+    init(expense: Expense) {
+        self.expense = expense
+        _viewModel = StateObject(wrappedValue: TransactionDetailViewModel(expense: expense))
     }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Group Badge (if applicable)
-                    if isGroupExpense {
+                    if viewModel.isGroupExpense {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "person.2.fill")
@@ -42,7 +29,7 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            NavigationLink(value: getGroupForNavigation()) { 
+                            NavigationLink(value: viewModel.getGroupForNavigation()) { 
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(expense.groupName ?? "Unknown Group")
@@ -71,33 +58,31 @@ struct TransactionDetailView: View {
                         .cornerRadius(16)
                     }
                     
-                    // Header
                     VStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill((category?.color ?? Color.gray).opacity(0.2))
+                                .fill((viewModel.category?.color ?? Color.gray).opacity(0.2))
                                 .frame(width: 80, height: 80)
                             
-                            Image(systemName: category?.icon ?? "ellipsis.circle.fill")
+                            Image(systemName: viewModel.category?.icon ?? "ellipsis.circle.fill")
                                 .font(.system(size: 40))
-                                .foregroundColor(category?.color ?? Color.gray)
+                                .foregroundColor(viewModel.category?.color ?? Color.gray)
                         }
                         
                         Text(expense.category)
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        Text("₹\(formatAmount(expense.amount))")
+                        Text("₹\(viewModel.formatAmount(expense.amount))")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.red)
                         
-                        Text(formatDateAndTime(expense.date, time: expense.time))
+                        Text(viewModel.formatDateAndTime(expense.date, time: expense.time))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     .padding(.top)
                     
-                    // Details Section
                     VStack(alignment: .leading, spacing: 16) {
                         if let description = expense.expenseDescription, !description.isEmpty {
                             DetailRow(label: "Description", value: description)
@@ -109,10 +94,10 @@ struct TransactionDetailView: View {
                         
                         DetailRow(label: "Category", value: expense.category)
                         
-                        DetailRow(label: "Created", value: formatFullDate(expense.createdAt))
+                        DetailRow(label: "Created", value: viewModel.formatFullDate(expense.createdAt))
                         
                         if expense.updatedAt != expense.createdAt {
-                            DetailRow(label: "Last Modified", value: formatFullDate(expense.updatedAt))
+                            DetailRow(label: "Last Modified", value: viewModel.formatFullDate(expense.updatedAt))
                         }
                         
                         if expense.isRecurring {
@@ -132,10 +117,9 @@ struct TransactionDetailView: View {
                     .background(Color(.systemGray6))
                     .cornerRadius(16)
                     
-                    // Actions
                     HStack(spacing: 16) {
                         Button(action: {
-                            showEditSheet = true
+                            viewModel.showEditSheet = true
                         }) {
                             Text("Edit")
                                 .fontWeight(.semibold)
@@ -147,7 +131,7 @@ struct TransactionDetailView: View {
                         }
                         
                         Button(action: {
-                            showDeleteAlert = true
+                            viewModel.showDeleteAlert = true
                         }) {
                             Text("Delete")
                                 .fontWeight(.semibold)
@@ -174,67 +158,21 @@ struct TransactionDetailView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showEditSheet) {
+            .sheet(isPresented: $viewModel.showEditSheet) {
                 AddExpenseView(expenseToEdit: expense)
             }
-            .alert("Delete Expense?", isPresented: $showDeleteAlert) {
+            .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    deleteExpense()
+                    viewModel.deleteExpense { dismiss() }
                 }
             } message: {
                 Text("This action cannot be undone.")
             }
+            .onAppear {
+                viewModel.configure(modelContext: modelContext)
+            }
         }
-    }
-    
-    private func deleteExpense() {
-        expense.isDeleted = true
-        expense.updatedAt = Date()
-        
-        do {
-            try modelContext.save()
-            dismiss()
-        } catch {
-            print("Error deleting expense: \(error)")
-        }
-    }
-    
-    private func getGroupForNavigation() -> SplitGroup? {
-        guard let groupId = expense.groupId, let groupName = expense.groupName else { return nil }
-        return SplitGroup(
-            id: groupId,
-            name: groupName,
-            createdBy: UUID(),
-            createdAt: ISO8601DateFormatter().string(from: Date())
-        )
-    }
-    
-    private func formatAmount(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
-    }
-    
-    private func formatDateAndTime(_ date: Date, time: Date?) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        
-        if let time = time {
-            dateFormatter.timeStyle = .short
-            return dateFormatter.string(from: date)
-        } else {
-            dateFormatter.timeStyle = .none
-            return dateFormatter.string(from: date)
-        }
-    }
-    
-    private func formatFullDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 

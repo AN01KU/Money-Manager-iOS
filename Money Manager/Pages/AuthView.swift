@@ -1,15 +1,7 @@
 import SwiftUI
 
 struct AuthView: View {
-    @State private var isLoginMode = true
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var isLoading = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    
-    @ObservedObject private var apiService = APIService.shared
+    @StateObject private var viewModel = AuthViewModel()
     
     var body: some View {
         NavigationStack {
@@ -24,13 +16,13 @@ struct AuthView: View {
                             .font(.largeTitle)
                             .fontWeight(.bold)
                         
-                        Text(isLoginMode ? "Welcome back" : "Create your account")
+                        Text(viewModel.isLoginMode ? "Welcome back" : "Create your account")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 40)
                     
-                    Picker("Mode", selection: $isLoginMode) {
+                    Picker("Mode", selection: $viewModel.isLoginMode) {
                         Text("Login").tag(true)
                         Text("Sign Up").tag(false)
                     }
@@ -43,7 +35,7 @@ struct AuthView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
-                            TextField("you@example.com", text: $email)
+                            TextField("you@example.com", text: $viewModel.email)
                                 .textContentType(.emailAddress)
                                 .keyboardType(.emailAddress)
                                 .autocorrectionDisabled()
@@ -58,20 +50,20 @@ struct AuthView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
-                            SecureField("Password", text: $password)
-                                .textContentType(isLoginMode ? .password : .newPassword)
+                            SecureField("Password", text: $viewModel.password)
+                                .textContentType(viewModel.isLoginMode ? .password : .newPassword)
                                 .padding()
                                 .background(Color(.systemGray6))
                                 .cornerRadius(10)
                         }
                         
-                        if !isLoginMode {
+                        if !viewModel.isLoginMode {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Confirm Password")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 
-                                SecureField("Confirm Password", text: $confirmPassword)
+                                SecureField("Confirm Password", text: $viewModel.confirmPassword)
                                     .textContentType(.newPassword)
                                     .padding()
                                     .background(Color(.systemGray6))
@@ -81,71 +73,40 @@ struct AuthView: View {
                     }
                     .padding(.horizontal)
                     
-                    Button(action: submit) {
+                    Button(action: {
+                        Task {
+                            _ = await viewModel.submit()
+                        }
+                    }) {
                         Group {
-                            if isLoading {
+                            if viewModel.isLoading {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Text(isLoginMode ? "Login" : "Sign Up")
+                                Text(viewModel.isLoginMode ? "Login" : "Sign Up")
                                     .fontWeight(.semibold)
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(isFormValid ? Color.teal : Color.teal.opacity(0.4))
+                        .background(viewModel.isFormValid ? Color.teal : Color.teal.opacity(0.4))
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
-                    .disabled(!isFormValid || isLoading)
+                    .disabled(!viewModel.isFormValid || viewModel.isLoading)
                     .padding(.horizontal)
                     
                     Spacer()
                 }
             }
-            .alert("Error", isPresented: $showError) {
+            .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text(errorMessage)
+                Text(viewModel.errorMessage)
             }
-            .onChange(of: isLoginMode) {
-                confirmPassword = ""
+            .onChange(of: viewModel.isLoginMode) {
+                viewModel.confirmPassword = ""
             }
-        }
-    }
-    
-    private var isFormValid: Bool {
-        let emailValid = !email.trimmingCharacters(in: .whitespaces).isEmpty && email.contains("@")
-        let passwordValid = password.count >= 6
-        
-        if isLoginMode {
-            return emailValid && passwordValid
-        } else {
-            return emailValid && passwordValid && password == confirmPassword
-        }
-    }
-    
-    private func submit() {
-        isLoading = true
-        
-        Task {
-            if useTestData {
-                try? await Task.sleep(for: .milliseconds(500))
-                apiService.currentUser = TestData.currentUser
-                apiService.isAuthenticated = true
-            } else {
-                do {
-                    if isLoginMode {
-                        _ = try await apiService.login(email: email.trimmingCharacters(in: .whitespaces), password: password)
-                    } else {
-                        _ = try await apiService.signup(email: email.trimmingCharacters(in: .whitespaces), password: password)
-                    }
-                } catch {
-                    errorMessage = error.localizedDescription
-                    showError = true
-                }
-            }
-            isLoading = false
         }
     }
 }

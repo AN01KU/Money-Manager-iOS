@@ -8,76 +8,7 @@ struct Overview: View {
     
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     
-    @State private var selectedView: ViewType = .daily
-    @State private var selectedDate: Date = Date()
-    @State private var filterMode: FilterMode = .monthly
-    @State private var showAddExpense = false
-    @State private var showBudgetSheet = false
-    @State private var searchText = ""
-    @State private var scrollOffset: CGFloat = 0
-    @State private var showSearchBar = false
-    @State private var testDataLoaded = false
-    
-    private var filteredExpenses: [Expense] {
-        let calendar = Calendar.current
-        
-        let dateFiltered: [Expense]
-        if filterMode == .daily {
-            let startOfDay = calendar.startOfDay(for: selectedDate)
-            let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay)!
-            
-            dateFiltered = allExpenses.filter { expense in
-                !expense.isDeleted &&
-                expense.date >= startOfDay &&
-                expense.date <= endOfDay
-            }
-        } else {
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate))!
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
-            
-            dateFiltered = allExpenses.filter { expense in
-                !expense.isDeleted &&
-                expense.date >= startOfMonth &&
-                expense.date <= endOfMonth
-            }
-        }
-        
-        guard !searchText.isEmpty else { return dateFiltered }
-        return dateFiltered.filter { expense in
-            expense.category.localizedCaseInsensitiveContains(searchText) ||
-            (expense.expenseDescription?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-            (expense.notes?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-            (expense.groupName?.localizedCaseInsensitiveContains(searchText) ?? false)
-        }
-    }
-    
-    private var currentBudget: MonthlyBudget? {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        return budgets.first { $0.year == year && $0.month == month }
-    }
-    
-    private var totalSpent: Double {
-        filteredExpenses.reduce(0) { $0 + $1.amount }
-    }
-    
-    private var categorySpending: [CategorySpending] {
-        let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
-        let total = totalSpent
-        
-        guard total > 0 else { return [] }
-        
-        return grouped.map { category, expenses in
-            let amount = expenses.reduce(0) { $0 + $1.amount }
-            let percentage = Int((amount / total) * 100)
-            return CategorySpending(
-                category: Category.fromString(category),
-                amount: amount,
-                percentage: percentage
-            )
-        }.sorted { $0.amount > $1.amount }
-    }
+    @StateObject private var viewModel = OverviewViewModel()
     
     var body: some View {
         NavigationStack {
@@ -90,39 +21,39 @@ struct Overview: View {
                         }
                         .frame(height: 0)
                         
-                        DateFilterSelector(selectedDate: $selectedDate, filterMode: $filterMode)
+                        DateFilterSelector(selectedDate: $viewModel.selectedDate, filterMode: $viewModel.filterMode)
                             .padding(.horizontal)
                         
-                        if let budget = currentBudget {
+                        if let budget = viewModel.currentBudget {
                             BudgetOverviewCard(
                                 budget: budget,
-                                spent: totalSpent
+                                spent: viewModel.totalSpent
                             )
                             .padding(.horizontal)
                         } else {
-                            NoBudgetCard(selectedMonth: selectedDate) {
-                                showBudgetSheet = true
+                            NoBudgetCard(selectedMonth: viewModel.selectedDate) {
+                                viewModel.showBudgetSheet = true
                             }
                             .padding(.horizontal)
                         }
                         
-                        ViewTypeSelector(selectedView: $selectedView)
+                        ViewTypeSelector(selectedView: $viewModel.selectedView)
                             .padding(.horizontal)
                         
-                        if selectedView == .categories {
-                            if !categorySpending.isEmpty {
-                                CategoryChart(categorySpending: categorySpending)
+                        if viewModel.selectedView == .categories {
+                            if !viewModel.categorySpending.isEmpty {
+                                CategoryChart(categorySpending: viewModel.categorySpending)
                                     .padding(.horizontal)
                             } else {
                                 EmptyStateView()
                                     .padding(.horizontal)
                             }
                         } else {
-                            if filteredExpenses.isEmpty {
+                            if viewModel.filteredExpenses.isEmpty {
                                 EmptyStateView()
                                     .padding(.horizontal)
                             } else {
-                                TransactionList(expenses: filteredExpenses)
+                                TransactionList(expenses: viewModel.filteredExpenses)
                                     .padding(.horizontal)
                             }
                         }
@@ -131,13 +62,11 @@ struct Overview: View {
                 }
                 .coordinateSpace(name: "scroll")
                 .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showSearchBar = value < -30
-                    }
+                    viewModel.updateScrollOffset(value)
                 }
                 
                 FloatingActionButton(icon: "plus") {
-                    showAddExpense = true
+                    viewModel.showAddExpense = true
                 }
                 .padding(.trailing, 24)
                 .padding(.bottom, 24)
@@ -145,17 +74,17 @@ struct Overview: View {
             .navigationTitle("Overview")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if showSearchBar {
+                    if viewModel.showSearchBar {
                         HStack {
                             Image(systemName: "magnifyingglass")
                                 .foregroundColor(.secondary)
                             
-                            TextField("Search expenses", text: $searchText)
+                            TextField("Search expenses", text: $viewModel.searchText)
                                 .textInputAutocapitalization(.never)
                             
-                            if !searchText.isEmpty {
+                            if !viewModel.searchText.isEmpty {
                                 Button {
-                                    searchText = ""
+                                    viewModel.searchText = ""
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.secondary)
@@ -171,53 +100,28 @@ struct Overview: View {
                     }
                 }
             }
-            .sheet(isPresented: $showAddExpense) {
+            .sheet(isPresented: $viewModel.showAddExpense) {
                 AddExpenseView()
             }
-            .sheet(isPresented: $showBudgetSheet) {
-                BudgetSheet(selectedMonth: selectedDate)
+            .sheet(isPresented: $viewModel.showBudgetSheet) {
+                BudgetSheet(selectedMonth: viewModel.selectedDate)
             }
-            .task(id: selectedDate) {
-                ensureBudgetExists()
+            .task(id: viewModel.selectedDate) {
+                viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
             }
             .task {
-                loadTestDataIfNeeded()
+                viewModel.loadTestDataIfNeeded(modelContext: modelContext)
+            }
+            .onAppear {
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            }
+            .onChange(of: allExpenses) { _, _ in
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            }
+            .onChange(of: budgets) { _, _ in
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
             }
         }
-    }
-    
-    private func loadTestDataIfNeeded() {
-        guard !testDataLoaded, useTestData else { return }
-        testDataLoaded = true
-        
-        try? modelContext.delete(model: Expense.self)
-        try? modelContext.delete(model: MonthlyBudget.self)
-        try? modelContext.delete(model: RecurringExpense.self)
-        
-        for expense in TestData.generatePersonalExpenses() {
-            modelContext.insert(expense)
-        }
-        for expense in TestData.getGroupExpensesForOverview() {
-            modelContext.insert(expense)
-        }
-        for budget in TestData.generateBudgets() {
-            modelContext.insert(budget)
-        }
-        for recurring in TestData.generateRecurringExpenses() {
-            modelContext.insert(recurring)
-        }
-        
-        try? modelContext.save()
-    }
-    
-    private func ensureBudgetExists() {
-        guard currentBudget == nil, defaultBudgetLimit > 0 else { return }
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        let budget = MonthlyBudget(year: year, month: month, limit: defaultBudgetLimit)
-        modelContext.insert(budget)
-        try? modelContext.save()
     }
 }
 

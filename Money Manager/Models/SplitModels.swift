@@ -67,7 +67,7 @@ struct HealthResponse: Decodable {
     let database: String
 }
 
-struct CreateSharedExpenseRequest: Encodable {
+struct CreateSharedExpenseRequest: Codable {
     let groupId: UUID
     let description: String
     let category: String
@@ -107,7 +107,7 @@ struct BudgetResponse: Decodable, Identifiable {
     let updatedAt: String
 }
 
-struct SetBudgetRequest: Encodable {
+struct SetBudgetRequest: Codable {
     let amount: String
     let month: Int
     let year: Int
@@ -124,7 +124,7 @@ struct CategoryResponse: Decodable, Identifiable {
     let createdAt: String
 }
 
-struct CreateCategoryRequest: Encodable {
+struct CreateCategoryRequest: Codable {
     let name: String
     let color: String
     let icon: String
@@ -150,7 +150,7 @@ struct PersonalExpenseResponse: Decodable, Identifiable {
     let updatedAt: String
 }
 
-struct CreatePersonalExpenseRequest: Encodable {
+struct CreatePersonalExpenseRequest: Codable {
     let categoryId: UUID?
     let amount: String
     let description: String?
