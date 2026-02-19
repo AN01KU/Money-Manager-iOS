@@ -74,7 +74,7 @@ class AddRecurringExpenseViewModel: ObservableObject {
             return false
         }
         
-        guard let modelContext = modelContext else { return false }
+        guard let modelContext = modelContext else { return true }
         
         let recurring = RecurringExpense(
             name: name.trimmingCharacters(in: .whitespaces),

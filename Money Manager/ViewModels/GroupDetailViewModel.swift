@@ -38,6 +38,9 @@ class GroupDetailViewModel: ObservableObject {
         self.expensesParam = expenses
         self.balancesParam = balances
         self.membersParam = members
+        self.expenses = expenses ?? []
+        self.balances = balances ?? []
+        self.members = members ?? []
     }
     
     func loadData() async {

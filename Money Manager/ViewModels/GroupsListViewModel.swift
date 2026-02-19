@@ -37,13 +37,12 @@ class GroupsListViewModel: ObservableObject {
     }
     
     var netBalance: Double {
-        guard let userId = currentUserId else { return 0 }
-        
         var total = 0.0
         for group in groups {
-            if let balances = groupBalances[group.id],
-               let userBalance = balances.first(where: { $0.userId == userId }) {
-                total += Double(userBalance.amount) ?? 0
+            if let balances = groupBalances[group.id] {
+                for balance in balances {
+                    total += Double(balance.amount) ?? 0
+                }
             }
         }
         return total
@@ -83,13 +82,15 @@ class GroupsListViewModel: ObservableObject {
         self.balancesParam = balances
         self.expensesParam = expenses
         self.membersParam = members
+        self.groups = groups ?? []
+        self.groupBalances = balances
+        self.groupExpenses = expenses
+        self.groupMembers = members
     }
     
     func userBalance(for groupId: UUID) -> Double {
-        guard let userId = currentUserId,
-              let balances = groupBalances[groupId],
-              let balance = balances.first(where: { $0.userId == userId }) else { return 0 }
-        return Double(balance.amount) ?? 0
+        guard let balances = groupBalances[groupId] else { return 0 }
+        return balances.reduce(0.0) { $0 + (Double($1.amount) ?? 0) }
     }
     
     func nameForUser(_ userId: UUID) -> String {

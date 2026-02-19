@@ -7,13 +7,6 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
-		6B62AB512F464BCD004EA7DF /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6B6A4C462EFD151B00B81C49 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 6B6A4C4D2EFD151B00B81C49;
-			remoteInfo = "Money Manager";
-		};
 		6B8D06712F1672DA00C93A9B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6B6A4C462EFD151B00B81C49 /* Project object */;
@@ -106,7 +99,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				6B62AB522F464BCD004EA7DF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6B62AB4E2F464BCD004EA7DF /* Money ManagerTests */,
@@ -256,11 +248,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		6B62AB522F464BCD004EA7DF /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 6B6A4C4D2EFD151B00B81C49 /* Money Manager */;
-			targetProxy = 6B62AB512F464BCD004EA7DF /* PBXContainerItemProxy */;
-		};
 		6B8D06722F1672DA00C93A9B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 6B6A4C4D2EFD151B00B81C49 /* Money Manager */;
