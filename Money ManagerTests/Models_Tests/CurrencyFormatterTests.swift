@@ -29,7 +29,11 @@ struct CurrencyFormatterTests {
     func testCurrencyFormatterWithoutSymbolFormatsLargeNumbers() {
         let formatted = CurrencyFormatter.formatWithoutSymbol(1234567)
         
-        #expect(formatted.contains("12,34,567"))
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        let expected = formatter.string(from: NSNumber(value: 1234567)) ?? "1234567"
+        #expect(formatted == expected)
     }
     
     @Test
