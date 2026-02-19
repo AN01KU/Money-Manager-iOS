@@ -27,14 +27,15 @@ jobs:
           xcodebuild build \
             -project "Money Manager.xcodeproj" \
             -scheme "Money Manager" \
-            -destination "platform=iOS Simulator,name=iPhone 16" \
+            -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Run Unit Tests
         run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c "import sys,json; devs=json.load(sys.stdin)['devices']; print(next(d['udid'] for rt in sorted(devs.keys(), reverse=True) for d in devs[rt] if 'iPhone' in d['name'] and d['isAvailable']))")
           xcodebuild test \
             -project "Money Manager.xcodeproj" \
             -scheme "Money Manager" \
-            -destination "platform=iOS Simulator,name=iPhone 16" \
+            -destination "platform=iOS Simulator,id=$DEVICE" \
             -only-testing:"Money ManagerTests" \
             CODE_SIGNING_ALLOWED=NO
