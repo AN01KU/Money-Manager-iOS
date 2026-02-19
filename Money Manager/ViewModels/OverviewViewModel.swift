@@ -10,8 +10,6 @@ class OverviewViewModel: ObservableObject {
     @Published var showAddExpense = false
     @Published var showBudgetSheet = false
     @Published var searchText = ""
-    @Published var scrollOffset: CGFloat = 0
-    @Published var showSearchBar = false
     @Published var testDataLoaded = false
     
     @Published var filteredExpenses: [Expense] = []
@@ -47,13 +45,6 @@ class OverviewViewModel: ObservableObject {
     
     func updateSelectedView(_ view: ViewType) {
         selectedView = view
-    }
-    
-    func updateScrollOffset(_ offset: CGFloat) {
-        scrollOffset = offset
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showSearchBar = offset < -30
-        }
     }
     
     func recalculate() {

@@ -37,5 +37,4 @@ jobs:
             -project "Money Manager.xcodeproj" \
             -scheme "Money Manager" \
             -destination "platform=iOS Simulator,id=$DEVICE" \
-            -only-testing:"Money ManagerTests" \
             CODE_SIGNING_ALLOWED=NO

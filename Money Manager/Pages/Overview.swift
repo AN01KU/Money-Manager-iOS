@@ -15,12 +15,6 @@ struct Overview: View {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        GeometryReader { geometry in
-                            Color.clear
-                                .preference(key: ScrollOffsetPreferenceKey.self, value: geometry.frame(in: .named("scroll")).minY)
-                        }
-                        .frame(height: 0)
-                        
                         DateFilterSelector(selectedDate: $viewModel.selectedDate, filterMode: $viewModel.filterMode)
                             .padding(.horizontal)
                         
@@ -60,10 +54,6 @@ struct Overview: View {
                     }
                     .padding(.vertical)
                 }
-                .coordinateSpace(name: "scroll")
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                    viewModel.updateScrollOffset(value)
-                }
                 
                 FloatingActionButton(icon: "plus") {
                     viewModel.showAddExpense = true
@@ -74,13 +64,14 @@ struct Overview: View {
             .navigationTitle("Overview")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if viewModel.showSearchBar {
+                    if !viewModel.filteredExpenses.isEmpty {
                         HStack {
                             Image(systemName: "magnifyingglass")
                                 .foregroundColor(.secondary)
                             
                             TextField("Search expenses", text: $viewModel.searchText)
                                 .textInputAutocapitalization(.never)
+                                .accessibilityIdentifier("searchExpensesField")
                             
                             if !viewModel.searchText.isEmpty {
                                 Button {
@@ -122,14 +113,6 @@ struct Overview: View {
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
             }
         }
-    }
-}
-
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
     }
 }
 
