@@ -8,7 +8,7 @@
 import Foundation
 
 struct CurrencyFormatter {
-    private static let currencySymbols: [String: String] = [
+    static let currencySymbols: [String: String] = [
         "INR": "₹",
         "USD": "$",
         "EUR": "€",

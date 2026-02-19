@@ -41,6 +41,17 @@
                ReferencedContainer = "container:Money Manager.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "6B62AB4C2F464BCD004EA7DF"
+               BuildableName = "Money ManagerTests.xctest"
+               BlueprintName = "Money ManagerTests"
+               ReferencedContainer = "container:Money Manager.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

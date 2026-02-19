@@ -13,7 +13,8 @@ struct Budget {
     let month: Date
     
     var percentage: Int {
-        Int((spent / monthlyLimit) * 100.0)
+        guard monthlyLimit > 0 else { return 0 }
+        return Int((spent / monthlyLimit) * 100.0)
     }
     
     var remaining: Double {
