@@ -1,28 +1,65 @@
 # Money Manager
 
-A personal money manager iOS app for tracking daily and monthly expenses with budget management.
+A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending — all from your pocket.
 
-**Note: This is a work in progress application.**
+> **Note:** This app is under active development. Features and UI are subject to change.
+
+## Why Money Manager?
+
+Most expense trackers are either too simple or bloated with features you don't need. Money Manager strikes the right balance — it handles your personal expenses, recurring bills, monthly budgets, **and** group expense splitting in one clean interface. No subscriptions, no ads, just your money, organized.
 
 ## Features
 
-- Track daily and monthly expenses
-- Set and manage monthly budgets
-- View spending by category with visual charts
-- Quick expense entry with preset amounts
-- Filter expenses by day or month
-- View transaction details and history
+### 💰 Personal Expense Tracking
+- Log expenses with amounts, categories, notes, and dates
+- Quick-add with preset amounts for fast entry
+- View and filter transactions by day or month
+- Detailed transaction history with search
 
-## Screenshots
+### 📊 Budget Management
+- Set monthly budgets and track spending against them
+- Visual breakdown of spending by category
+- Dashboard with projected spending, daily averages, and remaining budget
+- Over-budget alerts to keep you on track
 
-### Overview Screen
-<img src="screenshots/overview.png" alt="Overview Screen" width="300">
+### 🔁 Recurring Expenses
+- Set up recurring expenses (daily, weekly, monthly)
+- Flexible scheduling — choose specific days of the week or month
+- Skip weekends or specific dates
+- Auto-generates expenses so you never forget a bill
 
-### Budgets Screen
-<img src="screenshots/budgets.png" alt="Budgets Screen" width="300">
+### 👥 Group Expense Splitting
+- Create groups for trips, roommates, dinners, or any shared cost
+- Add shared expenses and split them across group members
+- Track balances — see who owes whom
+- Record settlements to clear debts
 
-### Add Expense Screen
-<img src="screenshots/add-expense.png" alt="Add Expense Screen" width="300">
+### 🏷️ Custom Categories
+- Comes with predefined spending categories
+- Create your own categories with custom names, colors, and icons
+- Organize expenses the way that makes sense to you
+
+### 🌐 Sync & Offline Support
+- Cloud sync via backend API — access your data across sessions
+- Offline-first: log expenses without internet, sync when you're back online
+- Pending sync indicator so you always know your data status
+
+### ⚙️ Settings & Preferences
+- Multi-currency support — pick your preferred currency
+- Export data (coming soon — CSV/PDF)
+- Authentication with secure keychain storage
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| UI | SwiftUI |
+| Architecture | MVVM |
+| Local Persistence | SwiftData |
+| Charts | Swift Charts |
+| Networking | URLSession + async/await |
+| Auth | Token-based (Keychain storage) |
+| Sync | Custom offline-first sync service |
 
 ## Requirements
 
@@ -30,32 +67,39 @@ A personal money manager iOS app for tracking daily and monthly expenses with bu
 - Xcode 15.0+
 - Swift 5.9+
 
-## Building and Running
+## Getting Started
 
-1. Open `Money Manager.xcodeproj` in Xcode
-2. Select a simulator or connected device
-3. Build and run the project (Cmd+R)
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/an01ku/money-manager-ios.git
+   ```
+2. Open `Money Manager.xcodeproj` in Xcode
+3. Select a simulator or connected device
+4. Build and run (⌘R)
+
+### Build & Test via Makefile
+
+```bash
+make build       # Build the project
+make test        # Run unit tests
+make test-ui     # Run UI tests
+make clean       # Clean build artifacts
+```
 
 ## Project Structure
 
 ```
 Money Manager/
-├── Models/          # Swift Data models
-├── Pages/           # Main view screens
-├── Components/      # Reusable UI components
-└── Services/        # Data services
+├── Models/          # Data models (Expense, Budget, Category, Split, etc.)
+├── ViewModels/      # MVVM view models for each screen
+├── Pages/           # Full-screen views (Overview, Budgets, Groups, Auth, etc.)
+├── Components/      # Reusable UI components (Budget/, Category/, Transaction/, Common/)
+├── Services/        # API, Sync, Data, Keychain, and Error handling services
+├── Helpers/         # App constants and utilities
+├── ContentView.swift
+└── Money_ManagerApp.swift
 ```
-
-## Technology Stack
-
-- SwiftUI for user interface
-- Swift Data for local persistence
-- Charts framework for visualizations
-
-## Current Status
-
-The app is currently in active development. Core features are implemented and functional, with ongoing improvements and bug fixes.
 
 ## License
 
-This project is a personal application.
+This project is for personal use.
