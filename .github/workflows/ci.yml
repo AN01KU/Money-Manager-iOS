@@ -14,7 +14,6 @@ env:
   PROJECT: Money Manager.xcodeproj
   SCHEME: Money Manager
   XCODE_VERSION: "26.2"
-  DERIVED_DATA: /tmp/DerivedData
 
 jobs:
   build:
@@ -34,21 +33,13 @@ jobs:
           DEVICE=$(xcrun simctl list devices available -j | python3 -c "import sys,json; devs=json.load(sys.stdin)['devices']; print(next(d['udid'] for rt in sorted(devs.keys(), reverse=True) for d in devs[rt] if 'iPhone' in d['name'] and d['isAvailable']))")
           echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
 
-      - name: Build for Testing
+      - name: Build
         run: |
-          xcodebuild build-for-testing \
+          xcodebuild build \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device }}" \
-            -derivedDataPath "$DERIVED_DATA" \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Upload Build Products
-        uses: actions/upload-artifact@v4
-        with:
-          name: derived-data
-          path: /tmp/DerivedData/Build/Products
-          retention-days: 1
 
   test:
     name: Tests
@@ -62,12 +53,6 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
-      - name: Download Build Products
-        uses: actions/download-artifact@v4
-        with:
-          name: derived-data
-          path: /tmp/DerivedData/Build/Products
-
       - name: Resolve Simulator
         id: sim
         run: |
@@ -76,21 +61,19 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          xcodebuild test-without-building \
+          xcodebuild test \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device }}" \
-            -derivedDataPath "$DERIVED_DATA" \
             -only-testing:"Money ManagerTests" \
             CODE_SIGNING_ALLOWED=NO
 
       # - name: Run UI Tests
       #   run: |
-      #     xcodebuild test-without-building \
+      #     xcodebuild test \
       #       -project "$PROJECT" \
       #       -scheme "$SCHEME" \
       #       -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device }}" \
-      #       -derivedDataPath "$DERIVED_DATA" \
       #       -only-testing:"Money ManagerUITests" \
       #       CODE_SIGNING_ALLOWED=NO
 

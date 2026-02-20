@@ -32,10 +32,10 @@
       <Testables>
          <TestableReference
             skipped = "YES"
-             parallelizable = "YES">
-             <BuildableReference
-                BuildableIdentifier = "primary"
-                BlueprintIdentifier = "6B8D066A2F1672DA00C93A9B"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "6B8D066A2F1672DA00C93A9B"
                BuildableName = "Money ManagerUITests.xctest"
                BlueprintName = "Money ManagerUITests"
                ReferencedContainer = "container:Money Manager.xcodeproj">
