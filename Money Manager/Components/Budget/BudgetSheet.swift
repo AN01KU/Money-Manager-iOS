@@ -114,7 +114,7 @@ struct BudgetSheet: View {
         Task {
             do {
                 // Save to backend if not using dummy data
-                if !MockData.useDummyData {
+                if !useTestData {
                     _ = try await APIService.shared.setBudget(
                         amount: amount,
                         month: month,

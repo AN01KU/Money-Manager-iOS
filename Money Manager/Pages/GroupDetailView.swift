@@ -67,6 +67,14 @@ struct GroupDetailView: View {
                         .padding(.trailing, 24)
                         .padding(.bottom, 24)
                     }
+                    
+                    if viewModel.selectedSection == .members {
+                        FloatingActionButton(icon: "person.badge.plus") {
+                            viewModel.showAddMember = true
+                        }
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 24)
+                    }
                 }
             }
         }
@@ -82,6 +90,19 @@ struct GroupDetailView: View {
             RecordSettlementView(group: group, members: viewModel.members, balances: viewModel.balances) { _ in
                 viewModel.recalculateBalances()
             }
+        }
+        .sheet(isPresented: $viewModel.showAddMember) {
+            AddMemberSheet(existingMembers: viewModel.members) { email in
+                viewModel.addMember(email: email)
+            }
+        }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.addMemberError != nil },
+            set: { if !$0 { viewModel.addMemberError = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.addMemberError ?? "")
         }
         .task {
             await viewModel.loadData()
@@ -182,7 +203,11 @@ struct GroupDetailView: View {
         List {
             Section {
                 ForEach(viewModel.members) { member in
-                    MemberRow(member: member, isAdmin: member.id == group.createdBy)
+                    MemberRow(
+                        member: member,
+                        isAdmin: member.id == group.createdBy,
+                        isPending: viewModel.pendingMemberIds.contains(member.id)
+                    )
                 }
             }
         }
@@ -195,6 +220,7 @@ struct GroupDetailView: View {
 struct MemberRow: View {
     let member: APIUser
     let isAdmin: Bool
+    var isPending: Bool = false
     
     private var displayName: String {
         member.email.components(separatedBy: "@").first?.capitalized ?? member.email
@@ -204,18 +230,25 @@ struct MemberRow: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.teal.opacity(0.12))
+                    .fill(isPending ? Color.orange.opacity(0.12) : Color.teal.opacity(0.12))
                     .frame(width: 40, height: 40)
                 
-                Text(String(member.email.prefix(1)).uppercased())
-                    .font(.headline)
-                    .foregroundColor(.teal)
+                if isPending {
+                    Image(systemName: "clock")
+                        .font(.subheadline)
+                        .foregroundColor(.orange)
+                } else {
+                    Text(String(member.email.prefix(1)).uppercased())
+                        .font(.headline)
+                        .foregroundColor(.teal)
+                }
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayName)
                     .font(.body)
                     .fontWeight(.medium)
+                    .foregroundColor(isPending ? .secondary : .primary)
                 Text(member.email)
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -223,7 +256,16 @@ struct MemberRow: View {
             
             Spacer()
             
-            if isAdmin {
+            if isPending {
+                Text("Invited")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(6)
+            } else if isAdmin {
                 Text("Admin")
                     .font(.caption2)
                     .fontWeight(.medium)
@@ -355,6 +397,69 @@ struct BalanceRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Add Member Sheet
+
+struct AddMemberSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var email = ""
+    
+    let existingMembers: [APIUser]
+    var onAdd: (String) -> Void
+    
+    private var trimmedEmail: String {
+        email.trimmingCharacters(in: .whitespaces)
+    }
+    
+    private var isValid: Bool {
+        !trimmedEmail.isEmpty && trimmedEmail.contains("@")
+    }
+    
+    private var isAlreadyMember: Bool {
+        existingMembers.contains { $0.email.lowercased() == trimmedEmail.lowercased() }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Email")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        TextField("e.g., user@example.com", text: $email)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.emailAddress)
+                    }
+                    .padding(.vertical, 8)
+                } footer: {
+                    if isAlreadyMember {
+                        Text("This user is already a member of the group.")
+                            .foregroundColor(.red)
+                    } else {
+                        Text("An invitation will be sent to this email address.")
+                    }
+                }
+            }
+            .navigationTitle("Invite Member")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Invite") {
+                        onAdd(trimmedEmail)
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(!isValid || isAlreadyMember)
+                }
+            }
+        }
     }
 }
 

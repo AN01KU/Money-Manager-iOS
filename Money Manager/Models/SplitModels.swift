@@ -28,7 +28,7 @@ struct CreateGroupRequest: Encodable, Sendable {
 }
 
 struct AddMemberRequest: Encodable, Sendable {
-    let userId: UUID
+    let userEmail: String
 }
 
 struct AddMemberResponse: Decodable, Sendable {

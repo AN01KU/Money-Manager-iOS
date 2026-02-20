@@ -16,6 +16,9 @@ class GroupDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showAddExpense = false
     @Published var showSettlement = false
+    @Published var showAddMember = false
+    @Published var addMemberError: String?
+    @Published var pendingMemberIds: Set<UUID> = []
     
     let group: SplitGroup
     var expensesParam: [SharedExpense]?
@@ -93,5 +96,30 @@ class GroupDetailViewModel: ObservableObject {
     func addExpense(_ newExpense: SharedExpense) {
         expenses.insert(newExpense, at: 0)
         recalculateBalances()
+    }
+    
+    func addMember(email: String) {
+        let tempId = UUID()
+        let newMember = APIUser(
+            id: tempId,
+            email: email,
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+        members.append(newMember)
+        pendingMemberIds.insert(tempId)
+        showAddMember = false
+        
+        Task {
+            do {
+                if useTestData {
+                    try await Task.sleep(for: .seconds(Int.random(in: 5...10)))
+                } else {
+                    _ = try await APIService.shared.addMember(groupId: group.id, userEmail: email)
+                }
+                pendingMemberIds.remove(tempId)
+            } catch {
+                addMemberError = error.localizedDescription
+            }
+        }
     }
 }

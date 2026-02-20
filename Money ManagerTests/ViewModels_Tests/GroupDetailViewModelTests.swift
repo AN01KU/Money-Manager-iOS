@@ -139,4 +139,83 @@ struct GroupDetailViewModelTests {
         #expect(GroupSection.allCases.contains(.balances))
         #expect(GroupSection.allCases.contains(.members))
     }
+    
+    // MARK: - Add Member (Invitation) Tests
+    
+    @Test
+    func testAddMemberAppendsMemberToList() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group, members: [])
+        
+        viewModel.addMember(email: "new@test.com")
+        
+        #expect(viewModel.members.count == 1)
+        #expect(viewModel.members.first?.email == "new@test.com")
+    }
+    
+    @Test
+    func testAddMemberMarksAsPending() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group, members: [])
+        
+        viewModel.addMember(email: "pending@test.com")
+        
+        let addedMember = viewModel.members.first!
+        #expect(viewModel.pendingMemberIds.contains(addedMember.id))
+    }
+    
+    @Test
+    func testAddMemberDismissesSheet() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group)
+        viewModel.showAddMember = true
+        
+        viewModel.addMember(email: "user@test.com")
+        
+        #expect(viewModel.showAddMember == false)
+    }
+    
+    @Test
+    func testAddMemberPreservesExistingMembers() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let existing = APIUser(id: UUID(), email: "existing@test.com", createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group, members: [existing])
+        
+        viewModel.addMember(email: "new@test.com")
+        
+        #expect(viewModel.members.count == 2)
+        #expect(viewModel.members.first?.email == "existing@test.com")
+        #expect(viewModel.members.last?.email == "new@test.com")
+    }
+    
+    @Test
+    func testAddMemberDoesNotMarkExistingAsPending() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let existing = APIUser(id: UUID(), email: "existing@test.com", createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group, members: [existing])
+        
+        viewModel.addMember(email: "new@test.com")
+        
+        #expect(!viewModel.pendingMemberIds.contains(existing.id))
+    }
+    
+    @Test
+    func testAddMultipleMembersBothPending() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group, members: [])
+        
+        viewModel.addMember(email: "a@test.com")
+        viewModel.addMember(email: "b@test.com")
+        
+        #expect(viewModel.members.count == 2)
+        #expect(viewModel.pendingMemberIds.count == 2)
+    }
+    
+    @Test
+    func testPendingMemberIdsStartsEmpty() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let viewModel = GroupDetailViewModel(group: group)
+        
+        #expect(viewModel.pendingMemberIds.isEmpty)
+    }
 }

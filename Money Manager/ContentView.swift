@@ -7,7 +7,7 @@ struct ContentView: View {
     @ObservedObject private var apiService = APIService.shared
     
     var body: some View {
-        if apiService.isAuthenticated || MockData.useDummyData {
+        if apiService.isAuthenticated || useTestData {
             MainTabView()
         } else {
             AuthView()
@@ -48,7 +48,7 @@ struct SettingsView: View {
     @State private var showLogoutConfirmation = false
     
     private var displayUser: APIUser? {
-        apiService.currentUser ?? (MockData.useDummyData ? MockData.currentUser : nil)
+        apiService.currentUser ?? (useTestData ? TestData.currentUser : nil)
     }
     
     var body: some View {
@@ -91,7 +91,7 @@ struct SettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(MockData.useDummyData ? MockData.nameForUser(user.id) : user.email.components(separatedBy: "@").first?.capitalized ?? user.email)
+                        Text(useTestData ? TestData.nameForUser(user.id) : user.email.components(separatedBy: "@").first?.capitalized ?? user.email)
                             .font(.title3)
                             .fontWeight(.semibold)
                         

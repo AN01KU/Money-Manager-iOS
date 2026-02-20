@@ -30,14 +30,13 @@ struct SplitModelsTests {
     
     @Test
     func testAddMemberRequestEncoding() throws {
-        let userId = UUID()
-        let request = AddMemberRequest(userId: userId)
+        let request = AddMemberRequest(userEmail: "test@example.com")
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         let data = try encoder.encode(request)
         let json = String(data: data, encoding: .utf8)!
         
-        #expect(json.contains("\"user_id\":\"\(userId.uuidString)\""))
+        #expect(json.contains("\"user_email\":\"test@example.com\""))
     }
     
     @Test

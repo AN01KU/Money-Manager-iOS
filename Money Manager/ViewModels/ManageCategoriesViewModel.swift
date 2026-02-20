@@ -76,7 +76,7 @@ class AddCategoryViewModel: ObservableObject {
         
         Task {
             do {
-                if !MockData.useDummyData {
+                if !useTestData {
                     _ = try await APIService.shared.createCategory(
                         name: trimmedName,
                         color: selectedColor,

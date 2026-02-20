@@ -1,10 +1,6 @@
 import Foundation
 
 struct MockData {
-    // Set to `false` to use the real backend
-    // Set to `true` to use mock/dummy data for testing without a backend
-    static let useDummyData = true
-    
     // Reference TestData for all mock data
     static let currentUser = TestData.currentUser
     static let users = TestData.testUsers

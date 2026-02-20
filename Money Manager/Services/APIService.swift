@@ -96,8 +96,8 @@ final class APIService: ObservableObject {
         return try await post("/groups", body: body)
     }
     
-    func addMember(groupId: UUID, userId: UUID) async throws -> AddMemberResponse {
-        let body = AddMemberRequest(userId: userId)
+    func addMember(groupId: UUID, userEmail: String) async throws -> AddMemberResponse {
+        let body = AddMemberRequest(userEmail: userEmail)
         return try await post("/groups/\(groupId)/add-member", body: body)
     }
     

@@ -73,10 +73,131 @@ final class GroupDetailTests: XCTestCase {
         XCTAssertTrue(hasButton, "Should have create group button")
     }
     
+    // MARK: - Add Member / Invite
+    
+    func testMembersTabShowsAddMemberFAB() throws {
+        navigateToGroupDetail()
+        
+        let membersTab = app.buttons["Members"]
+        guard membersTab.waitForExistence(timeout: 3) else { return }
+        membersTab.tap()
+        
+        let fab = app.buttons["person.badge.plus"]
+        XCTAssertTrue(fab.waitForExistence(timeout: 3), "Add member FAB should appear on Members tab")
+    }
+    
+    func testAddMemberFABOpensInviteSheet() throws {
+        navigateToGroupDetail()
+        
+        let membersTab = app.buttons["Members"]
+        guard membersTab.waitForExistence(timeout: 3) else { return }
+        membersTab.tap()
+        
+        let fab = app.buttons["person.badge.plus"]
+        guard fab.waitForExistence(timeout: 3) else { return }
+        fab.tap()
+        
+        let sheetTitle = app.navigationBars["Invite Member"]
+        XCTAssertTrue(sheetTitle.waitForExistence(timeout: 3), "Invite Member sheet should appear")
+    }
+    
+    func testInviteSheetHasEmailField() throws {
+        navigateToGroupDetail()
+        
+        let membersTab = app.buttons["Members"]
+        guard membersTab.waitForExistence(timeout: 3) else { return }
+        membersTab.tap()
+        
+        let fab = app.buttons["person.badge.plus"]
+        guard fab.waitForExistence(timeout: 3) else { return }
+        fab.tap()
+        
+        let emailField = app.textFields["e.g., user@example.com"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 3), "Email text field should exist")
+    }
+    
+    func testInviteSheetCancelDismisses() throws {
+        navigateToGroupDetail()
+        
+        let membersTab = app.buttons["Members"]
+        guard membersTab.waitForExistence(timeout: 3) else { return }
+        membersTab.tap()
+        
+        let fab = app.buttons["person.badge.plus"]
+        guard fab.waitForExistence(timeout: 3) else { return }
+        fab.tap()
+        
+        let cancelButton = app.buttons["Cancel"]
+        guard cancelButton.waitForExistence(timeout: 3) else { return }
+        cancelButton.tap()
+        
+        let sheetTitle = app.navigationBars["Invite Member"]
+        XCTAssertFalse(sheetTitle.waitForExistence(timeout: 2), "Sheet should be dismissed after Cancel")
+    }
+    
+    func testInviteButtonDisabledWithEmptyEmail() throws {
+        navigateToGroupDetail()
+        
+        let membersTab = app.buttons["Members"]
+        guard membersTab.waitForExistence(timeout: 3) else { return }
+        membersTab.tap()
+        
+        let fab = app.buttons["person.badge.plus"]
+        guard fab.waitForExistence(timeout: 3) else { return }
+        fab.tap()
+        
+        let inviteButton = app.buttons["Invite"]
+        XCTAssertTrue(inviteButton.waitForExistence(timeout: 3), "Invite button should exist")
+        XCTAssertFalse(inviteButton.isEnabled, "Invite button should be disabled with empty email")
+    }
+    
+    func testInviteMemberShowsPendingState() throws {
+        navigateToGroupDetail()
+        
+        let membersTab = app.buttons["Members"]
+        guard membersTab.waitForExistence(timeout: 3) else { return }
+        membersTab.tap()
+        
+        let fab = app.buttons["person.badge.plus"]
+        guard fab.waitForExistence(timeout: 3) else { return }
+        fab.tap()
+        
+        let emailField = app.textFields["e.g., user@example.com"]
+        guard emailField.waitForExistence(timeout: 3) else { return }
+        emailField.tap()
+        emailField.typeText("newuser@example.com")
+        
+        let inviteButton = app.buttons["Invite"]
+        guard inviteButton.waitForExistence(timeout: 2), inviteButton.isEnabled else { return }
+        inviteButton.tap()
+        
+        let invitedBadge = app.staticTexts["Invited"]
+        XCTAssertTrue(invitedBadge.waitForExistence(timeout: 3), "Invited badge should appear for pending member")
+    }
+    
+    func testAddMemberFABNotOnExpensesTab() throws {
+        navigateToGroupDetail()
+        
+        let expensesTab = app.buttons["Expenses"]
+        guard expensesTab.waitForExistence(timeout: 3) else { return }
+        expensesTab.tap()
+        
+        let addMemberFab = app.buttons["person.badge.plus"]
+        XCTAssertFalse(addMemberFab.waitForExistence(timeout: 2), "Add member FAB should not appear on Expenses tab")
+    }
+    
     // MARK: - Helper Methods
     
     private func navigateToGroups() {
         app.tabBars.buttons["Groups"].tap()
         _ = app.navigationBars["Groups"].waitForExistence(timeout: 3)
+    }
+    
+    private func navigateToGroupDetail() {
+        navigateToGroups()
+        
+        let groupButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Trip' OR label CONTAINS 'Lunch' OR label CONTAINS 'Office' OR label CONTAINS 'Weekend'")).firstMatch
+        guard groupButton.waitForExistence(timeout: 3) else { return }
+        groupButton.tap()
     }
 }

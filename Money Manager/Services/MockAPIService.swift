@@ -106,7 +106,7 @@ final class MockAPIService: ObservableObject {
         )
     }
     
-    func addMember(groupId: UUID, userId: UUID) async throws -> AddMemberResponse {
+    func addMember(groupId: UUID, userEmail: String) async throws -> AddMemberResponse {
         await simulateDelay(for: "groups/add-member")
         return AddMemberResponse(message: "Member added successfully")
     }
