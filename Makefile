@@ -1,6 +1,6 @@
 PROJECT = Money Manager.xcodeproj
 SCHEME = Money Manager
-DESTINATION = platform=iOS Simulator,name=iPhone 16
+DESTINATION = platform=iOS Simulator,name=iPhone 17
 SIGNING = CODE_SIGNING_ALLOWED=NO
 
 .PHONY: build test test-unit test-ui clean

@@ -14,7 +14,7 @@ final class OverviewTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "useTestData"]
         app.launch()
     }
     
