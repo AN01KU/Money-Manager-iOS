@@ -15,9 +15,9 @@ struct EmptyStateView: View {
     var action: (() -> Void)?
     
     init(
-        icon: String = "chart.bar.doc.horizontal",
-        title: String = "No expenses yet",
-        message: String = "Tap + to add your first expense",
+        icon: String = "tray",
+        title: String = "Nothing here yet",
+        message: String = "Items you add will appear here",
         actionTitle: String? = nil,
         action: (() -> Void)? = nil
     ) {

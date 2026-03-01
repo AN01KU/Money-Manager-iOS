@@ -25,7 +25,7 @@ struct BudgetSheet: View {
             Form {
                 Section {
                     HStack {
-                        Text("₹")
+                        Text(CurrencyFormatter.currentSymbol)
                             .font(.title2)
                             .foregroundColor(.secondary)
                         TextField("0", text: $budgetAmount)
@@ -111,45 +111,47 @@ struct BudgetSheet: View {
         let year = calendar.component(.year, from: selectedMonth)
         let month = calendar.component(.month, from: selectedMonth)
         
-        Task {
-            do {
-                // Save to backend if not using dummy data
-                if !useTestData {
-                    _ = try await APIService.shared.setBudget(
-                        amount: amount,
-                        month: month,
-                        year: year
-                    )
-                }
-                
-                // Also save to local SwiftData for offline access
-                if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
-                    predicate: #Predicate<MonthlyBudget> { budget in
-                        budget.year == year && budget.month == month
-                    }
-                )).first {
-                    existing.limit = amount
-                    existing.updatedAt = Date()
-                } else {
-                    let budget = MonthlyBudget(
-                        year: year,
-                        month: month,
-                        limit: amount
-                    )
-                    modelContext.insert(budget)
-                }
-                
-                defaultBudgetLimit = amount
-                
-                try modelContext.save()
-                isSaving = false
-                dismiss()
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
-                isSaving = false
+        // Save locally first — this is the source of truth
+        if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
+            predicate: #Predicate<MonthlyBudget> { budget in
+                budget.year == year && budget.month == month
             }
+        )).first {
+            existing.limit = amount
+            existing.updatedAt = Date()
+        } else {
+            let budget = MonthlyBudget(
+                year: year,
+                month: month,
+                limit: amount
+            )
+            modelContext.insert(budget)
         }
+        
+        defaultBudgetLimit = amount
+        
+        do {
+            try modelContext.save()
+        } catch {
+            errorMessage = "Failed to save budget locally"
+            showError = true
+            isSaving = false
+            return
+        }
+        
+        // Queue for backend sync in background if authenticated
+        if APIService.shared.isAuthenticated {
+            let request = SetBudgetRequest(amount: String(amount), month: month, year: year)
+            SyncService.shared.queueForSync(
+                itemType: .budget,
+                itemId: UUID(),
+                action: .create,
+                payload: request
+            )
+        }
+        
+        isSaving = false
+        dismiss()
     }
     
     private func formatMonth(_ date: Date) -> String {

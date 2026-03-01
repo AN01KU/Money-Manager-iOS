@@ -7,6 +7,7 @@ class AuthViewModel: ObservableObject {
     @Published var email = ""
     @Published var password = ""
     @Published var confirmPassword = ""
+    @Published var username = ""
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
@@ -14,17 +15,19 @@ class AuthViewModel: ObservableObject {
     var isFormValid: Bool {
         let emailValid = !email.trimmingCharacters(in: .whitespaces).isEmpty && email.contains("@")
         let passwordValid = password.count >= 6
+        let usernameValid = !username.trimmingCharacters(in: .whitespaces).isEmpty
         
         if isLoginMode {
             return emailValid && passwordValid
         } else {
-            return emailValid && passwordValid && password == confirmPassword
+            return emailValid && passwordValid && password == confirmPassword && usernameValid
         }
     }
     
     func toggleMode() {
         isLoginMode.toggle()
         confirmPassword = ""
+        username = ""
     }
     
     func submit() async -> Bool {
@@ -41,8 +44,11 @@ class AuthViewModel: ObservableObject {
                 if isLoginMode {
                     _ = try await APIService.shared.login(email: email.trimmingCharacters(in: .whitespaces), password: password)
                 } else {
-                    _ = try await APIService.shared.signup(email: email.trimmingCharacters(in: .whitespaces), password: password)
+                    _ = try await APIService.shared.signup(email: email.trimmingCharacters(in: .whitespaces), password: password, username: username.trimmingCharacters(in: .whitespaces))
                 }
+                
+                try await APIService.shared.syncUserData()
+                
                 isLoading = false
                 return true
             } catch {

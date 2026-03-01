@@ -7,7 +7,7 @@ struct SplitModelsTests {
     
     @Test
     func testAuthRequestEncodingToSnakeCase() throws {
-        let request = AuthRequest(email: "test@example.com", password: "password123")
+        let request = AuthRequest(email: "test@example.com", password: "password123", username: "testuser")
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         let data = try encoder.encode(request)
@@ -15,6 +15,7 @@ struct SplitModelsTests {
         
         #expect(json.contains("\"email\""))
         #expect(json.contains("\"password\""))
+        #expect(json.contains("\"username\""))
         #expect(!json.contains("\"email_address\""))
     }
     
@@ -30,13 +31,13 @@ struct SplitModelsTests {
     
     @Test
     func testAddMemberRequestEncoding() throws {
-        let request = AddMemberRequest(userEmail: "test@example.com")
+        let request = AddMemberRequest(email: "test@example.com")
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         let data = try encoder.encode(request)
         let json = String(data: data, encoding: .utf8)!
         
-        #expect(json.contains("\"user_email\":\"test@example.com\""))
+        #expect(json.contains("\"email\":\"test@example.com\""))
     }
     
     @Test
@@ -136,9 +137,8 @@ struct SplitModelsTests {
     
     @Test
     func testCreatePersonalExpenseRequestEncoding() throws {
-        let categoryId = UUID()
         let request = CreatePersonalExpenseRequest(
-            categoryId: categoryId,
+            category: "Food",
             amount: "500.00",
             description: "Lunch",
             notes: "With team",
@@ -150,7 +150,7 @@ struct SplitModelsTests {
         let data = try encoder.encode(request)
         let json = String(data: data, encoding: .utf8)!
         
-        #expect(json.contains("\"category_id\""))
+        #expect(json.contains("\"category\":\"Food\""))
         #expect(json.contains("\"expense_date\":\"2026-02-19\""))
     }
     

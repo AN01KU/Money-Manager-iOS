@@ -73,7 +73,7 @@ struct TransactionDetailView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        Text("₹\(viewModel.formatAmount(expense.amount))")
+                        Text(CurrencyFormatter.format(expense.amount))
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.red)
                         

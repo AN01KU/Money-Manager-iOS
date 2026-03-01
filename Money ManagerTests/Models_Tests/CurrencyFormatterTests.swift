@@ -42,4 +42,44 @@ struct CurrencyFormatterTests {
         
         #expect(formatted == "0")
     }
+    
+    @Test
+    func testCurrentSymbolReturnsConfiguredCurrency() {
+        let symbol = CurrencyFormatter.currentSymbol
+        
+        #expect(!symbol.isEmpty)
+    }
+    
+    @Test
+    func testCurrentCodeDefaultsToINR() {
+        UserDefaults.standard.removeObject(forKey: "selectedCurrency")
+        
+        let code = CurrencyFormatter.currentCode
+        
+        #expect(code == "INR")
+    }
+    
+    @Test
+    func testSupportedCurrenciesContainsCommonCurrencies() {
+        let codes = CurrencyFormatter.supportedCurrencies.map { $0.code }
+        
+        #expect(codes.contains("INR"))
+        #expect(codes.contains("USD"))
+        #expect(codes.contains("EUR"))
+        #expect(codes.contains("GBP"))
+    }
+    
+    @Test
+    func testFormatNegativeAmount() {
+        let formatted = CurrencyFormatter.format(-500.0, showDecimals: false)
+        
+        #expect(formatted.contains("500"))
+    }
+    
+    @Test
+    func testFormatLargeAmount() {
+        let formatted = CurrencyFormatter.format(9999999, showDecimals: false)
+        
+        #expect(formatted.contains("9,999,999") || formatted.contains("99,99,999"))
+    }
 }

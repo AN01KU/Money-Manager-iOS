@@ -69,7 +69,7 @@ class AddExpenseViewModel: ObservableObject {
     }
     
     var equalShareText: String {
-        guard let total = Double(amount), total > 0, !selectedMembers.isEmpty else { return "₹0" }
+        guard let total = Double(amount), total > 0, !selectedMembers.isEmpty else { return "\(CurrencyFormatter.currentSymbol)0" }
         return CurrencyFormatter.format(total / Double(selectedMembers.count), showDecimals: true)
     }
     
@@ -197,15 +197,33 @@ class AddExpenseViewModel: ObservableObject {
                                         of: selectedDate) ?? selectedDate
         }
         
-        let expense = Expense(
-            amount: amountValue,
-            category: selectedCategory,
-            date: expenseDate,
-            time: hasTime ? selectedTime : nil,
-            expenseDescription: description.isEmpty ? nil : description,
-            notes: notes.isEmpty ? nil : notes
-        )
-        modelContext.insert(expense)
+        let expense: Expense
+        let isEditing: Bool
+        
+        if case .personal(let existing) = mode, let existingExpense = existing {
+            // Update existing expense
+            existingExpense.amount = amountValue
+            existingExpense.category = selectedCategory
+            existingExpense.date = expenseDate
+            existingExpense.time = hasTime ? selectedTime : nil
+            existingExpense.expenseDescription = description.isEmpty ? nil : description
+            existingExpense.notes = notes.isEmpty ? nil : notes
+            existingExpense.updatedAt = Date()
+            expense = existingExpense
+            isEditing = true
+        } else {
+            // Create new expense
+            expense = Expense(
+                amount: amountValue,
+                category: selectedCategory,
+                date: expenseDate,
+                time: hasTime ? selectedTime : nil,
+                expenseDescription: description.isEmpty ? nil : description,
+                notes: notes.isEmpty ? nil : notes
+            )
+            modelContext.insert(expense)
+            isEditing = false
+        }
         
         do {
             try modelContext.save()
@@ -216,26 +234,25 @@ class AddExpenseViewModel: ObservableObject {
             return
         }
         
-        Task {
-            if !useTestData {
-                let request = CreatePersonalExpenseRequest(
-                    categoryId: nil,
-                    amount: String(format: "%.2f", amountValue),
-                    description: description.isEmpty ? nil : description,
-                    notes: notes.isEmpty ? nil : notes,
-                    expenseDate: ISO8601DateFormatter().string(from: expenseDate)
-                )
-                SyncService.shared.queueForSync(
-                    itemType: .personalExpense,
-                    itemId: expense.id,
-                    action: .create,
-                    payload: request
-                )
-            }
-            
-            isSaving = false
-            completion()
+        // Queue for backend sync if authenticated
+        if APIService.shared.isAuthenticated {
+            let request = CreatePersonalExpenseRequest(
+                category: selectedCategory.isEmpty ? nil : selectedCategory,
+                amount: String(format: "%.2f", amountValue),
+                description: description.isEmpty ? nil : description,
+                notes: notes.isEmpty ? nil : notes,
+                expenseDate: ISO8601DateFormatter().string(from: expenseDate)
+            )
+            SyncService.shared.queueForSync(
+                itemType: .personalExpense,
+                itemId: expense.id,
+                action: isEditing ? .update : .create,
+                payload: request
+            )
         }
+        
+        isSaving = false
+        completion()
     }
     
     private func saveSharedExpense(completion: @escaping () -> Void) {

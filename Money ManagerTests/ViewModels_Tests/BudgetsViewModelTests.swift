@@ -6,6 +6,12 @@ import Testing
 @MainActor
 struct BudgetsViewModelTests {
     
+    private func currentYearMonth() -> (year: Int, month: Int) {
+        let calendar = Calendar.current
+        let now = Date()
+        return (calendar.component(.year, from: now), calendar.component(.month, from: now))
+    }
+    
     @Test
     func testTotalSpentCalculatesCorrectly() {
         let viewModel = BudgetsViewModel()
@@ -51,10 +57,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testRemainingBudgetCalculatesCorrectly() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 300, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 1000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -63,10 +70,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testRemainingBudgetNeverNegative() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 1500, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 1000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -75,10 +83,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testBudgetPercentageCalculatesCorrectly() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 250, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 1000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -98,10 +107,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testBudgetPercentageIsZeroWhenLimitIsZero() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 500, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 0)
+        let budget = MonthlyBudget(year: year, month: month, limit: 0)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -110,10 +120,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testBudgetPercentageAtLimit() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 1000, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 1000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -122,10 +133,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testBudgetPercentageOverBudget() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 1500, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 1000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -134,10 +146,11 @@ struct BudgetsViewModelTests {
     
     @Test
     func testDailyAverageCalculatesCorrectly() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         
         let expense = Expense(amount: 200, category: "Food", date: Date())
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 1000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
         
         viewModel.configure(allExpenses: [expense], budgets: [budget], modelContext: nil)
         
@@ -155,14 +168,15 @@ struct BudgetsViewModelTests {
     
     @Test
     func testCurrentBudgetFindsCorrectMonth() {
+        let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
         viewModel.selectedMonth = Date()
         
-        let budget = MonthlyBudget(year: 2026, month: 2, limit: 5000)
+        let budget = MonthlyBudget(year: year, month: month, limit: 5000)
         
         viewModel.configure(allExpenses: [], budgets: [budget], modelContext: nil)
         
-        #expect(viewModel.currentBudget == nil || viewModel.currentBudget?.limit == 5000)
+        #expect(viewModel.currentBudget?.limit == 5000)
     }
     
     @Test
@@ -179,6 +193,7 @@ struct BudgetsViewModelTests {
         
         viewModel.configure(allExpenses: [expenseThisMonth, expenseLastMonth], budgets: [], modelContext: nil)
         
-        #expect(viewModel.currentMonthExpenses.count >= 1)
+        #expect(viewModel.currentMonthExpenses.count == 1)
+        #expect(viewModel.currentMonthExpenses.first?.amount == 500)
     }
 }

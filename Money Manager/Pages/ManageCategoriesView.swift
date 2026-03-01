@@ -97,6 +97,9 @@ struct ManageCategoriesView: View {
         .onAppear {
             viewModel.configure(customCategories: customCategories, modelContext: modelContext)
         }
+        .onChange(of: customCategories) { _, _ in
+            viewModel.configure(customCategories: customCategories, modelContext: modelContext)
+        }
     }
 }
 

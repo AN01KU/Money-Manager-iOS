@@ -134,9 +134,9 @@ struct GroupsListViewModelTests {
     }
     
     @Test
-    func testNameForUserReturnsCapitalizedName() {
+    func testNameForUserReturnsUsername() {
         let userId = UUID()
-        let user = APIUser(id: userId, email: "john@example.com", createdAt: "2026-01-01")
+        let user = APIUser(id: userId, email: "john@example.com", username: "John", createdAt: "2026-01-01")
         let groupId = UUID()
         
         let viewModel = GroupsListViewModel(members: [groupId: [user]])

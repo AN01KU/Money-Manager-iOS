@@ -3,6 +3,7 @@ import Foundation
 struct AuthRequest: Encodable, Sendable {
     let email: String
     let password: String
+    let username: String
 }
 
 struct AuthResponse: Decodable, Sendable {
@@ -13,6 +14,7 @@ struct AuthResponse: Decodable, Sendable {
 struct APIUser: Decodable, Identifiable, Sendable {
     let id: UUID
     let email: String
+    let username: String
     let createdAt: String
 }
 
@@ -28,7 +30,7 @@ struct CreateGroupRequest: Encodable, Sendable {
 }
 
 struct AddMemberRequest: Encodable, Sendable {
-    let userEmail: String
+    let email: String
 }
 
 struct AddMemberResponse: Decodable, Sendable {
@@ -136,7 +138,7 @@ struct UpdateCategoryRequest: Encodable, Sendable {
 struct PersonalExpenseResponse: Decodable, Identifiable, Sendable {
     let id: UUID
     let userId: UUID
-    let categoryId: UUID?
+    let category: String?
     let amount: String
     let description: String?
     let notes: String?
@@ -146,7 +148,7 @@ struct PersonalExpenseResponse: Decodable, Identifiable, Sendable {
 }
 
 struct CreatePersonalExpenseRequest: Codable, Sendable {
-    let categoryId: UUID?
+    let category: String?
     let amount: String
     let description: String?
     let notes: String?

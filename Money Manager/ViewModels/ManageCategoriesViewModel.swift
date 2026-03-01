@@ -70,38 +70,43 @@ class AddCategoryViewModel: ObservableObject {
         self.modelContext = modelContext
     }
     
-    func save() -> Bool {
+    func save() async -> Bool {
         isSaving = true
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         
-        Task {
-            do {
-                if !useTestData {
-                    _ = try await APIService.shared.createCategory(
-                        name: trimmedName,
-                        color: selectedColor,
-                        icon: selectedIcon
-                    )
-                }
-                
-                let category = CustomCategory(
-                    name: trimmedName,
-                    icon: selectedIcon,
-                    color: selectedColor
-                )
-                modelContext?.insert(category)
-                try modelContext?.save()
-                
-                isSaving = false
-                return true
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
-                isSaving = false
-                return false
-            }
+        // Save locally first
+        let category = CustomCategory(
+            name: trimmedName,
+            icon: selectedIcon,
+            color: selectedColor
+        )
+        modelContext?.insert(category)
+        
+        do {
+            try modelContext?.save()
+        } catch {
+            errorMessage = "Failed to save category locally"
+            showError = true
+            isSaving = false
+            return false
         }
         
-        return false
+        // Queue for backend sync if authenticated
+        if APIService.shared.isAuthenticated {
+            let request = CreateCategoryRequest(
+                name: trimmedName,
+                color: selectedColor,
+                icon: selectedIcon
+            )
+            SyncService.shared.queueForSync(
+                itemType: .category,
+                itemId: category.id,
+                action: .create,
+                payload: request
+            )
+        }
+        
+        isSaving = false
+        return true
     }
 }

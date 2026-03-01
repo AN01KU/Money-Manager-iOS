@@ -334,7 +334,7 @@ struct QuickAmountButton: View {
     
     var body: some View {
         Button(action: action) {
-            Text("₹\(amount)")
+            Text("\(CurrencyFormatter.currentSymbol)\(amount)")
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .frame(maxWidth: .infinity)

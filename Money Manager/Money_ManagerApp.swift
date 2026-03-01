@@ -18,12 +18,16 @@ struct Money_ManagerApp: App {
             RecurringExpense.self,
             CustomCategory.self,
             MonthlyBudget.self,
-            PendingSyncItem.self
+            PendingSyncItem.self,
+            CachedUser.self,
+            AuthToken.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            KeychainService.shared.setModelContainer(container)
+            return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -36,6 +40,7 @@ struct Money_ManagerApp: App {
                     let context = sharedModelContainer.mainContext
                     modelContext = context
                     SyncService.shared.configure(with: context)
+                    APIService.shared.configure(modelContext: context)
                 }
         }
         .modelContainer(sharedModelContainer)

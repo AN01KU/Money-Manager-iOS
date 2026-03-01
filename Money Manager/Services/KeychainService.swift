@@ -6,55 +6,49 @@
 //
 
 import Foundation
-import Security
+import SwiftData
 
+@MainActor
 final class KeychainService {
     static let shared = KeychainService()
-    private let tokenKey = "com.moneymanager.authToken"
+    
+    private var modelContainer: ModelContainer?
     
     private init() {}
     
+    func setModelContainer(_ container: ModelContainer) {
+        self.modelContainer = container
+    }
+    
     @discardableResult
     func saveToken(_ token: String) -> Bool {
+        guard let context = modelContainer?.mainContext else { return false }
+        
         deleteToken()
         
-        guard let data = token.data(using: .utf8) else { return false }
+        let authToken = AuthToken(token: token)
+        context.insert(authToken)
         
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: tokenKey,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-        ]
-        
-        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+        return (try? context.save()) != nil
     }
     
     func getToken() -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: tokenKey,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        guard let context = modelContainer?.mainContext else { return nil }
         
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else {
-            return nil
-        }
-        
-        return String(data: data, encoding: .utf8)
+        let descriptor = FetchDescriptor<AuthToken>()
+        return try? context.fetch(descriptor).first?.token
     }
     
     @discardableResult
     func deleteToken() -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: tokenKey
-        ]
+        guard let context = modelContainer?.mainContext else { return false }
         
-        return SecItemDelete(query as CFDictionary) == errSecSuccess
+        let descriptor = FetchDescriptor<AuthToken>()
+        if let token = try? context.fetch(descriptor).first {
+            context.delete(token)
+            return (try? context.save()) != nil
+        }
+        return false
     }
     
     var isLoggedIn: Bool {

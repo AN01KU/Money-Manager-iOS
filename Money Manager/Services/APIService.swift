@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftData
 
 enum APIError: LocalizedError {
     case invalidURL
@@ -34,11 +35,7 @@ enum APIError: LocalizedError {
 final class APIService: ObservableObject {
     static let shared = APIService()
     
-    // Configure your backend URL here:
-    // For local development: http://localhost:8080
-    // For remote server: https://your-backend-url.com
-    // Make sure CORS is enabled on the backend for iOS app's domain
-    private let baseURL = "http://localhost:8080"
+    private let baseURL = "http://192.168.1.50:8080"
     
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -55,26 +52,78 @@ final class APIService: ObservableObject {
     @Published var currentUser: APIUser?
     @Published var isAuthenticated = false
     
+    private var modelContext: ModelContext?
+    
     private init() {
         isAuthenticated = KeychainService.shared.isLoggedIn
     }
     
+    func configure(modelContext: ModelContext) {
+        self.modelContext = modelContext
+        loadCachedUser()
+        
+        if isAuthenticated {
+            Task {
+                try? await syncUserData()
+            }
+        }
+    }
+    
+    private func loadCachedUser() {
+        guard isAuthenticated, let context = modelContext else { return }
+        
+        let descriptor = FetchDescriptor<CachedUser>()
+        if let cached = try? context.fetch(descriptor).first {
+            currentUser = APIUser(id: cached.id, email: cached.email, username: cached.username, createdAt: cached.createdAt)
+        }
+    }
+    
+    private func cacheUser(_ user: APIUser) {
+        guard let context = modelContext else { return }
+        
+        let descriptor = FetchDescriptor<CachedUser>()
+        let existing = try? context.fetch(descriptor).first
+        
+        if let existing = existing {
+            existing.email = user.email
+            existing.username = user.username
+            existing.createdAt = user.createdAt
+        } else {
+            let cached = CachedUser(id: user.id, email: user.email, username: user.username, createdAt: user.createdAt)
+            context.insert(cached)
+        }
+        
+        try? context.save()
+    }
+    
+    private func clearCachedUser() {
+        guard let context = modelContext else { return }
+        
+        let descriptor = FetchDescriptor<CachedUser>()
+        if let cached = try? context.fetch(descriptor).first {
+            context.delete(cached)
+            try? context.save()
+        }
+    }
+    
     // MARK: - Auth
     
-    func signup(email: String, password: String) async throws -> AuthResponse {
-        let body = AuthRequest(email: email, password: password)
+    func signup(email: String, password: String, username: String) async throws -> AuthResponse {
+        let body = AuthRequest(email: email, password: password, username: username)
         let response: AuthResponse = try await post("/auth/signup", body: body, authenticated: false)
         KeychainService.shared.saveToken(response.token)
         currentUser = response.user
+        cacheUser(response.user)
         isAuthenticated = true
         return response
     }
     
     func login(email: String, password: String) async throws -> AuthResponse {
-        let body = AuthRequest(email: email, password: password)
+        let body = AuthRequest(email: email, password: password, username: "")
         let response: AuthResponse = try await post("/auth/login", body: body, authenticated: false)
         KeychainService.shared.saveToken(response.token)
         currentUser = response.user
+        cacheUser(response.user)
         isAuthenticated = true
         return response
     }
@@ -82,7 +131,55 @@ final class APIService: ObservableObject {
     func logout() {
         KeychainService.shared.deleteToken()
         currentUser = nil
+        clearCachedUser()
         isAuthenticated = false
+    }
+    
+    func syncUserData() async throws {
+        guard let context = modelContext else { return }
+        
+        async let personalExpensesTask = getPersonalExpenses()
+        async let budgetsTask = getAllBudgets()
+        async let categoriesTask = getCategories()
+        
+        let (personalExpensesResponse, budgets, categories) = try await (personalExpensesTask, budgetsTask, categoriesTask)
+        
+        let dateFormatter = ISO8601DateFormatter()
+        
+        for expense in personalExpensesResponse.expenses {
+            let expenseDate = dateFormatter.date(from: expense.expenseDate) ?? Date()
+            let newExpense = Expense(
+                amount: Double(expense.amount) ?? 0,
+                category: expense.category ?? "",
+                date: expenseDate,
+                expenseDescription: expense.description,
+                notes: expense.notes
+            )
+            newExpense.id = expense.id
+            context.insert(newExpense)
+        }
+        
+        for budget in budgets {
+            let newBudget = MonthlyBudget(
+                year: budget.year,
+                month: budget.month,
+                limit: Double(budget.amount) ?? 0
+            )
+            newBudget.id = budget.id
+            context.insert(newBudget)
+        }
+        
+        for category in categories {
+            let newCategory = CustomCategory(
+                name: category.name,
+                icon: category.icon,
+                color: category.color
+            )
+            newCategory.id = category.id
+            context.insert(newCategory)
+        }
+        
+        try context.save()
     }
     
     func healthCheck() async throws -> HealthResponse {
@@ -96,8 +193,8 @@ final class APIService: ObservableObject {
         return try await post("/groups", body: body)
     }
     
-    func addMember(groupId: UUID, userEmail: String) async throws -> AddMemberResponse {
-        let body = AddMemberRequest(userEmail: userEmail)
+    func addMember(groupId: UUID, email: String) async throws -> AddMemberResponse {
+        let body = AddMemberRequest(email: email)
         return try await post("/groups/\(groupId)/add-member", body: body)
     }
     
@@ -169,10 +266,10 @@ final class APIService: ObservableObject {
         return try await post("/personal-expenses", body: request)
     }
     
-    func getPersonalExpenses(limit: Int = 50, offset: Int = 0, categoryId: UUID? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> PaginatedPersonalExpensesResponse {
+    func getPersonalExpenses(limit: Int = 50, offset: Int = 0, category: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> PaginatedPersonalExpensesResponse {
         var query = "?limit=\(limit)&offset=\(offset)"
-        if let categoryId = categoryId {
-            query += "&category_id=\(categoryId)"
+        if let category = category {
+            query += "&category=\(category)"
         }
         if let startDate = startDate {
             query += "&start_date=\(startDate)"

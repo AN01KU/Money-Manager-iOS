@@ -19,8 +19,8 @@ final class MonthlyBudget {
     var createdAt: Date
     var updatedAt: Date
     
-    init(year: Int, month: Int, limit: Double) {
-        self.id = UUID()
+    init(id: UUID = UUID(), year: Int, month: Int, limit: Double) {
+        self.id = id
         self.year = year
         self.month = month
         self.limit = limit

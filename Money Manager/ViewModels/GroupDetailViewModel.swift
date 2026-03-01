@@ -103,6 +103,7 @@ class GroupDetailViewModel: ObservableObject {
         let newMember = APIUser(
             id: tempId,
             email: email,
+            username: email.components(separatedBy: "@").first?.capitalized ?? email,
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         members.append(newMember)
@@ -114,11 +115,13 @@ class GroupDetailViewModel: ObservableObject {
                 if useTestData {
                     try await Task.sleep(for: .seconds(Int.random(in: 5...10)))
                 } else {
-                    _ = try await APIService.shared.addMember(groupId: group.id, userEmail: email)
+                    _ = try await APIService.shared.addMember(groupId: group.id, email: email)
                 }
                 pendingMemberIds.remove(tempId)
             } catch {
                 addMemberError = error.localizedDescription
+                members.removeAll { $0.id == tempId }
+                pendingMemberIds.remove(tempId)
             }
         }
     }

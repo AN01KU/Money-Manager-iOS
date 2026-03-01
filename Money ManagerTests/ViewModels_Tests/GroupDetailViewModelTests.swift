@@ -58,8 +58,8 @@ struct GroupDetailViewModelTests {
     @Test
     func testRecalculateBalancesCalculatesCorrectly() {
         let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let member1 = APIUser(id: UUID(), email: "user1@test.com", createdAt: "2026-01-01")
-        let member2 = APIUser(id: UUID(), email: "user2@test.com", createdAt: "2026-01-01")
+        let member1 = APIUser(id: UUID(), email: "user1@test.com", username: "User1", createdAt: "2026-01-01")
+        let member2 = APIUser(id: UUID(), email: "user2@test.com", username: "User2", createdAt: "2026-01-01")
         
         let expense = SharedExpense(
             id: UUID(),
@@ -85,7 +85,7 @@ struct GroupDetailViewModelTests {
     @Test
     func testRecalculateBalancesWithNoSplits() {
         let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let member1 = APIUser(id: UUID(), email: "user1@test.com", createdAt: "2026-01-01")
+        let member1 = APIUser(id: UUID(), email: "user1@test.com", username: "User1", createdAt: "2026-01-01")
         
         let expense = SharedExpense(
             id: UUID(),
@@ -121,7 +121,7 @@ struct GroupDetailViewModelTests {
     @Test
     func testAddExpenseRecalculatesBalances() {
         let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let member = APIUser(id: UUID(), email: "user@test.com", createdAt: "2026-01-01")
+        let member = APIUser(id: UUID(), email: "user@test.com", username: "User", createdAt: "2026-01-01")
         
         let expense = SharedExpense(id: UUID(), groupId: group.id, description: "Test", category: "Food", totalAmount: "100.00", paidBy: member.id, createdAt: "2026-01-01", splits: nil)
         
@@ -178,7 +178,7 @@ struct GroupDetailViewModelTests {
     @Test
     func testAddMemberPreservesExistingMembers() {
         let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let existing = APIUser(id: UUID(), email: "existing@test.com", createdAt: "2026-01-01")
+        let existing = APIUser(id: UUID(), email: "existing@test.com", username: "Existing", createdAt: "2026-01-01")
         let viewModel = GroupDetailViewModel(group: group, members: [existing])
         
         viewModel.addMember(email: "new@test.com")
@@ -191,7 +191,7 @@ struct GroupDetailViewModelTests {
     @Test
     func testAddMemberDoesNotMarkExistingAsPending() {
         let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let existing = APIUser(id: UUID(), email: "existing@test.com", createdAt: "2026-01-01")
+        let existing = APIUser(id: UUID(), email: "existing@test.com", username: "Existing", createdAt: "2026-01-01")
         let viewModel = GroupDetailViewModel(group: group, members: [existing])
         
         viewModel.addMember(email: "new@test.com")

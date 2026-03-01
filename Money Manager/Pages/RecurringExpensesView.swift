@@ -45,6 +45,9 @@ struct RecurringExpensesView: View {
         .onAppear {
             viewModel.configure(recurringExpenses: recurringExpenses, modelContext: modelContext)
         }
+        .onChange(of: recurringExpenses) { _, _ in
+            viewModel.configure(recurringExpenses: recurringExpenses, modelContext: modelContext)
+        }
     }
 }
 

@@ -4,18 +4,13 @@ import SwiftData
 let useTestData: Bool = CommandLine.arguments.contains("useTestData")
 
 struct ContentView: View {
-    @ObservedObject private var apiService = APIService.shared
-    
     var body: some View {
-        if apiService.isAuthenticated || useTestData {
-            MainTabView()
-        } else {
-            AuthView()
-        }
+        MainTabView()
     }
 }
 
 struct MainTabView: View {
+    @ObservedObject private var apiService = APIService.shared
     @State private var selectedTab = 0
     
     var body: some View {
@@ -26,11 +21,13 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
-            GroupsListView()
-                .tabItem {
-                    Label("Groups", systemImage: "person.3.fill")
-                }
-                .tag(1)
+            if apiService.isAuthenticated || useTestData {
+                GroupsListView()
+                    .tabItem {
+                        Label("Groups", systemImage: "person.3.fill")
+                    }
+                    .tag(1)
+            }
             
             SettingsView()
                 .tabItem {
@@ -54,11 +51,17 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                profileSection
-                syncSection
+                if apiService.isAuthenticated {
+                    profileSection
+                    syncSection
+                } else {
+                    loginPromptSection
+                }
                 financeSection
                 preferencesSection
-                accountSection
+                if apiService.isAuthenticated {
+                    accountSection
+                }
                 aboutSection
             }
             .navigationTitle("Settings")
@@ -73,6 +76,45 @@ struct SettingsView: View {
         }
     }
     
+    @State private var showLoginSheet = false
+    
+    // MARK: - Login Prompt
+    
+    private var loginPromptSection: some View {
+        Section {
+            Button {
+                showLoginSheet = true
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.teal.opacity(0.12))
+                            .frame(width: 56, height: 56)
+                        
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.title2)
+                            .foregroundColor(.teal)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Sign in to sync")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Back up data & access group splits")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .sheet(isPresented: $showLoginSheet) {
+            AuthView()
+        }
+    }
+    
     // MARK: - Profile
     
     private var profileSection: some View {
@@ -84,14 +126,14 @@ struct SettingsView: View {
                             .fill(Color.teal.opacity(0.12))
                             .frame(width: 56, height: 56)
                         
-                        Text(String(user.email.prefix(1)).uppercased())
+                        Text(String(user.username.prefix(1)).uppercased())
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.teal)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(useTestData ? TestData.nameForUser(user.id) : user.email.components(separatedBy: "@").first?.capitalized ?? user.email)
+                        Text(useTestData ? TestData.nameForUser(user.id) : user.username)
                             .font(.title3)
                             .fontWeight(.semibold)
                         

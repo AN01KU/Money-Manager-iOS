@@ -7,6 +7,11 @@ struct BudgetsView: View {
     @Query private var budgets: [MonthlyBudget]
     
     @StateObject private var viewModel = BudgetsViewModel()
+    @State private var lastBudgetUpdate: Date = Date.distantPast
+    
+    private var latestBudgetUpdate: Date {
+        budgets.map(\.updatedAt).max() ?? Date.distantPast
+    }
     
     var body: some View {
         ScrollView {
@@ -63,12 +68,23 @@ struct BudgetsView: View {
             BudgetSheet(selectedMonth: viewModel.selectedMonth)
         }
         .onAppear {
+            lastBudgetUpdate = latestBudgetUpdate
             viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
         }
-        .onChange(of: allExpenses) { _, _ in
+        .onChange(of: allExpenses.count) { _, _ in
             viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
         }
-        .onChange(of: budgets) { _, _ in
+        .onChange(of: budgets.count) { _, _ in
+            lastBudgetUpdate = latestBudgetUpdate
+            viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+        }
+        .onChange(of: latestBudgetUpdate) { _, newUpdate in
+            if newUpdate > lastBudgetUpdate {
+                lastBudgetUpdate = newUpdate
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            }
+        }
+        .onChange(of: viewModel.selectedMonth) { _, _ in
             viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
         }
     }

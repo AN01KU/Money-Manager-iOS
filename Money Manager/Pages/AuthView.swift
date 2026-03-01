@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AuthView: View {
+    @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = AuthViewModel()
     
     var body: some View {
@@ -30,6 +31,22 @@ struct AuthView: View {
                     .padding(.horizontal)
                     
                     VStack(spacing: 16) {
+                        if !viewModel.isLoginMode {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Username")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                TextField("Your name", text: $viewModel.username)
+                                    .textContentType(.name)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.words)
+                                    .padding()
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(10)
+                            }
+                        }
+                        
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Email")
                                 .font(.subheadline)
@@ -75,7 +92,8 @@ struct AuthView: View {
                     
                     Button(action: {
                         Task {
-                            _ = await viewModel.submit()
+                            let success = await viewModel.submit()
+                            if success { dismiss() }
                         }
                     }) {
                         Group {
@@ -106,6 +124,7 @@ struct AuthView: View {
             }
             .onChange(of: viewModel.isLoginMode) {
                 viewModel.confirmPassword = ""
+                viewModel.username = ""
             }
         }
     }

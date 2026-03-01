@@ -39,12 +39,20 @@ struct Overview: View {
                                 CategoryChart(categorySpending: viewModel.categorySpending)
                                     .padding(.horizontal)
                             } else {
-                                EmptyStateView()
+                                EmptyStateView(
+                                    icon: "chart.bar.doc.horizontal",
+                                    title: "No expenses yet",
+                                    message: "Tap + to add your first expense"
+                                )
                                     .padding(.horizontal)
                             }
                         } else {
                             if viewModel.filteredExpenses.isEmpty {
-                                EmptyStateView()
+                                EmptyStateView(
+                                    icon: "chart.bar.doc.horizontal",
+                                    title: "No expenses yet",
+                                    message: "Tap + to add your first expense"
+                                )
                                     .padding(.horizontal)
                             } else {
                                 TransactionList(expenses: viewModel.filteredExpenses)
@@ -62,35 +70,7 @@ struct Overview: View {
                 .padding(.bottom, 24)
             }
             .navigationTitle("Overview")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if !viewModel.filteredExpenses.isEmpty {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
-                            
-                            TextField("Search expenses", text: $viewModel.searchText)
-                                .textInputAutocapitalization(.never)
-                                .accessibilityIdentifier("searchExpensesField")
-                            
-                            if !viewModel.searchText.isEmpty {
-                                Button {
-                                    viewModel.searchText = ""
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(Color(.systemGray5))
-                        .cornerRadius(8)
-                        .frame(maxWidth: .infinity)
-                        .transition(.opacity.combined(with: .move(edge: .leading)))
-                    }
-                }
-            }
+            .searchable(text: $viewModel.searchText, prompt: "Search expenses")
             .sheet(isPresented: $viewModel.showAddExpense) {
                 AddExpenseView()
             }
@@ -111,6 +91,15 @@ struct Overview: View {
             }
             .onChange(of: budgets) { _, _ in
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            }
+            .onChange(of: viewModel.searchText) { _, _ in
+                viewModel.recalculate()
+            }
+            .onChange(of: viewModel.filterMode) { _, _ in
+                viewModel.recalculate()
+            }
+            .onChange(of: viewModel.selectedDate) { _, _ in
+                viewModel.recalculate()
             }
         }
     }

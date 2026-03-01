@@ -391,7 +391,7 @@ struct BalanceRow: View {
                     .fontWeight(.semibold)
                     .foregroundColor(isOwed ? .green : .red)
             } else {
-                Text("₹0")
+                Text(CurrencyFormatter.format(0))
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }

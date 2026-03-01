@@ -61,8 +61,13 @@ class TransactionDetailViewModel: ObservableObject {
         dateFormatter.dateStyle = .medium
         
         if let time = time {
+            let calendar = Calendar.current
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+            let combined = calendar.date(bySettingHour: timeComponents.hour ?? 0,
+                                         minute: timeComponents.minute ?? 0,
+                                         second: 0, of: date) ?? date
             dateFormatter.timeStyle = .short
-            return dateFormatter.string(from: date)
+            return dateFormatter.string(from: combined)
         } else {
             dateFormatter.timeStyle = .none
             return dateFormatter.string(from: date)

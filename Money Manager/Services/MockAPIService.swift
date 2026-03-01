@@ -37,6 +37,7 @@ final class MockAPIService: ObservableObject {
             currentUser = APIUser(
                 id: UUID(),
                 email: MockData.currentUser.email,
+                username: MockData.currentUser.username,
                 createdAt: isoString()
             )
         }
@@ -57,10 +58,10 @@ final class MockAPIService: ObservableObject {
     
     // MARK: - Auth
     
-    func signup(email: String, password: String) async throws -> AuthResponse {
+    func signup(email: String, password: String, username: String) async throws -> AuthResponse {
         await simulateDelay(for: "auth/signup")
         
-        let user = APIUser(id: UUID(), email: email, createdAt: isoString())
+        let user = APIUser(id: UUID(), email: email, username: username, createdAt: isoString())
         let token = UUID().uuidString
         
         KeychainService.shared.saveToken(token)
@@ -70,10 +71,10 @@ final class MockAPIService: ObservableObject {
         return AuthResponse(token: token, user: user)
     }
     
-    func login(email: String, password: String) async throws -> AuthResponse {
+    func login(email: String, password: String, username: String? = nil) async throws -> AuthResponse {
         await simulateDelay(for: "auth/login")
         
-        let user = APIUser(id: UUID(), email: email, createdAt: isoString())
+        let user = APIUser(id: UUID(), email: email, username: username ?? email.components(separatedBy: "@").first?.capitalized ?? "User", createdAt: isoString())
         let token = UUID().uuidString
         
         KeychainService.shared.saveToken(token)
@@ -106,7 +107,7 @@ final class MockAPIService: ObservableObject {
         )
     }
     
-    func addMember(groupId: UUID, userEmail: String) async throws -> AddMemberResponse {
+    func addMember(groupId: UUID, email: String) async throws -> AddMemberResponse {
         await simulateDelay(for: "groups/add-member")
         return AddMemberResponse(message: "Member added successfully")
     }
@@ -254,7 +255,7 @@ final class MockAPIService: ObservableObject {
         return PersonalExpenseResponse(
             id: UUID(),
             userId: currentUser?.id ?? UUID(),
-            categoryId: request.categoryId,
+            category: request.category,
             amount: request.amount,
             description: request.description,
             notes: request.notes,
@@ -264,7 +265,7 @@ final class MockAPIService: ObservableObject {
         )
     }
     
-    func getPersonalExpenses(limit: Int = 50, offset: Int = 0, categoryId: UUID? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> PaginatedPersonalExpensesResponse {
+    func getPersonalExpenses(limit: Int = 50, offset: Int = 0, category: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> PaginatedPersonalExpensesResponse {
         await simulateDelay(for: "personal-expenses")
         return PaginatedPersonalExpensesResponse(
             expenses: [],
@@ -278,7 +279,7 @@ final class MockAPIService: ObservableObject {
         return PersonalExpenseResponse(
             id: id,
             userId: currentUser?.id ?? UUID(),
-            categoryId: UUID(),
+            category: "Food",
             amount: "100.00",
             description: "Sample expense",
             notes: nil,
@@ -294,7 +295,7 @@ final class MockAPIService: ObservableObject {
         return PersonalExpenseResponse(
             id: id,
             userId: currentUser?.id ?? UUID(),
-            categoryId: UUID(),
+            category: "Food",
             amount: amount.map { String($0) } ?? "0",
             description: description ?? "",
             notes: notes,

@@ -131,4 +131,58 @@ struct TransactionDetailViewModelTests {
         
         #expect(result == nil)
     }
+    
+    @Test
+    func testFormatDateAndTimeWithSpecificTimeContainsTime() {
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        let calendar = Calendar.current
+        let date = calendar.startOfDay(for: Date())
+        let time = calendar.date(bySettingHour: 14, minute: 30, second: 0, of: date)!
+        
+        let result = viewModel.formatDateAndTime(date, time: time)
+        
+        #expect(result.contains("2:30") || result.contains("14:30"))
+    }
+    
+    @Test
+    func testFormatDateAndTimeWithNilTimeContainsNoTime() {
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        let calendar = Calendar.current
+        let date = calendar.startOfDay(for: Date())
+        
+        let result = viewModel.formatDateAndTime(date, time: nil)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .none
+        let expectedDateOnly = dateFormatter.string(from: date)
+        
+        #expect(result == expectedDateOnly)
+    }
+    
+    @Test
+    func testFormatDateAndTimeKnownDateAndTimeContainsBoth() {
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        var dateComponents = DateComponents()
+        dateComponents.year = 2026
+        dateComponents.month = 1
+        dateComponents.day = 15
+        let calendar = Calendar.current
+        let date = calendar.date(from: dateComponents)!
+        
+        let time = calendar.date(bySettingHour: 14, minute: 30, second: 0, of: date)!
+        
+        let result = viewModel.formatDateAndTime(date, time: time)
+        
+        #expect(result.contains("Jan") || result.contains("January"))
+        #expect(result.contains("15"))
+        #expect(result.contains("2026"))
+        #expect(result.contains("2:30") || result.contains("14:30"))
+    }
 }

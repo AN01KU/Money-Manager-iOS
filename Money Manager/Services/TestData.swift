@@ -8,15 +8,16 @@ struct TestData {
     static let currentUser = APIUser(
         id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
         email: "ankush@example.com",
+        username: "Ankush",
         createdAt: "2025-06-15T10:00:00Z"
     )
     
     static let testUsers: [APIUser] = [
         currentUser,
-        APIUser(id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!, email: "ravi@example.com", createdAt: "2025-07-01T10:00:00Z"),
-        APIUser(id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!, email: "priya@example.com", createdAt: "2025-07-10T10:00:00Z"),
-        APIUser(id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!, email: "neha@example.com", createdAt: "2025-08-01T10:00:00Z"),
-        APIUser(id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!, email: "amit@example.com", createdAt: "2025-08-15T10:00:00Z"),
+        APIUser(id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!, email: "ravi@example.com", username: "Ravi", createdAt: "2025-07-01T10:00:00Z"),
+        APIUser(id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!, email: "priya@example.com", username: "Priya", createdAt: "2025-07-10T10:00:00Z"),
+        APIUser(id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!, email: "neha@example.com", username: "Neha", createdAt: "2025-08-01T10:00:00Z"),
+        APIUser(id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!, email: "amit@example.com", username: "Amit", createdAt: "2025-08-15T10:00:00Z"),
     ]
     
     // MARK: - Groups
@@ -346,7 +347,6 @@ struct TestData {
     }
     
     static func nameForUser(_ userId: UUID) -> String {
-        let email = emailForUser(userId)
-        return email.components(separatedBy: "@").first?.capitalized ?? "Unknown"
+        testUsers.first(where: { $0.id == userId })?.username ?? "Unknown"
     }
 }

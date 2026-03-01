@@ -62,6 +62,7 @@ struct AuthViewModelTests {
         viewModel.email = "test@example.com"
         viewModel.password = "password123"
         viewModel.confirmPassword = "password123"
+        viewModel.username = "testuser"
         
         #expect(viewModel.isFormValid == true)
     }
@@ -93,11 +94,13 @@ struct AuthViewModelTests {
         let viewModel = AuthViewModel()
         viewModel.isLoginMode = true
         viewModel.confirmPassword = "savedpassword"
+        viewModel.username = "testuser"
         
         viewModel.toggleMode()
         
         #expect(viewModel.isLoginMode == false)
         #expect(viewModel.confirmPassword == "")
+        #expect(viewModel.username == "")
     }
     
     @Test
@@ -110,6 +113,42 @@ struct AuthViewModelTests {
         
         #expect(viewModel.isLoginMode == true)
         #expect(viewModel.confirmPassword == "")
+    }
+    
+    @Test
+    func testIsFormValidSignupWithValidUsername() {
+        let viewModel = AuthViewModel()
+        viewModel.isLoginMode = false
+        viewModel.email = "test@example.com"
+        viewModel.password = "password123"
+        viewModel.confirmPassword = "password123"
+        viewModel.username = "testuser"
+        
+        #expect(viewModel.isFormValid == true)
+    }
+    
+    @Test
+    func testIsFormValidSignupWithEmptyUsername() {
+        let viewModel = AuthViewModel()
+        viewModel.isLoginMode = false
+        viewModel.email = "test@example.com"
+        viewModel.password = "password123"
+        viewModel.confirmPassword = "password123"
+        viewModel.username = ""
+        
+        #expect(viewModel.isFormValid == false)
+    }
+    
+    @Test
+    func testIsFormValidSignupWithWhitespaceUsername() {
+        let viewModel = AuthViewModel()
+        viewModel.isLoginMode = false
+        viewModel.email = "test@example.com"
+        viewModel.password = "password123"
+        viewModel.confirmPassword = "password123"
+        viewModel.username = "   "
+        
+        #expect(viewModel.isFormValid == false)
     }
     
     @Test

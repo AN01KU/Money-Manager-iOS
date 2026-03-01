@@ -30,6 +30,7 @@ final class Expense {
     var groupName: String?
     
     init(
+        id: UUID = UUID(),
         amount: Double,
         category: String,
         date: Date,
@@ -40,7 +41,7 @@ final class Expense {
         groupId: UUID? = nil,
         groupName: String? = nil
     ) {
-        self.id = UUID()
+        self.id = id
         self.amount = amount
         self.category = category
         self.date = date
