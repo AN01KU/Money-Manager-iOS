@@ -118,22 +118,58 @@ class GroupsListViewModel: ObservableObject {
         return "\(weeks)w ago"
     }
     
-    func loadGroups() async {
-        isLoading = true
+    func loadFromDB(dbGroups: [SplitGroupModel], dbMembers: [GroupMemberModel], dbExpenses: [GroupExpenseModel], dbBalances: [GroupBalanceModel]) {
+        groups = dbGroups.map { SplitGroup(id: $0.id, name: $0.name, createdBy: $0.createdBy, createdAt: $0.createdAt) }
         
-        if let groupsParam {
-            groups = groupsParam
-            groupBalances = balancesParam
-            groupExpenses = expensesParam
-            groupMembers = membersParam
-        } else if useTestData {
-            try? await Task.sleep(for: .milliseconds(400))
-            groups = TestData.testGroups
-            groupBalances = TestData.testBalances
-            groupExpenses = TestData.testSharedExpenses
-            groupMembers = TestData.testGroupMembers
+        var membersDict: [UUID: [APIUser]] = [:]
+        var expensesDict: [UUID: [SharedExpense]] = [:]
+        var balancesDict: [UUID: [UserBalance]] = [:]
+        
+        for group in groups ?? [] {
+            let groupMembers = dbMembers.filter { $0.group?.id == group.id }
+            membersDict[group.id] = groupMembers.map { APIUser(id: $0.id, email: $0.email, username: $0.username, createdAt: $0.createdAt) }
+            
+            let groupExpenses = dbExpenses.filter { $0.group?.id == group.id }
+            expensesDict[group.id] = groupExpenses.map { exp in
+                SharedExpense(id: exp.id, groupId: group.id, description: exp.expenseDescription, category: exp.category, totalAmount: String(exp.totalAmount), paidBy: exp.paidBy, createdAt: exp.createdAt, splits: nil)
+            }
+            
+            let groupBalances = dbBalances.filter { $0.group?.id == group.id }
+            balancesDict[group.id] = groupBalances.map { bal in
+                UserBalance(userId: bal.userId, amount: String(bal.amount))
+            }
         }
         
+        groupMembers = membersDict
+        groupExpenses = expensesDict
+        groupBalances = balancesDict
+    }
+    
+    func refreshFromAPI() async {
+        guard !useTestData else { return }
+        
+        do {
+            let fetchedGroups = try await APIService.shared.getGroups()
+            groups = fetchedGroups
+            
+            for group in fetchedGroups {
+                async let expensesTask = APIService.shared.getGroupExpenses(groupId: group.id)
+                async let balancesTask = APIService.shared.getBalances(groupId: group.id)
+                async let membersTask = APIService.shared.getGroupMembers(groupId: group.id)
+                
+                let (expenses, balances, members) = try await (expensesTask, balancesTask, membersTask)
+                groupExpenses[group.id] = expenses
+                groupBalances[group.id] = balances
+                groupMembers[group.id] = members
+            }
+        } catch {
+            print("Failed to load groups: \(error)")
+        }
+        
+        isLoading = false
+    }
+    
+    func loadGroups() {
         isLoading = false
     }
     

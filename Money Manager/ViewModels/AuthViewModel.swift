@@ -47,7 +47,11 @@ class AuthViewModel: ObservableObject {
                     _ = try await APIService.shared.signup(email: email.trimmingCharacters(in: .whitespaces), password: password, username: username.trimmingCharacters(in: .whitespaces))
                 }
                 
-                try await APIService.shared.syncUserData()
+                do {
+                    try await APIService.shared.syncUserData()
+                } catch {
+                    print("Sync failed: \(error.localizedDescription)")
+                }
                 
                 isLoading = false
                 return true

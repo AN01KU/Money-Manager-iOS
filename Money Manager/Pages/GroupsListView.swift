@@ -1,33 +1,26 @@
 import SwiftUI
+import SwiftData
 
 struct GroupsListView: View {
-    var groups: [SplitGroup]?
-    var balances: [UUID: [UserBalance]] = [:]
-    var expenses: [UUID: [SharedExpense]] = [:]
-    var members: [UUID: [APIUser]] = [:]
+    @Query private var dbGroups: [SplitGroupModel]
+    @Query private var dbMembers: [GroupMemberModel]
+    @Query private var dbExpenses: [GroupExpenseModel]
+    @Query private var dbBalances: [GroupBalanceModel]
     
     @StateObject private var viewModel: GroupsListViewModel
     
-    init(groups: [SplitGroup]? = nil,
-         balances: [UUID: [UserBalance]] = [:],
-         expenses: [UUID: [SharedExpense]] = [:],
-         members: [UUID: [APIUser]] = [:]) {
-        _viewModel = StateObject(wrappedValue: GroupsListViewModel(
-            groups: groups,
-            balances: balances,
-            expenses: expenses,
-            members: members
-        ))
+    init() {
+        _viewModel = StateObject(wrappedValue: GroupsListViewModel())
     }
     
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 Group {
-                    if viewModel.isLoading {
+                    if viewModel.isLoading && viewModel.groups.isEmpty {
                         ProgressView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if viewModel.groups.isEmpty {
+                    } else if viewModel.groups.isEmpty && dbGroups.isEmpty {
                         EmptyStateView(
                             icon: "person.3.fill",
                             actionTitle: "Create Group"
@@ -75,7 +68,8 @@ struct GroupsListView: View {
                 }
             }
             .task {
-                await viewModel.loadGroups()
+                viewModel.loadFromDB(dbGroups: dbGroups, dbMembers: dbMembers, dbExpenses: dbExpenses, dbBalances: dbBalances)
+                await viewModel.refreshFromAPI()
             }
         }
     }
@@ -394,24 +388,11 @@ struct CreateGroupSheet: View {
 // MARK: - Previews
 
 #Preview("With Groups") {
-    GroupsListView(
-        groups: TestData.testGroups,
-        balances: TestData.testBalances,
-        expenses: TestData.testSharedExpenses,
-        members: TestData.testGroupMembers
-    )
+    GroupsListView()
+        .modelContainer(for: [SplitGroupModel.self, GroupMemberModel.self, GroupExpenseModel.self, GroupBalanceModel.self])
 }
 
 #Preview("Empty State") {
-    GroupsListView(groups: [])
-}
-
-#Preview("Single Group") {
-    let group = TestData.testGroups[0]
-    GroupsListView(
-        groups: [group],
-        balances: [group.id: TestData.testBalances[group.id] ?? []],
-        expenses: [group.id: TestData.testSharedExpenses[group.id] ?? []],
-        members: [group.id: TestData.testGroupMembers[group.id] ?? []]
-    )
+    GroupsListView()
+        .modelContainer(for: [SplitGroupModel.self, GroupMemberModel.self, GroupExpenseModel.self, GroupBalanceModel.self])
 }

@@ -20,7 +20,11 @@ struct Money_ManagerApp: App {
             MonthlyBudget.self,
             PendingSyncItem.self,
             CachedUser.self,
-            AuthToken.self
+            AuthToken.self,
+            SplitGroupModel.self,
+            GroupMemberModel.self,
+            GroupExpenseModel.self,
+            GroupBalanceModel.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

@@ -42,7 +42,7 @@ struct GroupDetailView: View {
                 ProgressView()
                 Spacer()
             } else {
-                ZStack(alignment: .bottomTrailing) {
+                ZStack {
                     switch viewModel.selectedSection {
                     case .expenses:
                         expensesSection
@@ -52,29 +52,15 @@ struct GroupDetailView: View {
                         membersSection
                     }
                     
-                    if viewModel.selectedSection == .expenses {
-                        FloatingActionButton(icon: "plus") {
-                            viewModel.showAddExpense = true
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            FABView
                         }
-                        .padding(.trailing, 24)
-                        .padding(.bottom, 24)
                     }
-                    
-                    if viewModel.selectedSection == .balances && viewModel.hasUnsettledBalances {
-                        FloatingActionButton(icon: "arrow.left.arrow.right") {
-                            viewModel.showSettlement = true
-                        }
-                        .padding(.trailing, 24)
-                        .padding(.bottom, 24)
-                    }
-                    
-                    if viewModel.selectedSection == .members {
-                        FloatingActionButton(icon: "person.badge.plus") {
-                            viewModel.showAddMember = true
-                        }
-                        .padding(.trailing, 24)
-                        .padding(.bottom, 24)
-                    }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 24)
                 }
             }
         }
@@ -155,6 +141,26 @@ struct GroupDetailView: View {
         .padding(.bottom, 8)
     }
     
+    @ViewBuilder
+    private var FABView: some View {
+        switch viewModel.selectedSection {
+        case .expenses:
+            FloatingActionButton(icon: "plus") {
+                viewModel.showAddExpense = true
+            }
+        case .balances:
+            if viewModel.hasUnsettledBalances {
+                FloatingActionButton(icon: "arrow.left.arrow.right") {
+                    viewModel.showSettlement = true
+                }
+            }
+        case .members:
+            FloatingActionButton(icon: "person.badge.plus") {
+                viewModel.showAddMember = true
+            }
+        }
+    }
+    
     private var expensesSection: some View {
         Group {
             if viewModel.expenses.isEmpty {
@@ -200,18 +206,24 @@ struct GroupDetailView: View {
     }
     
     private var membersSection: some View {
-        List {
-            Section {
-                ForEach(viewModel.members) { member in
-                    MemberRow(
-                        member: member,
-                        isAdmin: member.id == group.createdBy,
-                        isPending: viewModel.pendingMemberIds.contains(member.id)
-                    )
+        Group {
+            if viewModel.members.isEmpty {
+                EmptyStateView(icon: "person.3")
+            } else {
+                List {
+                    Section {
+                        ForEach(viewModel.members) { member in
+                            MemberRow(
+                                member: member,
+                                isAdmin: member.id == group.createdBy,
+                                isPending: viewModel.pendingMemberIds.contains(member.id)
+                            )
+                        }
+                    }
                 }
+                .listStyle(.insetGrouped)
             }
         }
-        .listStyle(.insetGrouped)
     }
 }
 

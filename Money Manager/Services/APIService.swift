@@ -141,42 +141,150 @@ final class APIService: ObservableObject {
         async let personalExpensesTask = getPersonalExpenses()
         async let budgetsTask = getAllBudgets()
         async let categoriesTask = getCategories()
+        async let groupsTask = getGroups()
         
-        let (personalExpensesResponse, budgets, categories) = try await (personalExpensesTask, budgetsTask, categoriesTask)
+        let (personalExpensesResponse, budgets, categories, groups) = try await (personalExpensesTask, budgetsTask, categoriesTask, groupsTask)
         
         let dateFormatter = ISO8601DateFormatter()
         
+        // Sync personal expenses
         for expense in personalExpensesResponse.expenses {
             let expenseDate = dateFormatter.date(from: expense.expenseDate) ?? Date()
-            let newExpense = Expense(
-                amount: Double(expense.amount) ?? 0,
-                category: expense.category ?? "",
-                date: expenseDate,
-                expenseDescription: expense.description,
-                notes: expense.notes
-            )
-            newExpense.id = expense.id
-            context.insert(newExpense)
+            let expenseId = expense.id
+            
+            let descriptor = FetchDescriptor<Expense>(predicate: #Predicate<Expense> { item in
+                item.id == expenseId
+            })
+            let existing = try? context.fetch(descriptor)
+            if existing?.isEmpty ?? true {
+                let newExpense = Expense(
+                    amount: Double(expense.amount) ?? 0,
+                    category: expense.category ?? "",
+                    date: expenseDate,
+                    expenseDescription: expense.description,
+                    notes: expense.notes
+                )
+                newExpense.id = expense.id
+                context.insert(newExpense)
+            }
         }
         
+        // Sync budgets
         for budget in budgets {
-            let newBudget = MonthlyBudget(
-                year: budget.year,
-                month: budget.month,
-                limit: Double(budget.amount) ?? 0
-            )
-            newBudget.id = budget.id
-            context.insert(newBudget)
+            let budgetId = budget.id
+            let descriptor = FetchDescriptor<MonthlyBudget>(predicate: #Predicate<MonthlyBudget> { item in
+                item.id == budgetId
+            })
+            let existing = try? context.fetch(descriptor)
+            if existing?.isEmpty ?? true {
+                let newBudget = MonthlyBudget(
+                    year: budget.year,
+                    month: budget.month,
+                    limit: Double(budget.amount) ?? 0
+                )
+                newBudget.id = budget.id
+                context.insert(newBudget)
+            }
         }
         
+        // Sync categories
         for category in categories {
-            let newCategory = CustomCategory(
-                name: category.name,
-                icon: category.icon,
-                color: category.color
-            )
-            newCategory.id = category.id
-            context.insert(newCategory)
+            let categoryId = category.id
+            let descriptor = FetchDescriptor<CustomCategory>(predicate: #Predicate<CustomCategory> { item in
+                item.id == categoryId
+            })
+            let existing = try? context.fetch(descriptor)
+            if existing?.isEmpty ?? true {
+                let newCategory = CustomCategory(
+                    name: category.name,
+                    icon: category.icon,
+                    color: category.color
+                )
+                newCategory.id = category.id
+                context.insert(newCategory)
+            }
+        }
+        
+        // Sync groups with members, expenses, balances
+        for group in groups {
+            let groupId = group.id
+            let descriptor = FetchDescriptor<SplitGroupModel>(predicate: #Predicate<SplitGroupModel> { item in
+                item.id == groupId
+            })
+            let existing = try? context.fetch(descriptor)
+            
+            if existing?.isEmpty ?? true {
+                let newGroup = SplitGroupModel(
+                    id: group.id,
+                    name: group.name,
+                    createdBy: group.createdBy,
+                    createdAt: group.createdAt
+                )
+                context.insert(newGroup)
+                
+                // Sync members
+                if let members = try? await getGroupMembers(groupId: group.id) {
+                    for member in members {
+                        let memberId = member.id
+                        let memberDescriptor = FetchDescriptor<GroupMemberModel>(predicate: #Predicate<GroupMemberModel> { item in
+                            item.id == memberId
+                        })
+                        let memberExists = try? context.fetch(memberDescriptor)
+                        if memberExists?.isEmpty ?? true {
+                            let newMember = GroupMemberModel(
+                                id: member.id,
+                                email: member.email,
+                                username: member.username,
+                                createdAt: member.createdAt
+                            )
+                            newMember.group = newGroup
+                            context.insert(newMember)
+                        }
+                    }
+                }
+                
+                // Sync group expenses
+                if let expenses = try? await getGroupExpenses(groupId: group.id) {
+                    for expense in expenses {
+                        let expId = expense.id
+                        let expDescriptor = FetchDescriptor<GroupExpenseModel>(predicate: #Predicate<GroupExpenseModel> { item in
+                            item.id == expId
+                        })
+                        let expExists = try? context.fetch(expDescriptor)
+                        if expExists?.isEmpty ?? true {
+                            let newExpense = GroupExpenseModel(
+                                id: expense.id,
+                                description: expense.description,
+                                category: expense.category,
+                                totalAmount: Double(expense.totalAmount) ?? 0,
+                                paidBy: expense.paidBy,
+                                createdAt: expense.createdAt
+                            )
+                            newExpense.group = newGroup
+                            context.insert(newExpense)
+                        }
+                    }
+                }
+                
+                // Sync group balances
+                if let balances = try? await getBalances(groupId: group.id) {
+                    for balance in balances {
+                        let balanceUserId = balance.userId
+                        let balanceDescriptor = FetchDescriptor<GroupBalanceModel>(predicate: #Predicate<GroupBalanceModel> { item in
+                            item.userId == balanceUserId
+                        })
+                        let balanceExists = try? context.fetch(balanceDescriptor)
+                        if balanceExists?.isEmpty ?? true {
+                            let newBalance = GroupBalanceModel(
+                                userId: balance.userId,
+                                amount: Double(balance.amount) ?? 0,
+                                group: newGroup
+                            )
+                            context.insert(newBalance)
+                        }
+                    }
+                }
+            }
         }
         
         try context.save()
@@ -188,9 +296,17 @@ final class APIService: ObservableObject {
     
     // MARK: - Groups
     
+    func getGroups() async throws -> [SplitGroup] {
+        return try await get("/groups")
+    }
+    
     func createGroup(name: String) async throws -> SplitGroup {
         let body = CreateGroupRequest(name: name)
         return try await post("/groups", body: body)
+    }
+    
+    func getGroupMembers(groupId: UUID) async throws -> [APIUser] {
+        return try await get("/groups/\(groupId)/members")
     }
     
     func addMember(groupId: UUID, email: String) async throws -> AddMemberResponse {
