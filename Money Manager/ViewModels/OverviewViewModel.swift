@@ -112,7 +112,6 @@ class OverviewViewModel: ObservableObject {
         
         try? modelContext.delete(model: Expense.self)
         try? modelContext.delete(model: MonthlyBudget.self)
-        try? modelContext.delete(model: RecurringExpense.self)
         
         for expense in TestData.generatePersonalExpenses() {
             modelContext.insert(expense)

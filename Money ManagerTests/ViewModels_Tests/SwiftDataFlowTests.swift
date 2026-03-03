@@ -10,7 +10,7 @@ struct AddRecurringExpenseSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, RecurringExpense.self, CustomCategory.self,
+            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }
@@ -33,11 +33,13 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate<Expense> { $0.isRecurring }
+        )
         let saved = try context.fetch(descriptor)
         
         #expect(saved.count == 1)
-        #expect(saved.first?.name == "Netflix")
+        #expect(saved.first?.expenseDescription == "Netflix")
         #expect(saved.first?.amount == 649)
         #expect(saved.first?.category == "Entertainment")
         #expect(saved.first?.frequency == "monthly")
@@ -63,10 +65,12 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate<Expense> { $0.isRecurring }
+        )
         let saved = try context.fetch(descriptor)
         
-        #expect(saved.first?.endDate == nil)
+        #expect(saved.first?.recurringEndDate == nil)
     }
     
     @Test
@@ -89,10 +93,12 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate<Expense> { $0.isRecurring }
+        )
         let saved = try context.fetch(descriptor)
         
-        #expect(saved.first?.endDate != nil)
+        #expect(saved.first?.recurringEndDate != nil)
     }
 }
 
@@ -103,7 +109,7 @@ struct AddCategorySwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, RecurringExpense.self, CustomCategory.self,
+            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }
@@ -192,7 +198,7 @@ struct ManageCategoriesSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, RecurringExpense.self, CustomCategory.self,
+            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }
@@ -270,7 +276,7 @@ struct OverviewSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, RecurringExpense.self, CustomCategory.self,
+            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }

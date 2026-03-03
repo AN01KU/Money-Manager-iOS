@@ -3,7 +3,8 @@ import SwiftData
 
 struct RecurringExpensesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \RecurringExpense.name) private var recurringExpenses: [RecurringExpense]
+    @Query(filter: #Predicate<Expense> { $0.isRecurring }, sort: \Expense.expenseDescription)
+    private var recurringExpenses: [Expense]
     
     @StateObject private var viewModel = RecurringExpensesViewModel()
     
@@ -43,17 +44,21 @@ struct RecurringExpensesView: View {
             AddRecurringExpenseSheet()
         }
         .onAppear {
-            viewModel.configure(recurringExpenses: recurringExpenses, modelContext: modelContext)
+            viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
         }
         .onChange(of: recurringExpenses) { _, _ in
-            viewModel.configure(recurringExpenses: recurringExpenses, modelContext: modelContext)
+            viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
         }
     }
 }
 
 struct RecurringExpenseRow: View {
-    @Bindable var expense: RecurringExpense
+    @Bindable var expense: Expense
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    
+    private var displayName: String {
+        expense.expenseDescription ?? expense.category
+    }
     
     private var categoryIcon: String {
         if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == expense.category }) {
@@ -83,7 +88,7 @@ struct RecurringExpenseRow: View {
                 .frame(width: 36)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(expense.name)
+                Text(displayName)
                     .fontWeight(.semibold)
                 
                 Text(CurrencyFormatter.format(expense.amount))
@@ -93,14 +98,16 @@ struct RecurringExpenseRow: View {
             
             Spacer()
             
-            Text(expense.frequency.capitalized)
-                .font(.caption)
-                .fontWeight(.medium)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.teal.opacity(0.1))
-                .foregroundColor(.teal)
-                .cornerRadius(6)
+            if let frequency = expense.frequency {
+                Text(frequency.capitalized)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.teal.opacity(0.1))
+                    .foregroundColor(.teal)
+                    .cornerRadius(6)
+            }
             
             Toggle("", isOn: Binding(
                 get: { expense.isActive },
@@ -265,6 +272,6 @@ struct AddRecurringExpenseSheet: View {
 #Preview {
     NavigationStack {
         RecurringExpensesView()
-            .modelContainer(for: RecurringExpense.self)
+            .modelContainer(for: Expense.self)
     }
 }

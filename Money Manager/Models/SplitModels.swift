@@ -143,6 +143,10 @@ struct PersonalExpenseResponse: Decodable, Identifiable, Sendable {
     let description: String?
     let notes: String?
     let expenseDate: String
+    let isRecurring: Bool?
+    let frequency: String?
+    let dayOfMonth: Int?
+    let recurringEndDate: String?
     let createdAt: String
     let updatedAt: String
 }
@@ -153,12 +157,20 @@ struct CreatePersonalExpenseRequest: Codable, Sendable {
     let description: String?
     let notes: String?
     let expenseDate: String
+    let isRecurring: Bool?
+    let frequency: String?
+    let dayOfMonth: Int?
+    let recurringEndDate: String?
 }
 
 struct UpdatePersonalExpenseRequest: Encodable, Sendable {
     let amount: String?
     let description: String?
     let notes: String?
+    let isRecurring: Bool?
+    let frequency: String?
+    let dayOfMonth: Int?
+    let isActive: Bool?
 }
 
 struct PaginatedPersonalExpensesResponse: Decodable, Sendable {

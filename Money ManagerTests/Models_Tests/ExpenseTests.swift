@@ -6,21 +6,23 @@ import Testing
 struct ExpenseModelTests {
     
     @Test
-    func testExpenseIsRecurringFlagAutoSetWhenRecurringExpenseIdProvided() {
-        let recurringId = UUID()
+    func testExpenseIsRecurringWhenFlagSet() {
         let expense = Expense(
             amount: 500,
             category: "Food & Dining",
             date: Date(),
-            recurringExpenseId: recurringId
+            isRecurring: true,
+            frequency: "monthly",
+            dayOfMonth: 15
         )
         
         #expect(expense.isRecurring == true)
-        #expect(expense.recurringExpenseId == recurringId)
+        #expect(expense.frequency == "monthly")
+        #expect(expense.dayOfMonth == 15)
     }
     
     @Test
-    func testExpenseIsRecurringFlagFalseWhenNoRecurringExpenseId() {
+    func testExpenseIsNotRecurringByDefault() {
         let expense = Expense(
             amount: 500,
             category: "Food & Dining",
@@ -28,7 +30,8 @@ struct ExpenseModelTests {
         )
         
         #expect(expense.isRecurring == false)
-        #expect(expense.recurringExpenseId == nil)
+        #expect(expense.frequency == nil)
+        #expect(expense.dayOfMonth == nil)
     }
     
     @Test
@@ -40,11 +43,13 @@ struct ExpenseModelTests {
         )
         
         #expect(expense.isDeleted == false)
+        #expect(expense.isActive == true)
         #expect(expense.time == nil)
         #expect(expense.expenseDescription == nil)
         #expect(expense.notes == nil)
         #expect(expense.groupId == nil)
         #expect(expense.groupName == nil)
+        #expect(expense.recurringEndDate == nil)
     }
     
     @Test
@@ -65,8 +70,8 @@ struct ExpenseModelTests {
     @Test
     func testExpenseWithAllOptionalParameters() {
         let expenseTime = Date()
-        let recurringId = UUID()
         let groupId = UUID()
+        let endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
         
         let expense = Expense(
             amount: 250,
@@ -75,7 +80,10 @@ struct ExpenseModelTests {
             time: expenseTime,
             expenseDescription: "New shirt",
             notes: "Gift for friend",
-            recurringExpenseId: recurringId,
+            isRecurring: true,
+            frequency: "monthly",
+            dayOfMonth: 1,
+            recurringEndDate: endDate,
             groupId: groupId,
             groupName: "Office Lunch"
         )
@@ -83,6 +91,9 @@ struct ExpenseModelTests {
         #expect(expense.time == expenseTime)
         #expect(expense.expenseDescription == "New shirt")
         #expect(expense.notes == "Gift for friend")
+        #expect(expense.isRecurring == true)
+        #expect(expense.frequency == "monthly")
+        #expect(expense.recurringEndDate == endDate)
         #expect(expense.groupName == "Office Lunch")
     }
     
@@ -107,5 +118,77 @@ struct ExpenseModelTests {
         )
         
         #expect(expense.amount == -50)
+    }
+    
+    @Test
+    func testRecurringExpenseWithEndDate() {
+        let startDate = Date()
+        let endDate = Calendar.current.date(byAdding: .year, value: 1, to: startDate)!
+        
+        let expense = Expense(
+            amount: 649,
+            category: "Entertainment",
+            date: startDate,
+            expenseDescription: "Netflix",
+            isRecurring: true,
+            frequency: "monthly",
+            dayOfMonth: 1,
+            recurringEndDate: endDate
+        )
+        
+        #expect(expense.recurringEndDate == endDate)
+        #expect(expense.isActive == true)
+    }
+    
+    @Test
+    func testRecurringExpenseDeactivation() {
+        let expense = Expense(
+            amount: 649,
+            category: "Entertainment",
+            date: Date(),
+            expenseDescription: "Netflix",
+            isRecurring: true,
+            frequency: "monthly"
+        )
+        
+        #expect(expense.isActive == true)
+        expense.isActive = false
+        #expect(expense.isActive == false)
+    }
+    
+    @Test
+    func testRecurringExpenseSupportsAllFrequencies() {
+        let frequencies = ["daily", "weekly", "monthly", "yearly"]
+        
+        for frequency in frequencies {
+            let expense = Expense(
+                amount: 100,
+                category: "Other",
+                date: Date(),
+                isRecurring: true,
+                frequency: frequency
+            )
+            #expect(expense.frequency == frequency)
+        }
+    }
+    
+    @Test
+    func testGroupExpenseCanBeRecurring() {
+        let groupId = UUID()
+        let expense = Expense(
+            amount: 1500,
+            category: "Utilities",
+            date: Date(),
+            expenseDescription: "Monthly Rent Split",
+            isRecurring: true,
+            frequency: "monthly",
+            dayOfMonth: 1,
+            groupId: groupId,
+            groupName: "Roommates"
+        )
+        
+        #expect(expense.isRecurring == true)
+        #expect(expense.groupId == groupId)
+        #expect(expense.frequency == "monthly")
     }
 }

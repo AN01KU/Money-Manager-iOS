@@ -162,7 +162,11 @@ final class APIService: ObservableObject {
                     category: expense.category ?? "",
                     date: expenseDate,
                     expenseDescription: expense.description,
-                    notes: expense.notes
+                    notes: expense.notes,
+                    isRecurring: expense.isRecurring ?? false,
+                    frequency: expense.frequency,
+                    dayOfMonth: expense.dayOfMonth,
+                    recurringEndDate: expense.recurringEndDate.flatMap { dateFormatter.date(from: $0) }
                 )
                 newExpense.id = expense.id
                 context.insert(newExpense)
@@ -400,8 +404,8 @@ final class APIService: ObservableObject {
         return try await get("/personal-expenses/\(id)")
     }
     
-    func updatePersonalExpense(id: UUID, amount: Double?, description: String?, notes: String?) async throws -> PersonalExpenseResponse {
-        let body = UpdatePersonalExpenseRequest(amount: amount.map { String($0) }, description: description, notes: notes)
+    func updatePersonalExpense(id: UUID, amount: Double?, description: String?, notes: String?, isRecurring: Bool? = nil, frequency: String? = nil, dayOfMonth: Int? = nil, isActive: Bool? = nil) async throws -> PersonalExpenseResponse {
+        let body = UpdatePersonalExpenseRequest(amount: amount.map { String($0) }, description: description, notes: notes, isRecurring: isRecurring, frequency: frequency, dayOfMonth: dayOfMonth, isActive: isActive)
         return try await put("/personal-expenses/\(id)", body: body)
     }
     

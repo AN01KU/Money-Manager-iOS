@@ -4,24 +4,44 @@ import Combine
 
 @MainActor
 class RecurringExpensesViewModel: ObservableObject {
-    @Published var recurringExpenses: [RecurringExpense] = []
+    @Published var expenses: [Expense] = []
     @Published var showAddSheet = false
     
-    var activeExpenses: [RecurringExpense] {
-        recurringExpenses.filter { $0.isActive }
+    var activeExpenses: [Expense] {
+        expenses.filter { $0.isRecurring && $0.isActive }
     }
     
     private var modelContext: ModelContext?
     
-    func configure(recurringExpenses: [RecurringExpense], modelContext: ModelContext?) {
-        self.recurringExpenses = recurringExpenses
+    func configure(expenses: [Expense], modelContext: ModelContext?) {
+        self.expenses = expenses
         self.modelContext = modelContext
     }
     
     func deactivateExpense(at index: Int) {
         guard index < activeExpenses.count else { return }
-        activeExpenses[index].isActive = false
-        activeExpenses[index].updatedAt = Date()
+        let expense = activeExpenses[index]
+        expense.isActive = false
+        expense.updatedAt = Date()
+        try? modelContext?.save()
+        
+        if APIService.shared.isAuthenticated {
+            let request = UpdatePersonalExpenseRequest(
+                amount: nil,
+                description: nil,
+                notes: nil,
+                isRecurring: nil,
+                frequency: nil,
+                dayOfMonth: nil,
+                isActive: false
+            )
+            SyncService.shared.queueForSync(
+                itemType: .personalExpense,
+                itemId: expense.id,
+                action: .update,
+                payload: request
+            )
+        }
     }
 }
 
@@ -76,26 +96,50 @@ class AddRecurringExpenseViewModel: ObservableObject {
         
         guard let modelContext = modelContext else { return true }
         
-        let recurring = RecurringExpense(
-            name: name.trimmingCharacters(in: .whitespaces),
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        
+        let expense = Expense(
             amount: amountValue,
             category: selectedCategory,
+            date: startDate,
+            expenseDescription: trimmedName,
+            notes: notes.isEmpty ? nil : notes,
+            isRecurring: true,
             frequency: frequency,
-            startDate: startDate,
-            endDate: hasEndDate ? endDate : nil,
-            dayOfMonth: frequency == "monthly" ? dayOfMonth : nil
+            dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
+            recurringEndDate: hasEndDate ? endDate : nil
         )
-        recurring.notes = notes.isEmpty ? nil : notes
         
-        modelContext.insert(recurring)
+        modelContext.insert(expense)
         
         do {
             try modelContext.save()
-            return true
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"
             showError = true
             return false
         }
+        
+        if APIService.shared.isAuthenticated {
+            let request = CreatePersonalExpenseRequest(
+                category: selectedCategory,
+                amount: String(format: "%.2f", amountValue),
+                description: trimmedName,
+                notes: notes.isEmpty ? nil : notes,
+                expenseDate: ISO8601DateFormatter().string(from: startDate),
+                isRecurring: true,
+                frequency: frequency,
+                dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
+                recurringEndDate: hasEndDate ? ISO8601DateFormatter().string(from: endDate) : nil
+            )
+            SyncService.shared.queueForSync(
+                itemType: .personalExpense,
+                itemId: expense.id,
+                action: .create,
+                payload: request
+            )
+        }
+        
+        return true
     }
 }

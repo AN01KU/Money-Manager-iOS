@@ -15,7 +15,6 @@ struct Money_ManagerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Expense.self,
-            RecurringExpense.self,
             CustomCategory.self,
             MonthlyBudget.self,
             PendingSyncItem.self,

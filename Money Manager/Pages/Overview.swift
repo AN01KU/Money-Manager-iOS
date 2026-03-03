@@ -113,7 +113,7 @@ private func previewContainer(
 ) -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Expense.self, MonthlyBudget.self, RecurringExpense.self, CustomCategory.self,
+        for: Expense.self, MonthlyBudget.self, CustomCategory.self,
         configurations: config
     )
     let context = container.mainContext

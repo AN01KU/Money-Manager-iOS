@@ -241,7 +241,11 @@ class AddExpenseViewModel: ObservableObject {
                 amount: String(format: "%.2f", amountValue),
                 description: description.isEmpty ? nil : description,
                 notes: notes.isEmpty ? nil : notes,
-                expenseDate: ISO8601DateFormatter().string(from: expenseDate)
+                expenseDate: ISO8601DateFormatter().string(from: expenseDate),
+                isRecurring: isRecurring ? true : nil,
+                frequency: isRecurring ? expense.frequency : nil,
+                dayOfMonth: isRecurring ? expense.dayOfMonth : nil,
+                recurringEndDate: nil
             )
             SyncService.shared.queueForSync(
                 itemType: .personalExpense,

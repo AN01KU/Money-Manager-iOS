@@ -159,6 +159,10 @@ struct SettingsView: View {
                 Text(syncService.isConnected ? "Online" : "Offline")
                     .foregroundColor(syncService.isConnected ? .primary : .secondary)
                 Spacer()
+                if syncService.isSyncing {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
             }
             
             if syncService.pendingCount > 0 {
@@ -171,6 +175,20 @@ struct SettingsView: View {
                 }
             }
             
+            if syncService.failedCount > 0 {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundColor(.red)
+                    Text("\(syncService.failedCount) failed")
+                        .foregroundColor(.red)
+                    Spacer()
+                    Button("Clear") {
+                        syncService.clearFailedItems()
+                    }
+                    .font(.subheadline)
+                }
+            }
+            
             if let lastSync = syncService.lastSyncDate {
                 HStack {
                     Text("Last synced")
@@ -180,21 +198,6 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
-            Button {
-                syncService.triggerManualSync()
-            } label: {
-                HStack {
-                    if syncService.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    Text(syncService.isSyncing ? "Syncing..." : "Sync Now")
-                }
-            }
-            .disabled(!syncService.isConnected || syncService.isSyncing)
         }
     }
     

@@ -142,7 +142,11 @@ struct SplitModelsTests {
             amount: "500.00",
             description: "Lunch",
             notes: "With team",
-            expenseDate: "2026-02-19"
+            expenseDate: "2026-02-19",
+            isRecurring: nil,
+            frequency: nil,
+            dayOfMonth: nil,
+            recurringEndDate: nil
         )
         
         let encoder = JSONEncoder()

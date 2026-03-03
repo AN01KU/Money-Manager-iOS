@@ -260,6 +260,10 @@ final class MockAPIService: ObservableObject {
             description: request.description,
             notes: request.notes,
             expenseDate: request.expenseDate,
+            isRecurring: request.isRecurring,
+            frequency: request.frequency,
+            dayOfMonth: request.dayOfMonth,
+            recurringEndDate: request.recurringEndDate,
             createdAt: now,
             updatedAt: now
         )
@@ -284,6 +288,10 @@ final class MockAPIService: ObservableObject {
             description: "Sample expense",
             notes: nil,
             expenseDate: now,
+            isRecurring: nil,
+            frequency: nil,
+            dayOfMonth: nil,
+            recurringEndDate: nil,
             createdAt: now,
             updatedAt: now
         )
@@ -300,6 +308,10 @@ final class MockAPIService: ObservableObject {
             description: description ?? "",
             notes: notes,
             expenseDate: now,
+            isRecurring: nil,
+            frequency: nil,
+            dayOfMonth: nil,
+            recurringEndDate: nil,
             createdAt: now,
             updatedAt: now
         )

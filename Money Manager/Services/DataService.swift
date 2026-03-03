@@ -131,12 +131,12 @@ class DataService {
     
     // MARK: - Recurring Expenses
     
-    func fetchRecurringExpenses() -> [RecurringExpense] {
-        let descriptor = FetchDescriptor<RecurringExpense>(
-            predicate: #Predicate<RecurringExpense> { recurring in
-                recurring.isActive
+    func fetchRecurringExpenses() -> [Expense] {
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate<Expense> { expense in
+                expense.isRecurring && expense.isActive
             },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.expenseDescription)]
         )
         
         do {

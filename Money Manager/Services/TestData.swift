@@ -281,9 +281,9 @@ struct TestData {
     }
     
     // MARK: - Recurring Expenses
-    /// Generate recurring expenses
-    static func generateRecurringExpenses() -> [RecurringExpense] {
-        var recurring: [RecurringExpense] = []
+    /// Generate recurring expenses as Expense objects with isRecurring = true
+    static func generateRecurringExpenses() -> [Expense] {
+        var recurring: [Expense] = []
         let today = Date()
         
         let recurringExpenses: [(String, Double, String, String)] = [
@@ -295,12 +295,13 @@ struct TestData {
         ]
         
         for (name, amount, category, frequency) in recurringExpenses {
-            let expense = RecurringExpense(
-                name: name,
+            let expense = Expense(
                 amount: amount,
                 category: category,
-                frequency: frequency,
-                startDate: today
+                date: today,
+                expenseDescription: name,
+                isRecurring: true,
+                frequency: frequency
             )
             recurring.append(expense)
         }

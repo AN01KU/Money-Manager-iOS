@@ -10,12 +10,12 @@ struct RecurringExpensesViewModelTests {
     func testActiveExpensesFiltersOutInactive() {
         let viewModel = RecurringExpensesViewModel()
         
-        let active1 = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", startDate: Date())
-        let active2 = RecurringExpense(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date())
-        let inactive = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", startDate: Date())
+        let active1 = Expense(amount: 649, category: "Entertainment", date: Date(), expenseDescription: "Netflix", isRecurring: true, frequency: "monthly")
+        let active2 = Expense(amount: 500, category: "Health", date: Date(), expenseDescription: "Gym", isRecurring: true, frequency: "monthly")
+        let inactive = Expense(amount: 100, category: "Other", date: Date(), expenseDescription: "Old", isRecurring: true, frequency: "monthly")
         inactive.isActive = false
         
-        viewModel.configure(recurringExpenses: [active1, active2, inactive], modelContext: nil)
+        viewModel.configure(expenses: [active1, active2, inactive], modelContext: nil)
         
         #expect(viewModel.activeExpenses.count == 2)
     }
@@ -24,12 +24,25 @@ struct RecurringExpensesViewModelTests {
     func testActiveExpensesReturnsEmptyWhenAllInactive() {
         let viewModel = RecurringExpensesViewModel()
         
-        let inactive = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", startDate: Date())
+        let inactive = Expense(amount: 100, category: "Other", date: Date(), expenseDescription: "Old", isRecurring: true, frequency: "monthly")
         inactive.isActive = false
         
-        viewModel.configure(recurringExpenses: [inactive], modelContext: nil)
+        viewModel.configure(expenses: [inactive], modelContext: nil)
         
         #expect(viewModel.activeExpenses.isEmpty)
+    }
+    
+    @Test
+    func testActiveExpensesOnlyIncludesRecurring() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let recurring = Expense(amount: 649, category: "Entertainment", date: Date(), expenseDescription: "Netflix", isRecurring: true, frequency: "monthly")
+        let nonRecurring = Expense(amount: 500, category: "Food", date: Date(), expenseDescription: "Lunch")
+        
+        viewModel.configure(expenses: [recurring, nonRecurring], modelContext: nil)
+        
+        #expect(viewModel.activeExpenses.count == 1)
+        #expect(viewModel.activeExpenses.first?.expenseDescription == "Netflix")
     }
 }
 
