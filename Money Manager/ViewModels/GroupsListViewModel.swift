@@ -146,7 +146,14 @@ class GroupsListViewModel: ObservableObject {
     }
     
     func refreshFromAPI() async {
-        guard !useTestData else { return }
+        if useTestData {
+            groups = TestData.testGroups
+            groupMembers = TestData.testGroupMembers
+            groupExpenses = TestData.testSharedExpenses
+            groupBalances = TestData.testBalances
+            isLoading = false
+            return
+        }
         
         do {
             let fetchedGroups = try await APIService.shared.getGroups()
