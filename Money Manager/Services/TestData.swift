@@ -36,70 +36,82 @@ struct TestData {
     ]
     
     // MARK: - Shared Expenses (Group Expenses)
-    static let testSharedExpenses: [UUID: [SharedExpense]] = [
-        testGroups[0].id: [
-            SharedExpense(id: UUID(), groupId: testGroups[0].id, description: "Hotel booking", category: "Travel", totalAmount: "9000.00", paidBy: currentUser.id, createdAt: "2025-12-10T14:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "3000.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "3000.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "3000.00"),
-            ]),
-            SharedExpense(id: UUID(), groupId: testGroups[0].id, description: "Dinner at beach shack", category: "Food & Dining", totalAmount: "2400.00", paidBy: testUsers[1].id, createdAt: "2025-12-11T20:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "800.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "800.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "800.00"),
-            ]),
-            SharedExpense(id: UUID(), groupId: testGroups[0].id, description: "Cab to airport", category: "Transport", totalAmount: "1500.00", paidBy: testUsers[2].id, createdAt: "2025-12-12T08:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "500.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "500.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "500.00"),
-            ]),
-        ],
-        testGroups[1].id: [
-            SharedExpense(id: UUID(), groupId: testGroups[1].id, description: "Electricity bill", category: "Utilities", totalAmount: "3200.00", paidBy: currentUser.id, createdAt: "2026-01-05T10:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "1066.67"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "1066.67"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "1066.66"),
-            ]),
-            SharedExpense(id: UUID(), groupId: testGroups[1].id, description: "WiFi monthly", category: "Utilities", totalAmount: "999.00", paidBy: testUsers[1].id, createdAt: "2026-01-01T10:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "333.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "333.00"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "333.00"),
-            ]),
-            SharedExpense(id: UUID(), groupId: testGroups[1].id, description: "Water bill", category: "Utilities", totalAmount: "1500.00", paidBy: testUsers[3].id, createdAt: "2026-02-01T10:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "500.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "500.00"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "500.00"),
-            ]),
-        ],
-        testGroups[2].id: [
-            SharedExpense(id: UUID(), groupId: testGroups[2].id, description: "Pizza order", category: "Food & Dining", totalAmount: "1800.00", paidBy: testUsers[4].id, createdAt: "2026-02-10T13:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "360.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "360.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "360.00"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "360.00"),
-                ExpenseSplit(userId: testUsers[4].id, amount: "360.00"),
-            ]),
-            SharedExpense(id: UUID(), groupId: testGroups[2].id, description: "Coffee & snacks", category: "Food & Dining", totalAmount: "800.00", paidBy: currentUser.id, createdAt: "2026-02-12T10:30:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "160.00"),
-                ExpenseSplit(userId: testUsers[1].id, amount: "160.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "160.00"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "160.00"),
-                ExpenseSplit(userId: testUsers[4].id, amount: "160.00"),
-            ]),
-        ],
-        testGroups[3].id: [
-            SharedExpense(id: UUID(), groupId: testGroups[3].id, description: "Movie tickets", category: "Entertainment", totalAmount: "900.00", paidBy: currentUser.id, createdAt: "2026-02-14T18:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "300.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "300.00"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "300.00"),
-            ]),
-            SharedExpense(id: UUID(), groupId: testGroups[3].id, description: "Dinner after movie", category: "Food & Dining", totalAmount: "1200.00", paidBy: testUsers[3].id, createdAt: "2026-02-14T21:00:00Z", splits: [
-                ExpenseSplit(userId: testUsers[0].id, amount: "400.00"),
-                ExpenseSplit(userId: testUsers[2].id, amount: "400.00"),
-                ExpenseSplit(userId: testUsers[3].id, amount: "400.00"),
-            ]),
-        ],
-    ]
+    
+    private static let formatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        return f
+    }()
+    
+    private static func iso(_ daysAgo: Int) -> String {
+        formatter.string(from: Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!)
+    }
+    
+    static var testSharedExpenses: [UUID: [SharedExpense]] {
+        [
+            testGroups[0].id: [
+                SharedExpense(id: UUID(uuidString: "ee000001-0001-0001-0001-000000000001")!, groupId: testGroups[0].id, description: "Hotel booking", category: "Travel", totalAmount: "9000.00", paidBy: currentUser.id, createdAt: iso(2), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "3000.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "3000.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "3000.00"),
+                ]),
+                SharedExpense(id: UUID(uuidString: "ee000001-0001-0001-0001-000000000002")!, groupId: testGroups[0].id, description: "Dinner at beach shack", category: "Food & Dining", totalAmount: "2400.00", paidBy: testUsers[1].id, createdAt: iso(1), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "800.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "800.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "800.00"),
+                ]),
+                SharedExpense(id: UUID(uuidString: "ee000001-0001-0001-0001-000000000003")!, groupId: testGroups[0].id, description: "Cab to airport", category: "Transport", totalAmount: "1500.00", paidBy: testUsers[2].id, createdAt: iso(0), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "500.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "500.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "500.00"),
+                ]),
+            ],
+            testGroups[1].id: [
+                SharedExpense(id: UUID(uuidString: "ee000002-0002-0002-0002-000000000001")!, groupId: testGroups[1].id, description: "Electricity bill", category: "Utilities", totalAmount: "3200.00", paidBy: currentUser.id, createdAt: iso(5), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "1066.67"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "1066.67"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "1066.66"),
+                ]),
+                SharedExpense(id: UUID(uuidString: "ee000002-0002-0002-0002-000000000002")!, groupId: testGroups[1].id, description: "WiFi monthly", category: "Utilities", totalAmount: "999.00", paidBy: testUsers[1].id, createdAt: iso(10), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "333.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "333.00"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "333.00"),
+                ]),
+                SharedExpense(id: UUID(uuidString: "ee000002-0002-0002-0002-000000000003")!, groupId: testGroups[1].id, description: "Water bill", category: "Utilities", totalAmount: "1500.00", paidBy: testUsers[3].id, createdAt: iso(3), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "500.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "500.00"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "500.00"),
+                ]),
+            ],
+            testGroups[2].id: [
+                SharedExpense(id: UUID(uuidString: "ee000003-0003-0003-0003-000000000001")!, groupId: testGroups[2].id, description: "Pizza order", category: "Food & Dining", totalAmount: "1800.00", paidBy: testUsers[4].id, createdAt: iso(1), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "360.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "360.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "360.00"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "360.00"),
+                    ExpenseSplit(userId: testUsers[4].id, amount: "360.00"),
+                ]),
+                SharedExpense(id: UUID(uuidString: "ee000003-0003-0003-0003-000000000002")!, groupId: testGroups[2].id, description: "Coffee & snacks", category: "Food & Dining", totalAmount: "800.00", paidBy: currentUser.id, createdAt: iso(0), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "160.00"),
+                    ExpenseSplit(userId: testUsers[1].id, amount: "160.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "160.00"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "160.00"),
+                    ExpenseSplit(userId: testUsers[4].id, amount: "160.00"),
+                ]),
+            ],
+            testGroups[3].id: [
+                SharedExpense(id: UUID(uuidString: "ee000004-0004-0004-0004-000000000001")!, groupId: testGroups[3].id, description: "Movie tickets", category: "Entertainment", totalAmount: "900.00", paidBy: currentUser.id, createdAt: iso(0), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "300.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "300.00"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "300.00"),
+                ]),
+                SharedExpense(id: UUID(uuidString: "ee000004-0004-0004-0004-000000000002")!, groupId: testGroups[3].id, description: "Dinner after movie", category: "Food & Dining", totalAmount: "1200.00", paidBy: testUsers[3].id, createdAt: iso(0), splits: [
+                    ExpenseSplit(userId: testUsers[0].id, amount: "400.00"),
+                    ExpenseSplit(userId: testUsers[2].id, amount: "400.00"),
+                    ExpenseSplit(userId: testUsers[3].id, amount: "400.00"),
+                ]),
+            ],
+        ]
+    }
     
     static let testBalances: [UUID: [UserBalance]] = [
         testGroups[0].id: [

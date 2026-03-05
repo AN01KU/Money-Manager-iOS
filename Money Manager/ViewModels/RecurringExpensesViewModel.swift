@@ -33,6 +33,7 @@ class RecurringExpensesViewModel: ObservableObject {
                 isRecurring: nil,
                 frequency: nil,
                 dayOfMonth: nil,
+                daysOfWeek: nil,
                 isActive: false
             )
             SyncService.shared.queueForSync(
@@ -130,6 +131,7 @@ class AddRecurringExpenseViewModel: ObservableObject {
                 isRecurring: true,
                 frequency: frequency,
                 dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
+                daysOfWeek: nil,
                 recurringEndDate: hasEndDate ? ISO8601DateFormatter().string(from: endDate) : nil
             )
             SyncService.shared.queueForSync(

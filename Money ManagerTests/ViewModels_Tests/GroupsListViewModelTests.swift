@@ -165,4 +165,79 @@ struct GroupsListViewModelTests {
         
         #expect(viewModel.groups.first?.name == "New Group")
     }
+    
+    @Test
+    func testLoadFromDBConvertsGroupModelsToViewModels() {
+        let groupId = UUID()
+        let createdBy = UUID()
+        
+        let dbGroup = SplitGroupModel(id: groupId, name: "DB Group", createdBy: createdBy, createdAt: "2026-01-01")
+        
+        let viewModel = GroupsListViewModel()
+        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [], dbExpenses: [], dbBalances: [])
+        
+        #expect(viewModel.groups.count == 1)
+        #expect(viewModel.groups.first?.name == "DB Group")
+    }
+    
+    @Test
+    func testLoadFromDBConvertsMemberModels() {
+        let groupId = UUID()
+        let createdBy = UUID()
+        let memberId = UUID()
+        
+        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
+        let dbMember = GroupMemberModel(id: memberId, email: "test@example.com", username: "testuser", createdAt: "2026-01-01")
+        dbMember.group = dbGroup
+        
+        let viewModel = GroupsListViewModel()
+        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [dbMember], dbExpenses: [], dbBalances: [])
+        
+        #expect(viewModel.groupMembers[groupId]?.count == 1)
+        #expect(viewModel.groupMembers[groupId]?.first?.username == "testuser")
+    }
+    
+    @Test
+    func testLoadFromDBConvertsExpenseModels() {
+        let groupId = UUID()
+        let createdBy = UUID()
+        let expenseId = UUID()
+        
+        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
+        let dbExpense = GroupExpenseModel(id: expenseId, description: "Lunch", category: "Food", totalAmount: 500.0, paidBy: createdBy, createdAt: "2026-01-01")
+        dbExpense.group = dbGroup
+        
+        let viewModel = GroupsListViewModel()
+        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [], dbExpenses: [dbExpense], dbBalances: [])
+        
+        #expect(viewModel.groupExpenses[groupId]?.count == 1)
+        #expect(viewModel.groupExpenses[groupId]?.first?.description == "Lunch")
+    }
+    
+    @Test
+    func testLoadFromDBConvertsBalanceModels() {
+        let groupId = UUID()
+        let createdBy = UUID()
+        let userId = UUID()
+        
+        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
+        let dbBalance = GroupBalanceModel(userId: userId, amount: 100.0, group: dbGroup)
+        
+        let viewModel = GroupsListViewModel()
+        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [], dbExpenses: [], dbBalances: [dbBalance])
+        
+        #expect(viewModel.groupBalances[groupId]?.count == 1)
+        #expect(viewModel.groupBalances[groupId]?.first?.userId == userId)
+    }
+    
+    @Test
+    func testLoadFromDBHandlesEmptyArrays() {
+        let viewModel = GroupsListViewModel()
+        viewModel.loadFromDB(dbGroups: [], dbMembers: [], dbExpenses: [], dbBalances: [])
+        
+        #expect(viewModel.groups.isEmpty)
+        #expect(viewModel.groupMembers.isEmpty)
+        #expect(viewModel.groupExpenses.isEmpty)
+        #expect(viewModel.groupBalances.isEmpty)
+    }
 }
