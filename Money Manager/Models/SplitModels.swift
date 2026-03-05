@@ -23,6 +23,35 @@ struct SplitGroup: Codable, Identifiable, Hashable, Sendable {
     let name: String
     let createdBy: UUID
     let createdAt: String
+    let members: [GroupMember]?
+    let balances: [UserBalance]?
+
+    init(id: UUID, name: String, createdBy: UUID, createdAt: String, members: [GroupMember]? = nil, balances: [UserBalance]? = nil) {
+        self.id = id
+        self.name = name
+        self.createdBy = createdBy
+        self.createdAt = createdAt
+        self.members = members
+        self.balances = balances
+    }
+
+    static func == (lhs: SplitGroup, rhs: SplitGroup) -> Bool {
+        lhs.id == rhs.id
+    }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+struct GroupMember: Codable, Identifiable, Sendable {
+    let id: UUID
+    let email: String
+    let username: String
+    let createdAt: String
+}
+
+struct GroupMembersResponse: Decodable, Sendable {
+    let members: [GroupMember]
 }
 
 struct CreateGroupRequest: Encodable, Sendable {
@@ -77,7 +106,7 @@ struct CreateSharedExpenseRequest: Codable, Sendable {
     let splits: [ExpenseSplit]
 }
 
-struct UserBalance: Decodable, Sendable {
+struct UserBalance: Codable, Sendable {
     let userId: UUID
     let amount: String
 }
@@ -146,6 +175,7 @@ struct PersonalExpenseResponse: Decodable, Identifiable, Sendable {
     let isRecurring: Bool?
     let frequency: String?
     let dayOfMonth: Int?
+    let daysOfWeek: [Int]?
     let recurringEndDate: String?
     let createdAt: String
     let updatedAt: String
@@ -160,6 +190,7 @@ struct CreatePersonalExpenseRequest: Codable, Sendable {
     let isRecurring: Bool?
     let frequency: String?
     let dayOfMonth: Int?
+    let daysOfWeek: [Int]?
     let recurringEndDate: String?
 }
 
@@ -170,6 +201,7 @@ struct UpdatePersonalExpenseRequest: Encodable, Sendable {
     let isRecurring: Bool?
     let frequency: String?
     let dayOfMonth: Int?
+    let daysOfWeek: [Int]?
     let isActive: Bool?
 }
 

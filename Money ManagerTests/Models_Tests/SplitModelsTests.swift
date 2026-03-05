@@ -146,6 +146,7 @@ struct SplitModelsTests {
             isRecurring: nil,
             frequency: nil,
             dayOfMonth: nil,
+            daysOfWeek: nil,
             recurringEndDate: nil
         )
         

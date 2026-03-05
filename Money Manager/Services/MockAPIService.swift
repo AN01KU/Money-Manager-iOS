@@ -263,6 +263,7 @@ final class MockAPIService: ObservableObject {
             isRecurring: request.isRecurring,
             frequency: request.frequency,
             dayOfMonth: request.dayOfMonth,
+            daysOfWeek: request.daysOfWeek,
             recurringEndDate: request.recurringEndDate,
             createdAt: now,
             updatedAt: now
@@ -291,6 +292,7 @@ final class MockAPIService: ObservableObject {
             isRecurring: nil,
             frequency: nil,
             dayOfMonth: nil,
+            daysOfWeek: nil,
             recurringEndDate: nil,
             createdAt: now,
             updatedAt: now
@@ -311,6 +313,7 @@ final class MockAPIService: ObservableObject {
             isRecurring: nil,
             frequency: nil,
             dayOfMonth: nil,
+            daysOfWeek: nil,
             recurringEndDate: nil,
             createdAt: now,
             updatedAt: now

@@ -227,23 +227,21 @@ final class APIService: ObservableObject {
                 context.insert(newGroup)
                 
                 // Sync members
-                if let members = try? await getGroupMembers(groupId: group.id) {
-                    for member in members {
-                        let memberId = member.id
-                        let memberDescriptor = FetchDescriptor<GroupMemberModel>(predicate: #Predicate<GroupMemberModel> { item in
-                            item.id == memberId
-                        })
-                        let memberExists = try? context.fetch(memberDescriptor)
-                        if memberExists?.isEmpty ?? true {
-                            let newMember = GroupMemberModel(
-                                id: member.id,
-                                email: member.email,
-                                username: member.username,
-                                createdAt: member.createdAt
-                            )
-                            newMember.group = newGroup
-                            context.insert(newMember)
-                        }
+                for member in group.members ?? [] {
+                    let memberId = member.id
+                    let memberDescriptor = FetchDescriptor<GroupMemberModel>(predicate: #Predicate<GroupMemberModel> { item in
+                        item.id == memberId
+                    })
+                    let memberExists = try? context.fetch(memberDescriptor)
+                    if memberExists?.isEmpty ?? true {
+                        let newMember = GroupMemberModel(
+                            id: member.id,
+                            email: member.email,
+                            username: member.username,
+                            createdAt: member.createdAt
+                        )
+                        newMember.group = newGroup
+                        context.insert(newMember)
                     }
                 }
                 
@@ -271,21 +269,19 @@ final class APIService: ObservableObject {
                 }
                 
                 // Sync group balances
-                if let balances = try? await getBalances(groupId: group.id) {
-                    for balance in balances {
-                        let balanceUserId = balance.userId
-                        let balanceDescriptor = FetchDescriptor<GroupBalanceModel>(predicate: #Predicate<GroupBalanceModel> { item in
-                            item.userId == balanceUserId
-                        })
-                        let balanceExists = try? context.fetch(balanceDescriptor)
-                        if balanceExists?.isEmpty ?? true {
-                            let newBalance = GroupBalanceModel(
-                                userId: balance.userId,
-                                amount: Double(balance.amount) ?? 0,
-                                group: newGroup
-                            )
-                            context.insert(newBalance)
-                        }
+                for balance in group.balances ?? [] {
+                    let balanceUserId = balance.userId
+                    let balanceDescriptor = FetchDescriptor<GroupBalanceModel>(predicate: #Predicate<GroupBalanceModel> { item in
+                        item.userId == balanceUserId
+                    })
+                    let balanceExists = try? context.fetch(balanceDescriptor)
+                    if balanceExists?.isEmpty ?? true {
+                        let newBalance = GroupBalanceModel(
+                            userId: balance.userId,
+                            amount: Double(balance.amount) ?? 0,
+                            group: newGroup
+                        )
+                        context.insert(newBalance)
                     }
                 }
             }
@@ -309,8 +305,9 @@ final class APIService: ObservableObject {
         return try await post("/groups", body: body)
     }
     
-    func getGroupMembers(groupId: UUID) async throws -> [APIUser] {
-        return try await get("/groups/\(groupId)/members")
+    func getGroupMembers(groupId: UUID) async throws -> [GroupMember] {
+        let response: GroupMembersResponse = try await get("/groups/\(groupId)/members")
+        return response.members
     }
     
     func addMember(groupId: UUID, email: String) async throws -> AddMemberResponse {
@@ -386,7 +383,7 @@ final class APIService: ObservableObject {
         return try await post("/personal-expenses", body: request)
     }
     
-    func getPersonalExpenses(limit: Int = 50, offset: Int = 0, category: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> PaginatedPersonalExpensesResponse {
+    func getPersonalExpenses(limit: Int = 50, offset: Int = 0, category: String? = nil, startDate: String? = nil, endDate: String? = nil, recurring: Bool? = nil) async throws -> PaginatedPersonalExpensesResponse {
         var query = "?limit=\(limit)&offset=\(offset)"
         if let category = category {
             query += "&category=\(category)"
@@ -397,6 +394,9 @@ final class APIService: ObservableObject {
         if let endDate = endDate {
             query += "&end_date=\(endDate)"
         }
+        if let recurring = recurring {
+            query += "&recurring=\(recurring)"
+        }
         return try await get("/personal-expenses\(query)")
     }
     
@@ -405,7 +405,7 @@ final class APIService: ObservableObject {
     }
     
     func updatePersonalExpense(id: UUID, amount: Double?, description: String?, notes: String?, isRecurring: Bool? = nil, frequency: String? = nil, dayOfMonth: Int? = nil, isActive: Bool? = nil) async throws -> PersonalExpenseResponse {
-        let body = UpdatePersonalExpenseRequest(amount: amount.map { String($0) }, description: description, notes: notes, isRecurring: isRecurring, frequency: frequency, dayOfMonth: dayOfMonth, isActive: isActive)
+        let body = UpdatePersonalExpenseRequest(amount: amount.map { String($0) }, description: description, notes: notes, isRecurring: isRecurring, frequency: frequency, dayOfMonth: dayOfMonth, daysOfWeek: nil, isActive: isActive)
         return try await put("/personal-expenses/\(id)", body: body)
     }
     
