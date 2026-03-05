@@ -27,6 +27,17 @@ struct TransactionRow: View {
                 Text(expense.expenseDescription ?? "No description")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                
+                if let groupName = expense.groupName {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.2.fill")
+                            .font(.caption2)
+                        Text(groupName)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.teal)
+                }
             }
             
             Spacer()
