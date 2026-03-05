@@ -153,14 +153,21 @@ class GroupsListViewModel: ObservableObject {
             groups = fetchedGroups
             
             for group in fetchedGroups {
-                async let expensesTask = APIService.shared.getGroupExpenses(groupId: group.id)
-                async let balancesTask = APIService.shared.getBalances(groupId: group.id)
-                async let membersTask = APIService.shared.getGroupMembers(groupId: group.id)
+                // Members and balances come from the rich group response
+                if let members = group.members {
+                    groupMembers[group.id] = members.map { APIUser(id: $0.id, email: $0.email, username: $0.username, createdAt: $0.createdAt) }
+                }
+                if let balances = group.balances {
+                    groupBalances[group.id] = balances
+                }
                 
-                let (expenses, balances, members) = try await (expensesTask, balancesTask, membersTask)
-                groupExpenses[group.id] = expenses
-                groupBalances[group.id] = balances
-                groupMembers[group.id] = members
+                // Expenses still need a separate call
+                do {
+                    let expenses = try await APIService.shared.getGroupExpenses(groupId: group.id)
+                    groupExpenses[group.id] = expenses
+                } catch {
+                    print("Failed to load expenses for group \(group.id): \(error)")
+                }
             }
         } catch {
             print("Failed to load groups: \(error)")

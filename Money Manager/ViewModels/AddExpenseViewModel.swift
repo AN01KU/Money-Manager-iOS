@@ -245,6 +245,7 @@ class AddExpenseViewModel: ObservableObject {
                 isRecurring: isRecurring ? true : nil,
                 frequency: isRecurring ? expense.frequency : nil,
                 dayOfMonth: isRecurring ? expense.dayOfMonth : nil,
+                daysOfWeek: isRecurring ? expense.daysOfWeek : nil,
                 recurringEndDate: nil
             )
             SyncService.shared.queueForSync(

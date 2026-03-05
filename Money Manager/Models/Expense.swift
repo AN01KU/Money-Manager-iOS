@@ -27,6 +27,7 @@ final class Expense {
     var isRecurring: Bool
     var frequency: String?
     var dayOfMonth: Int?
+    var daysOfWeek: [Int]?  // 0=Sun, 1=Mon, ..., 6=Sat — for weekly recurring
     var recurringEndDate: Date?
     var isActive: Bool
     
@@ -45,6 +46,7 @@ final class Expense {
         isRecurring: Bool = false,
         frequency: String? = nil,
         dayOfMonth: Int? = nil,
+        daysOfWeek: [Int]? = nil,
         recurringEndDate: Date? = nil,
         groupId: UUID? = nil,
         groupName: String? = nil
@@ -59,6 +61,7 @@ final class Expense {
         self.isRecurring = isRecurring
         self.frequency = frequency
         self.dayOfMonth = dayOfMonth
+        self.daysOfWeek = daysOfWeek
         self.recurringEndDate = recurringEndDate
         self.isActive = true
         self.createdAt = Date()
