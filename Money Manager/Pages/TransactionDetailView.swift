@@ -4,6 +4,7 @@ import SwiftData
 struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var apiService = APIService.shared
     
     let expense: Expense
     @StateObject private var viewModel: TransactionDetailViewModel
@@ -11,6 +12,36 @@ struct TransactionDetailView: View {
     init(expense: Expense) {
         self.expense = expense
         _viewModel = StateObject(wrappedValue: TransactionDetailViewModel(expense: expense))
+    }
+    
+    private var groupExpenseContent: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(expense.groupName ?? "Unknown Group")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                Text(apiService.isAuthenticated ? "Tap to view group details" : "Sign in to view group details")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            if apiService.isAuthenticated {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                Image(systemName: "lock.fill")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .background(Color.teal.opacity(0.1))
+        .cornerRadius(12)
     }
     
     var body: some View {
@@ -29,28 +60,13 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            NavigationLink(value: viewModel.getGroupForNavigation()) { 
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(expense.groupName ?? "Unknown Group")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primary)
-                                        
-                                        Text("Tap to view group details")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                            if apiService.isAuthenticated {
+                                NavigationLink(value: viewModel.getGroupForNavigation()) { 
+                                    groupExpenseContent
                                 }
-                                .padding()
-                                .background(Color.teal.opacity(0.1))
-                                .cornerRadius(12)
+                                .buttonStyle(PlainButtonStyle())
+                            } else {
+                                groupExpenseContent
                             }
                         }
                         .padding()
