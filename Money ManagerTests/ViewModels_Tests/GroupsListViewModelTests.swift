@@ -334,4 +334,29 @@ struct GroupsListViewModelTests {
         
         #expect(viewModel.userBalance(for: groupId) == 0)
     }
+    
+    // MARK: - DB Data Persistence
+    
+    @Test
+    func testLoadFromDBPreservesMembersWithNoAPIResponse() {
+        let groupId = UUID()
+        let memberId = UUID()
+        let createdBy = UUID()
+        
+        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
+        let dbMember = GroupMemberModel(id: memberId, email: "existing@test.com", username: "existing", createdAt: "2026-01-01")
+        dbMember.group = dbGroup
+        
+        let viewModel = GroupsListViewModel()
+        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [dbMember], dbExpenses: [], dbBalances: [])
+        
+        #expect(viewModel.groupMembers[groupId]?.count == 1)
+        #expect(viewModel.groupMembers[groupId]?.first?.email == "existing@test.com")
+        
+        let apiGroup = SplitGroup(id: groupId, name: "Updated Group", createdBy: createdBy, createdAt: "2026-01-01", members: nil, balances: nil)
+        
+        viewModel.groups = [apiGroup]
+        
+        #expect(viewModel.groupMembers[groupId]?.count == 1)
+    }
 }

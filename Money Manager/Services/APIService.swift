@@ -145,6 +145,11 @@ final class APIService: ObservableObject {
         
         let (personalExpensesResponse, budgets, categories, groups) = try await (personalExpensesTask, budgetsTask, categoriesTask, groupsTask)
         
+        print("[Sync] Personal expenses response: \(personalExpensesResponse.expenses.count) expenses")
+        for expense in personalExpensesResponse.expenses {
+            print("  - \(expense.description ?? "nil"): \(expense.amount), category: '\(expense.category ?? "nil")', date: \(expense.expenseDate)")
+        }
+        
         let dateFormatter = ISO8601DateFormatter()
         
         // Sync personal expenses
@@ -233,8 +238,16 @@ final class APIService: ObservableObject {
                 dbGroup.name = group.name
             }
             
-            // Sync members
-            for member in group.members ?? [] {
+            // Sync members - either from group response or fetch separately
+            var membersToSync: [GroupMember] = group.members ?? []
+            if membersToSync.isEmpty {
+                // Fetch members separately if not in group response
+                if let fetchedMembers = try? await getGroupMembers(groupId: group.id) {
+                    membersToSync = fetchedMembers
+                }
+            }
+            
+            for member in membersToSync {
                 let memberId = member.id
                 let memberDescriptor = FetchDescriptor<GroupMemberModel>(predicate: #Predicate<GroupMemberModel> { item in
                     item.id == memberId
@@ -253,8 +266,13 @@ final class APIService: ObservableObject {
             }
             
             // Sync group expenses
-            let memberCount = group.members?.count ?? 1
+            let memberCount = membersToSync.count > 0 ? membersToSync.count : 1
             if let expenses = try? await getGroupExpenses(groupId: group.id) {
+                print("[Sync] Group '\(group.name)' expenses: \(expenses.count)")
+                for expense in expenses {
+                    print("  - \(expense.description): \(expense.totalAmount), category: '\(expense.category)', paidBy: \(expense.paidBy)")
+                }
+                
                 for expense in expenses {
                     let expId = expense.id
                     let expDescriptor = FetchDescriptor<GroupExpenseModel>(predicate: #Predicate<GroupExpenseModel> { item in
@@ -302,8 +320,16 @@ final class APIService: ObservableObject {
                 }
             }
             
-            // Sync group balances
-            for balance in group.balances ?? [] {
+            // Sync group balances - either from group response or fetch separately
+            var balancesToSync: [UserBalance] = group.balances ?? []
+            if balancesToSync.isEmpty {
+                // Fetch balances separately if not in group response
+                if let fetchedBalances = try? await getBalances(groupId: group.id) {
+                    balancesToSync = fetchedBalances
+                }
+            }
+            
+            for balance in balancesToSync {
                 let balanceUserId = balance.userId
                 // Fetch all balances for this group and check for matching user
                 let balanceDescriptor = FetchDescriptor<GroupBalanceModel>()
