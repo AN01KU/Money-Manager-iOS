@@ -53,19 +53,40 @@ class GroupDetailViewModel: ObservableObject {
             expenses = expensesParam
             balances = balancesParam
             members = membersParam
+            print("[GroupDetail] Loaded from params — expenses: \(expenses.count), balances: \(balances.count), members: \(members.count)")
         } else if useTestData {
             try? await Task.sleep(for: .milliseconds(300))
             expenses = TestData.testSharedExpenses[group.id] ?? []
             balances = TestData.testBalances[group.id] ?? []
             members = TestData.testGroupMembers[group.id] ?? []
+            print("[GroupDetail] Loaded test data — expenses: \(expenses.count), balances: \(balances.count), members: \(members.count)")
         } else {
             do {
                 async let fetchedExpenses = APIService.shared.getGroupExpenses(groupId: group.id)
                 async let fetchedBalances = APIService.shared.getBalances(groupId: group.id)
+                async let fetchedMembers = APIService.shared.getGroupMembers(groupId: group.id)
+                
                 expenses = try await fetchedExpenses
                 balances = try await fetchedBalances
+                let groupMembers = try await fetchedMembers
+                members = groupMembers.map { APIUser(id: $0.id, email: $0.email, username: $0.username, createdAt: $0.createdAt) }
+                
+                print("[GroupDetail] API response for group '\(group.name)':")
+                print("  Expenses: \(expenses.count)")
+                for expense in expenses {
+                    print("    - \(expense.description): \(expense.totalAmount) paid by \(expense.paidBy), splits: \(expense.splits?.count ?? 0)")
+                }
+                print("  Balances: \(balances.count)")
+                for balance in balances {
+                    let memberName = members.first(where: { $0.id == balance.userId })?.email ?? "UNKNOWN(\(balance.userId))"
+                    print("    - \(memberName): \(balance.amount)")
+                }
+                print("  Members: \(members.count)")
+                for member in members {
+                    print("    - \(member.email) (\(member.id))")
+                }
             } catch {
-                // Handle error
+                print("[GroupDetail] API error loading group '\(group.name)': \(error)")
             }
         }
         

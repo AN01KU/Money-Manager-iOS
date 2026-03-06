@@ -50,17 +50,21 @@ struct GroupsListViewModelTests {
     
     @Test
     func testNetBalanceCalculatesCorrectly() {
-        let userId = UUID()
-        let groupId = UUID()
-        let balance1 = UserBalance(userId: userId, amount: "100.00")
-        let balance2 = UserBalance(userId: userId, amount: "-50.00")
-        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let currentUserId = TestData.currentUser.id
+        let groupId1 = UUID()
+        let groupId2 = UUID()
+        let group1 = SplitGroup(id: groupId1, name: "Trip", createdBy: UUID(), createdAt: "2026-01-01")
+        let group2 = SplitGroup(id: groupId2, name: "Flat", createdBy: UUID(), createdAt: "2026-01-02")
         
-        let viewModel = GroupsListViewModel(groups: [group], balances: [groupId: [balance1, balance2]])
+        let viewModel = GroupsListViewModel(
+            groups: [group1, group2],
+            balances: [
+                groupId1: [UserBalance(userId: currentUserId, amount: "100.00"), UserBalance(userId: UUID(), amount: "-100.00")],
+                groupId2: [UserBalance(userId: currentUserId, amount: "-50.00"), UserBalance(userId: UUID(), amount: "50.00")]
+            ]
+        )
         
-        let result = viewModel.netBalance
-        
-        #expect(result == 50.0)
+        #expect(viewModel.netBalance == 50.0)
     }
     
     @Test
@@ -72,15 +76,17 @@ struct GroupsListViewModelTests {
     
     @Test
     func testUserBalanceReturnsCorrectValue() {
-        let userId = UUID()
+        let currentUserId = TestData.currentUser.id
         let groupId = UUID()
-        let balance = UserBalance(userId: userId, amount: "250.50")
+        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let balances = [
+            UserBalance(userId: currentUserId, amount: "250.50"),
+            UserBalance(userId: UUID(), amount: "-250.50")
+        ]
         
-        let viewModel = GroupsListViewModel(balances: [groupId: [balance]])
+        let viewModel = GroupsListViewModel(groups: [group], balances: [groupId: balances])
         
-        let result = viewModel.userBalance(for: groupId)
-        
-        #expect(result == 250.50)
+        #expect(viewModel.userBalance(for: groupId) == 250.50)
     }
     
     @Test
@@ -239,5 +245,93 @@ struct GroupsListViewModelTests {
         #expect(viewModel.groupMembers.isEmpty)
         #expect(viewModel.groupExpenses.isEmpty)
         #expect(viewModel.groupBalances.isEmpty)
+    }
+    
+    // MARK: - Net Balance (Current User Only)
+    
+    @Test
+    func testNetBalanceIgnoresOtherUsersBalances() {
+        let currentUserId = TestData.currentUser.id
+        let otherUserId = UUID()
+        let groupId = UUID()
+        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        
+        let viewModel = GroupsListViewModel(
+            groups: [group],
+            balances: [groupId: [
+                UserBalance(userId: currentUserId, amount: "200.00"),
+                UserBalance(userId: otherUserId, amount: "-200.00")
+            ]]
+        )
+        
+        #expect(viewModel.netBalance == 200.0)
+    }
+    
+    @Test
+    func testNetBalanceSumsAcrossMultipleGroups() {
+        let currentUserId = TestData.currentUser.id
+        let groupId1 = UUID()
+        let groupId2 = UUID()
+        let groupId3 = UUID()
+        let group1 = SplitGroup(id: groupId1, name: "A", createdBy: UUID(), createdAt: "2026-01-01")
+        let group2 = SplitGroup(id: groupId2, name: "B", createdBy: UUID(), createdAt: "2026-01-01")
+        let group3 = SplitGroup(id: groupId3, name: "C", createdBy: UUID(), createdAt: "2026-01-01")
+        
+        let viewModel = GroupsListViewModel(
+            groups: [group1, group2, group3],
+            balances: [
+                groupId1: [UserBalance(userId: currentUserId, amount: "100.00")],
+                groupId2: [UserBalance(userId: currentUserId, amount: "-300.00")],
+                groupId3: [UserBalance(userId: currentUserId, amount: "50.00")]
+            ]
+        )
+        
+        #expect(viewModel.netBalance == -150.0)
+    }
+    
+    @Test
+    func testNetBalanceReturnsZeroWhenUserNotInBalances() {
+        let groupId = UUID()
+        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let otherUserId = UUID()
+        
+        let viewModel = GroupsListViewModel(
+            groups: [group],
+            balances: [groupId: [UserBalance(userId: otherUserId, amount: "500.00")]]
+        )
+        
+        #expect(viewModel.netBalance == 0)
+    }
+    
+    // MARK: - User Balance Per Group (Current User Only)
+    
+    @Test
+    func testUserBalanceIgnoresOtherUsersInGroup() {
+        let currentUserId = TestData.currentUser.id
+        let groupId = UUID()
+        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        
+        let viewModel = GroupsListViewModel(
+            groups: [group],
+            balances: [groupId: [
+                UserBalance(userId: currentUserId, amount: "-75.00"),
+                UserBalance(userId: UUID(), amount: "75.00")
+            ]]
+        )
+        
+        #expect(viewModel.userBalance(for: groupId) == -75.0)
+    }
+    
+    @Test
+    func testUserBalanceReturnsZeroWhenUserNotInGroup() {
+        let groupId = UUID()
+        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        
+        let viewModel = GroupsListViewModel(
+            groups: [group],
+            balances: [groupId: [UserBalance(userId: UUID(), amount: "100.00")]]
+        )
+        
+        #expect(viewModel.userBalance(for: groupId) == 0)
     }
 }
