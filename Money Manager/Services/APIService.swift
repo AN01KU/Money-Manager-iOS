@@ -246,6 +246,7 @@ final class APIService: ObservableObject {
                 }
                 
                 // Sync group expenses
+                let memberCount = group.members?.count ?? 1
                 if let expenses = try? await getGroupExpenses(groupId: group.id) {
                     for expense in expenses {
                         let expId = expense.id
@@ -264,6 +265,32 @@ final class APIService: ObservableObject {
                             )
                             newExpense.group = newGroup
                             context.insert(newExpense)
+                        }
+                        
+                        // Also create an Expense record so group expenses appear in Overview
+                        let overviewDescriptor = FetchDescriptor<Expense>(predicate: #Predicate<Expense> { item in
+                            item.id == expId
+                        })
+                        let overviewExists = try? context.fetch(overviewDescriptor)
+                        if overviewExists?.isEmpty ?? true {
+                            let isoFormatter = ISO8601DateFormatter()
+                            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                            let expDate = isoFormatter.date(from: expense.createdAt)
+                                ?? ISO8601DateFormatter().date(from: expense.createdAt)
+                                ?? Date()
+                            let userShare = (Double(expense.totalAmount) ?? 0) / Double(memberCount)
+                            let overviewExpense = Expense(
+                                id: expense.id,
+                                amount: userShare,
+                                category: expense.category.isEmpty ? "Other" : expense.category,
+                                date: expDate,
+                                expenseDescription: expense.description,
+                                notes: "Your share from group split",
+                                groupId: group.id,
+                                groupName: group.name
+                            )
+                            overviewExpense.createdAt = expDate
+                            context.insert(overviewExpense)
                         }
                     }
                 }

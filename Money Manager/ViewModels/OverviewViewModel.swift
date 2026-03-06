@@ -25,6 +25,15 @@ class OverviewViewModel: ObservableObject {
         self.allExpenses = allExpenses
         self.budgets = budgets
         self.modelContext = modelContext
+        
+        let groupExpenses = allExpenses.filter { $0.groupId != nil }
+        print("[Overview] configure — total: \(allExpenses.count), group: \(groupExpenses.count), budgets: \(budgets.count)")
+        if !groupExpenses.isEmpty {
+            for e in groupExpenses.prefix(5) {
+                print("  [Group] \(e.expenseDescription ?? "?") | \(e.amount) | \(e.groupName ?? "nil") | date: \(e.date)")
+            }
+        }
+        
         recalculate()
     }
     
@@ -113,10 +122,12 @@ class OverviewViewModel: ObservableObject {
         try? modelContext.delete(model: Expense.self)
         try? modelContext.delete(model: MonthlyBudget.self)
         
-        for expense in TestData.generatePersonalExpenses() {
+        let personalExpenses = TestData.generatePersonalExpenses()
+        for expense in personalExpenses {
             modelContext.insert(expense)
         }
-        for expense in TestData.getGroupExpensesForOverview() {
+        let groupExpenses = TestData.getGroupExpensesForOverview()
+        for expense in groupExpenses {
             modelContext.insert(expense)
         }
         for budget in TestData.generateBudgets() {
@@ -127,6 +138,10 @@ class OverviewViewModel: ObservableObject {
         }
         
         try? modelContext.save()
+        print("[Overview] Test data loaded — personal: \(personalExpenses.count), group: \(groupExpenses.count)")
+        for expense in groupExpenses {
+            print("  [Group] \(expense.expenseDescription ?? "?") | \(expense.category) | \(expense.amount) | group: \(expense.groupName ?? "nil") | date: \(expense.date)")
+        }
     }
     
     func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {
