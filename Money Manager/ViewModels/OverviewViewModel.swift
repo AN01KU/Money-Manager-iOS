@@ -28,10 +28,11 @@ class OverviewViewModel: ObservableObject {
         
         let groupExpenses = allExpenses.filter { $0.groupId != nil }
         print("[Overview] configure — total: \(allExpenses.count), group: \(groupExpenses.count), budgets: \(budgets.count)")
-        if !groupExpenses.isEmpty {
-            for e in groupExpenses.prefix(5) {
-                print("  [Group] \(e.expenseDescription ?? "?") | \(e.amount) | \(e.groupName ?? "nil") | date: \(e.date)")
-            }
+        
+        // Log all expenses with their categories
+        print("[Overview] All expenses categories:")
+        for expense in allExpenses.prefix(20) {
+            print("  - \(expense.expenseDescription ?? "?") | category: '\(expense.category)' | \(expense.amount) | date: \(expense.date)")
         }
         
         recalculate()
@@ -100,6 +101,12 @@ class OverviewViewModel: ObservableObject {
         let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
         let total = totalSpent
         
+        print("[Overview] recalculate — filtered: \(filteredExpenses.count), grouped categories: \(grouped.keys.count)")
+        for (category, expenses) in grouped {
+            let sum = expenses.reduce(0) { $0 + $1.amount }
+            print("  Category '\(category)': \(expenses.count) expenses, total: \(sum)")
+        }
+        
         if total > 0 {
             categorySpending = grouped.map { category, expenses in
                 let amount = expenses.reduce(0) { $0 + $1.amount }
@@ -110,6 +117,7 @@ class OverviewViewModel: ObservableObject {
                     percentage: percentage
                 )
             }.sorted { $0.amount > $1.amount }
+            print("[Overview] Category spending: \(categorySpending.map { "\($0.category.rawValue): \($0.amount) (\($0.percentage)%)" }.joined(separator: ", "))")
         } else {
             categorySpending = []
         }
