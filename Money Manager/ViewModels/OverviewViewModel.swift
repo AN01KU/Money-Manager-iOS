@@ -25,6 +25,16 @@ class OverviewViewModel: ObservableObject {
         self.allExpenses = allExpenses
         self.budgets = budgets
         self.modelContext = modelContext
+        
+        let groupExpenses = allExpenses.filter { $0.groupId != nil }
+        print("[Overview] configure — total: \(allExpenses.count), group: \(groupExpenses.count), budgets: \(budgets.count)")
+        
+        // Log all expenses with their categories
+        print("[Overview] All expenses categories:")
+        for expense in allExpenses.prefix(20) {
+            print("  - \(expense.expenseDescription ?? "?") | category: '\(expense.category)' | \(expense.amount) | date: \(expense.date)")
+        }
+        
         recalculate()
     }
     
@@ -91,6 +101,12 @@ class OverviewViewModel: ObservableObject {
         let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
         let total = totalSpent
         
+        print("[Overview] recalculate — filtered: \(filteredExpenses.count), grouped categories: \(grouped.keys.count)")
+        for (category, expenses) in grouped {
+            let sum = expenses.reduce(0) { $0 + $1.amount }
+            print("  Category '\(category)': \(expenses.count) expenses, total: \(sum)")
+        }
+        
         if total > 0 {
             categorySpending = grouped.map { category, expenses in
                 let amount = expenses.reduce(0) { $0 + $1.amount }
@@ -101,6 +117,7 @@ class OverviewViewModel: ObservableObject {
                     percentage: percentage
                 )
             }.sorted { $0.amount > $1.amount }
+            print("[Overview] Category spending: \(categorySpending.map { "\($0.category.rawValue): \($0.amount) (\($0.percentage)%)" }.joined(separator: ", "))")
         } else {
             categorySpending = []
         }
@@ -113,10 +130,12 @@ class OverviewViewModel: ObservableObject {
         try? modelContext.delete(model: Expense.self)
         try? modelContext.delete(model: MonthlyBudget.self)
         
-        for expense in TestData.generatePersonalExpenses() {
+        let personalExpenses = TestData.generatePersonalExpenses()
+        for expense in personalExpenses {
             modelContext.insert(expense)
         }
-        for expense in TestData.getGroupExpensesForOverview() {
+        let groupExpenses = TestData.getGroupExpensesForOverview()
+        for expense in groupExpenses {
             modelContext.insert(expense)
         }
         for budget in TestData.generateBudgets() {
@@ -127,6 +146,10 @@ class OverviewViewModel: ObservableObject {
         }
         
         try? modelContext.save()
+        print("[Overview] Test data loaded — personal: \(personalExpenses.count), group: \(groupExpenses.count)")
+        for expense in groupExpenses {
+            print("  [Group] \(expense.expenseDescription ?? "?") | \(expense.category) | \(expense.amount) | group: \(expense.groupName ?? "nil") | date: \(expense.date)")
+        }
     }
     
     func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {
