@@ -24,25 +24,6 @@ class RecurringExpensesViewModel: ObservableObject {
         expense.isActive = false
         expense.updatedAt = Date()
         try? modelContext?.save()
-        
-        if APIService.shared.isAuthenticated {
-            let request = UpdatePersonalExpenseRequest(
-                amount: nil,
-                description: nil,
-                notes: nil,
-                isRecurring: nil,
-                frequency: nil,
-                dayOfMonth: nil,
-                daysOfWeek: nil,
-                isActive: false
-            )
-            SyncService.shared.queueForSync(
-                itemType: .personalExpense,
-                itemId: expense.id,
-                action: .update,
-                payload: request
-            )
-        }
     }
 }
 
@@ -119,27 +100,6 @@ class AddRecurringExpenseViewModel: ObservableObject {
             errorMessage = "Failed to save: \(error.localizedDescription)"
             showError = true
             return false
-        }
-        
-        if APIService.shared.isAuthenticated {
-            let request = CreatePersonalExpenseRequest(
-                category: selectedCategory,
-                amount: String(format: "%.2f", amountValue),
-                description: trimmedName,
-                notes: notes.isEmpty ? nil : notes,
-                expenseDate: ISO8601DateFormatter().string(from: startDate),
-                isRecurring: true,
-                frequency: frequency,
-                dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
-                daysOfWeek: nil,
-                recurringEndDate: hasEndDate ? ISO8601DateFormatter().string(from: endDate) : nil
-            )
-            SyncService.shared.queueForSync(
-                itemType: .personalExpense,
-                itemId: expense.id,
-                action: .create,
-                payload: request
-            )
         }
         
         return true

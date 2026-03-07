@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @ObservedObject private var apiService = APIService.shared
     @State private var selectedTab = 0
     
     var body: some View {
@@ -12,19 +11,11 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
-            if apiService.isAuthenticated || useTestData {
-                GroupsListView()
-                    .tabItem {
-                        Label("Groups", systemImage: "person.3.fill")
-                    }
-                    .tag(1)
-            }
-            
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
                 }
-                .tag(2)
+                .tag(1)
         }
         .accentColor(.teal)
     }

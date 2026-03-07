@@ -139,17 +139,6 @@ struct BudgetSheet: View {
             return
         }
         
-        // Queue for backend sync in background if authenticated
-        if APIService.shared.isAuthenticated {
-            let request = SetBudgetRequest(amount: String(amount), month: month, year: year)
-            SyncService.shared.queueForSync(
-                itemType: .budget,
-                itemId: UUID(),
-                action: .create,
-                payload: request
-            )
-        }
-        
         isSaving = false
         dismiss()
     }

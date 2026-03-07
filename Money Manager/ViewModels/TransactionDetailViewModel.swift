@@ -6,7 +6,6 @@ import Combine
 class TransactionDetailViewModel: ObservableObject {
     @Published var showEditSheet = false
     @Published var showDeleteAlert = false
-    @Published var selectedGroup: SplitGroup?
     
     let expense: Expense
     private var modelContext: ModelContext?
@@ -37,16 +36,6 @@ class TransactionDetailViewModel: ObservableObject {
         } catch {
             print("Error deleting expense: \(error)")
         }
-    }
-    
-    func getGroupForNavigation() -> SplitGroup? {
-        guard let groupId = expense.groupId, let groupName = expense.groupName else { return nil }
-        return SplitGroup(
-            id: groupId,
-            name: groupName,
-            createdBy: UUID(),
-            createdAt: ISO8601DateFormatter().string(from: Date())
-        )
     }
     
     func formatAmount(_ amount: Double) -> String {

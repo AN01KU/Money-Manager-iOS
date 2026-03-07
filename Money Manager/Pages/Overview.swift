@@ -80,9 +80,6 @@ struct Overview: View {
             .task(id: viewModel.selectedDate) {
                 viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
             }
-            .task {
-                viewModel.loadTestDataIfNeeded(modelContext: modelContext)
-            }
             .onAppear {
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
             }

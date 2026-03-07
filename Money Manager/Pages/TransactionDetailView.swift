@@ -4,8 +4,6 @@ import SwiftData
 struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    @ObservedObject private var apiService = APIService.shared
-    
     let expense: Expense
     @StateObject private var viewModel: TransactionDetailViewModel
     
@@ -22,22 +20,16 @@ struct TransactionDetailView: View {
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                 
-                Text(apiService.isAuthenticated ? "Tap to view group details" : "Sign in to view group details")
+                Text("Group expense")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            if apiService.isAuthenticated {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } else {
-                Image(systemName: "lock.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding()
         .background(Color.teal.opacity(0.1))
@@ -60,14 +52,7 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            if apiService.isAuthenticated {
-                                NavigationLink(value: viewModel.getGroupForNavigation()) { 
-                                    groupExpenseContent
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            } else {
-                                groupExpenseContent
-                            }
+                            groupExpenseContent
                         }
                         .padding()
                         .background(Color(.systemGray6))
@@ -164,9 +149,6 @@ struct TransactionDetailView: View {
             }
             .navigationTitle("Transaction Details")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: SplitGroup.self) { group in
-                GroupDetailView(group: group)
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
