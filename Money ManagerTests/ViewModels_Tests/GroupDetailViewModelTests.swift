@@ -218,4 +218,90 @@ struct GroupDetailViewModelTests {
         
         #expect(viewModel.pendingMemberIds.isEmpty)
     }
+    
+    // MARK: - Recalculate Balances Correctness
+    
+    @Test
+    func testRecalculateBalancesPayerGetsPositiveBalance() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let payer = APIUser(id: UUID(), email: "payer@test.com", username: "Payer", createdAt: "2026-01-01")
+        let other = APIUser(id: UUID(), email: "other@test.com", username: "Other", createdAt: "2026-01-01")
+        
+        let expense = SharedExpense(
+            id: UUID(), groupId: group.id, description: "Dinner", category: "Food",
+            totalAmount: "200.00", paidBy: payer.id, createdAt: "2026-01-01",
+            splits: [
+                ExpenseSplit(userId: payer.id, amount: "100.00"),
+                ExpenseSplit(userId: other.id, amount: "100.00")
+            ]
+        )
+        
+        let viewModel = GroupDetailViewModel(group: group, expenses: [expense], members: [payer, other])
+        viewModel.recalculateBalances()
+        
+        let payerBalance = viewModel.balances.first(where: { $0.userId == payer.id })
+        let otherBalance = viewModel.balances.first(where: { $0.userId == other.id })
+        
+        #expect((Double(payerBalance?.amount ?? "0") ?? 0) == 100.0)
+        #expect((Double(otherBalance?.amount ?? "0") ?? 0) == -100.0)
+    }
+    
+    @Test
+    func testRecalculateBalancesMultipleExpensesNetCorrectly() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let user1 = APIUser(id: UUID(), email: "u1@test.com", username: "U1", createdAt: "2026-01-01")
+        let user2 = APIUser(id: UUID(), email: "u2@test.com", username: "U2", createdAt: "2026-01-01")
+        
+        let expense1 = SharedExpense(
+            id: UUID(), groupId: group.id, description: "Lunch", category: "Food",
+            totalAmount: "100.00", paidBy: user1.id, createdAt: "2026-01-01",
+            splits: [
+                ExpenseSplit(userId: user1.id, amount: "50.00"),
+                ExpenseSplit(userId: user2.id, amount: "50.00")
+            ]
+        )
+        let expense2 = SharedExpense(
+            id: UUID(), groupId: group.id, description: "Coffee", category: "Food",
+            totalAmount: "60.00", paidBy: user2.id, createdAt: "2026-01-01",
+            splits: [
+                ExpenseSplit(userId: user1.id, amount: "30.00"),
+                ExpenseSplit(userId: user2.id, amount: "30.00")
+            ]
+        )
+        
+        let viewModel = GroupDetailViewModel(group: group, expenses: [expense1, expense2], members: [user1, user2])
+        viewModel.recalculateBalances()
+        
+        let balance1 = Double(viewModel.balances.first(where: { $0.userId == user1.id })?.amount ?? "0") ?? 0
+        let balance2 = Double(viewModel.balances.first(where: { $0.userId == user2.id })?.amount ?? "0") ?? 0
+        
+        // user1 paid 100, owes 80 (50+30) → net +20
+        // user2 paid 60, owes 80 (50+30) → net -20
+        #expect(balance1 == 20.0)
+        #expect(balance2 == -20.0)
+    }
+    
+    @Test
+    func testRecalculateBalancesSortedByAbsoluteValue() {
+        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
+        let user1 = APIUser(id: UUID(), email: "u1@test.com", username: "U1", createdAt: "2026-01-01")
+        let user2 = APIUser(id: UUID(), email: "u2@test.com", username: "U2", createdAt: "2026-01-01")
+        let user3 = APIUser(id: UUID(), email: "u3@test.com", username: "U3", createdAt: "2026-01-01")
+        
+        let expense = SharedExpense(
+            id: UUID(), groupId: group.id, description: "Trip", category: "Travel",
+            totalAmount: "300.00", paidBy: user1.id, createdAt: "2026-01-01",
+            splits: [
+                ExpenseSplit(userId: user1.id, amount: "100.00"),
+                ExpenseSplit(userId: user2.id, amount: "50.00"),
+                ExpenseSplit(userId: user3.id, amount: "150.00")
+            ]
+        )
+        
+        let viewModel = GroupDetailViewModel(group: group, expenses: [expense], members: [user1, user2, user3])
+        viewModel.recalculateBalances()
+        
+        let amounts = viewModel.balances.map { abs(Double($0.amount) ?? 0) }
+        #expect(amounts == amounts.sorted(by: >))
+    }
 }

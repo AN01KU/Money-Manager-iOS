@@ -37,12 +37,12 @@ class GroupsListViewModel: ObservableObject {
     }
     
     var netBalance: Double {
+        guard let userId = currentUserId else { return 0 }
         var total = 0.0
         for group in groups {
-            if let balances = groupBalances[group.id] {
-                for balance in balances {
-                    total += Double(balance.amount) ?? 0
-                }
+            if let balances = groupBalances[group.id],
+               let userBalance = balances.first(where: { $0.userId == userId }) {
+                total += Double(userBalance.amount) ?? 0
             }
         }
         return total
@@ -89,8 +89,10 @@ class GroupsListViewModel: ObservableObject {
     }
     
     func userBalance(for groupId: UUID) -> Double {
-        guard let balances = groupBalances[groupId] else { return 0 }
-        return balances.reduce(0.0) { $0 + (Double($1.amount) ?? 0) }
+        guard let userId = currentUserId,
+              let balances = groupBalances[groupId],
+              let userBalance = balances.first(where: { $0.userId == userId }) else { return 0 }
+        return Double(userBalance.amount) ?? 0
     }
     
     func nameForUser(_ userId: UUID) -> String {
@@ -152,32 +154,60 @@ class GroupsListViewModel: ObservableObject {
             groupExpenses = TestData.testSharedExpenses
             groupBalances = TestData.testBalances
             isLoading = false
+            print("[GroupsList] Loaded test data — \(groups.count) groups")
             return
         }
         
         do {
             let fetchedGroups = try await APIService.shared.getGroups()
             groups = fetchedGroups
+            print("[GroupsList] API returned \(fetchedGroups.count) groups")
             
             for group in fetchedGroups {
-                // Members and balances come from the rich group response
+                // Members come from the rich group response, or fetch separately
                 if let members = group.members {
                     groupMembers[group.id] = members.map { APIUser(id: $0.id, email: $0.email, username: $0.username, createdAt: $0.createdAt) }
+                    print("[GroupsList] Group '\(group.name)' — \(members.count) members from response")
+                } else {
+                    // Fetch members separately if not in group response
+                    do {
+                        let fetchedMembers = try await APIService.shared.getGroupMembers(groupId: group.id)
+                        groupMembers[group.id] = fetchedMembers.map { APIUser(id: $0.id, email: $0.email, username: $0.username, createdAt: $0.createdAt) }
+                        print("[GroupsList] Group '\(group.name)' — \(fetchedMembers.count) members fetched separately")
+                    } catch {
+                        print("[GroupsList] Failed to fetch members for group '\(group.name)': \(error)")
+                    }
                 }
+                
+                // Balances come from the rich group response, or fetch separately
                 if let balances = group.balances {
                     groupBalances[group.id] = balances
+                    print("[GroupsList] Group '\(group.name)' — \(balances.count) balances: \(balances.map { "\($0.userId.uuidString.prefix(8))=\($0.amount)" }.joined(separator: ", "))")
+                } else {
+                    // Fetch balances separately if not in group response
+                    do {
+                        let fetchedBalances = try await APIService.shared.getBalances(groupId: group.id)
+                        groupBalances[group.id] = fetchedBalances
+                        print("[GroupsList] Group '\(group.name)' — \(fetchedBalances.count) balances fetched separately")
+                    } catch {
+                        print("[GroupsList] Failed to fetch balances for group '\(group.name)': \(error)")
+                    }
                 }
                 
                 // Expenses still need a separate call
                 do {
                     let expenses = try await APIService.shared.getGroupExpenses(groupId: group.id)
                     groupExpenses[group.id] = expenses
+                    print("[GroupsList] Group '\(group.name)' — \(expenses.count) expenses fetched")
                 } catch {
-                    print("Failed to load expenses for group \(group.id): \(error)")
+                    print("[GroupsList] Failed to load expenses for group '\(group.name)': \(error)")
                 }
             }
+            
+            print("[GroupsList] Current user ID: \(currentUserId?.uuidString ?? "nil")")
+            print("[GroupsList] Net balance: \(netBalance)")
         } catch {
-            print("Failed to load groups: \(error)")
+            print("[GroupsList] Failed to load groups: \(error)")
         }
         
         isLoading = false
