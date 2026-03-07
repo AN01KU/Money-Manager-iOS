@@ -18,19 +18,9 @@ struct AddExpenseView: View {
     var body: some View {
         NavigationStack {
             Form {
-                mainSection
-                
-                if viewModel.isShared {
-                    paidBySection
-                    splitSection
-                    splitMembersSection
-                    if viewModel.splitType == .custom && !viewModel.selectedMembers.isEmpty {
-                        splitSummarySection
-                    }
-                } else {
-                    dateTimeSection
-                    detailsSection
-                }
+                amountSection
+                dateTimeSection
+                detailsSection
             }
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -49,11 +39,7 @@ struct AddExpenseView: View {
                 }
             }
             .sheet(isPresented: $viewModel.showCategoryPicker) {
-                if viewModel.isShared {
-                    sharedCategoryPicker
-                } else {
-                    CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
-                }
+                CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
             .sheet(isPresented: $viewModel.showDatePicker) {
                 DatePickerSheet(selectedDate: $viewModel.selectedDate)
@@ -72,20 +58,8 @@ struct AddExpenseView: View {
         }
     }
     
-    private var mainSection: some View {
+    private var amountSection: some View {
         Section {
-            if viewModel.isShared {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Description *")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    TextField("e.g., Dinner, Cab, Groceries", text: $viewModel.description)
-                        .textInputAutocapitalization(.sentences)
-                }
-                .padding(.vertical, 4)
-            }
-            
             VStack(alignment: .leading, spacing: 8) {
                 Text("Amount *")
                     .font(.subheadline)
@@ -194,133 +168,6 @@ struct AddExpenseView: View {
             
             Section {
                 Toggle("Make this recurring?", isOn: $viewModel.isRecurring)
-            }
-        }
-    }
-    
-    private var paidBySection: some View {
-        Section("Paid By") {
-            if case .shared(_, let members, _) = viewModel.mode {
-                ForEach(members) { member in
-                    Button { viewModel.paidByUserId = member.id } label: {
-                        HStack {
-                            Text(viewModel.displayName(for: member))
-                                .foregroundColor(.primary)
-                            Text(member.email)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Image(systemName: viewModel.paidByUserId == member.id ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(viewModel.paidByUserId == member.id ? .teal : .secondary)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    private var splitSection: some View {
-        Section {
-            Picker("Split Type", selection: $viewModel.splitType) {
-                ForEach(SplitType.allCases, id: \.self) { type in
-                    Text(type.rawValue).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-        } header: {
-            Text("Split Between")
-        }
-    }
-    
-    private var splitMembersSection: some View {
-        Section {
-            if case .shared(_, let members, _) = viewModel.mode {
-                ForEach(members) { member in
-                    HStack {
-                        Button { viewModel.toggleMember(member.id) } label: {
-                            HStack {
-                                Image(systemName: viewModel.selectedMembers.contains(member.id) ? "checkmark.square.fill" : "square")
-                                    .foregroundColor(viewModel.selectedMembers.contains(member.id) ? .teal : .secondary)
-                                Text(viewModel.displayName(for: member))
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        if viewModel.splitType == .equal {
-                            if viewModel.selectedMembers.contains(member.id) {
-                                Text(viewModel.equalShareText)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        } else {
-                            if viewModel.selectedMembers.contains(member.id) {
-                                TextField("0.00", text: viewModel.binding(for: member.id))
-                                    .keyboardType(.decimalPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: 100)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    private var splitSummarySection: some View {
-        Section {
-            HStack {
-                Text("Total split")
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(CurrencyFormatter.format(viewModel.customSplitTotal, showDecimals: true))
-                    .fontWeight(.semibold)
-                    .foregroundColor(viewModel.splitMatchesTotal ? .green : .red)
-            }
-            
-            if let total = Double(viewModel.amount), total > 0 {
-                HStack {
-                    Text("Remaining")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(CurrencyFormatter.format(total - viewModel.customSplitTotal, showDecimals: true))
-                        .fontWeight(.semibold)
-                        .foregroundColor(viewModel.splitMatchesTotal ? .green : .orange)
-                }
-            }
-        }
-    }
-    
-    private var sharedCategoryPicker: some View {
-        NavigationStack {
-            List {
-                ForEach(PredefinedCategory.allCases) { category in
-                    Button {
-                        viewModel.selectedCategory = category.rawValue
-                        viewModel.showCategoryPicker = false
-                    } label: {
-                        HStack {
-                            Image(systemName: category.icon)
-                                .foregroundColor(category.color)
-                                .frame(width: 30)
-                            Text(category.rawValue)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if viewModel.selectedCategory == category.rawValue {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.teal)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Select Category")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { viewModel.showCategoryPicker = false }
-                }
             }
         }
     }
@@ -485,25 +332,13 @@ struct TimePickerSheet: View {
 
 // MARK: - Previews
 
-#Preview("Personal - New") {
+#Preview("New Expense") {
     AddExpenseView()
         .modelContainer(for: [Expense.self, CustomCategory.self], inMemory: true)
 }
 
-#Preview("Personal - Edit") {
+#Preview("Edit Expense") {
     let expense = Expense(amount: 450, category: "Food & Dining", date: Date(), expenseDescription: "Lunch at cafe", notes: "With colleagues")
     AddExpenseView(expenseToEdit: expense)
         .modelContainer(for: [Expense.self, CustomCategory.self], inMemory: true)
-}
-
-#Preview("Shared - Small Group") {
-    let group = TestData.testGroups[0]
-    AddExpenseView(mode: .shared(group: group, members: TestData.testGroupMembers[group.id] ?? []) { _ in })
-        .modelContainer(for: Expense.self, inMemory: true)
-}
-
-#Preview("Shared - Large Group") {
-    let group = TestData.testGroups[2]
-    AddExpenseView(mode: .shared(group: group, members: TestData.testGroupMembers[group.id] ?? []) { _ in })
-        .modelContainer(for: Expense.self, inMemory: true)
 }

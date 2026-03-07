@@ -91,21 +91,6 @@ class AddCategoryViewModel: ObservableObject {
             return false
         }
         
-        // Queue for backend sync if authenticated
-        if APIService.shared.isAuthenticated {
-            let request = CreateCategoryRequest(
-                name: trimmedName,
-                color: selectedColor,
-                icon: selectedIcon
-            )
-            SyncService.shared.queueForSync(
-                itemType: .category,
-                itemId: category.id,
-                action: .create,
-                payload: request
-            )
-        }
-        
         isSaving = false
         return true
     }
