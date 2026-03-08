@@ -57,7 +57,7 @@ struct TransactionRow: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .contentShape(Rectangle())
     }
     

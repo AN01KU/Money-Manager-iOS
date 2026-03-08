@@ -99,7 +99,7 @@ struct AddExpenseView: View {
                     }
                     .padding()
                     .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
             .padding(.vertical, 8)
@@ -122,7 +122,7 @@ struct AddExpenseView: View {
                     }
                     .padding()
                     .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 
                 HStack(spacing: 12) {
@@ -147,7 +147,7 @@ struct AddExpenseView: View {
                         }
                         .padding()
                         .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
             }
@@ -189,7 +189,7 @@ struct QuickAmountButton: View {
                 .padding(.vertical, 8)
                 .background(Color.teal.opacity(0.1))
                 .foregroundColor(.teal)
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.borderless)
     }
@@ -209,7 +209,7 @@ struct QuickDateButton: View {
                 .padding(.vertical, 8)
                 .background(Color.teal.opacity(0.1))
                 .foregroundColor(.teal)
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.borderless)
     }
@@ -315,7 +315,7 @@ struct TimePickerSheet: View {
         NavigationStack {
             VStack {
                 DatePicker("Select Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
+                    .datePickerStyle(.graphical)
                     .padding()
                 Spacer()
             }

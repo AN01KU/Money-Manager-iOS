@@ -36,7 +36,7 @@ struct DateFilterSelector: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             
             // Filter Mode Toggle
@@ -54,7 +54,7 @@ struct DateFilterSelector: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             
             Spacer()

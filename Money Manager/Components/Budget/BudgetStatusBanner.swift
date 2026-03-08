@@ -32,7 +32,7 @@ struct BudgetStatusBanner: View {
         .padding()
         .background(statusColor.opacity(0.1))
         .foregroundColor(statusColor)
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
     
     private var statusIcon: String {
