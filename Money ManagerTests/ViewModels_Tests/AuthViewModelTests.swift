@@ -1,3 +1,5 @@
+// MARK: - Commented out: AuthViewModel removed in offline-v1
+/*
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -171,3 +173,5 @@ struct AuthViewModelTests {
         #expect(viewModel.isFormValid == true)
     }
 }
+
+*/

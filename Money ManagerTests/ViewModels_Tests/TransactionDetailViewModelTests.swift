@@ -109,6 +109,8 @@ struct TransactionDetailViewModelTests {
         #expect(expense.isDeleted == true)
     }
     
+    // MARK: - Commented out: group navigation removed in offline-v1
+    /*
     @Test
     func testGetGroupForNavigationReturnsGroup() {
         let groupId = UUID()
@@ -121,7 +123,10 @@ struct TransactionDetailViewModelTests {
         #expect(result?.id == groupId)
         #expect(result?.name == "Trip")
     }
+    */
     
+    // MARK: - Commented out: group navigation removed in offline-v1
+    /*
     @Test
     func testGetGroupForNavigationReturnsNilWhenNoGroup() {
         let expense = Expense(amount: 100, category: "Food", date: Date())
@@ -131,6 +136,7 @@ struct TransactionDetailViewModelTests {
         
         #expect(result == nil)
     }
+    */
     
     @Test
     func testFormatDateAndTimeWithSpecificTimeContainsTime() {

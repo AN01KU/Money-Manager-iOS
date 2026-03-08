@@ -5,6 +5,8 @@ import Testing
 @MainActor
 struct AddExpenseViewModelTests {
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testEqualShareTextCalculatesCorrectly() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -16,7 +18,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result.contains("1,000") || result.contains("₹1,000"))
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testEqualShareTextWithMultipleMembers() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -27,7 +32,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result.contains("100"))
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testEqualShareTextReturnsZeroWhenNoMembers() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -38,7 +46,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result.contains("0"))
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testCustomSplitTotalSumsCorrectly() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -51,7 +62,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result == 500.0)
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testCustomSplitTotalIgnoresInvalidAmounts() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -64,7 +78,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result == 250.0)
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testSplitMatchesTotalReturnsTrueWhenMatching() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -78,7 +95,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result == true)
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testSplitMatchesTotalReturnsFalseWhenNotMatching() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -92,7 +112,10 @@ struct AddExpenseViewModelTests {
         
         #expect(result == false)
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testSplitMatchesTotalReturnsFalseForInvalidAmount() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -102,6 +125,7 @@ struct AddExpenseViewModelTests {
         
         #expect(result == false)
     }
+    */
     
     @Test
     func testIsValidForPersonalExpenseWithValidData() {
@@ -139,6 +163,8 @@ struct AddExpenseViewModelTests {
         #expect(viewModel.isValid == false)
     }
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testBuildSplitsEqualSplitWithRounding() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -155,7 +181,10 @@ struct AddExpenseViewModelTests {
         let total = splits.compactMap { Double($0.amount) }.reduce(0, +)
         #expect(abs(total - 100) < 0.01)
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testBuildSplitsCustomSplit() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -170,7 +199,10 @@ struct AddExpenseViewModelTests {
         
         #expect(splits.count == 2)
     }
+    */
     
+    // MARK: - Commented out: shared expense feature removed in offline-v1
+    /*
     @Test
     func testToggleMemberAddsAndRemoves() {
         let viewModel = AddExpenseViewModel(mode: .personal())
@@ -184,4 +216,5 @@ struct AddExpenseViewModelTests {
         viewModel.toggleMember(userId)
         #expect(!viewModel.selectedMembers.contains(userId))
     }
+    */
 }

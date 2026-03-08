@@ -1,3 +1,5 @@
+// MARK: - Commented out: backend/auth/groups code removed in offline-v1
+/*
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -108,3 +110,4 @@ struct ErrorHandlerTests {
         #expect(message == "Something went wrong")
     }
 }
+*/
