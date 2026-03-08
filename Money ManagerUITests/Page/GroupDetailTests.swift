@@ -1,3 +1,5 @@
+// MARK: - Commented out: backend/auth/groups code removed in offline-v1
+/*
 //
 //  GroupDetailTests.swift
 //  Money Manager UITests
@@ -201,3 +203,4 @@ final class GroupDetailTests: XCTestCase {
         groupButton.tap()
     }
 }
+*/
