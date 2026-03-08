@@ -1,3 +1,5 @@
+// MARK: - Commented out: backend/auth/groups code removed in offline-v1
+/*
 //
 //  GroupsTests.swift
 //  Money Manager UITests
@@ -213,3 +215,4 @@ final class GroupsTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Groups"].waitForExistence(timeout: 3), "Should navigate to Groups")
     }
 }
+*/

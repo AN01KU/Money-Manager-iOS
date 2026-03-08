@@ -1,3 +1,5 @@
+// MARK: - Commented out: backend/auth/groups code removed in offline-v1
+/*
 //
 //  AuthTests.swift
 //  Money Manager UITests
@@ -226,3 +228,4 @@ final class AuthTests: XCTestCase {
         XCTAssertFalse(loginButton.isEnabled, "Submit should be disabled with short password")
     }
 }
+*/
