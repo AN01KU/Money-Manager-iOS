@@ -17,11 +17,11 @@ struct FloatingActionButton: View {
             Image(systemName: icon)
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(width: 60, height: 60)
                 .background(color)
                 .clipShape(Circle())
-                .shadow(radius: 4)
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
         }
     }
 }

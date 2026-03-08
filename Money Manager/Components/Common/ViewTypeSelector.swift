@@ -28,7 +28,7 @@ struct ViewTypeSelector: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                         .background(selectedView == viewType ? Color.teal.opacity(0.1) : Color(.systemGray6))
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.borderless)
             }

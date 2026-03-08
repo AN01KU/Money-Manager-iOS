@@ -27,7 +27,7 @@ struct ManageCategoriesView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(Color(.systemGray5))
-                            .cornerRadius(6)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
             } header: {
@@ -135,7 +135,7 @@ struct AddCategorySheet: View {
                                     .foregroundColor(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
                                     .frame(width: 44, height: 44)
                                     .background(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor).opacity(0.12) : Color.clear)
-                                    .cornerRadius(10)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                             .buttonStyle(.plain)
                         }

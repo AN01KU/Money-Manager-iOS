@@ -46,7 +46,7 @@ struct CategoryChart: View {
             }
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(16)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             
             // Full category breakdown
             if !categorySpending.isEmpty {
@@ -62,7 +62,7 @@ struct CategoryChart: View {
                 }
                 .padding(.vertical, 8)
                 .background(Color(.systemGray6))
-                .cornerRadius(16)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
     }

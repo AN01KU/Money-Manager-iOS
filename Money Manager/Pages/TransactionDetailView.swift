@@ -33,7 +33,7 @@ struct TransactionDetailView: View {
         }
         .padding()
         .background(Color.teal.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
     
     var body: some View {
@@ -56,7 +56,7 @@ struct TransactionDetailView: View {
                         }
                         .padding()
                         .background(Color(.systemGray6))
-                        .cornerRadius(16)
+.clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     
                     VStack(spacing: 8) {
@@ -111,12 +111,12 @@ struct TransactionDetailView: View {
                             }
                             .padding()
                             .background(Color.teal.opacity(0.1))
-                            .cornerRadius(8)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
                     .padding()
                     .background(Color(.systemGray6))
-                    .cornerRadius(16)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     
                     HStack(spacing: 16) {
                         Button(action: {
@@ -128,7 +128,7 @@ struct TransactionDetailView: View {
                                 .padding()
                                 .background(Color.teal)
                                 .foregroundColor(.white)
-                                .cornerRadius(12)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         
                         Button(action: {
@@ -140,7 +140,7 @@ struct TransactionDetailView: View {
                                 .padding()
                                 .background(Color.red)
                                 .foregroundColor(.white)
-                                .cornerRadius(12)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
                     .padding(.horizontal)

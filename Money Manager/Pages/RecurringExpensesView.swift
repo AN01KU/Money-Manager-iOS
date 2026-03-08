@@ -106,7 +106,7 @@ struct RecurringExpenseRow: View {
                     .padding(.vertical, 4)
                     .background(Color.teal.opacity(0.1))
                     .foregroundColor(.teal)
-                    .cornerRadius(6)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
             }
             
             Toggle("", isOn: Binding(
@@ -189,7 +189,7 @@ struct AddRecurringExpenseSheet: View {
                             }
                             .padding()
                             .background(Color(.systemGray6))
-                            .cornerRadius(8)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
                     .padding(.vertical, 8)
