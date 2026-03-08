@@ -1,3 +1,5 @@
+// MARK: - Commented out: GroupsListViewModel removed in offline-v1
+/*
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -360,3 +362,5 @@ struct GroupsListViewModelTests {
         #expect(viewModel.groupMembers[groupId]?.count == 1)
     }
 }
+
+*/
