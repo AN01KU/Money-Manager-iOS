@@ -13,6 +13,7 @@ class OverviewViewModel: ObservableObject {
     
     @Published var filteredExpenses: [Expense] = []
     @Published var currentBudget: MonthlyBudget?
+    @Published var dailyBudgetLimit: Double = 0
     @Published var totalSpent: Double = 0
     @Published var categorySpending: [CategorySpending] = []
     @Published var expenseToDelete: Expense?
@@ -90,6 +91,14 @@ class OverviewViewModel: ObservableObject {
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
         currentBudget = budgets.first { $0.year == year && $0.month == month }
+        
+        if filterMode == .daily, let budget = currentBudget {
+            let range = calendar.range(of: .day, in: .month, for: selectedDate)!
+            let daysInMonth = range.count
+            dailyBudgetLimit = budget.limit / Double(daysInMonth)
+        } else {
+            dailyBudgetLimit = 0
+        }
         
         totalSpent = filteredExpenses.reduce(0) { $0 + $1.amount }
         
