@@ -55,7 +55,9 @@ struct Overview: View {
                                 )
                                     .padding(.horizontal)
                             } else {
-                                TransactionList(expenses: viewModel.filteredExpenses)
+                                TransactionList(expenses: viewModel.filteredExpenses) { expense in
+                                    viewModel.deleteExpense(expense)
+                                }
                                     .padding(.horizontal)
                             }
                         }
@@ -77,11 +79,29 @@ struct Overview: View {
             .sheet(isPresented: $viewModel.showBudgetSheet) {
                 BudgetSheet(selectedMonth: viewModel.selectedDate)
             }
+            .alert("Delete Expense?", isPresented: Binding(
+                get: { viewModel.expenseToDelete != nil },
+                set: { if !$0 { viewModel.cancelDeleteExpense() } }
+            )) {
+                Button("Cancel", role: .cancel) {
+                    viewModel.cancelDeleteExpense()
+                }
+                Button("Delete", role: .destructive) {
+                    viewModel.confirmDeleteExpense()
+                }
+            } message: {
+                if let expense = viewModel.expenseToDelete {
+                    Text("Are you sure you want to delete \"\(expense.expenseDescription ?? expense.category)\"? This action cannot be undone.")
+                }
+            }
             .task(id: viewModel.selectedDate) {
                 viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
             }
             .onAppear {
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+                #if DEBUG
+                viewModel.loadTestDataIfNeeded(modelContext: modelContext)
+                #endif
             }
             .onChange(of: allExpenses) { _, _ in
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)

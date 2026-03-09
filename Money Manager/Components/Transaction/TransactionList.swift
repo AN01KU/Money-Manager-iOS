@@ -10,6 +10,7 @@ import SwiftUI
 struct TransactionList: View {
     let expenses: [Expense]
     @State private var selectedExpense: Expense?
+    var onDelete: ((Expense) -> Void)?
     
     var groupedExpenses: [(String, [Expense])] {
         let calendar = Calendar.current
@@ -53,12 +54,19 @@ struct TransactionList: View {
                         .padding(.leading, 4)
                     
                     ForEach(section.1) { expense in
-                        Button(action: {
+                        Button {
                             selectedExpense = expense
-                        }) {
+                        } label: {
                             TransactionRow(expense: expense)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                onDelete?(expense)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }

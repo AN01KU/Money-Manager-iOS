@@ -74,7 +74,12 @@
             ReferencedContainer = "container:Money Manager.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "useTestData"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
