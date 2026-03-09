@@ -3,7 +3,7 @@ import SwiftData
 
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
+    @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
     @Query private var budgets: [MonthlyBudget]
     
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
