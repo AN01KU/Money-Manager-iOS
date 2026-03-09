@@ -15,6 +15,11 @@ class OverviewViewModel: ObservableObject {
     @Published var currentBudget: MonthlyBudget?
     @Published var totalSpent: Double = 0
     @Published var categorySpending: [CategorySpending] = []
+    @Published var expenseToDelete: Expense?
+    
+    #if DEBUG
+    private var testDataLoaded = false
+    #endif
     
     private var allExpenses: [Expense] = []
     private var budgets: [MonthlyBudget] = []
@@ -115,4 +120,45 @@ class OverviewViewModel: ObservableObject {
         modelContext.insert(budget)
         try? modelContext.save()
     }
+    
+    func deleteExpense(_ expense: Expense) {
+        expenseToDelete = expense
+    }
+    
+    func confirmDeleteExpense() {
+        guard let expense = expenseToDelete else { return }
+        expense.isDeleted = true
+        expense.updatedAt = Date()
+        
+        do {
+            try modelContext?.save()
+            recalculate()
+        } catch {
+            print("Error deleting expense: \(error)")
+        }
+        expenseToDelete = nil
+    }
+    
+    func cancelDeleteExpense() {
+        expenseToDelete = nil
+    }
+    
+    #if DEBUG
+    func loadTestDataIfNeeded(modelContext: ModelContext) {
+        guard !testDataLoaded, useTestData else { return }
+        testDataLoaded = true
+        
+        try? modelContext.delete(model: Expense.self)
+        try? modelContext.delete(model: MonthlyBudget.self)
+        
+        for expense in TestData.generatePersonalExpenses() {
+            modelContext.insert(expense)
+        }
+        for budget in TestData.generateBudgets() {
+            modelContext.insert(budget)
+        }
+        
+        try? modelContext.save()
+    }
+    #endif
 }
