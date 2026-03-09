@@ -31,7 +31,7 @@ struct BudgetCard: View {
                 
                 Spacer()
                 
-                Button(action: onEdit) {
+                Button(action: { HapticManager.impact(.light); onEdit() }) {
                     Image(systemName: "pencil.circle.fill")
                         .font(.title2)
                         .foregroundColor(.teal)

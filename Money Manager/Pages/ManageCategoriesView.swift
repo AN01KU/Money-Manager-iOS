@@ -71,6 +71,7 @@ struct ManageCategoriesView: View {
                             Spacer()
                             
                             Button("Restore") {
+                                HapticManager.notification(.success)
                                 viewModel.restoreCategory(category)
                             }
                             .font(.caption)
@@ -84,6 +85,7 @@ struct ManageCategoriesView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    HapticManager.impact(.medium)
                     viewModel.showAddCategory = true
                 } label: {
                     Image(systemName: "plus")
@@ -128,6 +130,7 @@ struct AddCategorySheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 16) {
                         ForEach(viewModel.iconOptions, id: \.self) { icon in
                             Button {
+                                HapticManager.impact(.light)
                                 viewModel.selectedIcon = icon
                             } label: {
                                 Image(systemName: icon)
@@ -147,6 +150,7 @@ struct AddCategorySheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 12) {
                         ForEach(viewModel.colorOptions, id: \.self) { color in
                             Button {
+                                HapticManager.impact(.light)
                                 viewModel.selectedColor = color
                             } label: {
                                 Circle()
@@ -191,6 +195,7 @@ struct AddCategorySheet: View {
                         Button("Add") {
                             Task {
                                 if await viewModel.save() {
+                                    HapticManager.notification(.success)
                                     dismiss()
                                 }
                             }

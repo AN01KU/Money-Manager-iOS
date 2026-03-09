@@ -19,6 +19,7 @@ struct ViewTypeSelector: View {
         HStack(spacing: 12) {
             ForEach(ViewType.allCases, id: \.self) { viewType in
                 Button(action: {
+                    HapticManager.selection()
                     selectedView = viewType
                 }) {
                     Text(viewType.rawValue)

@@ -21,6 +21,7 @@ struct DateFilterSelector: View {
         HStack(spacing: 12) {
             // Date Picker Button
             Button(action: {
+                HapticManager.impact(.light)
                 showDatePicker = true
             }) {
                 HStack {
@@ -41,6 +42,7 @@ struct DateFilterSelector: View {
             
             // Filter Mode Toggle
             Button(action: {
+                HapticManager.selection()
                 filterMode = filterMode == .daily ? .monthly : .daily
             }) {
                 HStack(spacing: 6) {
