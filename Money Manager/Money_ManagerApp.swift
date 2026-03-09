@@ -1,6 +1,10 @@
 import SwiftUI
 import SwiftData
 
+#if DEBUG
+private let useTestData = CommandLine.arguments.contains("useTestData")
+#endif
+
 @main
 struct Money_ManagerApp: App {
     let container: ModelContainer
@@ -12,47 +16,37 @@ struct Money_ManagerApp: App {
             MonthlyBudget.self
         ])
         
-        let isUITesting = CommandLine.arguments.contains("--uitesting")
-        let modelConfiguration = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: isUITesting
-        )
+        let modelConfiguration = ModelConfiguration(schema: schema)
 
         do {
             container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             
-            if isUITesting {
+            #if DEBUG
+            if useTestData {
                 Self.injectTestData(context: container.mainContext)
             }
+            #endif
+            
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }
     
+    #if DEBUG
     private static func injectTestData(context: ModelContext) {
-        let calendar = Calendar.current
-        let today = Date()
+        try? context.delete(model: Expense.self)
+        try? context.delete(model: MonthlyBudget.self)
         
-        let testExpenses = [
-            Expense(amount: 450, category: "Food & Dining", date: today, expenseDescription: "Lunch at cafe"),
-            Expense(amount: 120, category: "Food & Dining", date: today, expenseDescription: "Morning coffee"),
-            Expense(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, expenseDescription: "Fuel"),
-            Expense(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, expenseDescription: "New shirt"),
-            Expense(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, expenseDescription: "Phone bill"),
-            Expense(amount: 649, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, expenseDescription: "Netflix"),
-        ]
-        
-        for expense in testExpenses {
+        for expense in TestData.generatePersonalExpenses() {
             context.insert(expense)
         }
-        
-        let year = calendar.component(.year, from: today)
-        let month = calendar.component(.month, from: today)
-        let budget = MonthlyBudget(year: year, month: month, limit: 50000)
-        context.insert(budget)
+        for budget in TestData.generateBudgets() {
+            context.insert(budget)
+        }
         
         try? context.save()
     }
+    #endif
 
     var body: some Scene {
         WindowGroup {

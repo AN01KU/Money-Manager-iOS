@@ -13,14 +13,9 @@ class OverviewViewModel: ObservableObject {
     
     @Published var filteredExpenses: [Expense] = []
     @Published var currentBudget: MonthlyBudget?
-    @Published var dailyBudgetLimit: Double = 0
     @Published var totalSpent: Double = 0
     @Published var categorySpending: [CategorySpending] = []
     @Published var expenseToDelete: Expense?
-    
-    #if DEBUG
-    private var testDataLoaded = false
-    #endif
     
     private var allExpenses: [Expense] = []
     private var budgets: [MonthlyBudget] = []
@@ -92,14 +87,6 @@ class OverviewViewModel: ObservableObject {
         let month = calendar.component(.month, from: selectedDate)
         currentBudget = budgets.first { $0.year == year && $0.month == month }
         
-        if filterMode == .daily, let budget = currentBudget {
-            let range = calendar.range(of: .day, in: .month, for: selectedDate)!
-            let daysInMonth = range.count
-            dailyBudgetLimit = budget.limit / Double(daysInMonth)
-        } else {
-            dailyBudgetLimit = 0
-        }
-        
         totalSpent = filteredExpenses.reduce(0) { $0 + $1.amount }
         
         let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
@@ -151,23 +138,4 @@ class OverviewViewModel: ObservableObject {
     func cancelDeleteExpense() {
         expenseToDelete = nil
     }
-    
-    #if DEBUG
-    func loadTestDataIfNeeded(modelContext: ModelContext) {
-        guard !testDataLoaded, useTestData else { return }
-        testDataLoaded = true
-        
-        try? modelContext.delete(model: Expense.self)
-        try? modelContext.delete(model: MonthlyBudget.self)
-        
-        for expense in TestData.generatePersonalExpenses() {
-            modelContext.insert(expense)
-        }
-        for budget in TestData.generateBudgets() {
-            modelContext.insert(budget)
-        }
-        
-        try? modelContext.save()
-    }
-    #endif
 }
