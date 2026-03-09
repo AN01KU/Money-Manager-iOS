@@ -55,6 +55,7 @@ struct TransactionList: View {
                     
                     ForEach(section.1) { expense in
                         Button {
+                            HapticManager.impact(.light)
                             selectedExpense = expense
                         } label: {
                             TransactionRow(expense: expense)
@@ -62,6 +63,7 @@ struct TransactionList: View {
                         .buttonStyle(.plain)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
+                                HapticManager.notification(.warning)
                                 onDelete?(expense)
                             } label: {
                                 Label("Delete", systemImage: "trash")

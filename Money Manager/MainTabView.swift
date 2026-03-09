@@ -18,6 +18,9 @@ struct MainTabView: View {
                 .tag(1)
         }
         .tint(.teal)
+        .onChange(of: selectedTab) { _, _ in
+            HapticManager.selection()
+        }
     }
 }
 

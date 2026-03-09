@@ -43,7 +43,7 @@ struct EmptyStateView: View {
                 .foregroundColor(.secondary)
             
             if let actionTitle = actionTitle, let action = action {
-                Button(action: action) {
+                Button(action: { HapticManager.impact(.medium); action() }) {
                     Text(actionTitle)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)

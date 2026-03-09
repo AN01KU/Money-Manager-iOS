@@ -27,6 +27,7 @@ struct CurrencyPickerView: View {
         List {
             ForEach(filteredCurrencies, id: \.code) { currency in
                 Button {
+                    HapticManager.selection()
                     selectedCurrency = currency.code
                 } label: {
                     HStack(spacing: 14) {

@@ -13,6 +13,7 @@ struct MonthSelector: View {
     
     var body: some View {
         Button(action: {
+            HapticManager.impact(.light)
             showDatePicker = true
         }) {
             HStack {

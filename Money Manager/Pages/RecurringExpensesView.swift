@@ -22,6 +22,7 @@ struct RecurringExpensesView: View {
                         RecurringExpenseRow(expense: expense)
                     }
                     .onDelete { indexSet in
+                        HapticManager.notification(.warning)
                         for index in indexSet {
                             viewModel.deactivateExpense(at: index)
                         }
@@ -34,6 +35,7 @@ struct RecurringExpensesView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
+                    HapticManager.impact(.medium)
                     viewModel.showAddSheet = true
                 }) {
                     Image(systemName: "plus")
@@ -154,13 +156,13 @@ struct AddRecurringExpenseSheet: View {
                         
                         HStack(spacing: 12) {
                             QuickAmountButton(amount: 100) {
-                                viewModel.amount = "100"
+                                HapticManager.impact(.light); viewModel.amount = "100"
                             }
                             QuickAmountButton(amount: 500) {
-                                viewModel.amount = "500"
+                                HapticManager.impact(.light); viewModel.amount = "500"
                             }
                             QuickAmountButton(amount: 1000) {
-                                viewModel.amount = "1000"
+                                HapticManager.impact(.light); viewModel.amount = "1000"
                             }
                         }
                     }
@@ -172,6 +174,7 @@ struct AddRecurringExpenseSheet: View {
                             .foregroundColor(.secondary)
                         
                         Button(action: {
+                            HapticManager.impact(.light)
                             viewModel.showCategoryPicker = true
                         }) {
                             HStack {
@@ -247,6 +250,7 @@ struct AddRecurringExpenseSheet: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         if viewModel.save() {
+                            HapticManager.notification(.success)
                             dismiss()
                         }
                     }

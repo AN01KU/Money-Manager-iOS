@@ -13,7 +13,10 @@ struct FloatingActionButton: View {
     var color: Color = .teal
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticManager.impact(.medium)
+            action()
+        }) {
             Image(systemName: icon)
                 .font(.title2)
                 .fontWeight(.semibold)

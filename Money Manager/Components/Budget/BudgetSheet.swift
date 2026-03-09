@@ -78,6 +78,9 @@ struct BudgetSheet: View {
             } message: {
                 Text(errorMessage)
             }
+            .onChange(of: showError) { _, show in
+                if show { HapticManager.notification(.error) }
+            }
             .onAppear {
                 loadExistingBudget()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -140,6 +143,7 @@ struct BudgetSheet: View {
         }
         
         isSaving = false
+        HapticManager.notification(.success)
         dismiss()
     }
     

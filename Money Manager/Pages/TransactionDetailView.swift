@@ -120,6 +120,7 @@ struct TransactionDetailView: View {
                     
                     HStack(spacing: 16) {
                         Button(action: {
+                            HapticManager.impact(.light)
                             viewModel.showEditSheet = true
                         }) {
                             Text("Edit")
@@ -132,6 +133,7 @@ struct TransactionDetailView: View {
                         }
                         
                         Button(action: {
+                            HapticManager.notification(.warning)
                             viewModel.showDeleteAlert = true
                         }) {
                             Text("Delete")
@@ -162,7 +164,7 @@ struct TransactionDetailView: View {
             .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    viewModel.deleteExpense { dismiss() }
+                    viewModel.deleteExpense { HapticManager.notification(.success); dismiss() }
                 }
             } message: {
                 Text("This action cannot be undone.")

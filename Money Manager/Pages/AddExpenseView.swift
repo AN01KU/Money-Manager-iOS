@@ -32,7 +32,7 @@ struct AddExpenseView: View {
                     if viewModel.isSaving {
                         ProgressView()
                     } else {
-                        Button("Save") { viewModel.save { dismiss() } }
+                        Button("Save") { viewModel.save { HapticManager.notification(.success); dismiss() } }
                             .fontWeight(.semibold)
                             .disabled(!viewModel.isValid)
                     }
@@ -51,6 +51,9 @@ struct AddExpenseView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage)
+            }
+            .onChange(of: viewModel.showError) { _, show in
+                if show { HapticManager.notification(.error) }
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext)
@@ -71,9 +74,9 @@ struct AddExpenseView: View {
                     .fontWeight(.semibold)
                 
                 HStack(spacing: 12) {
-                    QuickAmountButton(amount: 100) { viewModel.amount = "100" }
-                    QuickAmountButton(amount: 500) { viewModel.amount = "500" }
-                    QuickAmountButton(amount: 1000) { viewModel.amount = "1000" }
+                    QuickAmountButton(amount: 100) { HapticManager.impact(.light); viewModel.amount = "100" }
+                    QuickAmountButton(amount: 500) { HapticManager.impact(.light); viewModel.amount = "500" }
+                    QuickAmountButton(amount: 1000) { HapticManager.impact(.light); viewModel.amount = "1000" }
                 }
             }
             .padding(.vertical, 8)
@@ -83,7 +86,7 @@ struct AddExpenseView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                Button(action: { viewModel.showCategoryPicker = true }) {
+                Button(action: { HapticManager.impact(.light); viewModel.showCategoryPicker = true }) {
                     HStack {
                         if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
                             Image(systemName: category.icon)
@@ -113,7 +116,7 @@ struct AddExpenseView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                Button(action: { viewModel.showDatePicker = true }) {
+                Button(action: { HapticManager.impact(.light); viewModel.showDatePicker = true }) {
                     HStack {
                         Text(viewModel.formatDate(viewModel.selectedDate))
                         Spacer()
@@ -126,8 +129,9 @@ struct AddExpenseView: View {
                 }
                 
                 HStack(spacing: 12) {
-                    QuickDateButton(label: "Today") { viewModel.selectedDate = Date() }
+                    QuickDateButton(label: "Today") { HapticManager.impact(.light); viewModel.selectedDate = Date() }
                     QuickDateButton(label: "Yesterday") {
+                        HapticManager.impact(.light)
                         viewModel.selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                     }
                 }
@@ -138,7 +142,7 @@ struct AddExpenseView: View {
                 Toggle("Include Time", isOn: $viewModel.hasTime)
                 
                 if viewModel.hasTime {
-                    Button(action: { viewModel.showTimePicker = true }) {
+                    Button(action: { HapticManager.impact(.light); viewModel.showTimePicker = true }) {
                         HStack {
                             Text(viewModel.formatTime(viewModel.selectedTime))
                             Spacer()
@@ -231,6 +235,7 @@ struct CategoryPickerView: View {
                     Section("Your Categories") {
                         ForEach(visibleCustom) { category in
                             Button {
+                                HapticManager.selection()
                                 selectedCategory = category.name
                                 dismiss()
                             } label: {
@@ -254,6 +259,7 @@ struct CategoryPickerView: View {
                 Section("Default Categories") {
                     ForEach(PredefinedCategory.allCases) { category in
                         Button {
+                            HapticManager.selection()
                             selectedCategory = category.rawValue
                             dismiss()
                         } label: {
