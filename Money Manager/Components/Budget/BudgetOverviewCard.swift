@@ -10,7 +10,6 @@ import SwiftUI
 struct BudgetOverviewCard: View {
     let budget: MonthlyBudget
     let spent: Double
-    var isDaily: Bool = false
     
     private var percentage: Int {
         guard budget.limit > 0 else { return 0 }
@@ -26,7 +25,7 @@ struct BudgetOverviewCard: View {
                 Text("/ \(CurrencyFormatter.format(budget.limit))")
                     .font(.title3)
                     .foregroundColor(.secondary)
-                Text(isDaily ? "Daily Budget" : "Monthly Budget")
+                Text("Budget")
                     .font(.title3)
                     .foregroundColor(.secondary)
             }

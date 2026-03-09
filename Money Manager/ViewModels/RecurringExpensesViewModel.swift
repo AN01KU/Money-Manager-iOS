@@ -6,7 +6,6 @@ import Combine
 class RecurringExpensesViewModel: ObservableObject {
     @Published var expenses: [Expense] = []
     @Published var showAddSheet = false
-    @Published var editingExpense: Expense?
     
     var activeExpenses: [Expense] {
         expenses.filter { $0.isRecurring && $0.isActive }

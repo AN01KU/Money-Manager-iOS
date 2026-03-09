@@ -18,18 +18,7 @@ struct Overview: View {
                         DateFilterSelector(selectedDate: $viewModel.selectedDate, filterMode: $viewModel.filterMode)
                             .padding(.horizontal)
                         
-                        if viewModel.filterMode == .daily, viewModel.dailyBudgetLimit > 0 {
-                            BudgetOverviewCard(
-                                budget: MonthlyBudget(
-                                    year: Calendar.current.component(.year, from: viewModel.selectedDate),
-                                    month: Calendar.current.component(.month, from: viewModel.selectedDate),
-                                    limit: viewModel.dailyBudgetLimit
-                                ),
-                                spent: viewModel.totalSpent,
-                                isDaily: true
-                            )
-                            .padding(.horizontal)
-                        } else if let budget = viewModel.currentBudget {
+                        if let budget = viewModel.currentBudget {
                             BudgetOverviewCard(
                                 budget: budget,
                                 spent: viewModel.totalSpent
@@ -110,9 +99,6 @@ struct Overview: View {
             }
             .onAppear {
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
-                #if DEBUG
-                viewModel.loadTestDataIfNeeded(modelContext: modelContext)
-                #endif
             }
             .onChange(of: allExpenses) { _, _ in
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)

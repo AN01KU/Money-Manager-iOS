@@ -2,8 +2,6 @@ import Foundation
 import SwiftData
 
 #if DEBUG
-let useTestData: Bool = CommandLine.arguments.contains("useTestData")
-
 struct TestData {
     
     static func generatePersonalExpenses() -> [Expense] {
