@@ -56,7 +56,7 @@ struct SettingsView: View {
             NavigationLink {
                 ExportDataView()
             } label: {
-                Label("Export Data", systemImage: "square.and.arrow.up")
+                Label("Backup", systemImage: "archivebox.fill")
             }
         }
     }
