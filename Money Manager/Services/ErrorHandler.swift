@@ -6,9 +6,7 @@ final class ErrorHandler {
     private init() {}
     
     func logError(_ error: Error, context: String = "") {
-        #if DEBUG
         let contextLabel = context.isEmpty ? "" : " [\(context)]"
         print("❌ ERROR\(contextLabel): \(error.localizedDescription)")
-        #endif
     }
 }
