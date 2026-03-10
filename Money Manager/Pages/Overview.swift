@@ -111,20 +111,11 @@ struct Overview: View {
             .onAppear {
                 viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
             }
-            .onChange(of: allExpenses) { _, _ in
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            .onChange(of: allExpenses) { _, newValue in
+                viewModel.configure(allExpenses: newValue, budgets: budgets, modelContext: modelContext)
             }
-            .onChange(of: budgets) { _, _ in
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
-            }
-            .onChange(of: viewModel.searchText) { _, _ in
-                viewModel.recalculate()
-            }
-            .onChange(of: viewModel.filterMode) { _, _ in
-                viewModel.recalculate()
-            }
-            .onChange(of: viewModel.selectedDate) { _, _ in
-                viewModel.recalculate()
+            .onChange(of: budgets) { _, newValue in
+                viewModel.configure(allExpenses: allExpenses, budgets: newValue, modelContext: modelContext)
             }
         }
     }
