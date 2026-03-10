@@ -107,6 +107,72 @@ class BackupViewModel: ObservableObject {
         return formatter
     }()
     
+    private let dateOnlyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+    
+    private func parseDate(_ dateStr: String, _ timeStr: String? = nil) -> (date: Date, time: Date?) {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        let dateFormats = [
+            "d MMM yyyy 'at' h:mm a",
+            "d MMM yyyy 'at' h:mm:ss a",
+            "MMM d, yyyy 'at' h:mm a",
+            "MM/dd/yyyy",
+            "yyyy-MM-dd"
+        ]
+        
+        var parsedDate: Date?
+        var parsedTime: Date?
+        
+        if !dateStr.isEmpty {
+            if let isoDate = isoFormatter.date(from: dateStr) {
+                parsedDate = isoDate
+            } else {
+                for format in dateFormats {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = format
+                    if let date = formatter.date(from: dateStr) {
+                        parsedDate = date
+                        break
+                    }
+                }
+            }
+            
+            if parsedDate == nil {
+                parsedDate = dateFormatter.date(from: dateStr)
+            }
+            if parsedDate == nil {
+                parsedDate = dateOnlyFormatter.date(from: dateStr)
+            }
+        }
+        
+        if let timeStr = timeStr, !timeStr.isEmpty {
+            if let isoTime = isoFormatter.date(from: timeStr) {
+                parsedTime = isoTime
+            } else {
+                for format in dateFormats {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = format
+                    if let time = formatter.date(from: timeStr) {
+                        parsedTime = time
+                        break
+                    }
+                }
+            }
+            
+            if parsedTime == nil {
+                parsedTime = dateFormatter.date(from: timeStr)
+            }
+        }
+        
+        return (parsedDate ?? Date(), parsedTime)
+    }
+    
     var exportDescription: String {
         switch selectedExportFormat {
         case .csv:
@@ -213,13 +279,80 @@ class BackupViewModel: ObservableObject {
         
         switch format {
         case .csv:
-            return try exportExpensesToCSV(expenses: activeExpenses)
+            return try exportAllToCSV(expenses: activeExpenses, budgets: budgets, categories: categories)
         case .json:
             return try exportAllToJSON(expenses: activeExpenses, budgets: budgets, categories: categories)
         }
     }
     
     // MARK: - CSV Export
+    
+    private let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    private func exportAllToCSV(expenses: [Expense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+        var csv = ""
+        
+        // Expenses section
+        csv += "# EXPENSES\n"
+        csv += "ID,Amount,Category,Date,Time,Description,Notes,Is Recurring,Frequency,Day of Month,Days of Week,Recurring End Date,Is Active,Group ID,Group Name\n"
+        
+        for expense in expenses {
+            let id = expense.id.uuidString
+            let amount = String(expense.amount)
+            let category = escapeCSV(expense.category)
+            let date = iso8601Formatter.string(from: expense.date)
+            let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
+            let desc = escapeCSV(expense.expenseDescription ?? "")
+            let notes = escapeCSV(expense.notes ?? "")
+            let isRec = String(expense.isRecurring)
+            let freq = expense.frequency ?? ""
+            let dom = expense.dayOfMonth.map { String($0) } ?? ""
+            let dow = expense.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
+            let red = expense.recurringEndDate.map { iso8601Formatter.string(from: $0) } ?? ""
+            let isAct = String(expense.isActive)
+            let gid = expense.groupId?.uuidString ?? ""
+            let gname = escapeCSV(expense.groupName ?? "")
+            
+            let row = [id, amount, category, date, time, desc, notes, isRec, freq, dom, dow, red, isAct, gid, gname].joined(separator: ",")
+            csv += row + "\n"
+        }
+        
+        // Budgets section
+        csv += "\n# BUDGETS\n"
+        csv += "ID,Year,Month,Limit\n"
+        
+        for budget in budgets {
+            let row = [
+                budget.id.uuidString,
+                String(budget.year),
+                String(budget.month),
+                String(budget.limit)
+            ].joined(separator: ",")
+            csv += row + "\n"
+        }
+        
+        // Categories section
+        csv += "\n# CATEGORIES\n"
+        csv += "ID,Name,Icon,Color,Is Hidden\n"
+        
+        for category in categories {
+            let row = [
+                category.id.uuidString,
+                escapeCSV(category.name),
+                category.icon,
+                category.color,
+                String(category.isHidden)
+            ].joined(separator: ",")
+            csv += row + "\n"
+        }
+        
+        let fileName = "money_manager_backup_\(dateString()).csv"
+        return try saveToTempFile(csv, fileName: fileName)
+    }
     
     private func exportExpensesToCSV(expenses: [Expense]) throws -> URL {
         var csv = "ID,Amount,Category,Date,Time,Description,Notes,Is Recurring,Frequency,Day of Month,Days of Week,Recurring End Date,Is Active,Group ID,Group Name\n"
@@ -228,15 +361,15 @@ class BackupViewModel: ObservableObject {
             let id = expense.id.uuidString
             let amount = String(expense.amount)
             let category = escapeCSV(expense.category)
-            let date = dateFormatter.string(from: expense.date)
-            let time = expense.time.map { dateFormatter.string(from: $0) } ?? ""
+            let date = iso8601Formatter.string(from: expense.date)
+            let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
             let description = escapeCSV(expense.expenseDescription ?? "")
             let notes = escapeCSV(expense.notes ?? "")
             let isRecurring = String(expense.isRecurring)
             let frequency = expense.frequency ?? ""
             let dayOfMonth = expense.dayOfMonth.map { String($0) } ?? ""
             let daysOfWeek = expense.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
-            let recurringEndDate = expense.recurringEndDate.map { dateFormatter.string(from: $0) } ?? ""
+            let recurringEndDate = expense.recurringEndDate.map { iso8601Formatter.string(from: $0) } ?? ""
             let isActive = String(expense.isActive)
             let groupId = expense.groupId?.uuidString ?? ""
             let groupName = escapeCSV(expense.groupName ?? "")
@@ -427,6 +560,14 @@ class BackupViewModel: ObservableObject {
     
     private func importCSV(from url: URL, context: ModelContext) async throws {
         let content = try String(contentsOf: url, encoding: .utf8)
+        
+        // Check if it's the new section-based format
+        if content.contains("# EXPENSES") || content.contains("# BUDGETS") || content.contains("# CATEGORIES") {
+            try await importSectionBasedCSV(content: content, context: context)
+            return
+        }
+        
+        // Legacy single-section format
         let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
         
         guard lines.count > 1 else { return }
@@ -438,27 +579,77 @@ class BackupViewModel: ObservableObject {
         var budgets: [ExportData.MonthlyBudgetData] = []
         var categories: [ExportData.CustomCategoryData] = []
         
-        let firstHeader = headers.first?.lowercased() ?? ""
+        let lowercaseHeaders = headers.map { $0.lowercased() }
+        let firstHeader = lowercaseHeaders.first ?? ""
         
-        if firstHeader == "id" && headers.contains("amount") && headers.contains("category") {
+        if firstHeader == "id" && lowercaseHeaders.contains("amount") && lowercaseHeaders.contains("category") {
             for i in 1..<lines.count {
                 let values = parseCSVLine(lines[i])
-                if let expense = parseExpenseCSVRow(values, headers: headers) {
+                if let expense = parseExpenseCSVRow(values, headers: lowercaseHeaders) {
                     expenses.append(expense)
                 }
             }
-        } else if firstHeader == "id" && headers.contains("limit") && headers.contains("year") {
+        } else if firstHeader == "id" && lowercaseHeaders.contains("limit") && lowercaseHeaders.contains("year") {
             for i in 1..<lines.count {
                 let values = parseCSVLine(lines[i])
-                if let budget = parseBudgetCSVRow(values, headers: headers) {
+                if let budget = parseBudgetCSVRow(values, headers: lowercaseHeaders) {
                     budgets.append(budget)
                 }
             }
-        } else if firstHeader == "id" && headers.contains("name") && headers.contains("icon") {
+        } else if firstHeader == "id" && lowercaseHeaders.contains("name") && lowercaseHeaders.contains("icon") {
             for i in 1..<lines.count {
                 let values = parseCSVLine(lines[i])
-                if let category = parseCategoryCSVRow(values, headers: headers) {
+                if let category = parseCategoryCSVRow(values, headers: lowercaseHeaders) {
                     categories.append(category)
+                }
+            }
+        }
+        
+        let exportData = ExportData(
+            exportDate: Date(),
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            expenses: expenses.isEmpty ? nil : expenses,
+            budgets: budgets.isEmpty ? nil : budgets,
+            categories: categories.isEmpty ? nil : categories
+        )
+        
+        try await processImportedData(exportData, context: context)
+    }
+    
+    private func importSectionBasedCSV(content: String, context: ModelContext) async throws {
+        var expenses: [ExportData.ExpenseData] = []
+        var budgets: [ExportData.MonthlyBudgetData] = []
+        var categories: [ExportData.CustomCategoryData] = []
+        
+        let sections = content.components(separatedBy: "\n# ")
+        
+        for section in sections {
+            let lines = section.components(separatedBy: .newlines).filter { !$0.isEmpty }
+            guard lines.count > 1 else { continue }
+            
+            let sectionHeader = lines[0]
+            let headers = parseCSVLine(lines[1]).map { $0.lowercased() }
+            
+            if sectionHeader.contains("EXPENSES") {
+                for i in 2..<lines.count {
+                    let values = parseCSVLine(lines[i])
+                    if let expense = parseExpenseCSVRow(values, headers: headers) {
+                        expenses.append(expense)
+                    }
+                }
+            } else if sectionHeader.contains("BUDGETS") {
+                for i in 2..<lines.count {
+                    let values = parseCSVLine(lines[i])
+                    if let budget = parseBudgetCSVRow(values, headers: headers) {
+                        budgets.append(budget)
+                    }
+                }
+            } else if sectionHeader.contains("CATEGORIES") {
+                for i in 2..<lines.count {
+                    let values = parseCSVLine(lines[i])
+                    if let category = parseCategoryCSVRow(values, headers: headers) {
+                        categories.append(category)
+                    }
                 }
             }
         }
