@@ -30,6 +30,7 @@ final class Expense {
     var daysOfWeek: [Int]?  // 0=Sun, 1=Mon, ..., 6=Sat — for weekly recurring
     var recurringEndDate: Date?
     var isActive: Bool
+    var lastAddedDate: Date?
     
     // Group properties
     var groupId: UUID?
@@ -63,7 +64,8 @@ final class Expense {
         self.dayOfMonth = dayOfMonth
         self.daysOfWeek = daysOfWeek
         self.recurringEndDate = recurringEndDate
-        self.isActive = true
+        isActive = true
+        self.lastAddedDate = nil
         self.createdAt = Date()
         self.updatedAt = Date()
         self.isDeleted = false

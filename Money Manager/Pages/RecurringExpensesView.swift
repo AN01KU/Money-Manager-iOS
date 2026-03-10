@@ -10,7 +10,7 @@ struct RecurringExpensesView: View {
     
     var body: some View {
         Group {
-            if viewModel.activeExpenses.isEmpty {
+            if viewModel.allRecurringExpenses.isEmpty {
                 EmptyStateView(
                     icon: "arrow.clockwise.circle.fill",
                     title: "No recurring expenses",
@@ -18,18 +18,41 @@ struct RecurringExpensesView: View {
                 )
             } else {
                 List {
-                    ForEach(viewModel.activeExpenses) { expense in
-                        RecurringExpenseRow(expense: expense)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                HapticManager.impact(.light)
-                                viewModel.editingExpense = expense
+                    if !viewModel.activeExpenses.isEmpty {
+                        Section("Active") {
+                            ForEach(viewModel.activeExpenses) { expense in
+                                RecurringExpenseRow(expense: expense)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        HapticManager.impact(.light)
+                                        viewModel.editingExpense = expense
+                                    }
                             }
+                            .onDelete { indexSet in
+                                HapticManager.notification(.warning)
+                                for index in indexSet {
+                                    viewModel.deactivateExpense(at: index)
+                                }
+                            }
+                        }
                     }
-                    .onDelete { indexSet in
-                        HapticManager.notification(.warning)
-                        for index in indexSet {
-                            viewModel.deactivateExpense(at: index)
+                    
+                    if !viewModel.pausedExpenses.isEmpty {
+                        Section("Paused") {
+                            ForEach(viewModel.pausedExpenses) { expense in
+                                RecurringExpenseRow(expense: expense)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        HapticManager.impact(.light)
+                                        viewModel.editingExpense = expense
+                                    }
+                            }
+                            .onDelete { indexSet in
+                                HapticManager.notification(.warning)
+                                for index in indexSet {
+                                    viewModel.deactivateExpense(at: index + viewModel.activeExpenses.count)
+                                }
+                            }
                         }
                     }
                 }
@@ -92,47 +115,74 @@ struct RecurringExpenseRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: categoryIcon)
-                .font(.title2)
-                .foregroundColor(categoryColor)
-                .frame(width: 36)
+            ZStack {
+                Circle()
+                    .fill(expense.isActive ? categoryColor.opacity(0.2) : Color.gray.opacity(0.2))
+                    .frame(width: 48, height: 48)
+                
+                Image(systemName: categoryIcon)
+                    .font(.title3)
+                    .foregroundColor(expense.isActive ? categoryColor : .secondary)
+            }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)
+                    .font(.body)
                     .fontWeight(.semibold)
+                    .foregroundColor(expense.isActive ? .primary : .secondary)
                 
-                Text(CurrencyFormatter.format(expense.amount))
-                    .font(.subheadline)
+                HStack(spacing: 6) {
+                    if let frequency = expense.frequency {
+                        Text(frequency.capitalized)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(expense.isActive ? Color.teal.opacity(0.1) : Color.gray.opacity(0.1))
+                            .foregroundColor(expense.isActive ? .teal : .secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    
+                    if !expense.isActive {
+                        Text("Paused")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.1))
+                            .foregroundColor(.orange)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+                
+                Text(expense.isActive ? "Next: \(expense.nextOccurrence?.relativeString ?? "Unknown")" : "Last: \(expense.lastOccurrence?.shortDateString ?? "Never")")
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            if let frequency = expense.frequency {
-                Text(frequency.capitalized)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.teal.opacity(0.1))
-                    .foregroundColor(.teal)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            VStack(alignment: .trailing, spacing: 8) {
+                Text(CurrencyFormatter.format(expense.amount))
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(expense.isActive ? .red : .secondary)
+                
+                Toggle("", isOn: Binding(
+                    get: { expense.isActive },
+                    set: { newValue in
+                        expense.isActive = newValue
+                        expense.updatedAt = Date()
+                    }
+                ))
+                .labelsHidden()
+                .tint(.teal)
             }
-            
-            Toggle("", isOn: Binding(
-                get: { expense.isActive },
-                set: { newValue in
-                    expense.isActive = newValue
-                    expense.updatedAt = Date()
-                }
-            ))
-            .labelsHidden()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding()
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .contentShape(Rectangle())
     }
 }
 

@@ -64,6 +64,7 @@ struct ExportData: Codable {
         let daysOfWeek: [Int]?
         let recurringEndDate: Date?
         let isActive: Bool
+        let lastAddedDate: Date?
         let groupId: String?
         let groupName: String?
     }
@@ -301,6 +302,7 @@ class BackupViewModel: ObservableObject {
                 daysOfWeek: expense.daysOfWeek,
                 recurringEndDate: expense.recurringEndDate,
                 isActive: expense.isActive,
+                lastAddedDate: expense.lastAddedDate,
                 groupId: expense.groupId?.uuidString,
                 groupName: expense.groupName
             )
@@ -376,6 +378,7 @@ class BackupViewModel: ObservableObject {
                 daysOfWeek: expense.daysOfWeek,
                 recurringEndDate: expense.recurringEndDate,
                 isActive: expense.isActive,
+                lastAddedDate: expense.lastAddedDate,
                 groupId: expense.groupId?.uuidString,
                 groupName: expense.groupName
             )
@@ -494,6 +497,8 @@ class BackupViewModel: ObservableObject {
                     groupId: expenseData.groupId.flatMap { UUID(uuidString: $0) },
                     groupName: expenseData.groupName
                 )
+                expense.isActive = expenseData.isActive
+                expense.lastAddedDate = expenseData.lastAddedDate
                 context.insert(expense)
                 expensesImported += 1
             }
@@ -583,6 +588,9 @@ class BackupViewModel: ObservableObject {
         let daysOfWeekStr = dict["days of week"] ?? ""
         let daysOfWeek = daysOfWeekStr.isEmpty ? nil : daysOfWeekStr.components(separatedBy: ";").compactMap { Int($0) }
         
+        let lastAddedDateStr = dict["last added date"] ?? ""
+        let lastAddedDate = lastAddedDateStr.isEmpty ? nil : (isoFormatter.date(from: lastAddedDateStr) ?? dateFormatter.date(from: lastAddedDateStr))
+        
         return ExportData.ExpenseData(
             id: dict["id"] ?? UUID().uuidString,
             amount: Double(dict["amount"] ?? "0") ?? 0,
@@ -597,6 +605,7 @@ class BackupViewModel: ObservableObject {
             daysOfWeek: daysOfWeek,
             recurringEndDate: recurringEndDate,
             isActive: dict["is active"]?.lowercased() != "false",
+            lastAddedDate: lastAddedDate,
             groupId: dict["group id"]?.isEmpty == false ? dict["group id"] : nil,
             groupName: dict["group name"]?.isEmpty == false ? dict["group name"] : nil
         )

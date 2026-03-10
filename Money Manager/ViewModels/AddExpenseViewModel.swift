@@ -23,6 +23,14 @@ class AddExpenseViewModel: ObservableObject {
     @Published var isRecurring = false
     @Published var showDatePicker = false
     @Published var showTimePicker = false
+    @Published var showRecurringDetails = false
+    
+    @Published var frequency = "monthly"
+    @Published var dayOfMonth = 1
+    @Published var hasEndDate = false
+    @Published var recurringEndDate = Date()
+    
+    let frequencies = ["daily", "weekly", "monthly", "yearly"]
     
     let mode: AddExpenseMode
     private var modelContext: ModelContext?
@@ -58,6 +66,11 @@ class AddExpenseViewModel: ObservableObject {
             hasTime = expense.time != nil
             description = expense.expenseDescription ?? ""
             notes = expense.notes ?? ""
+            isRecurring = expense.isRecurring
+            frequency = expense.frequency ?? "monthly"
+            dayOfMonth = expense.dayOfMonth ?? 1
+            hasEndDate = expense.recurringEndDate != nil
+            recurringEndDate = expense.recurringEndDate ?? Date()
         }
     }
     
@@ -101,6 +114,10 @@ class AddExpenseViewModel: ObservableObject {
             existingExpense.time = hasTime ? selectedTime : nil
             existingExpense.expenseDescription = description.isEmpty ? nil : description
             existingExpense.notes = notes.isEmpty ? nil : notes
+            existingExpense.isRecurring = isRecurring
+            existingExpense.frequency = isRecurring ? frequency : nil
+            existingExpense.dayOfMonth = (isRecurring && frequency == "monthly") ? dayOfMonth : nil
+            existingExpense.recurringEndDate = (isRecurring && hasEndDate) ? recurringEndDate : nil
             existingExpense.updatedAt = Date()
         } else {
             let expense = Expense(
@@ -109,7 +126,11 @@ class AddExpenseViewModel: ObservableObject {
                 date: expenseDate,
                 time: hasTime ? selectedTime : nil,
                 expenseDescription: description.isEmpty ? nil : description,
-                notes: notes.isEmpty ? nil : notes
+                notes: notes.isEmpty ? nil : notes,
+                isRecurring: isRecurring,
+                frequency: isRecurring ? frequency : nil,
+                dayOfMonth: (isRecurring && frequency == "monthly") ? dayOfMonth : nil,
+                recurringEndDate: (isRecurring && hasEndDate) ? recurringEndDate : nil
             )
             modelContext.insert(expense)
         }

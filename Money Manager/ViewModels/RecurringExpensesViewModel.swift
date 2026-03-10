@@ -12,6 +12,14 @@ class RecurringExpensesViewModel: ObservableObject {
         expenses.filter { $0.isRecurring && $0.isActive }
     }
     
+    var pausedExpenses: [Expense] {
+        expenses.filter { $0.isRecurring && !$0.isActive }
+    }
+    
+    var allRecurringExpenses: [Expense] {
+        expenses.filter { $0.isRecurring }
+    }
+    
     private var modelContext: ModelContext?
     
     func configure(expenses: [Expense], modelContext: ModelContext?) {
@@ -23,6 +31,14 @@ class RecurringExpensesViewModel: ObservableObject {
         guard index < activeExpenses.count else { return }
         let expense = activeExpenses[index]
         expense.isActive = false
+        expense.updatedAt = Date()
+        try? modelContext?.save()
+    }
+    
+    func toggleExpense(at index: Int) {
+        guard index < allRecurringExpenses.count else { return }
+        let expense = allRecurringExpenses[index]
+        expense.isActive.toggle()
         expense.updatedAt = Date()
         try? modelContext?.save()
     }
