@@ -5,11 +5,11 @@ import Combine
 @MainActor
 class OverviewViewModel: ObservableObject {
     @Published var selectedView: ViewType = .daily
-    @Published var selectedDate: Date = Date()
-    @Published var filterMode: FilterMode = .monthly
+    @Published var selectedDate: Date = Date() { didSet { recalculate() } }
+    @Published var filterMode: FilterMode = .monthly { didSet { recalculate() } }
     @Published var showAddExpense = false
     @Published var showBudgetSheet = false
-    @Published var searchText = ""
+    @Published var searchText = "" { didSet { recalculate() } }
     
     @Published var filteredExpenses: [Expense] = []
     @Published var currentBudget: MonthlyBudget?
@@ -28,25 +28,6 @@ class OverviewViewModel: ObservableObject {
         self.modelContext = modelContext
         
         recalculate()
-    }
-    
-    func updateSearchText(_ text: String) {
-        searchText = text
-        recalculate()
-    }
-    
-    func updateFilterMode(_ mode: FilterMode) {
-        filterMode = mode
-        recalculate()
-    }
-    
-    func updateSelectedDate(_ date: Date) {
-        selectedDate = date
-        recalculate()
-    }
-    
-    func updateSelectedView(_ view: ViewType) {
-        selectedView = view
     }
     
     func recalculate() {

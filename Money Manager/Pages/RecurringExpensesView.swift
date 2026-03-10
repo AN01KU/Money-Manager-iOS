@@ -79,8 +79,8 @@ struct RecurringExpensesView: View {
         .onAppear {
             viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
         }
-        .onChange(of: recurringExpenses) { _, _ in
-            viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
+        .onChange(of: recurringExpenses) { _, newValue in
+            viewModel.configure(expenses: newValue, modelContext: modelContext)
         }
     }
 }
