@@ -47,6 +47,15 @@ struct AddExpenseView: View {
             .sheet(isPresented: $viewModel.showTimePicker) {
                 TimePickerSheet(selectedTime: $viewModel.selectedTime)
             }
+            .sheet(isPresented: $viewModel.showRecurringDetails) {
+                RecurringDetailsSheet(
+                    frequency: $viewModel.frequency,
+                    dayOfMonth: $viewModel.dayOfMonth,
+                    hasEndDate: $viewModel.hasEndDate,
+                    recurringEndDate: $viewModel.recurringEndDate,
+                    startDate: viewModel.selectedDate
+                )
+            }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
             } message: {
@@ -172,6 +181,23 @@ struct AddExpenseView: View {
             
             Section {
                 Toggle("Make this recurring?", isOn: $viewModel.isRecurring)
+                
+                if viewModel.isRecurring {
+                    Button {
+                        viewModel.showRecurringDetails = true
+                    } label: {
+                        HStack {
+                            Text("Customize Recurring")
+                            Spacer()
+                            Text(viewModel.frequency.capitalized)
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
             }
         }
     }
