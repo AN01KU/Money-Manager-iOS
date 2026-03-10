@@ -26,7 +26,7 @@ struct BudgetOverviewCard: View {
                 Text("/ \(CurrencyFormatter.format(budget.limit))")
                     .font(.title3)
                     .foregroundColor(.secondary)
-                Text(isDaily ? "Daily Budget" : "Monthly Budget")
+                Text("Budget")
                     .font(.title3)
                     .foregroundColor(.secondary)
             }
@@ -43,6 +43,8 @@ struct BudgetOverviewCard: View {
         .padding()
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(isDaily ? "Daily" : "Monthly") budget, \(CurrencyFormatter.format(spent)) of \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used")
     }
 }
 

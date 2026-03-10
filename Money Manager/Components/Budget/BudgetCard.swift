@@ -36,6 +36,7 @@ struct BudgetCard: View {
                         .font(.title2)
                         .foregroundColor(.teal)
                 }
+                .accessibilityLabel("Edit budget")
             }
             
             Divider()
@@ -104,6 +105,8 @@ struct BudgetCard: View {
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Monthly budget \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used, \(CurrencyFormatter.format(remaining)) remaining")
     }
 }
 
@@ -129,6 +132,9 @@ struct BudgetProgressBar: View {
             }
         }
         .frame(height: 16)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Budget usage \(percentage) percent")
+        .accessibilityValue("\(percentage) percent")
     }
     
     private var progressColors: [Color] {

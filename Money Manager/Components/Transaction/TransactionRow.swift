@@ -59,6 +59,8 @@ struct TransactionRow: View {
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(expense.category), \(expense.expenseDescription ?? "No description"), \(CurrencyFormatter.format(expense.amount))")
     }
     
     private func formatTime(_ date: Date) -> String {
@@ -81,6 +83,7 @@ struct CategoryIconView: View {
                 .font(.title3)
                 .foregroundColor(category?.color ?? Color.gray)
         }
+        .accessibilityHidden(true)
     }
 }
 
