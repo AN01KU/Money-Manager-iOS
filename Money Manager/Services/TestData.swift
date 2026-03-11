@@ -95,26 +95,6 @@ struct TestData {
             expenses.append(expense)
         }
         
-        let recurringExpenses: [(Double, String, String, String)] = [
-            (649, "Netflix", "Entertainment", "monthly"),
-            (500, "Gym", "Health & Medical", "monthly"),
-            (5000, "Insurance", "Debt & Payments", "monthly"),
-            (799, "Internet", "Utilities", "monthly"),
-            (500, "Lunch", "Food & Dining", "weekly"),
-        ]
-        
-        for (amount, name, category, frequency) in recurringExpenses {
-            let expense = Expense(
-                amount: amount,
-                category: category,
-                date: today,
-                expenseDescription: name,
-                isRecurring: true,
-                frequency: frequency
-            )
-            expenses.append(expense)
-        }
-        
         return expenses.sorted { $0.date > $1.date }
     }
     

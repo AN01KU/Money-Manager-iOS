@@ -1,12 +1,12 @@
 import Foundation
 
-extension Expense {
+extension RecurringExpense {
     var nextOccurrence: Date? {
-        guard isRecurring, isActive, let frequency = frequency else { return nil }
+        guard isActive else { return nil }
         
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        var nextDate = calendar.startOfDay(for: date)
+        var nextDate = calendar.startOfDay(for: startDate)
         
         switch frequency {
         case "daily":
@@ -61,7 +61,7 @@ extension Expense {
             return nil
         }
         
-        if let endDate = recurringEndDate, nextDate > endDate {
+        if let endDate = endDate, nextDate > endDate {
             return nil
         }
         
@@ -69,8 +69,7 @@ extension Expense {
     }
     
     var lastOccurrence: Date? {
-        guard isRecurring else { return nil }
-        return lastAddedDate ?? date
+        return lastAddedDate ?? startDate
     }
 }
 

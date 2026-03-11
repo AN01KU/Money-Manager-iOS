@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct ExportDataView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var expenses: [Expense]
+    @Query private var recurringExpenses: [RecurringExpense]
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
     
@@ -85,6 +86,7 @@ struct ExportDataView: View {
                 Task {
                     await viewModel.exportData(
                         expenses: expenses,
+                        recurringExpenses: recurringExpenses,
                         budgets: budgets,
                         categories: categories
                     )
@@ -99,7 +101,7 @@ struct ExportDataView: View {
                     Text("Export \(viewModel.selectedDataType.rawValue)")
                 }
             }
-            .disabled(expenses.isEmpty && budgets.isEmpty && categories.isEmpty)
+            .disabled(expenses.isEmpty && recurringExpenses.isEmpty && budgets.isEmpty && categories.isEmpty)
         } header: {
             Text("Export")
         } footer: {
