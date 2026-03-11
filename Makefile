@@ -3,6 +3,7 @@ SCHEME = Money Manager
 SIMULATOR_ID := $(shell xcrun simctl list devices available | grep -E "iPhone [0-9]+" | tail -1 | awk -F '[()]' '{print $$2}')
 DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_ID)
 SIGNING = CODE_SIGNING_ALLOWED=NO
+COVERAGE = -enableCodeCoverage YES
 TEST_RESULTS = ./test_results.xcresult
 
 XCODEBUILD_TEST = xcodebuild test \
@@ -10,7 +11,7 @@ XCODEBUILD_TEST = xcodebuild test \
 	-scheme "$(SCHEME)" \
 	-destination "$(DESTINATION)" \
 	$(SIGNING) \
-	-enableCodeCoverage YES
+	$(COVERAGE) \
 	-resultBundlePath "$(TEST_RESULTS)"
 
 .PHONY: build test test-unit test-ui coverage clean
