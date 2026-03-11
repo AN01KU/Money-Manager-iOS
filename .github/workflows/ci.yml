@@ -6,11 +6,13 @@ on:
       - main
       - develop
       - release/**
+      - feat/**
   pull_request:
     branches:
       - main
       - develop
       - release/**
+      - feat/**
 
 env:
   XCODE_VERSION: "26.2"
