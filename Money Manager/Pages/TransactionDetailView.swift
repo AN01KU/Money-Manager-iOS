@@ -101,7 +101,7 @@ struct TransactionDetailView: View {
                             DetailRow(label: "Last Modified", value: viewModel.formatFullDate(expense.updatedAt))
                         }
                         
-                        if expense.isRecurring {
+                        if expense.recurringExpenseId != nil {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                     .foregroundColor(.teal)

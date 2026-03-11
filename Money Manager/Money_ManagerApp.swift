@@ -12,6 +12,7 @@ struct Money_ManagerApp: App {
     init() {
         let schema = Schema([
             Expense.self,
+            RecurringExpense.self,
             CustomCategory.self,
             MonthlyBudget.self
         ])

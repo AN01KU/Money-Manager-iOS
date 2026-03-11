@@ -4,25 +4,25 @@ import Combine
 
 @MainActor
 class RecurringExpensesViewModel: ObservableObject {
-    @Published var expenses: [Expense] = []
+    @Published var expenses: [RecurringExpense] = []
     @Published var showAddSheet = false
-    @Published var editingExpense: Expense?
+    @Published var editingExpense: RecurringExpense?
     
-    var activeExpenses: [Expense] {
-        expenses.filter { $0.isRecurring && $0.isActive }
+    var activeExpenses: [RecurringExpense] {
+        expenses.filter { $0.isActive }
     }
     
-    var pausedExpenses: [Expense] {
-        expenses.filter { $0.isRecurring && !$0.isActive }
+    var pausedExpenses: [RecurringExpense] {
+        expenses.filter { !$0.isActive }
     }
     
-    var allRecurringExpenses: [Expense] {
-        expenses.filter { $0.isRecurring }
+    var allRecurringExpenses: [RecurringExpense] {
+        expenses
     }
     
     private var modelContext: ModelContext?
     
-    func configure(expenses: [Expense], modelContext: ModelContext?) {
+    func configure(expenses: [RecurringExpense], modelContext: ModelContext?) {
         self.expenses = expenses
         self.modelContext = modelContext
     }
@@ -97,19 +97,18 @@ class AddRecurringExpenseViewModel: ObservableObject {
         
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         
-        let expense = Expense(
+        let recurringExpense = RecurringExpense(
+            name: trimmedName,
             amount: amountValue,
             category: selectedCategory,
-            date: startDate,
-            expenseDescription: trimmedName,
-            notes: notes.isEmpty ? nil : notes,
-            isRecurring: true,
             frequency: frequency,
             dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
-            recurringEndDate: hasEndDate ? endDate : nil
+            startDate: startDate,
+            endDate: hasEndDate ? endDate : nil,
+            notes: notes.isEmpty ? nil : notes
         )
         
-        modelContext.insert(expense)
+        modelContext.insert(recurringExpense)
         
         do {
             try modelContext.save()

@@ -23,16 +23,8 @@ final class Expense {
     var updatedAt: Date
     var isDeleted: Bool
     
-    // Recurring properties
-    var isRecurring: Bool
-    var frequency: String?
-    var dayOfMonth: Int?
-    var daysOfWeek: [Int]?  // 0=Sun, 1=Mon, ..., 6=Sat — for weekly recurring
-    var recurringEndDate: Date?
-    var isActive: Bool
-    var lastAddedDate: Date?
+    var recurringExpenseId: UUID?
     
-    // Group properties
     var groupId: UUID?
     var groupName: String?
     
@@ -44,11 +36,7 @@ final class Expense {
         time: Date? = nil,
         expenseDescription: String? = nil,
         notes: String? = nil,
-        isRecurring: Bool = false,
-        frequency: String? = nil,
-        dayOfMonth: Int? = nil,
-        daysOfWeek: [Int]? = nil,
-        recurringEndDate: Date? = nil,
+        recurringExpenseId: UUID? = nil,
         groupId: UUID? = nil,
         groupName: String? = nil
     ) {
@@ -59,13 +47,7 @@ final class Expense {
         self.time = time
         self.expenseDescription = expenseDescription
         self.notes = notes
-        self.isRecurring = isRecurring
-        self.frequency = frequency
-        self.dayOfMonth = dayOfMonth
-        self.daysOfWeek = daysOfWeek
-        self.recurringEndDate = recurringEndDate
-        isActive = true
-        self.lastAddedDate = nil
+        self.recurringExpenseId = recurringExpenseId
         self.createdAt = Date()
         self.updatedAt = Date()
         self.isDeleted = false

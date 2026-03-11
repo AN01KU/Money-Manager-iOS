@@ -27,6 +27,7 @@ enum ExportFormat: String, CaseIterable, Identifiable {
 
 enum ExportDataType: String, CaseIterable, Identifiable {
     case expenses = "Expenses"
+    case recurringExpenses = "Recurring Expenses"
     case budgets = "Budgets"
     case categories = "Categories"
     case all = "All Data"
@@ -36,6 +37,7 @@ enum ExportDataType: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .expenses: return "creditcard.fill"
+        case .recurringExpenses: return "arrow.clockwise.circle.fill"
         case .budgets: return "chart.bar.fill"
         case .categories: return "folder.fill"
         case .all: return "archivebox.fill"
@@ -47,6 +49,7 @@ struct ExportData: Codable {
     let exportDate: Date
     let appVersion: String
     var expenses: [ExpenseData]?
+    var recurringExpenses: [RecurringExpenseData]?
     var budgets: [MonthlyBudgetData]?
     var categories: [CustomCategoryData]?
     
@@ -58,15 +61,39 @@ struct ExportData: Codable {
         let time: Date?
         let expenseDescription: String?
         let notes: String?
-        let isRecurring: Bool
-        let frequency: String?
-        let dayOfMonth: Int?
-        let daysOfWeek: [Int]?
-        let recurringEndDate: Date?
-        let isActive: Bool
-        let lastAddedDate: Date?
+        let recurringExpenseId: String?
         let groupId: String?
         let groupName: String?
+        
+        init(id: String, amount: Double, category: String, date: Date, time: Date?, expenseDescription: String?, notes: String?, recurringExpenseId: String?, groupId: String?, groupName: String?) {
+            self.id = id
+            self.amount = amount
+            self.category = category
+            self.date = date
+            self.time = time
+            self.expenseDescription = expenseDescription
+            self.notes = notes
+            self.recurringExpenseId = recurringExpenseId
+            self.groupId = groupId
+            self.groupName = groupName
+        }
+    }
+    
+    struct RecurringExpenseData: Codable {
+        let id: String
+        let name: String
+        let amount: Double
+        let category: String
+        let frequency: String
+        let dayOfMonth: Int?
+        let daysOfWeek: [Int]?
+        let startDate: Date
+        let endDate: Date?
+        let isActive: Bool
+        let lastAddedDate: Date?
+        let notes: String?
+        let createdAt: Date
+        let updatedAt: Date
     }
     
     struct MonthlyBudgetData: Codable {
@@ -181,7 +208,7 @@ class BackupViewModel: ObservableObject {
             switch selectedDataType {
             case .all:
                 return "JSON backup includes all your data. Use this for complete backup and restore."
-            case .expenses, .budgets, .categories:
+            case .expenses, .recurringExpenses, .budgets, .categories:
                 return "JSON preserves all data details and is suitable for backup or transfer."
             }
         }
@@ -198,6 +225,7 @@ class BackupViewModel: ObservableObject {
     
     func exportData(
         expenses: [Expense],
+        recurringExpenses: [RecurringExpense],
         budgets: [MonthlyBudget],
         categories: [CustomCategory]
     ) async {
@@ -210,12 +238,14 @@ class BackupViewModel: ObservableObject {
             switch selectedDataType {
             case .expenses:
                 url = try await exportExpenses(format: selectedExportFormat, expenses: expenses)
+            case .recurringExpenses:
+                url = try await exportRecurringExpenses(format: selectedExportFormat, recurringExpenses: recurringExpenses)
             case .budgets:
                 url = try await exportBudgets(format: selectedExportFormat, budgets: budgets)
             case .categories:
                 url = try await exportCategories(format: selectedExportFormat, categories: categories)
             case .all:
-                url = try await exportAll(format: selectedExportFormat, expenses: expenses, budgets: budgets, categories: categories)
+                url = try await exportAll(format: selectedExportFormat, expenses: expenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
             }
             
             exportedFileURL = url
@@ -274,15 +304,80 @@ class BackupViewModel: ObservableObject {
         }
     }
     
-    private func exportAll(format: ExportFormat, expenses: [Expense], budgets: [MonthlyBudget], categories: [CustomCategory]) async throws -> URL {
+    private func exportAll(format: ExportFormat, expenses: [Expense], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) async throws -> URL {
         let activeExpenses = expenses.filter { !$0.isDeleted }
         
         switch format {
         case .csv:
-            return try exportAllToCSV(expenses: activeExpenses, budgets: budgets, categories: categories)
+            return try exportAllToCSV(expenses: activeExpenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
         case .json:
-            return try exportAllToJSON(expenses: activeExpenses, budgets: budgets, categories: categories)
+            return try exportAllToJSON(expenses: activeExpenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
         }
+    }
+    
+    private func exportRecurringExpenses(format: ExportFormat, recurringExpenses: [RecurringExpense]) async throws -> URL {
+        switch format {
+        case .csv:
+            return try exportRecurringExpensesToCSV(recurringExpenses: recurringExpenses)
+        case .json:
+            return try exportRecurringExpensesToJSON(recurringExpenses: recurringExpenses)
+        }
+    }
+    
+    private func exportRecurringExpensesToJSON(recurringExpenses: [RecurringExpense]) throws -> URL {
+        let recurringData = recurringExpenses.map { recurring in
+            ExportData.RecurringExpenseData(
+                id: recurring.id.uuidString,
+                name: recurring.name,
+                amount: recurring.amount,
+                category: recurring.category,
+                frequency: recurring.frequency,
+                dayOfMonth: recurring.dayOfMonth,
+                daysOfWeek: recurring.daysOfWeek,
+                startDate: recurring.startDate,
+                endDate: recurring.endDate,
+                isActive: recurring.isActive,
+                lastAddedDate: recurring.lastAddedDate,
+                notes: recurring.notes,
+                createdAt: recurring.createdAt,
+                updatedAt: recurring.updatedAt
+            )
+        }
+        
+        let exportData = ExportData(
+            exportDate: Date(),
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            expenses: nil,
+            recurringExpenses: recurringData,
+            budgets: nil,
+            categories: nil
+        )
+        
+        return try saveToJSON(exportData, fileName: "recurring_expenses_\(dateString()).json")
+    }
+    
+    private func exportRecurringExpensesToCSV(recurringExpenses: [RecurringExpense]) throws -> URL {
+        var csv = "ID,Name,Amount,Category,Frequency,Day of Month,Days of Week,Start Date,End Date,Is Active,Notes\n"
+        
+        for recurring in recurringExpenses {
+            let id = recurring.id.uuidString
+            let name = escapeCSV(recurring.name)
+            let amount = String(recurring.amount)
+            let category = escapeCSV(recurring.category)
+            let frequency = recurring.frequency
+            let dayOfMonth = recurring.dayOfMonth.map { String($0) } ?? ""
+            let daysOfWeek = recurring.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
+            let startDate = iso8601Formatter.string(from: recurring.startDate)
+            let endDate = recurring.endDate.map { iso8601Formatter.string(from: $0) } ?? ""
+            let isActive = String(recurring.isActive)
+            let notes = escapeCSV(recurring.notes ?? "")
+            
+            let row = [id, name, amount, category, frequency, dayOfMonth, daysOfWeek, startDate, endDate, isActive, notes].joined(separator: ",")
+            csv += row + "\n"
+        }
+        
+        let fileName = "recurring_expenses_\(dateString()).csv"
+        return try saveToTempFile(csv, fileName: fileName)
     }
     
     // MARK: - CSV Export
@@ -293,12 +388,12 @@ class BackupViewModel: ObservableObject {
         return formatter
     }()
     
-    private func exportAllToCSV(expenses: [Expense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToCSV(expenses: [Expense], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
         var csv = ""
         
         // Expenses section
         csv += "# EXPENSES\n"
-        csv += "ID,Amount,Category,Date,Time,Description,Notes,Is Recurring,Frequency,Day of Month,Days of Week,Recurring End Date,Is Active,Group ID,Group Name\n"
+        csv += "ID,Amount,Category,Date,Time,Description,Notes,Recurring Expense ID,Group ID,Group Name\n"
         
         for expense in expenses {
             let id = expense.id.uuidString
@@ -308,16 +403,32 @@ class BackupViewModel: ObservableObject {
             let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
             let desc = escapeCSV(expense.expenseDescription ?? "")
             let notes = escapeCSV(expense.notes ?? "")
-            let isRec = String(expense.isRecurring)
-            let freq = expense.frequency ?? ""
-            let dom = expense.dayOfMonth.map { String($0) } ?? ""
-            let dow = expense.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
-            let red = expense.recurringEndDate.map { iso8601Formatter.string(from: $0) } ?? ""
-            let isAct = String(expense.isActive)
+            let recId = expense.recurringExpenseId?.uuidString ?? ""
             let gid = expense.groupId?.uuidString ?? ""
             let gname = escapeCSV(expense.groupName ?? "")
             
-            let row = [id, amount, category, date, time, desc, notes, isRec, freq, dom, dow, red, isAct, gid, gname].joined(separator: ",")
+            let row = [id, amount, category, date, time, desc, notes, recId, gid, gname].joined(separator: ",")
+            csv += row + "\n"
+        }
+        
+        // Recurring Expenses section
+        csv += "\n# RECURRING EXPENSES\n"
+        csv += "ID,Name,Amount,Category,Frequency,Day of Month,Days of Week,Start Date,End Date,Is Active,Notes\n"
+        
+        for recurring in recurringExpenses {
+            let id = recurring.id.uuidString
+            let name = escapeCSV(recurring.name)
+            let amount = String(recurring.amount)
+            let category = escapeCSV(recurring.category)
+            let frequency = recurring.frequency
+            let dayOfMonth = recurring.dayOfMonth.map { String($0) } ?? ""
+            let daysOfWeek = recurring.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
+            let startDate = iso8601Formatter.string(from: recurring.startDate)
+            let endDate = recurring.endDate.map { iso8601Formatter.string(from: $0) } ?? ""
+            let isActive = String(recurring.isActive)
+            let notes = escapeCSV(recurring.notes ?? "")
+            
+            let row = [id, name, amount, category, frequency, dayOfMonth, daysOfWeek, startDate, endDate, isActive, notes].joined(separator: ",")
             csv += row + "\n"
         }
         
@@ -355,7 +466,7 @@ class BackupViewModel: ObservableObject {
     }
     
     private func exportExpensesToCSV(expenses: [Expense]) throws -> URL {
-        var csv = "ID,Amount,Category,Date,Time,Description,Notes,Is Recurring,Frequency,Day of Month,Days of Week,Recurring End Date,Is Active,Group ID,Group Name\n"
+        var csv = "ID,Amount,Category,Date,Time,Description,Notes,Recurring Expense ID,Group ID,Group Name\n"
         
         for expense in expenses {
             let id = expense.id.uuidString
@@ -365,16 +476,11 @@ class BackupViewModel: ObservableObject {
             let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
             let description = escapeCSV(expense.expenseDescription ?? "")
             let notes = escapeCSV(expense.notes ?? "")
-            let isRecurring = String(expense.isRecurring)
-            let frequency = expense.frequency ?? ""
-            let dayOfMonth = expense.dayOfMonth.map { String($0) } ?? ""
-            let daysOfWeek = expense.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
-            let recurringEndDate = expense.recurringEndDate.map { iso8601Formatter.string(from: $0) } ?? ""
-            let isActive = String(expense.isActive)
+            let recurringExpenseId = expense.recurringExpenseId?.uuidString ?? ""
             let groupId = expense.groupId?.uuidString ?? ""
             let groupName = escapeCSV(expense.groupName ?? "")
             
-            let row = [id, amount, category, date, time, description, notes, isRecurring, frequency, dayOfMonth, daysOfWeek, recurringEndDate, isActive, groupId, groupName].joined(separator: ",")
+            let row = [id, amount, category, date, time, description, notes, recurringExpenseId, groupId, groupName].joined(separator: ",")
             csv += row + "\n"
         }
         
@@ -429,13 +535,7 @@ class BackupViewModel: ObservableObject {
                 time: expense.time,
                 expenseDescription: expense.expenseDescription,
                 notes: expense.notes,
-                isRecurring: expense.isRecurring,
-                frequency: expense.frequency,
-                dayOfMonth: expense.dayOfMonth,
-                daysOfWeek: expense.daysOfWeek,
-                recurringEndDate: expense.recurringEndDate,
-                isActive: expense.isActive,
-                lastAddedDate: expense.lastAddedDate,
+                recurringExpenseId: expense.recurringExpenseId?.uuidString,
                 groupId: expense.groupId?.uuidString,
                 groupName: expense.groupName
             )
@@ -445,6 +545,7 @@ class BackupViewModel: ObservableObject {
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             expenses: expenseData,
+            recurringExpenses: nil,
             budgets: nil,
             categories: nil
         )
@@ -466,6 +567,7 @@ class BackupViewModel: ObservableObject {
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             expenses: nil,
+            recurringExpenses: nil,
             budgets: budgetData,
             categories: nil
         )
@@ -488,6 +590,7 @@ class BackupViewModel: ObservableObject {
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             expenses: nil,
+            recurringExpenses: nil,
             budgets: nil,
             categories: categoryData
         )
@@ -495,7 +598,7 @@ class BackupViewModel: ObservableObject {
         return try saveToJSON(exportData, fileName: "categories_\(dateString()).json")
     }
     
-    private func exportAllToJSON(expenses: [Expense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToJSON(expenses: [Expense], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
         let expenseData = expenses.map { expense in
             ExportData.ExpenseData(
                 id: expense.id.uuidString,
@@ -505,15 +608,28 @@ class BackupViewModel: ObservableObject {
                 time: expense.time,
                 expenseDescription: expense.expenseDescription,
                 notes: expense.notes,
-                isRecurring: expense.isRecurring,
-                frequency: expense.frequency,
-                dayOfMonth: expense.dayOfMonth,
-                daysOfWeek: expense.daysOfWeek,
-                recurringEndDate: expense.recurringEndDate,
-                isActive: expense.isActive,
-                lastAddedDate: expense.lastAddedDate,
+                recurringExpenseId: expense.recurringExpenseId?.uuidString,
                 groupId: expense.groupId?.uuidString,
                 groupName: expense.groupName
+            )
+        }
+        
+        let recurringExpenseData = recurringExpenses.map { recurring in
+            ExportData.RecurringExpenseData(
+                id: recurring.id.uuidString,
+                name: recurring.name,
+                amount: recurring.amount,
+                category: recurring.category,
+                frequency: recurring.frequency,
+                dayOfMonth: recurring.dayOfMonth,
+                daysOfWeek: recurring.daysOfWeek,
+                startDate: recurring.startDate,
+                endDate: recurring.endDate,
+                isActive: recurring.isActive,
+                lastAddedDate: recurring.lastAddedDate,
+                notes: recurring.notes,
+                createdAt: recurring.createdAt,
+                updatedAt: recurring.updatedAt
             )
         }
         
@@ -540,6 +656,7 @@ class BackupViewModel: ObservableObject {
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             expenses: expenseData,
+            recurringExpenses: recurringExpenseData,
             budgets: budgetData,
             categories: categoryData
         )
@@ -667,11 +784,44 @@ class BackupViewModel: ObservableObject {
     
     private func processImportedData(_ exportData: ExportData, context: ModelContext) async throws {
         var expensesImported = 0
+        var recurringExpensesImported = 0
         var budgetsImported = 0
         var categoriesImported = 0
         
+        var recurringExpenseIdMap: [String: UUID] = [:]
+        
+        if let recurringExpenses = exportData.recurringExpenses {
+            for recurringData in recurringExpenses {
+                let recurringExpense = RecurringExpense(
+                    id: UUID(uuidString: recurringData.id) ?? UUID(),
+                    name: recurringData.name,
+                    amount: recurringData.amount,
+                    category: recurringData.category,
+                    frequency: recurringData.frequency,
+                    dayOfMonth: recurringData.dayOfMonth,
+                    daysOfWeek: recurringData.daysOfWeek,
+                    startDate: recurringData.startDate,
+                    endDate: recurringData.endDate,
+                    isActive: recurringData.isActive,
+                    lastAddedDate: recurringData.lastAddedDate,
+                    notes: recurringData.notes
+                )
+                context.insert(recurringExpense)
+                recurringExpensesImported += 1
+                recurringExpenseIdMap[recurringData.id] = recurringExpense.id
+            }
+        }
+        
         if let expenses = exportData.expenses {
             for expenseData in expenses {
+                let recurringExpenseId: UUID?
+                if let recIdString = expenseData.recurringExpenseId,
+                   let recId = recurringExpenseIdMap[recIdString] {
+                    recurringExpenseId = recId
+                } else {
+                    recurringExpenseId = nil
+                }
+                
                 let expense = Expense(
                     id: UUID(uuidString: expenseData.id) ?? UUID(),
                     amount: expenseData.amount,
@@ -680,16 +830,10 @@ class BackupViewModel: ObservableObject {
                     time: expenseData.time,
                     expenseDescription: expenseData.expenseDescription,
                     notes: expenseData.notes,
-                    isRecurring: expenseData.isRecurring,
-                    frequency: expenseData.frequency,
-                    dayOfMonth: expenseData.dayOfMonth,
-                    daysOfWeek: expenseData.daysOfWeek,
-                    recurringEndDate: expenseData.recurringEndDate,
+                    recurringExpenseId: recurringExpenseId,
                     groupId: expenseData.groupId.flatMap { UUID(uuidString: $0) },
                     groupName: expenseData.groupName
                 )
-                expense.isActive = expenseData.isActive
-                expense.lastAddedDate = expenseData.lastAddedDate
                 context.insert(expense)
                 expensesImported += 1
             }
@@ -725,7 +869,8 @@ class BackupViewModel: ObservableObject {
         try context.save()
         
         var message = ""
-        if expensesImported > 0 { message += "\(expensesImported) expenses" }
+        if recurringExpensesImported > 0 { message += "\(recurringExpensesImported) recurring expenses" }
+        if expensesImported > 0 { message += message.isEmpty ? "\(expensesImported) expenses" : ", \(expensesImported) expenses" }
         if budgetsImported > 0 { message += message.isEmpty ? "\(budgetsImported) budgets" : ", \(budgetsImported) budgets" }
         if categoriesImported > 0 { message += message.isEmpty ? "\(categoriesImported) categories" : ", \(categoriesImported) categories" }
         
@@ -773,15 +918,6 @@ class BackupViewModel: ObservableObject {
         let date = isoFormatter.date(from: dateStr) ?? dateFormatter.date(from: dateStr) ?? Date()
         let time = timeStr.isEmpty ? nil : (isoFormatter.date(from: timeStr) ?? dateFormatter.date(from: timeStr))
         
-        let recurringEndDateStr = dict["recurring end date"] ?? ""
-        let recurringEndDate = recurringEndDateStr.isEmpty ? nil : (isoFormatter.date(from: recurringEndDateStr) ?? dateFormatter.date(from: recurringEndDateStr))
-        
-        let daysOfWeekStr = dict["days of week"] ?? ""
-        let daysOfWeek = daysOfWeekStr.isEmpty ? nil : daysOfWeekStr.components(separatedBy: ";").compactMap { Int($0) }
-        
-        let lastAddedDateStr = dict["last added date"] ?? ""
-        let lastAddedDate = lastAddedDateStr.isEmpty ? nil : (isoFormatter.date(from: lastAddedDateStr) ?? dateFormatter.date(from: lastAddedDateStr))
-        
         return ExportData.ExpenseData(
             id: dict["id"] ?? UUID().uuidString,
             amount: Double(dict["amount"] ?? "0") ?? 0,
@@ -790,13 +926,7 @@ class BackupViewModel: ObservableObject {
             time: time,
             expenseDescription: dict["description"]?.isEmpty == false ? dict["description"] : nil,
             notes: dict["notes"]?.isEmpty == false ? dict["notes"] : nil,
-            isRecurring: dict["is recurring"]?.lowercased() == "true",
-            frequency: dict["frequency"]?.isEmpty == false ? dict["frequency"] : nil,
-            dayOfMonth: dict["day of month"]?.isEmpty == false ? Int(dict["day of month"] ?? "") : nil,
-            daysOfWeek: daysOfWeek,
-            recurringEndDate: recurringEndDate,
-            isActive: dict["is active"]?.lowercased() != "false",
-            lastAddedDate: lastAddedDate,
+            recurringExpenseId: dict["recurring expense id"]?.isEmpty == false ? dict["recurring expense id"] : nil,
             groupId: dict["group id"]?.isEmpty == false ? dict["group id"] : nil,
             groupName: dict["group name"]?.isEmpty == false ? dict["group name"] : nil
         )

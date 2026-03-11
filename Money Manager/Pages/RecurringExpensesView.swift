@@ -3,8 +3,8 @@ import SwiftData
 
 struct RecurringExpensesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Expense> { $0.isRecurring }, sort: \Expense.expenseDescription)
-    private var recurringExpenses: [Expense]
+    @Query(sort: \RecurringExpense.name)
+    private var recurringExpenses: [RecurringExpense]
     
     @StateObject private var viewModel = RecurringExpensesViewModel()
     
@@ -86,11 +86,11 @@ struct RecurringExpensesView: View {
 }
 
 struct RecurringExpenseRow: View {
-    @Bindable var expense: Expense
+    @Bindable var expense: RecurringExpense
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
     private var displayName: String {
-        expense.expenseDescription ?? expense.category
+        expense.name
     }
     
     private var categoryIcon: String {
@@ -132,16 +132,14 @@ struct RecurringExpenseRow: View {
                     .foregroundColor(expense.isActive ? .primary : .secondary)
                 
                 HStack(spacing: 6) {
-                    if let frequency = expense.frequency {
-                        Text(frequency.capitalized)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(expense.isActive ? Color.teal.opacity(0.1) : Color.gray.opacity(0.1))
-                            .foregroundColor(expense.isActive ? .teal : .secondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
+                    Text(expense.frequency.capitalized)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(expense.isActive ? Color.teal.opacity(0.1) : Color.gray.opacity(0.1))
+                        .foregroundColor(expense.isActive ? .teal : .secondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     
                     if !expense.isActive {
                         Text("Paused")
@@ -338,7 +336,7 @@ struct AddRecurringExpenseSheet: View {
 #Preview {
     NavigationStack {
         RecurringExpensesView()
-            .modelContainer(for: Expense.self)
+            .modelContainer(for: RecurringExpense.self)
     }
 }
 
@@ -346,7 +344,7 @@ struct EditRecurringExpenseSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @Bindable var expense: Expense
+    @Bindable var expense: RecurringExpense
 
     @State private var name: String = ""
     @State private var amount: String = ""
@@ -498,13 +496,13 @@ struct EditRecurringExpenseSheet: View {
     }
 
     private func loadExpenseData() {
-        name = expense.expenseDescription ?? ""
+        name = expense.name
         amount = String(format: "%.2f", expense.amount)
         selectedCategory = expense.category
-        frequency = expense.frequency ?? "monthly"
-        startDate = expense.date
-        hasEndDate = expense.recurringEndDate != nil
-        endDate = expense.recurringEndDate ?? Date()
+        frequency = expense.frequency
+        startDate = expense.startDate
+        hasEndDate = expense.endDate != nil
+        endDate = expense.endDate ?? Date()
         dayOfMonth = expense.dayOfMonth ?? 1
         notes = expense.notes ?? ""
     }
@@ -528,13 +526,13 @@ struct EditRecurringExpenseSheet: View {
             return
         }
 
-        expense.expenseDescription = name.trimmingCharacters(in: .whitespaces)
+        expense.name = name.trimmingCharacters(in: .whitespaces)
         expense.amount = amountValue
         expense.category = selectedCategory
         expense.frequency = frequency
-        expense.date = startDate
+        expense.startDate = startDate
         expense.dayOfMonth = frequency == "monthly" ? dayOfMonth : nil
-        expense.recurringEndDate = hasEndDate ? endDate : nil
+        expense.endDate = hasEndDate ? endDate : nil
         expense.notes = notes.isEmpty ? nil : notes
         expense.updatedAt = Date()
 
