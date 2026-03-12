@@ -47,13 +47,14 @@ jobs:
       - name: Run Tests
         run: make test-unit
 
+      - name: Install xcresultparser
+        run: |
+          brew install xcresultparser
+
       - name: Convert xcresult to JUnit XML
         if: always()
-        uses: yokawasa/xcresults-to-junit-action@v0.0.4
-        with:
-          xcresult_path: ./test_results.xcresult
-          junitxml_path: ./test_results.xml
-          scheme: Money Manager
+        run: |
+          xcresultparser -o junit ./test_results.xcresult > ./test_results.xml || true
 
       - name: Upload test results to Codecov
         if: always()
