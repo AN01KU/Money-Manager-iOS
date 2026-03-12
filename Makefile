@@ -26,9 +26,16 @@ build:
 test: test-unit test-ui
 
 test-unit:
+	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests"
 
+test-one:
+	@echo "Usage: make test-one TEST=BackupViewModelTests"
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/$(TEST)"
+
 test-ui:
+	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests"
 
 coverage:

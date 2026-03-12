@@ -134,7 +134,7 @@ class OverviewViewModel: ObservableObject {
         expenseToDelete = nil
     }
     
-    private func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
+    func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
         if let custom = customCategories.first(where: { $0.name == categoryName && !$0.isHidden }) {
             return (custom.icon, Color(hex: custom.color))
         }

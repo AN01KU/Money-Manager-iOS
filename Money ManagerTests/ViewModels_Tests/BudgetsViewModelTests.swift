@@ -196,4 +196,103 @@ struct BudgetsViewModelTests {
         #expect(viewModel.currentMonthExpenses.count == 1)
         #expect(viewModel.currentMonthExpenses.first?.amount == 500)
     }
+    
+    // MARK: - Days Remaining Tests
+    
+    @Test
+    func testDaysRemainingCalculatesForCurrentMonth() {
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+        
+        #expect(viewModel.daysRemaining > 0)
+    }
+    
+    @Test
+    func testDaysRemainingReturnsZeroForPastMonth() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: Date())!
+        
+        viewModel.selectedMonth = lastMonth
+        
+        #expect(viewModel.daysRemaining == 0)
+    }
+    
+    @Test
+    func testDaysRemainingReturnsZeroForFutureMonth() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let nextMonth = calendar.date(byAdding: .month, value: 1, to: Date())!
+        
+        viewModel.selectedMonth = nextMonth
+        
+        #expect(viewModel.daysRemaining == 0)
+    }
+    
+    // MARK: - Daily Average Tests
+    
+    @Test
+    func testDailyAverageIsZeroWhenDaysRemainingIsZero() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: Date())!
+        
+        viewModel.selectedMonth = lastMonth
+        
+        let budget = MonthlyBudget(year: 2025, month: 1, limit: 1000)
+        viewModel.configure(allExpenses: [], budgets: [budget], modelContext: nil)
+        
+        #expect(viewModel.dailyAverage == 0)
+    }
+    
+    // MARK: - Current Budget Tests
+    
+    @Test
+    func testCurrentBudgetReturnsNilWhenNoBudgets() {
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+        
+        viewModel.configure(allExpenses: [], budgets: [], modelContext: nil)
+        
+        #expect(viewModel.currentBudget == nil)
+    }
+    
+    @Test
+    func testCurrentBudgetReturnsNilWhenNoMatchingMonth() {
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+        
+        let budget = MonthlyBudget(year: 2020, month: 1, limit: 1000)
+        viewModel.configure(allExpenses: [], budgets: [budget], modelContext: nil)
+        
+        #expect(viewModel.currentBudget == nil)
+    }
+    
+    @Test
+    func testCurrentBudgetFindsCorrectYearAndMonth() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: Date())
+        let month = calendar.component(.month, from: Date())
+        
+        viewModel.selectedMonth = Date()
+        
+        let budget1 = MonthlyBudget(year: year, month: month, limit: 5000)
+        let budget2 = MonthlyBudget(year: year + 1, month: month, limit: 6000)
+        
+        viewModel.configure(allExpenses: [], budgets: [budget1, budget2], modelContext: nil)
+        
+        #expect(viewModel.currentBudget?.limit == 5000)
+    }
+    
+    // MARK: - Initial State Tests
+    
+    @Test
+    func testInitialState() {
+        let viewModel = BudgetsViewModel()
+        
+        #expect(viewModel.showBudgetSheet == false)
+        #expect(viewModel.allExpenses.isEmpty)
+        #expect(viewModel.budgets.isEmpty)
+    }
 }

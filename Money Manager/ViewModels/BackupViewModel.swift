@@ -143,7 +143,7 @@ class BackupViewModel: ObservableObject {
         return formatter
     }()
     
-    private func parseDate(_ dateStr: String, _ timeStr: String? = nil) -> (date: Date, time: Date?) {
+    func parseDate(_ dateStr: String, _ timeStr: String? = nil) -> (date: Date, time: Date?) {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         
@@ -916,7 +916,7 @@ class BackupViewModel: ObservableObject {
     
     // MARK: - CSV Parsing
     
-    private func parseCSVLine(_ line: String) -> [String] {
+    func parseCSVLine(_ line: String) -> [String] {
         var result: [String] = []
         var current = ""
         var inQuotes = false
@@ -936,7 +936,7 @@ class BackupViewModel: ObservableObject {
         return result
     }
     
-    private func parseExpenseCSVRow(_ values: [String], headers: [String]) -> ExportData.ExpenseData? {
+    func parseExpenseCSVRow(_ values: [String], headers: [String]) -> ExportData.ExpenseData? {
         guard values.count == headers.count else { return nil }
         
         let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
@@ -964,7 +964,7 @@ class BackupViewModel: ObservableObject {
         )
     }
     
-    private func parseBudgetCSVRow(_ values: [String], headers: [String]) -> ExportData.MonthlyBudgetData? {
+    func parseBudgetCSVRow(_ values: [String], headers: [String]) -> ExportData.MonthlyBudgetData? {
         guard values.count == headers.count else { return nil }
         
         let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
@@ -977,7 +977,7 @@ class BackupViewModel: ObservableObject {
         )
     }
     
-    private func parseCategoryCSVRow(_ values: [String], headers: [String]) -> ExportData.CustomCategoryData? {
+    func parseCategoryCSVRow(_ values: [String], headers: [String]) -> ExportData.CustomCategoryData? {
         guard values.count == headers.count else { return nil }
         
         let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
@@ -995,7 +995,7 @@ class BackupViewModel: ObservableObject {
     
     // MARK: - Helpers
     
-    private func escapeCSV(_ string: String) -> String {
+    func escapeCSV(_ string: String) -> String {
         if string.contains(",") || string.contains("\"") || string.contains("\n") {
             return "\"\(string.replacingOccurrences(of: "\"", with: "\"\""))\""
         }

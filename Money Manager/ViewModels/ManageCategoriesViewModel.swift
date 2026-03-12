@@ -60,6 +60,7 @@ class ManageCategoriesViewModel: ObservableObject {
         modelContext?.delete(category)
         try? modelContext?.save()
         categoryToDelete = nil
+        showDeleteConfirmation = false
     }
 }
 
