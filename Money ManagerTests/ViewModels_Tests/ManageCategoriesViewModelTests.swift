@@ -83,18 +83,18 @@ struct AddCategoryViewModelTests {
     func testIconOptionsContainsStandardIcons() {
         let viewModel = AddCategoryViewModel()
         
-        #expect(viewModel.iconOptions.contains("tag.circle.fill"))
-        #expect(viewModel.iconOptions.contains("cart.circle.fill"))
-        #expect(viewModel.iconOptions.contains("star.circle.fill"))
+        #expect(AddCategoryViewModel.iconOptions.contains("tag.circle.fill"))
+        #expect(AddCategoryViewModel.iconOptions.contains("cart.circle.fill"))
+        #expect(AddCategoryViewModel.iconOptions.contains("star.circle.fill"))
     }
     
     @Test
     func testColorOptionsContainsStandardColors() {
         let viewModel = AddCategoryViewModel()
         
-        #expect(viewModel.colorOptions.contains("#FF6B6B"))
-        #expect(viewModel.colorOptions.contains("#4ECDC4"))
-        #expect(viewModel.colorOptions.contains("#3498DB"))
+        #expect(AddCategoryViewModel.colorOptions.contains("#FF6B6B"))
+        #expect(AddCategoryViewModel.colorOptions.contains("#4ECDC4"))
+        #expect(AddCategoryViewModel.colorOptions.contains("#3498DB"))
     }
     
     @Test
@@ -115,13 +115,268 @@ struct AddCategoryViewModelTests {
     func testIconOptionsHasMultipleChoices() {
         let viewModel = AddCategoryViewModel()
         
-        #expect(viewModel.iconOptions.count > 10)
+        #expect(AddCategoryViewModel.iconOptions.count > 10)
     }
     
     @Test
     func testColorOptionsHasMultipleChoices() {
         let viewModel = AddCategoryViewModel()
         
-        #expect(viewModel.colorOptions.count > 10)
+        #expect(AddCategoryViewModel.colorOptions.count > 10)
+    }
+}
+
+@MainActor
+struct EditCategoryViewModelTests {
+    
+    @Test
+    func testInitSetsValuesFromCategory() {
+        let category = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let viewModel = EditCategoryViewModel(category: category)
+        
+        #expect(viewModel.name == "Food")
+        #expect(viewModel.selectedIcon == "fork.knife")
+        #expect(viewModel.selectedColor == "#FF0000")
+    }
+    
+    @Test
+    func testSaveReturnsFalseWhenNameEmpty() {
+        let category = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let viewModel = EditCategoryViewModel(category: category)
+        viewModel.name = "   "
+        
+        let result = viewModel.save()
+        
+        #expect(result == false)
+        #expect(viewModel.showError == true)
+        #expect(viewModel.errorMessage.contains("empty"))
+    }
+    
+    @Test
+    func testSaveReturnsFalseWhenNameOnlyWhitespace() {
+        let category = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let viewModel = EditCategoryViewModel(category: category)
+        viewModel.name = "  \t  "
+        
+        let result = viewModel.save()
+        
+        #expect(result == false)
+    }
+    
+    @Test
+    func testInitialStateIsNotSaving() {
+        let category = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let viewModel = EditCategoryViewModel(category: category)
+        
+        #expect(viewModel.isSaving == false)
+        #expect(viewModel.showError == false)
+    }
+    
+    @Test
+    func testColorConflictDetectsSameColor() {
+        let category1 = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let category2 = CustomCategory(
+            name: "Transport",
+            icon: "car.fill",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let viewModel = EditCategoryViewModel(category: category1, allCategories: [category1, category2])
+        
+        #expect(viewModel.colorConflictCategory != nil)
+    }
+    
+    @Test
+    func testColorConflictIgnoresSameCategory() {
+        let category = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [category])
+        
+        #expect(viewModel.colorConflictCategory == nil)
+    }
+    
+    @Test
+    func testColorConflictIgnoresHiddenCategories() {
+        let category1 = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let category2 = CustomCategory(
+            name: "Hidden",
+            icon: "car.fill",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        category2.isHidden = true
+        
+        let viewModel = EditCategoryViewModel(category: category1, allCategories: [category1, category2])
+        
+        #expect(viewModel.colorConflictCategory == nil)
+    }
+    
+    // MARK: - Delete Category Tests
+    
+    @Test
+    func testDeleteCategorySetsCategoryToDelete() {
+        let viewModel = ManageCategoriesViewModel()
+        
+        let category = CustomCategory(
+            name: "Test",
+            icon: "star",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        viewModel.configure(customCategories: [category], modelContext: nil)
+        
+        viewModel.deleteCategory(category)
+        
+        #expect(viewModel.categoryToDelete == category)
+        #expect(viewModel.showDeleteConfirmation == true)
+    }
+    
+    @Test
+    func testDeleteCategoryDoesNothingForOtherCategory() {
+        let viewModel = ManageCategoriesViewModel()
+        
+        let category = CustomCategory(
+            name: "Other",
+            icon: "ellipsis.circle.fill",
+            color: "#95A5A6",
+            isPredefined: true,
+            predefinedKey: "other"
+        )
+        
+        viewModel.configure(customCategories: [category], modelContext: nil)
+        
+        viewModel.deleteCategory(category)
+        
+        #expect(viewModel.categoryToDelete == nil)
+        #expect(viewModel.showDeleteConfirmation == false)
+    }
+    
+    @Test
+    func testDeleteCategoryAllowsPredefinedCategories() {
+        let viewModel = ManageCategoriesViewModel()
+        
+        let category = CustomCategory(
+            name: "Food & Dining",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: true,
+            predefinedKey: "foodDining"
+        )
+        
+        viewModel.configure(customCategories: [category], modelContext: nil)
+        
+        viewModel.deleteCategory(category)
+        
+        #expect(viewModel.categoryToDelete == category)
+        #expect(viewModel.showDeleteConfirmation == true)
+    }
+    
+    @Test
+    func testConfirmDeleteClearsState() {
+        let viewModel = ManageCategoriesViewModel()
+        
+        let category = CustomCategory(
+            name: "Test",
+            icon: "star",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let schema = Schema([CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(customCategories: [category], modelContext: context)
+        viewModel.deleteCategory(category)
+        
+        #expect(viewModel.categoryToDelete != nil)
+        
+        viewModel.confirmDelete()
+        
+        #expect(viewModel.categoryToDelete == nil)
+        #expect(viewModel.showDeleteConfirmation == false)
+    }
+    
+    @Test
+    func testConfirmDeleteRemovesFromContext() {
+        let category = CustomCategory(
+            name: "Test",
+            icon: "star",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let schema = Schema([CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        context.insert(category)
+        try? context.save()
+        
+        let viewModel = ManageCategoriesViewModel()
+        viewModel.configure(customCategories: [category], modelContext: context)
+        viewModel.deleteCategory(category)
+        viewModel.confirmDelete()
+        
+        let descriptor = FetchDescriptor<CustomCategory>()
+        let remaining = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(remaining.isEmpty)
     }
 }

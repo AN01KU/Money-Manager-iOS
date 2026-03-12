@@ -506,4 +506,134 @@ struct OverviewViewModelTests {
         
         #expect(viewModel.filteredExpenses.isEmpty)
     }
+    
+    // MARK: - Resolve Category Tests
+    
+    @Test
+    func testResolveCategoryReturnsCustomCategoryIconAndColor() {
+        let viewModel = OverviewViewModel()
+        
+        let customCategory = CustomCategory(
+            name: "My Groceries",
+            icon: "cart.fill",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [customCategory], modelContext: nil)
+        
+        let result = viewModel.resolveCategory("My Groceries")
+        
+        #expect(result.icon == "cart.fill")
+    }
+    
+    @Test
+    func testResolveCategoryReturnsPredefinedCategoryIconAndColor() {
+        let viewModel = OverviewViewModel()
+        
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
+        
+        let result = viewModel.resolveCategory("Food & Dining")
+        
+        #expect(!result.icon.isEmpty)
+    }
+    
+    @Test
+    func testResolveCategoryReturnsFallbackForUnknown() {
+        let viewModel = OverviewViewModel()
+        
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
+        
+        let result = viewModel.resolveCategory("Unknown Category")
+        
+        #expect(result.icon == "ellipsis.circle.fill")
+    }
+    
+    @Test
+    func testResolveCategoryIgnoresHiddenCustomCategories() {
+        let viewModel = OverviewViewModel()
+        
+        let hiddenCategory = CustomCategory(
+            name: "Hidden Cat",
+            icon: "star.fill",
+            color: "#000000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        hiddenCategory.isHidden = true
+        
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [hiddenCategory], modelContext: nil)
+        
+        let result = viewModel.resolveCategory("Hidden Cat")
+        
+        #expect(result.icon == "ellipsis.circle.fill")
+    }
+    
+    // MARK: - Ensure Budget Exists Tests
+    
+    @Test
+    func testEnsureBudgetExistsDoesNothingWhenBudgetExists() {
+        let viewModel = OverviewViewModel()
+        
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: Date())
+        let month = calendar.component(.month, from: Date())
+        let existingBudget = MonthlyBudget(year: year, month: month, limit: 5000)
+        
+        viewModel.configure(allExpenses: [], budgets: [existingBudget], customCategories: [], modelContext: nil)
+        
+        let initialCount = viewModel.currentBudget != nil ? 1 : 0
+        
+        let schema = Schema([Expense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
+        
+        #expect(viewModel.currentBudget != nil)
+    }
+    
+    @Test
+    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
+        
+        let schema = Schema([Expense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        #expect(viewModel.currentBudget == nil)
+        
+        viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
+        
+        let descriptor = FetchDescriptor<MonthlyBudget>()
+        let budgets = (try? context.fetch(descriptor)) ?? []
+        #expect(budgets.count == 1)
+    }
+    
+    @Test
+    func testEnsureBudgetExistsDoesNothingWhenLimitIsZero() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
+        
+        let schema = Schema([Expense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.ensureBudgetExists(defaultBudgetLimit: 0, modelContext: context)
+        
+        let descriptor = FetchDescriptor<MonthlyBudget>()
+        let budgets = (try? context.fetch(descriptor)) ?? []
+        #expect(budgets.isEmpty)
+    }
 }

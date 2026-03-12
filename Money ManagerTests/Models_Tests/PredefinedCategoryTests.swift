@@ -142,6 +142,30 @@ struct PredefinedCategoryTests {
     func testTotalPredefinedCategoriesCount() {
         #expect(PredefinedCategory.allCases.count == 15)
     }
+    
+    @Test
+    func testAllPredefinedCategoriesHaveKey() {
+        for category in PredefinedCategory.allCases {
+            #expect(!category.key.isEmpty)
+        }
+    }
+    
+    @Test
+    func testAllPredefinedCategoriesHaveDefaultColorHex() {
+        for category in PredefinedCategory.allCases {
+            #expect(!category.defaultColorHex.isEmpty)
+        }
+    }
+    
+    @Test
+    func testFoodDiningKey() {
+        #expect(PredefinedCategory.foodDining.key == "foodDining")
+    }
+    
+    @Test
+    func testTransportKey() {
+        #expect(PredefinedCategory.transport.key == "transport")
+    }
 }
 
 struct ColorHexExtensionTests {

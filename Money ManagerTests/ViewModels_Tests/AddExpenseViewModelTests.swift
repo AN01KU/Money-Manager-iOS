@@ -163,6 +163,134 @@ struct AddExpenseViewModelTests {
         #expect(viewModel.isValid == false)
     }
     
+    // MARK: - Format Tests
+    
+    @Test
+    func testFormatDateReturnsNonEmptyString() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        let date = Date()
+        let result = viewModel.formatDate(date)
+        
+        #expect(!result.isEmpty)
+    }
+    
+    @Test
+    func testFormatTimeReturnsNonEmptyString() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        let date = Date()
+        let result = viewModel.formatTime(date)
+        
+        #expect(!result.isEmpty)
+    }
+    
+    @Test
+    func testFormatDateContainsMonthName() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 3
+        components.day = 15
+        let date = Calendar.current.date(from: components)!
+        
+        let result = viewModel.formatDate(date)
+        
+        #expect(result.contains("Mar") || result.contains("15"))
+    }
+    
+    // MARK: - Navigation Title Tests
+    
+    @Test
+    func testNavigationTitleForNewExpense() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        
+        #expect(viewModel.navigationTitle == "Add Expense")
+    }
+    
+    @Test
+    func testNavigationTitleForEditingExpense() {
+        let expense = Expense(
+            amount: 100,
+            category: "Food",
+            date: Date(),
+            time: nil,
+            expenseDescription: nil,
+            notes: nil
+        )
+        let viewModel = AddExpenseViewModel(mode: .personal(editing: expense))
+        
+        #expect(viewModel.navigationTitle == "Edit Expense")
+    }
+    
+    // MARK: - Setup Tests
+    
+    @Test
+    func testSetupWithEditingExpense() {
+        let expense = Expense(
+            amount: 250.50,
+            category: "Transport",
+            date: Date(),
+            time: Date(),
+            expenseDescription: "Taxi",
+            notes: "Airport trip"
+        )
+        let viewModel = AddExpenseViewModel(mode: .personal(editing: expense))
+        
+        viewModel.setup()
+        
+        #expect(viewModel.amount == "250.50")
+        #expect(viewModel.selectedCategory == "Transport")
+        #expect(viewModel.description == "Taxi")
+        #expect(viewModel.notes == "Airport trip")
+        #expect(viewModel.hasTime == true)
+    }
+    
+    @Test
+    func testSetupWithExpenseWithoutTime() {
+        let expense = Expense(
+            amount: 100,
+            category: "Food",
+            date: Date(),
+            time: nil,
+            expenseDescription: nil,
+            notes: nil
+        )
+        let viewModel = AddExpenseViewModel(mode: .personal(editing: expense))
+        
+        viewModel.setup()
+        
+        #expect(viewModel.hasTime == false)
+    }
+    
+    // MARK: - Initial State Tests
+    
+    @Test
+    func testInitialStateHasTimeEnabled() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        
+        #expect(viewModel.hasTime == true)
+    }
+    
+    @Test
+    func testInitialStateHasEmptyFields() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        
+        #expect(viewModel.amount.isEmpty)
+        #expect(viewModel.selectedCategory.isEmpty)
+        #expect(viewModel.description.isEmpty)
+        #expect(viewModel.notes.isEmpty)
+    }
+    
+    @Test
+    func testInitialStateShowsPickersFalse() {
+        let viewModel = AddExpenseViewModel(mode: .personal())
+        
+        #expect(viewModel.showCategoryPicker == false)
+        #expect(viewModel.showDatePicker == false)
+        #expect(viewModel.showTimePicker == false)
+        #expect(viewModel.showError == false)
+        #expect(viewModel.isSaving == false)
+    }
+    
     // MARK: - Commented out: shared expense feature removed in offline-v1
     /*
     @Test
