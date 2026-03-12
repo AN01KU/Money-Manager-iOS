@@ -1,22 +1,25 @@
 <!-- Money Manager iOS App -->
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/placeholder-icon" width="120" alt="Money Manager">
-</p>
+<div align="center">
+  <img src="https://raw.githubusercontent.com/AN01KU/Money-Manager-iOS/feat/mvp/Money%20Manager/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" width="150" alt="Money Manager App Icon">
+  
+  # Money Manager
 
-<h1 align="center">Money Manager</h1>
+  [![Coverage][coverage-badge]][coverage-url]
+  [![CI][ci-badge]][ci-url]
+  ![iOS][ios-badge]
+  ![Swift][swift-badge]
+  ![Xcode][xcode-badge]
+  
+  [coverage-badge]: https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg
+  [coverage-url]: https://codecov.io/gh/an01ku/money-manager-ios
+  [ci-badge]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg
+  [ci-url]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml
+  [ios-badge]: https://img.shields.io/badge/iOS-17%2B-blue
+  [swift-badge]: https://img.shields.io/badge/Swift-5.9-orange
+  [xcode-badge]: https://img.shields.io/badge/Xcode-26%2B-purple
 
-<p align="center">
-  <a href="https://codecov.io/gh/an01ku/money-manager-ios">
-    <img src="https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg" alt="Coverage">
-  </a>
-  <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
-    <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
-  </a>
-  <img src="https://img.shields.io/badge/iOS-17%2B-blue" alt="iOS">
-  <img src="https://img.shields.io/badge/Swift-5.9-orange" alt="Swift">
-  <img src="https://img.shields.io/badge/Xcode-26%2B-purple" alt="Xcode">
-</p>
+</div>
 
 A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
 
@@ -158,4 +161,8 @@ This project is for personal use. All rights reserved.
 
 ---
 
-<p align="center">Built with SwiftUI</p>
+<div align="center">
+
+Built with SwiftUI
+
+</div>
