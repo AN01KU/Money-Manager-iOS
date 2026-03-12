@@ -5,6 +5,7 @@ struct Overview: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
     @Query private var budgets: [MonthlyBudget]
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     
@@ -109,13 +110,16 @@ struct Overview: View {
                 viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
             }
             .onAppear {
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, customCategories: customCategories, modelContext: modelContext)
             }
             .onChange(of: allExpenses) { _, newValue in
-                viewModel.configure(allExpenses: newValue, budgets: budgets, modelContext: modelContext)
+                viewModel.configure(allExpenses: newValue, budgets: budgets, customCategories: customCategories, modelContext: modelContext)
             }
             .onChange(of: budgets) { _, newValue in
-                viewModel.configure(allExpenses: allExpenses, budgets: newValue, modelContext: modelContext)
+                viewModel.configure(allExpenses: allExpenses, budgets: newValue, customCategories: customCategories, modelContext: modelContext)
+            }
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, customCategories: newValue, modelContext: modelContext)
             }
         }
     }

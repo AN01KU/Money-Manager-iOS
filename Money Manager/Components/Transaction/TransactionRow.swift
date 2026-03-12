@@ -6,17 +6,42 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct TransactionRow: View {
     let expense: Expense
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
-    var category: PredefinedCategory? {
-        PredefinedCategory.allCases.first { $0.rawValue == expense.category }
+    init(expense: Expense) {
+        self.expense = expense
+    }
+    
+    private var resolvedIcon: String {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return custom.icon
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+    }
+    
+    private var resolvedColor: Color {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return Color(hex: custom.color)
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
     }
     
     var body: some View {
         HStack(spacing: 12) {
-            CategoryIconView(category: category)
+            ZStack {
+                Circle()
+                    .fill(resolvedColor.opacity(0.2))
+                    .frame(width: 48, height: 48)
+                
+                Image(systemName: resolvedIcon)
+                    .font(.title3)
+                    .foregroundColor(resolvedColor)
+            }
+            .accessibilityHidden(true)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.category)
@@ -70,23 +95,6 @@ struct TransactionRow: View {
     }
 }
 
-struct CategoryIconView: View {
-    let category: PredefinedCategory?
-    
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill((category?.color ?? Color.gray).opacity(0.2))
-                .frame(width: 48, height: 48)
-            
-            Image(systemName: category?.icon ?? "ellipsis.circle.fill")
-                .font(.title3)
-                .foregroundColor(category?.color ?? Color.gray)
-        }
-        .accessibilityHidden(true)
-    }
-}
-
 #Preview {
     TransactionRow(
         expense: Expense(
@@ -98,4 +106,5 @@ struct CategoryIconView: View {
         )
     )
     .padding()
+    .modelContainer(for: [CustomCategory.self], inMemory: true)
 }

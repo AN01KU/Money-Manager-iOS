@@ -19,13 +19,18 @@ struct CategoryChart: View {
         let rest = sorted.dropFirst(4)
         let othersAmount = rest.reduce(0) { $0 + $1.amount }
         let othersPercentage = rest.reduce(0) { $0 + $1.percentage }
-        let others = CategorySpending(category: .other, amount: othersAmount, percentage: othersPercentage)
+        let others = CategorySpending(
+            categoryName: "Other",
+            icon: "ellipsis.circle.fill",
+            color: Color(hex: "#95A5A6"),
+            amount: othersAmount,
+            percentage: othersPercentage
+        )
         return top4 + [others]
     }
     
     var body: some View {
         VStack(spacing: 16) {
-            // Pie chart + legend
             HStack(alignment: .top, spacing: 20) {
                 Chart(pieData) { spending in
                     SectorMark(
@@ -33,7 +38,7 @@ struct CategoryChart: View {
                         innerRadius: .ratio(0.5),
                         angularInset: 2
                     )
-                    .foregroundStyle(spending.category.color)
+                    .foregroundStyle(spending.color)
                     .opacity(0.8)
                 }
                 .frame(width: 140, height: 140)
@@ -48,7 +53,6 @@ struct CategoryChart: View {
             .background(Color(.systemGray6))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             
-            // Full category breakdown
             if !categorySpending.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(categorySpending) { spending in
@@ -74,10 +78,10 @@ struct CategorySpendingRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(spending.category.color)
+                .fill(spending.color)
                 .frame(width: 14, height: 14)
             
-            Text(spending.category.rawValue)
+            Text(spending.categoryName)
                 .font(.subheadline)
                 .foregroundColor(.primary)
                 .lineLimit(1)
@@ -105,17 +109,17 @@ struct CategoryDetailRow: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(spending.category.color.opacity(0.2))
+                    .fill(spending.color.opacity(0.2))
                     .frame(width: 40, height: 40)
                 
-                Image(systemName: spending.category.icon)
+                Image(systemName: spending.icon)
                     .font(.body)
-                    .foregroundColor(spending.category.color)
+                    .foregroundColor(spending.color)
             }
             
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(spending.category.rawValue)
+                    Text(spending.categoryName)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
@@ -135,7 +139,7 @@ struct CategoryDetailRow: View {
                             .frame(height: 6)
                         
                         Capsule()
-                            .fill(spending.category.color)
+                            .fill(spending.color)
                             .frame(width: geometry.size.width * barFraction, height: 6)
                     }
                 }
@@ -150,13 +154,13 @@ struct CategoryDetailRow: View {
 #Preview {
     ScrollView {
         CategoryChart(categorySpending: [
-            CategorySpending(category: .food, amount: 11308, percentage: 35),
-            CategorySpending(category: .transport, amount: 6490, percentage: 20),
-            CategorySpending(category: .shopping, amount: 4200, percentage: 13),
-            CategorySpending(category: .entertainment, amount: 3500, percentage: 11),
-            CategorySpending(category: .utilities, amount: 2800, percentage: 9),
-            CategorySpending(category: .housing, amount: 2100, percentage: 6),
-            CategorySpending(category: .other, amount: 1952, percentage: 6)
+            CategorySpending(categoryName: "Food & Dining", icon: "fork.knife.circle.fill", color: Color(hex: "#FF6B6B"), amount: 11308, percentage: 35),
+            CategorySpending(categoryName: "Transport", icon: "car.circle.fill", color: Color(hex: "#4ECDC4"), amount: 6490, percentage: 20),
+            CategorySpending(categoryName: "Shopping", icon: "bag.circle.fill", color: Color(hex: "#FFEAA7"), amount: 4200, percentage: 13),
+            CategorySpending(categoryName: "Entertainment", icon: "gamecontroller.circle.fill", color: Color(hex: "#BC6C25"), amount: 3500, percentage: 11),
+            CategorySpending(categoryName: "Utilities", icon: "bolt.square.fill", color: Color(hex: "#DDA15E"), amount: 2800, percentage: 9),
+            CategorySpending(categoryName: "Housing", icon: "house.circle.fill", color: Color(hex: "#45B7D1"), amount: 2100, percentage: 6),
+            CategorySpending(categoryName: "Other", icon: "ellipsis.circle.fill", color: Color(hex: "#95A5A6"), amount: 1952, percentage: 6)
         ])
         .padding()
     }

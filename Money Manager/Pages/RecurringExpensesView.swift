@@ -238,13 +238,11 @@ struct AddRecurringExpenseSheet: View {
                             viewModel.showCategoryPicker = true
                         }) {
                             HStack {
-                                if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
-                                    Image(systemName: category.icon)
-                                        .foregroundColor(category.color)
+                                if !viewModel.selectedCategory.isEmpty {
                                     Text(viewModel.selectedCategory)
                                 } else {
-                                    Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)
-                                        .foregroundColor(viewModel.selectedCategory.isEmpty ? .secondary : .primary)
+                                    Text("Select Category")
+                                        .foregroundColor(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")
@@ -404,13 +402,11 @@ struct EditRecurringExpenseSheet: View {
                             showCategoryPicker = true
                         }) {
                             HStack {
-                                if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == selectedCategory }) {
-                                    Image(systemName: category.icon)
-                                        .foregroundColor(category.color)
+                                if !selectedCategory.isEmpty {
                                     Text(selectedCategory)
                                 } else {
-                                    Text(selectedCategory.isEmpty ? "Select Category" : selectedCategory)
-                                        .foregroundColor(selectedCategory.isEmpty ? .secondary : .primary)
+                                    Text("Select Category")
+                                        .foregroundColor(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")

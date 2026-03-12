@@ -20,11 +20,13 @@ class OverviewViewModel: ObservableObject {
     
     private var allExpenses: [Expense] = []
     private var budgets: [MonthlyBudget] = []
+    private var customCategories: [CustomCategory] = []
     private var modelContext: ModelContext?
     
-    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], modelContext: ModelContext?) {
+    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], customCategories: [CustomCategory], modelContext: ModelContext?) {
         self.allExpenses = allExpenses
         self.budgets = budgets
+        self.customCategories = customCategories
         self.modelContext = modelContext
         
         recalculate()
@@ -83,11 +85,14 @@ class OverviewViewModel: ObservableObject {
         let total = totalSpent
         
         if total > 0 {
-            categorySpending = grouped.map { category, expenses in
+            categorySpending = grouped.map { categoryName, expenses in
                 let amount = expenses.reduce(0) { $0 + $1.amount }
                 let percentage = Int((amount / total) * 100)
+                let (icon, color) = resolveCategory(categoryName)
                 return CategorySpending(
-                    category: Category.fromString(category),
+                    categoryName: categoryName,
+                    icon: icon,
+                    color: color,
                     amount: amount,
                     percentage: percentage
                 )
@@ -127,5 +132,15 @@ class OverviewViewModel: ObservableObject {
     
     func cancelDeleteExpense() {
         expenseToDelete = nil
+    }
+    
+    private func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
+        if let custom = customCategories.first(where: { $0.name == categoryName && !$0.isHidden }) {
+            return (custom.icon, Color(hex: custom.color))
+        }
+        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == categoryName }) {
+            return (predefined.icon, predefined.color)
+        }
+        return ("ellipsis.circle.fill", Color(hex: "#95A5A6"))
     }
 }

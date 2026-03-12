@@ -109,6 +109,8 @@ struct ExportData: Codable {
         let icon: String
         let color: String
         let isHidden: Bool
+        let isPredefined: Bool?
+        let predefinedKey: String?
     }
 }
 
@@ -448,7 +450,7 @@ class BackupViewModel: ObservableObject {
         
         // Categories section
         csv += "\n# CATEGORIES\n"
-        csv += "ID,Name,Icon,Color,Is Hidden\n"
+        csv += "ID,Name,Icon,Color,Is Hidden,Is Predefined,Predefined Key\n"
         
         for category in categories {
             let row = [
@@ -456,7 +458,9 @@ class BackupViewModel: ObservableObject {
                 escapeCSV(category.name),
                 category.icon,
                 category.color,
-                String(category.isHidden)
+                String(category.isHidden),
+                String(category.isPredefined),
+                category.predefinedKey ?? ""
             ].joined(separator: ",")
             csv += row + "\n"
         }
@@ -506,7 +510,7 @@ class BackupViewModel: ObservableObject {
     }
     
     private func exportCategoriesToCSV(categories: [CustomCategory]) throws -> URL {
-        var csv = "ID,Name,Icon,Color,Is Hidden\n"
+        var csv = "ID,Name,Icon,Color,Is Hidden,Is Predefined,Predefined Key\n"
         
         for category in categories {
             let row = [
@@ -514,7 +518,9 @@ class BackupViewModel: ObservableObject {
                 escapeCSV(category.name),
                 category.icon,
                 category.color,
-                String(category.isHidden)
+                String(category.isHidden),
+                String(category.isPredefined),
+                category.predefinedKey ?? ""
             ].joined(separator: ",")
             csv += row + "\n"
         }
@@ -582,7 +588,9 @@ class BackupViewModel: ObservableObject {
                 name: category.name,
                 icon: category.icon,
                 color: category.color,
-                isHidden: category.isHidden
+                isHidden: category.isHidden,
+                isPredefined: category.isPredefined,
+                predefinedKey: category.predefinedKey
             )
         }
         
@@ -648,7 +656,9 @@ class BackupViewModel: ObservableObject {
                 name: category.name,
                 icon: category.icon,
                 color: category.color,
-                isHidden: category.isHidden
+                isHidden: category.isHidden,
+                isPredefined: category.isPredefined,
+                predefinedKey: category.predefinedKey
             )
         }
         
@@ -854,11 +864,33 @@ class BackupViewModel: ObservableObject {
         
         if let categories = exportData.categories {
             for categoryData in categories {
+                let isPredefined = categoryData.isPredefined ?? false
+                let predefinedKey = categoryData.predefinedKey
+                
+                // For predefined categories, update existing record if found
+                if isPredefined, let key = predefinedKey {
+                    let keyToFind = key
+                    let descriptor = FetchDescriptor<CustomCategory>(
+                        predicate: #Predicate { $0.predefinedKey == keyToFind }
+                    )
+                    if let existing = try? context.fetch(descriptor).first {
+                        existing.name = categoryData.name
+                        existing.icon = categoryData.icon
+                        existing.color = categoryData.color
+                        existing.isHidden = categoryData.isHidden
+                        existing.updatedAt = Date()
+                        categoriesImported += 1
+                        continue
+                    }
+                }
+                
                 let category = CustomCategory(
                     id: UUID(uuidString: categoryData.id) ?? UUID(),
                     name: categoryData.name,
                     icon: categoryData.icon,
-                    color: categoryData.color
+                    color: categoryData.color,
+                    isPredefined: isPredefined,
+                    predefinedKey: predefinedKey
                 )
                 category.isHidden = categoryData.isHidden
                 context.insert(category)
@@ -955,7 +987,9 @@ class BackupViewModel: ObservableObject {
             name: dict["name"] ?? "Custom",
             icon: dict["icon"] ?? "folder.fill",
             color: dict["color"] ?? "#808080",
-            isHidden: dict["is hidden"]?.lowercased() == "true"
+            isHidden: dict["is hidden"]?.lowercased() == "true",
+            isPredefined: dict["is predefined"]?.lowercased() == "true",
+            predefinedKey: dict["predefined key"]?.isEmpty == false ? dict["predefined key"] : nil
         )
     }
     
