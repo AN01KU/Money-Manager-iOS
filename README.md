@@ -1,24 +1,8 @@
 <!-- Money Manager iOS App -->
-<p align="center">
-  <img src="Money%20Manager/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="150" alt="Money Manager App Icon">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/iOS-17%2B-blue.svg" alt="iOS Version">
-  <img src="https://img.shields.io/badge/Swift-5.9-orange.svg" alt="Swift Version">
-  <img src="https://img.shields.io/badge/Xcode-15%2B-purple.svg" alt="Xcode Version">
-  <a href="https://github.com/an01ku/money-manager-ios/actions"><img src="https://github.com/an01ku/money-manager-ios/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
-</p>
 
 # Money Manager
 
 A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
-
-## About
-
-Most expense trackers are either too simple or bloated with features you don't need. Money Manager strikes the right balance—it handles your personal expenses, recurring bills, monthly budgets, and group expense splitting in one clean interface. No subscriptions, no ads, just your money, organized.
-
-> **Note:** This app is under active development. Features and UI are subject to change.
 
 ## Features
 
@@ -56,21 +40,6 @@ Most expense trackers are either too simple or bloated with features you don't n
 - Export data to CSV/JSON formats
 - All data stored locally on device
 
-## Architecture
-
-The app follows the **MVVM (Model-View-ViewModel)** architecture pattern with SwiftUI:
-
-```
-Money Manager/
-├── Models/           # Data models (Expense, Budget, Category, etc.)
-├── ViewModels/       # Business logic and state management
-├── Views/            # SwiftUI views
-├── Pages/            # Screen-level views
-├── Components/       # Reusable UI components
-├── Services/         # Keychain, and core services
-└── Helpers/          # Constants and utilities
-```
-
 ## Tech Stack
 
 | Component | Technology |
@@ -82,9 +51,23 @@ Money Manager/
 
 ## Requirements
 
-- iOS 17.0+
-- Xcode 15.0+
-- Swift 5.9+
+| Requirement | Version |
+|-------------|---------|
+| iOS | 17.0+ |
+| Xcode | 15.0+ |
+| Swift | 5.9+ |
+
+## Architecture
+
+```
+Money Manager/
+├── Models/           # Data models (Expense, Budget, Category, etc.)
+├── ViewModels/       # Business logic and state management
+├── Pages/            # Screen-level views
+├── Components/       # Reusable UI components
+├── Services/         # Keychain and core services
+└── Helpers/         # Constants and utilities
+```
 
 ## Getting Started
 
@@ -141,8 +124,6 @@ Run tests with:
 make test-unit
 ```
 
-Current coverage: ~77%
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -156,11 +137,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is for personal use. All rights reserved.
-
-## Contact
-
-- GitHub: [@an01ku](https://github.com/an01ku)
-- Twitter: [@ankush_ganesh](https://twitter.com/ankush_ganesh)
 
 ---
 
