@@ -5,23 +5,21 @@
   
   # Money Manager
 
-  [![Coverage][coverage-badge]][coverage-url]
-  [![CI][ci-badge]][ci-url]
-  ![iOS][ios-badge]
-  ![Swift][swift-badge]
-  ![Xcode][xcode-badge]
+  [![CI][ci-badge]][ci-url] · [![Coverage][coverage-badge]][coverage-url]
+
+  ![iOS][ios-badge] · ![Swift][swift-badge] · ![Xcode][xcode-badge]
   
-  [coverage-badge]: https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg
-  [coverage-url]: https://codecov.io/gh/an01ku/money-manager-ios
   [ci-badge]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg
   [ci-url]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml
+  [coverage-badge]: https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg
+  [coverage-url]: https://codecov.io/gh/an01ku/money-manager-ios
   [ios-badge]: https://img.shields.io/badge/iOS-17%2B-blue
   [swift-badge]: https://img.shields.io/badge/Swift-5.9-orange
   [xcode-badge]: https://img.shields.io/badge/Xcode-26%2B-purple
 
 </div>
 
-A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
+A personal finance iOS app for tracking expenses, managing budgets, and staying on top of your spending.
 
 ## Features
 
@@ -42,12 +40,6 @@ A personal finance iOS app for tracking expenses, managing budgets, splitting co
 - Flexible scheduling—choose specific days of the week or month
 - Skip weekends or specific dates
 - Auto-generates expenses so you never forget a bill
-
-### Group Expense Splitting
-- Create groups for trips, roommates, dinners, or any shared cost
-- Add shared expenses and split them across group members
-- Track balances—see who owes whom
-- Record settlements to clear debts
 
 ### Categories
 - Comes with predefined spending categories
