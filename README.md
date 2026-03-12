@@ -1,6 +1,22 @@
 <!-- Money Manager iOS App -->
 
-# Money Manager
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/placeholder-icon" width="120" alt="Money Manager">
+</p>
+
+<h1 align="center">Money Manager</h1>
+
+<p align="center">
+  <a href="https://codecov.io/gh/an01ku/money-manager-ios">
+    <img src="https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
+    <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <img src="https://img.shields.io/badge/iOS-17%2B-blue" alt="iOS">
+  <img src="https://img.shields.io/badge/Swift-5.9-orange" alt="Swift">
+  <img src="https://img.shields.io/badge/Xcode-26%2B-purple" alt="Xcode">
+</p>
 
 A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
 
@@ -54,7 +70,7 @@ A personal finance iOS app for tracking expenses, managing budgets, splitting co
 | Requirement | Version |
 |-------------|---------|
 | iOS | 17.0+ |
-| Xcode | 15.0+ |
+| Xcode | 26.0+ |
 | Swift | 5.9+ |
 
 ## Architecture
@@ -73,7 +89,7 @@ Money Manager/
 
 ### Prerequisites
 
-1. Install [Xcode](https://developer.apple.com/xcode/) 15.0 or later
+1. Install [Xcode](https://developer.apple.com/xcode/) 26.0 or later
 2. An Apple Developer account (for running on device)
 
 ### Installation
@@ -123,6 +139,8 @@ Run tests with:
 ```bash
 make test-unit
 ```
+
+View coverage reports at: [codecov.io/gh/an01ku/money-manager-ios](https://codecov.io/gh/an01ku/money-manager-ios)
 
 ## Contributing
 
