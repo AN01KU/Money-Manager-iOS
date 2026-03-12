@@ -9,9 +9,20 @@ class TransactionDetailViewModel: ObservableObject {
     
     let expense: Expense
     private var modelContext: ModelContext?
+    var customCategories: [CustomCategory] = []
     
-    var category: PredefinedCategory? {
-        PredefinedCategory.allCases.first { $0.rawValue == expense.category }
+    var categoryIcon: String {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return custom.icon
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+    }
+    
+    var categoryColor: Color {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return Color(hex: custom.color)
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
     }
     
     var isGroupExpense: Bool {

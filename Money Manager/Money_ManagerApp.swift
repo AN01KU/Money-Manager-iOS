@@ -22,6 +22,8 @@ struct Money_ManagerApp: App {
         do {
             container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             
+            CategorySeeder.seedIfNeeded(context: container.mainContext)
+            
             #if DEBUG
             if useTestData {
                 Self.injectTestData(context: container.mainContext)

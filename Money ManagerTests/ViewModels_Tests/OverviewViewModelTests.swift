@@ -15,7 +15,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 200, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.filteredExpenses.count == 2)
     }
@@ -28,7 +28,7 @@ struct OverviewViewModelTests {
         
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         
-        viewModel.configure(allExpenses: [expense1], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.filteredExpenses.count == 1)
     }
@@ -43,7 +43,7 @@ struct OverviewViewModelTests {
         let deletedExpense = Expense(amount: 200, category: "Transport", date: Date())
         deletedExpense.isDeleted = true
         
-        viewModel.configure(allExpenses: [activeExpense, deletedExpense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [activeExpense, deletedExpense], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.filteredExpenses.count == 1)
         #expect(viewModel.filteredExpenses.first?.amount == 100)
@@ -58,7 +58,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 250, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.totalSpent == 350)
     }
@@ -69,7 +69,7 @@ struct OverviewViewModelTests {
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
         
-        viewModel.configure(allExpenses: [], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.totalSpent == 0)
         #expect(viewModel.filteredExpenses.isEmpty)
@@ -85,7 +85,7 @@ struct OverviewViewModelTests {
         let expense2 = Expense(amount: 200, category: "Food & Dining", date: Date())
         let expense3 = Expense(amount: 150, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2, expense3], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2, expense3], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.categorySpending.count == 2)
     }
@@ -99,9 +99,9 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 75, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 25, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         
-        let foodCategory = viewModel.categorySpending.first { $0.category == .food }
+        let foodCategory = viewModel.categorySpending.first { $0.categoryName == "Food & Dining" }
         #expect(foodCategory?.percentage == 75)
     }
     
@@ -114,9 +114,9 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Transport", date: Date())
         let expense2 = Expense(amount: 500, category: "Food & Dining", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         
-        #expect(viewModel.categorySpending.first?.category == .food)
+        #expect(viewModel.categorySpending.first?.categoryName == "Food & Dining")
     }
     
     @Test
@@ -127,7 +127,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "Food"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -141,7 +141,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food", date: Date(), expenseDescription: "Lunch at restaurant")
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "Lunch"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -155,7 +155,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food", date: Date(), expenseDescription: "Lunch")
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "Dinner"
         
         #expect(viewModel.filteredExpenses.isEmpty)
@@ -169,7 +169,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food", date: Date())
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "FOOD"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -180,7 +180,7 @@ struct OverviewViewModelTests {
         let viewModel = OverviewViewModel()
         let expense = Expense(amount: 100, category: "Food", date: Date())
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         
         viewModel.filterMode = .daily
         
@@ -202,7 +202,7 @@ struct OverviewViewModelTests {
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
         
-        viewModel.configure(allExpenses: [], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.categorySpending.isEmpty)
     }
@@ -217,7 +217,7 @@ struct OverviewViewModelTests {
         let matchingBudget = MonthlyBudget(year: year, month: month, limit: 5000)
         let otherBudget = MonthlyBudget(year: year, month: month == 12 ? 1 : month + 1, limit: 3000)
         
-        viewModel.configure(allExpenses: [], budgets: [matchingBudget, otherBudget], modelContext: nil)
+        viewModel.configure(allExpenses: [], budgets: [matchingBudget, otherBudget], customCategories: [], modelContext: nil)
         
         #expect(viewModel.currentBudget?.limit == 5000)
         #expect(viewModel.currentBudget?.year == year)
@@ -233,7 +233,7 @@ struct OverviewViewModelTests {
         
         let otherBudget = MonthlyBudget(year: year, month: month == 12 ? 1 : month + 1, limit: 3000)
         
-        viewModel.configure(allExpenses: [], budgets: [otherBudget], modelContext: nil)
+        viewModel.configure(allExpenses: [], budgets: [otherBudget], customCategories: [], modelContext: nil)
         
         #expect(viewModel.currentBudget == nil)
     }
@@ -250,7 +250,7 @@ struct OverviewViewModelTests {
         let febBudget = MonthlyBudget(year: 2026, month: 2, limit: 6000)
         
         viewModel.selectedDate = jan2026
-        viewModel.configure(allExpenses: [], budgets: [janBudget, febBudget], modelContext: nil)
+        viewModel.configure(allExpenses: [], budgets: [janBudget, febBudget], customCategories: [], modelContext: nil)
         #expect(viewModel.currentBudget?.limit == 4000)
         
         viewModel.selectedDate = feb2026
@@ -266,7 +266,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 200, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         #expect(viewModel.filteredExpenses.count == 2)
         
         viewModel.searchText = "Transport"
@@ -285,7 +285,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 200, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "Food"
         #expect(viewModel.filteredExpenses.count == 1)
         
@@ -308,7 +308,7 @@ struct OverviewViewModelTests {
         let expenseOtherDay = Expense(amount: 200, category: "Transport", date: differentDay)
         
         viewModel.selectedDate = todayStart
-        viewModel.configure(allExpenses: [expenseToday, expenseOtherDay], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expenseToday, expenseOtherDay], budgets: [], customCategories: [], modelContext: nil)
         
         viewModel.filterMode = .monthly
         let monthlyCount = viewModel.filteredExpenses.count
@@ -333,7 +333,7 @@ struct OverviewViewModelTests {
         
         viewModel.selectedDate = today
         viewModel.filterMode = .daily
-        viewModel.configure(allExpenses: [expenseToday, expenseYesterday], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expenseToday, expenseYesterday], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.filteredExpenses.count == 1)
         #expect(viewModel.filteredExpenses.first?.amount == 100)
@@ -352,7 +352,7 @@ struct OverviewViewModelTests {
         
         viewModel.filterMode = .monthly
         viewModel.selectedDate = jan15
-        viewModel.configure(allExpenses: [janExpense, febExpense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [janExpense, febExpense], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.filteredExpenses.count == 1)
         #expect(viewModel.totalSpent == 100)
@@ -375,7 +375,7 @@ struct OverviewViewModelTests {
         
         viewModel.filterMode = .monthly
         viewModel.selectedDate = jan15
-        viewModel.configure(allExpenses: [janExpense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [janExpense], budgets: [], customCategories: [], modelContext: nil)
         #expect(viewModel.filteredExpenses.count == 1)
         
         viewModel.selectedDate = mar15
@@ -393,7 +393,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 500, category: "Food & Dining", date: Date())
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.categorySpending.count == 1)
         #expect(viewModel.categorySpending.first?.percentage == 100)
@@ -409,7 +409,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 200, category: "Food & Dining", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.categorySpending.count == 1)
         #expect(viewModel.categorySpending.first?.percentage == 100)
@@ -425,7 +425,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 100, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         
         #expect(viewModel.categorySpending.count == 2)
         for spending in viewModel.categorySpending {
@@ -442,7 +442,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date(), notes: "paid with credit card")
         let expense2 = Expense(amount: 200, category: "Transport", date: Date(), notes: "monthly bus pass")
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "credit"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -458,7 +458,7 @@ struct OverviewViewModelTests {
         let expense1 = Expense(amount: 150, category: "Food & Dining", date: Date(), groupName: "Weekend Trip")
         let expense2 = Expense(amount: 300, category: "Transport", date: Date(), groupName: "Office Expenses")
         
-        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "Weekend"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -473,7 +473,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food & Dining", date: Date(), groupName: "Family Dinner")
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "family dinner"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -487,7 +487,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food & Dining", date: Date(), notes: "Reimbursable expense")
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "REIMBURSABLE"
         
         #expect(viewModel.filteredExpenses.count == 1)
@@ -501,7 +501,7 @@ struct OverviewViewModelTests {
         
         let expense = Expense(amount: 100, category: "Transport", date: Date())
         
-        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
         viewModel.searchText = "some random text"
         
         #expect(viewModel.filteredExpenses.isEmpty)

@@ -4,6 +4,7 @@ import SwiftData
 struct AddExpenseView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
     @StateObject private var viewModel: AddExpenseViewModel
     
@@ -88,9 +89,13 @@ struct AddExpenseView: View {
                 
                 Button(action: { HapticManager.impact(.light); viewModel.showCategoryPicker = true }) {
                     HStack {
-                        if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
-                            Image(systemName: category.icon)
-                                .foregroundColor(category.color)
+                        if let custom = customCategories.first(where: { $0.name == viewModel.selectedCategory && !$0.isHidden }) {
+                            Image(systemName: custom.icon)
+                                .foregroundColor(Color(hex: custom.color))
+                            Text(viewModel.selectedCategory)
+                        } else if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
+                            Image(systemName: predefined.icon)
+                                .foregroundColor(predefined.color)
                             Text(viewModel.selectedCategory)
                         } else {
                             Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)
@@ -220,8 +225,12 @@ struct CategoryPickerView: View {
     @Binding var selectedCategory: String
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
+    private var visiblePredefined: [CustomCategory] {
+        customCategories.filter { $0.isPredefined && !$0.isHidden }
+    }
+    
     private var visibleCustom: [CustomCategory] {
-        customCategories.filter { !$0.isHidden }
+        customCategories.filter { !$0.isPredefined && !$0.isHidden }
     }
     
     var body: some View {
@@ -230,48 +239,22 @@ struct CategoryPickerView: View {
                 if !visibleCustom.isEmpty {
                     Section("Your Categories") {
                         ForEach(visibleCustom) { category in
-                            Button {
+                            CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
                                 HapticManager.selection()
                                 selectedCategory = category.name
                                 dismiss()
-                            } label: {
-                                HStack {
-                                    Image(systemName: category.icon)
-                                        .foregroundColor(Color(hex: category.color))
-                                        .frame(width: 30)
-                                    Text(category.name)
-                                    Spacer()
-                                    if selectedCategory == category.name {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.teal)
-                                    }
-                                }
                             }
-                            .foregroundColor(.primary)
                         }
                     }
                 }
                 
                 Section("Default Categories") {
-                    ForEach(PredefinedCategory.allCases) { category in
-                        Button {
+                    ForEach(visiblePredefined) { category in
+                        CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
                             HapticManager.selection()
-                            selectedCategory = category.rawValue
+                            selectedCategory = category.name
                             dismiss()
-                        } label: {
-                            HStack {
-                                Image(systemName: category.icon)
-                                    .foregroundColor(category.color)
-                                    .frame(width: 30)
-                                Text(category.rawValue)
-                                Spacer()
-                                if selectedCategory == category.rawValue {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.teal)
-                                }
-                            }
                         }
-                        .foregroundColor(.primary)
                     }
                 }
             }
@@ -283,6 +266,29 @@ struct CategoryPickerView: View {
                 }
             }
         }
+    }
+}
+
+struct CategoryPickerRow: View {
+    let category: CustomCategory
+    let selectedCategory: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: category.icon)
+                    .foregroundColor(Color(hex: category.color))
+                    .frame(width: 30)
+                Text(category.name)
+                Spacer()
+                if selectedCategory == category.name {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.teal)
+                }
+            }
+        }
+        .foregroundColor(.primary)
     }
 }
 

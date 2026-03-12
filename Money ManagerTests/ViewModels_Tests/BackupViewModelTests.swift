@@ -149,7 +149,9 @@ struct ExportDataStructTests {
             name: "Groceries",
             icon: "cart.fill",
             color: "#FF0000",
-            isHidden: false
+            isHidden: false,
+            isPredefined: nil,
+            predefinedKey: nil
         )
         
         #expect(categoryData.name == "Groceries")

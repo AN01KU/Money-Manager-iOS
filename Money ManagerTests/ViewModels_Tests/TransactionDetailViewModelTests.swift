@@ -31,19 +31,19 @@ struct TransactionDetailViewModelTests {
     }
     
     @Test
-    func testCategoryReturnsCorrectPredefinedCategory() {
+    func testCategoryIconReturnsCorrectIconForPredefined() {
         let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
         
-        #expect(viewModel.category == .foodDining)
+        #expect(viewModel.categoryIcon == "fork.knife.circle.fill")
     }
     
     @Test
-    func testCategoryReturnsNilForNonMatching() {
+    func testCategoryIconReturnsFallbackForUnknown() {
         let expense = Expense(amount: 100, category: "Unknown Category", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
         
-        #expect(viewModel.category == nil)
+        #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
     }
     
     @Test

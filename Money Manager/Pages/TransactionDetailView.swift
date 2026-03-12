@@ -4,6 +4,7 @@ import SwiftData
 struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let expense: Expense
     @StateObject private var viewModel: TransactionDetailViewModel
     
@@ -62,12 +63,12 @@ struct TransactionDetailView: View {
                     VStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill((viewModel.category?.color ?? Color.gray).opacity(0.2))
+                                .fill(viewModel.categoryColor.opacity(0.2))
                                 .frame(width: 80, height: 80)
                             
-                            Image(systemName: viewModel.category?.icon ?? "ellipsis.circle.fill")
+                            Image(systemName: viewModel.categoryIcon)
                                 .font(.system(size: 40))
-                                .foregroundColor(viewModel.category?.color ?? Color.gray)
+                                .foregroundColor(viewModel.categoryColor)
                         }
                         
                         Text(expense.category)
@@ -171,6 +172,10 @@ struct TransactionDetailView: View {
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext)
+                viewModel.customCategories = customCategories
+            }
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.customCategories = newValue
             }
         }
     }
