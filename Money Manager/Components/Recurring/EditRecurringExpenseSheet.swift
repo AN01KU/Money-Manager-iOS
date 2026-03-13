@@ -19,6 +19,8 @@ struct EditRecurringExpenseSheet: View {
     @State private var showCategoryPicker = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var categoryTapped = false
+    @State private var saveSuccess = false
 
     private let frequencies = ["daily", "weekly", "monthly", "yearly"]
 
@@ -61,7 +63,7 @@ struct EditRecurringExpenseSheet: View {
                             .foregroundStyle(.secondary)
 
                         Button(action: {
-                            HapticManager.impact(.light)
+                            categoryTapped = true
                             showCategoryPicker = true
                         }) {
                             HStack {
@@ -78,6 +80,10 @@ struct EditRecurringExpenseSheet: View {
                             .padding()
                             .background(Color(.systemGray6))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
+                        .onChange(of: categoryTapped) { _, newValue in
+                            if newValue { categoryTapped = false }
                         }
                     }
                     .padding(.vertical, 8)
@@ -197,7 +203,7 @@ struct EditRecurringExpenseSheet: View {
 
         do {
             try modelContext.save()
-            HapticManager.notification(.success)
+            saveSuccess = true
             dismiss()
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"

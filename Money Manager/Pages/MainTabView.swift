@@ -1,21 +1,31 @@
 import SwiftUI
 
+enum TabItem: String, CaseIterable {
+    case overview
+    case settings
+}
+
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab: TabItem = .overview
+    @State private var tabChanged = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Overview", systemImage: "house.fill", value: 0) {
+            Tab("Overview", systemImage: "house.fill", value: .overview) {
                 Overview()
             }
             
-            Tab("Settings", systemImage: "gearshape.fill", value: 1) {
+            Tab("Settings", systemImage: "gearshape.fill", value: .settings) {
                 SettingsView()
             }
         }
         .tint(.teal)
+        .sensoryFeedback(.selection, trigger: tabChanged)
         .onChange(of: selectedTab) { _, _ in
-            HapticManager.selection()
+            tabChanged = true
+        }
+        .onChange(of: tabChanged) { _, newValue in
+            if newValue { tabChanged = false }
         }
     }
 }

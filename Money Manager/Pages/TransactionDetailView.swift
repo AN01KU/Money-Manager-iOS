@@ -7,6 +7,9 @@ struct TransactionDetailView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let expense: Expense
     @State private var viewModel: TransactionDetailViewModel
+    @State private var editTapped = false
+    @State private var deleteTapped = false
+    @State private var deleteSuccess = false
     
     init(expense: Expense) {
         self.expense = expense
@@ -121,7 +124,7 @@ struct TransactionDetailView: View {
                     
                     HStack(spacing: 16) {
                         Button(action: {
-                            HapticManager.impact(.light)
+                            editTapped = true
                             viewModel.showEditSheet = true
                         }) {
                             Text("Edit")
@@ -132,9 +135,13 @@ struct TransactionDetailView: View {
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
+                        .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
+                        .onChange(of: editTapped) { _, newValue in
+                            if newValue { editTapped = false }
+                        }
                         
                         Button(action: {
-                            HapticManager.notification(.warning)
+                            deleteTapped = true
                             viewModel.showDeleteAlert = true
                         }) {
                             Text("Delete")
@@ -144,6 +151,10 @@ struct TransactionDetailView: View {
                                 .background(AppColors.expense)
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .sensoryFeedback(.warning, trigger: deleteTapped)
+                        .onChange(of: deleteTapped) { _, newValue in
+                            if newValue { deleteTapped = false }
                         }
                     }
                     .padding(.horizontal)
@@ -165,7 +176,7 @@ struct TransactionDetailView: View {
             .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    viewModel.deleteExpense { HapticManager.notification(.success); dismiss() }
+                    viewModel.deleteExpense { deleteSuccess = true; dismiss() }
                 }
             } message: {
                 Text("This action cannot be undone.")

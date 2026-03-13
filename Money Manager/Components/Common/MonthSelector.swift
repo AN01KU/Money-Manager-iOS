@@ -10,10 +10,11 @@ import SwiftUI
 struct MonthSelector: View {
     @Binding var selectedMonth: Date
     @State private var showDatePicker = false
+    @State private var buttonTapped = false
     
     var body: some View {
         Button(action: {
-            HapticManager.impact(.light)
+            buttonTapped = true
             showDatePicker = true
         }) {
             HStack {
@@ -28,6 +29,10 @@ struct MonthSelector: View {
             .padding(.vertical, 12)
             .background(Color(.systemGray6))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: buttonTapped)
+        .onChange(of: buttonTapped) { _, newValue in
+            if newValue { buttonTapped = false }
         }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
