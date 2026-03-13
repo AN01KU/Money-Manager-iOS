@@ -1,11 +1,10 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class BudgetsViewModel: ObservableObject {
-    @Published var selectedMonth: Date = Date()
-    @Published var showBudgetSheet = false
+@Observable class BudgetsViewModel {
+    var selectedMonth: Date = Date()
+    var showBudgetSheet = false
     
     var allExpenses: [Expense] = []
     var budgets: [MonthlyBudget] = []

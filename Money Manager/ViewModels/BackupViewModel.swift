@@ -2,7 +2,6 @@ import Foundation
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
-import Combine
 
 enum ExportFormat: String, CaseIterable, Identifiable {
     case csv = "CSV"
@@ -115,19 +114,19 @@ struct ExportData: Codable {
 }
 
 @MainActor
-class BackupViewModel: ObservableObject {
-    @Published var isExporting = false
-    @Published var isImporting = false
-    @Published var showShareSheet = false
-    @Published var exportedFileURL: URL?
-    @Published var errorMessage: String?
-    @Published var showError = false
-    @Published var successMessage: String?
-    @Published var showSuccess = false
+@Observable class BackupViewModel {
+    var isExporting = false
+    var isImporting = false
+    var showShareSheet = false
+    var exportedFileURL: URL?
+    var errorMessage: String?
+    var showError = false
+    var successMessage: String?
+    var showSuccess = false
     
-    @Published var selectedExportFormat: ExportFormat = .csv
-    @Published var selectedDataType: ExportDataType = .all
-    @Published var selectedImportFormat: ExportFormat = .json
+    var selectedExportFormat: ExportFormat = .csv
+    var selectedDataType: ExportDataType = .all
+    var selectedImportFormat: ExportFormat = .json
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()

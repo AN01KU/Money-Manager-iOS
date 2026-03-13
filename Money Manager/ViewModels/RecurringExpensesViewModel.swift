@@ -1,12 +1,11 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class RecurringExpensesViewModel: ObservableObject {
-    @Published var expenses: [RecurringExpense] = []
-    @Published var showAddSheet = false
-    @Published var editingExpense: RecurringExpense?
+@Observable class RecurringExpensesViewModel {
+    var expenses: [RecurringExpense] = []
+    var showAddSheet = false
+    var editingExpense: RecurringExpense?
     
     var activeExpenses: [RecurringExpense] {
         expenses.filter { $0.isActive }
@@ -45,19 +44,19 @@ class RecurringExpensesViewModel: ObservableObject {
 }
 
 @MainActor
-class AddRecurringExpenseViewModel: ObservableObject {
-    @Published var name: String = ""
-    @Published var amount: String = ""
-    @Published var selectedCategory: String = ""
-    @Published var frequency: String = "monthly"
-    @Published var startDate: Date = Date()
-    @Published var hasEndDate: Bool = false
-    @Published var endDate: Date = Date()
-    @Published var dayOfMonth: Int = 1
-    @Published var notes: String = ""
-    @Published var showCategoryPicker = false
-    @Published var showError = false
-    @Published var errorMessage = ""
+@Observable class AddRecurringExpenseViewModel {
+    var name: String = ""
+    var amount: String = ""
+    var selectedCategory: String = ""
+    var frequency: String = "monthly"
+    var startDate: Date = Date()
+    var hasEndDate: Bool = false
+    var endDate: Date = Date()
+    var dayOfMonth: Int = 1
+    var notes: String = ""
+    var showCategoryPicker = false
+    var showError = false
+    var errorMessage = ""
     
     let frequencies = ["daily", "weekly", "monthly", "yearly"]
     

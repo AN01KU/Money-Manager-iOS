@@ -6,14 +6,14 @@ struct AddExpenseView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
-    @StateObject private var viewModel: AddExpenseViewModel
+    @State private var viewModel: AddExpenseViewModel
     
     init(mode: AddExpenseMode = .personal()) {
-        _viewModel = StateObject(wrappedValue: AddExpenseViewModel(mode: mode))
+        _viewModel = State(wrappedValue: AddExpenseViewModel(mode: mode))
     }
     
     init(expenseToEdit: Expense) {
-        _viewModel = StateObject(wrappedValue: AddExpenseViewModel(mode: .personal(editing: expenseToEdit)))
+        _viewModel = State(wrappedValue: AddExpenseViewModel(mode: .personal(editing: expenseToEdit)))
     }
     
     var body: some View {

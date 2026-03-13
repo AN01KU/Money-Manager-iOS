@@ -1,11 +1,10 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class TransactionDetailViewModel: ObservableObject {
-    @Published var showEditSheet = false
-    @Published var showDeleteAlert = false
+@Observable class TransactionDetailViewModel {
+    var showEditSheet = false
+    var showDeleteAlert = false
     
     let expense: Expense
     private var modelContext: ModelContext?

@@ -1,22 +1,21 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class OverviewViewModel: ObservableObject {
-    @Published var selectedView: ViewType = .daily
-    @Published var selectedDate: Date = Date() { didSet { recalculate() } }
-    @Published var filterMode: FilterMode = .monthly { didSet { recalculate() } }
-    @Published var showAddExpense = false
-    @Published var showBudgetSheet = false
-    @Published var searchText = "" { didSet { recalculate() } }
+@Observable class OverviewViewModel {
+    var selectedView: ViewType = .daily
+    var selectedDate: Date = Date() { didSet { recalculate() } }
+    var filterMode: FilterMode = .monthly { didSet { recalculate() } }
+    var showAddExpense = false
+    var showBudgetSheet = false
+    var searchText = "" { didSet { recalculate() } }
     
-    @Published var filteredExpenses: [Expense] = []
-    @Published var currentBudget: MonthlyBudget?
-    @Published var dailyBudgetLimit: Double = 0
-    @Published var totalSpent: Double = 0
-    @Published var categorySpending: [CategorySpending] = []
-    @Published var expenseToDelete: Expense?
+    var filteredExpenses: [Expense] = []
+    var currentBudget: MonthlyBudget?
+    var dailyBudgetLimit: Double = 0
+    var totalSpent: Double = 0
+    var categorySpending: [CategorySpending] = []
+    var expenseToDelete: Expense?
     
     private var allExpenses: [Expense] = []
     private var budgets: [MonthlyBudget] = []

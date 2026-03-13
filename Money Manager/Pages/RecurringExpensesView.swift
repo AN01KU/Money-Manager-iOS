@@ -6,7 +6,7 @@ struct RecurringExpensesView: View {
     @Query(sort: \RecurringExpense.name)
     private var recurringExpenses: [RecurringExpense]
     
-    @StateObject private var viewModel = RecurringExpensesViewModel()
+    @State private var viewModel = RecurringExpensesViewModel()
     
     var body: some View {
         Group {
@@ -188,7 +188,7 @@ struct AddRecurringExpenseSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    @StateObject private var viewModel = AddRecurringExpenseViewModel()
+    @State private var viewModel = AddRecurringExpenseViewModel()
     
     var body: some View {
         NavigationStack {
