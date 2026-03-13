@@ -59,7 +59,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             TabView(selection: $currentPage) {
                 ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
-                    pageView(page)
+                    OnboardingPageView(page: page)
                         .tag(index)
                 }
             }
@@ -69,34 +69,6 @@ struct OnboardingView: View {
             bottomSection
         }
         .background(Color(.systemBackground))
-    }
-    
-    // MARK: - Page Content
-    
-    private func pageView(_ page: OnboardingPage) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            Image(systemName: page.icon)
-                .font(.system(size: 80))
-                .foregroundStyle(page.color)
-                .accessibilityHidden(true)
-            
-            Text(page.title)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-            
-            Text(page.description)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            
-            Spacer()
-            Spacer()
-        }
-        .accessibilityElement(children: .combine)
     }
     
     // MARK: - Bottom Section
