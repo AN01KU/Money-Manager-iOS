@@ -50,7 +50,7 @@ struct TransactionModelTests {
     
     @Test
     func testTransactionWithDifferentCategories() {
-        let categories: [Money_Manager.Category] = [.food, .transport, .utilities, .shopping, .housing, .healthMedical, .entertainment, .travel]
+        let categories: [PredefinedCategory] = [.foodDining, .transport, .utilities, .shopping, .housing, .healthMedical, .entertainment, .travel]
         
         for category in categories {
             let transaction = Transaction(category: category, description: "Test", amount: 100, date: Date())
