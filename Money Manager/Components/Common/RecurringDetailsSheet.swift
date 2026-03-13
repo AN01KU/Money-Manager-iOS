@@ -32,7 +32,7 @@ struct RecurringDetailsSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Frequency")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         Picker("Frequency", selection: $frequency) {
                             ForEach(frequencies, id: \.self) { freq in
@@ -68,7 +68,7 @@ struct RecurringDetailsSheet: View {
             .navigationTitle("Recurring Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }

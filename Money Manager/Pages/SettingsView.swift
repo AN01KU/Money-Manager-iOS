@@ -49,7 +49,7 @@ struct SettingsView: View {
                     Label("Currency", systemImage: "coloncurrencysign.circle")
                     Spacer()
                     Text("\(selectedCurrency) (\(CurrencyFormatter.currentSymbol))")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -69,7 +69,7 @@ struct SettingsView: View {
                 Text("Version")
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }

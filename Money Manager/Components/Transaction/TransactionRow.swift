@@ -39,7 +39,7 @@ struct TransactionRow: View {
                 
                 Image(systemName: resolvedIcon)
                     .font(.title3)
-                    .foregroundColor(resolvedColor)
+                    .foregroundStyle(resolvedColor)
             }
             .accessibilityHidden(true)
             
@@ -47,11 +47,11 @@ struct TransactionRow: View {
                 Text(expense.category)
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text(expense.expenseDescription ?? "No description")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 if let groupName = expense.groupName {
                     HStack(spacing: 4) {
@@ -61,7 +61,7 @@ struct TransactionRow: View {
                             .font(.caption2)
                             .fontWeight(.medium)
                     }
-                    .foregroundColor(.teal)
+                    .foregroundStyle(AppColors.accent)
                 }
             }
             
@@ -71,12 +71,12 @@ struct TransactionRow: View {
                 Text(CurrencyFormatter.format(expense.amount))
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                 
                 if let time = expense.time {
                     Text(formatTime(time))
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }

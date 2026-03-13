@@ -25,10 +25,10 @@ struct BudgetOverviewCard: View {
                     .fontWeight(.bold)
                 Text("/ \(CurrencyFormatter.format(budget.limit))")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 Text("Budget")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             HStack(spacing: 12) {
@@ -37,7 +37,7 @@ struct BudgetOverviewCard: View {
                 Text("\(percentage)%")
                     .font(.body)
                     .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding()

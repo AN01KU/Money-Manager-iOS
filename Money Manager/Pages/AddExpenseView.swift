@@ -26,10 +26,10 @@ struct AddExpenseView: View {
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.isSaving {
                         ProgressView()
                     } else {
@@ -67,7 +67,7 @@ struct AddExpenseView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Amount *")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 TextField("0.00", text: $viewModel.amount)
                     .keyboardType(.decimalPad)
@@ -85,25 +85,25 @@ struct AddExpenseView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Category *")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 Button(action: { HapticManager.impact(.light); viewModel.showCategoryPicker = true }) {
                     HStack {
                         if let custom = customCategories.first(where: { $0.name == viewModel.selectedCategory && !$0.isHidden }) {
                             Image(systemName: custom.icon)
-                                .foregroundColor(Color(hex: custom.color))
+                                .foregroundStyle(Color(hex: custom.color))
                             Text(viewModel.selectedCategory)
                         } else if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
                             Image(systemName: predefined.icon)
-                                .foregroundColor(predefined.color)
+                                .foregroundStyle(predefined.color)
                             Text(viewModel.selectedCategory)
                         } else {
                             Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)
-                                .foregroundColor(viewModel.selectedCategory.isEmpty ? .secondary : .primary)
+                                .foregroundStyle(viewModel.selectedCategory.isEmpty ? .secondary : .primary)
                         }
                         Spacer()
                         Image(systemName: "chevron.down")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding()
                     .background(Color(.systemGray6))
@@ -119,14 +119,14 @@ struct AddExpenseView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Date *")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 Button(action: { HapticManager.impact(.light); viewModel.showDatePicker = true }) {
                     HStack {
                         Text(viewModel.formatDate(viewModel.selectedDate))
                         Spacer()
                         Image(systemName: "chevron.down")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding()
                     .background(Color(.systemGray6))
@@ -152,7 +152,7 @@ struct AddExpenseView: View {
                             Text(viewModel.formatTime(viewModel.selectedTime))
                             Spacer()
                             Image(systemName: "chevron.down")
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding()
                         .background(Color(.systemGray6))
@@ -192,8 +192,8 @@ struct QuickAmountButton: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color.teal.opacity(0.1))
-                .foregroundColor(.teal)
+                .background(AppColors.accentLight)
+                .foregroundStyle(AppColors.accent)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.borderless)
@@ -212,8 +212,8 @@ struct QuickDateButton: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color.teal.opacity(0.1))
-                .foregroundColor(.teal)
+                .background(AppColors.accentLight)
+                .foregroundStyle(AppColors.accent)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.borderless)
@@ -261,7 +261,7 @@ struct CategoryPickerView: View {
             .navigationTitle("Select Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
@@ -278,17 +278,17 @@ struct CategoryPickerRow: View {
         Button(action: action) {
             HStack {
                 Image(systemName: category.icon)
-                    .foregroundColor(Color(hex: category.color))
+                    .foregroundStyle(Color(hex: category.color))
                     .frame(width: 30)
                 Text(category.name)
                 Spacer()
                 if selectedCategory == category.name {
                     Image(systemName: "checkmark")
-                        .foregroundColor(.teal)
+                        .foregroundStyle(AppColors.accent)
                 }
             }
         }
-        .foregroundColor(.primary)
+        .foregroundStyle(.primary)
     }
 }
 
@@ -307,7 +307,7 @@ struct DatePickerSheet: View {
             .navigationTitle("Select Date")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
@@ -330,7 +330,7 @@ struct TimePickerSheet: View {
             .navigationTitle("Select Time")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }

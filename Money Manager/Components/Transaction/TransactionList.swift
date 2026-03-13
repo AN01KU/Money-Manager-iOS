@@ -51,7 +51,7 @@ struct TransactionList: View {
                     Text(section.0)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.leading, 4)
                     
                     ForEach(section.1) { expense in
@@ -104,11 +104,11 @@ private struct SwipeToDeleteRow<Content: View>: View {
             } label: {
                 Image(systemName: "trash.fill")
                     .font(.title3)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .frame(width: buttonWidth)
                     .frame(maxHeight: .infinity)
             }
-            .background(Color.red)
+            .background(AppColors.expense)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .opacity(offset < 0 ? 1 : 0)
             

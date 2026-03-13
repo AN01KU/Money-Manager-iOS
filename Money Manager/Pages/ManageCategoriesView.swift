@@ -82,12 +82,12 @@ struct ManageCategoriesView: View {
                     ForEach(hiddenCategories) { category in
                         HStack(spacing: 12) {
                             Image(systemName: category.icon)
-                                .foregroundColor(Color(hex: category.color).opacity(0.5))
+                                .foregroundStyle(Color(hex: category.color).opacity(0.5))
                                 .frame(width: 28)
                             
                             Text(category.name)
                                 .font(.body)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             
                             Spacer()
                             
@@ -96,7 +96,7 @@ struct ManageCategoriesView: View {
                                 viewModel.restoreCategory(category)
                             }
                             .font(.caption)
-                            .foregroundColor(.teal)
+                            .foregroundStyle(AppColors.accent)
                         }
                     }
                 }
@@ -104,13 +104,13 @@ struct ManageCategoriesView: View {
         }
         .navigationTitle("Categories")
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     HapticManager.impact(.medium)
                     viewModel.showAddCategory = true
                 } label: {
                     Image(systemName: "plus")
-                        .foregroundColor(.teal)
+                        .foregroundStyle(AppColors.accent)
                 }
             }
         }
@@ -144,7 +144,7 @@ struct CategoryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: category.icon)
-                .foregroundColor(Color(hex: category.color))
+                .foregroundStyle(Color(hex: category.color))
                 .frame(width: 28)
             
             Text(category.name)
@@ -155,7 +155,7 @@ struct CategoryRow: View {
             if category.isPredefined {
                 Text("Default")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Color(.systemGray5))
@@ -164,7 +164,7 @@ struct CategoryRow: View {
             
             Image(systemName: "chevron.right")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
 }
@@ -185,7 +185,7 @@ struct AddCategorySheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Name")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         TextField("e.g., Subscriptions, Pets", text: $viewModel.name)
                             .textInputAutocapitalization(.words)
@@ -208,10 +208,10 @@ struct AddCategorySheet: View {
             .navigationTitle("New Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     saveButton
                 }
             }
@@ -250,7 +250,7 @@ struct AddCategorySheet: View {
                 } label: {
                     Image(systemName: icon)
                         .font(.title2)
-                        .foregroundColor(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
+                        .foregroundStyle(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
                         .frame(width: 44, height: 44)
                         .background(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor).opacity(0.12) : Color.clear)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -266,11 +266,11 @@ struct AddCategorySheet: View {
         if let conflict = viewModel.colorConflictCategory {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(AppColors.warning)
                     .font(.caption)
                 Text("Also used by \"\(conflict)\"")
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundStyle(AppColors.warning)
             }
         }
         
@@ -300,12 +300,12 @@ struct AddCategorySheet: View {
         HStack(spacing: 12) {
             Image(systemName: viewModel.selectedIcon)
                 .font(.title2)
-                .foregroundColor(Color(hex: viewModel.selectedColor))
+                .foregroundStyle(Color(hex: viewModel.selectedColor))
                 .frame(width: 36)
             
             Text(viewModel.name.isEmpty ? "Category Name" : viewModel.name)
                 .font(.body)
-                .foregroundColor(viewModel.name.isEmpty ? .secondary : .primary)
+                .foregroundStyle(viewModel.name.isEmpty ? .secondary : .primary)
         }
         .padding(.vertical, 4)
     }
@@ -348,7 +348,7 @@ struct EditCategorySheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Name")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         TextField("Category name", text: $viewModel.name)
                             .textInputAutocapitalization(.words)
@@ -371,10 +371,10 @@ struct EditCategorySheet: View {
             .navigationTitle("Edit Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     saveButton
                 }
             }
@@ -411,7 +411,7 @@ struct EditCategorySheet: View {
                 } label: {
                     Image(systemName: icon)
                         .font(.title2)
-                        .foregroundColor(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
+                        .foregroundStyle(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
                         .frame(width: 44, height: 44)
                         .background(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor).opacity(0.12) : Color.clear)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -427,11 +427,11 @@ struct EditCategorySheet: View {
         if let conflict = viewModel.colorConflictCategory {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(AppColors.warning)
                     .font(.caption)
                 Text("Also used by \"\(conflict)\"")
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundStyle(AppColors.warning)
             }
         }
         
@@ -461,12 +461,12 @@ struct EditCategorySheet: View {
         HStack(spacing: 12) {
             Image(systemName: viewModel.selectedIcon)
                 .font(.title2)
-                .foregroundColor(Color(hex: viewModel.selectedColor))
+                .foregroundStyle(Color(hex: viewModel.selectedColor))
                 .frame(width: 36)
             
             Text(viewModel.name.isEmpty ? "Category Name" : viewModel.name)
                 .font(.body)
-                .foregroundColor(viewModel.name.isEmpty ? .secondary : .primary)
+                .foregroundStyle(viewModel.name.isEmpty ? .secondary : .primary)
         }
         .padding(.vertical, 4)
     }

@@ -15,13 +15,13 @@ struct SpendingSummaryCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("This Month")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Total Spent")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(CurrencyFormatter.format(totalSpent))
                         .font(.title2)
                         .fontWeight(.bold)
@@ -32,7 +32,7 @@ struct SpendingSummaryCard: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Transactions")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("\(transactionCount)")
                         .font(.title2)
                         .fontWeight(.bold)

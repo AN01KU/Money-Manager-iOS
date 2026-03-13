@@ -19,10 +19,10 @@ struct MonthSelector: View {
             HStack {
                 Text(formatMonth(selectedMonth))
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 Image(systemName: "chevron.down")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -43,7 +43,7 @@ struct MonthSelector: View {
                 .navigationTitle("Select Month")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") {
                             showDatePicker = false
                         }

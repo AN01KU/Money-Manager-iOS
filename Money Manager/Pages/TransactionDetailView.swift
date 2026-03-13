@@ -19,21 +19,21 @@ struct TransactionDetailView: View {
                 Text(expense.groupName ?? "Unknown Group")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text("Group expense")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding()
-        .background(Color.teal.opacity(0.1))
+        .background(AppColors.accentLight)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
     
@@ -45,11 +45,11 @@ struct TransactionDetailView: View {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "person.2.fill")
-                                    .foregroundColor(.teal)
+                                    .foregroundStyle(AppColors.accent)
                                 Text("Group Expense")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.teal)
+                                    .foregroundStyle(AppColors.accent)
                                 Spacer()
                             }
                             
@@ -68,7 +68,7 @@ struct TransactionDetailView: View {
                             
                             Image(systemName: viewModel.categoryIcon)
                                 .font(.system(size: 40))
-                                .foregroundColor(viewModel.categoryColor)
+                                .foregroundStyle(viewModel.categoryColor)
                         }
                         
                         Text(expense.category)
@@ -77,11 +77,11 @@ struct TransactionDetailView: View {
                         
                         Text(CurrencyFormatter.format(expense.amount))
                             .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(.red)
+                            .foregroundStyle(AppColors.expense)
                         
                         Text(viewModel.formatDateAndTime(expense.date, time: expense.time))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.top)
                     
@@ -105,13 +105,13 @@ struct TransactionDetailView: View {
                         if expense.recurringExpenseId != nil {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                    .foregroundColor(.teal)
+                                    .foregroundStyle(AppColors.accent)
                                 Text("This is a recurring expense")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding()
-                            .background(Color.teal.opacity(0.1))
+                            .background(AppColors.accentLight)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
@@ -128,8 +128,8 @@ struct TransactionDetailView: View {
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.teal)
-                                .foregroundColor(.white)
+                                .background(AppColors.accent)
+                                .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         
@@ -141,8 +141,8 @@ struct TransactionDetailView: View {
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.red)
-                                .foregroundColor(.white)
+                                .background(AppColors.expense)
+                                .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
@@ -153,7 +153,7 @@ struct TransactionDetailView: View {
             .navigationTitle("Transaction Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -189,10 +189,10 @@ struct DetailRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(value)
                 .font(.body)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
     }
 }
