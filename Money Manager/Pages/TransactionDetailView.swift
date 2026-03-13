@@ -16,30 +16,6 @@ struct TransactionDetailView: View {
         _viewModel = State(wrappedValue: TransactionDetailViewModel(expense: expense))
     }
     
-    private var groupExpenseContent: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(expense.groupName ?? "Unknown Group")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                
-                Text("Group expense")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(AppColors.accentLight)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -56,7 +32,7 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            groupExpenseContent
+                            GroupExpenseContent(groupName: expense.groupName)
                         }
                         .padding()
                         .background(Color(.systemGray6))
