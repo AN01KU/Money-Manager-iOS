@@ -1,25 +1,26 @@
 <!-- Money Manager iOS App -->
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/AN01KU/Money-Manager-iOS/feat/mvp/Money%20Manager/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" width="150" alt="Money Manager App Icon">
-  
-  # Money Manager
+<p align="center">
+  <img src="Money Manager/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" width="120" alt="Money Manager" style="border-radius: 22%;">
+</p>
 
-  [![CI][ci-badge]][ci-url] · [![Coverage][coverage-badge]][coverage-url]
+<h1 align="center">Money Manager</h1>
 
-  ![iOS][ios-badge] · ![Swift][swift-badge] · ![Xcode][xcode-badge]
-  
-  [ci-badge]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg
-  [ci-url]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml
-  [coverage-badge]: https://codecov.io/gh/an01ku/money-manager-ios/branch/feat%2Fmvp/graph/badge.svg
-  [coverage-url]: https://codecov.io/gh/an01ku/money-manager-ios
-  [ios-badge]: https://img.shields.io/badge/iOS-17%2B-blue
-  [swift-badge]: https://img.shields.io/badge/Swift-5.9-orange
-  [xcode-badge]: https://img.shields.io/badge/Xcode-26%2B-purple
+<p align="center">
+  A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
+</p>
 
-</div>
-
-A personal finance iOS app for tracking expenses, managing budgets, and staying on top of your spending.
+<p align="center">
+  <a href="https://codecov.io/gh/an01ku/money-manager-ios">
+    <img src="https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
+    <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <img src="https://img.shields.io/badge/iOS-17.6%2B-blue" alt="iOS 17.6+">
+  <img src="https://img.shields.io/badge/Swift-6.0-orange" alt="Swift 6.0">
+  <img src="https://img.shields.io/badge/Xcode-26%2B-purple" alt="Xcode 26+">
+</p>
 
 ## Features
 
@@ -37,7 +38,7 @@ A personal finance iOS app for tracking expenses, managing budgets, and staying 
 
 ### Recurring Expenses
 - Set up recurring expenses (daily, weekly, monthly)
-- Flexible scheduling—choose specific days of the week or month
+- Flexible scheduling — choose specific days of the week or month
 - Skip weekends or specific dates
 - Auto-generates expenses so you never forget a bill
 
@@ -64,9 +65,9 @@ A personal finance iOS app for tracking expenses, managing budgets, and staying 
 
 | Requirement | Version |
 |-------------|---------|
-| iOS | 17.0+ |
+| iOS | 17.6+ |
 | Xcode | 26.0+ |
-| Swift | 5.9+ |
+| Swift | 6.0 |
 
 ## Architecture
 
@@ -77,7 +78,9 @@ Money Manager/
 ├── Pages/            # Screen-level views
 ├── Components/       # Reusable UI components
 ├── Services/         # Keychain and core services
-└── Helpers/         # Constants and utilities
+├── Helpers/          # Constants and utilities
+├── ContentView.swift
+└── Money_ManagerApp.swift
 ```
 
 ## Getting Started
@@ -116,6 +119,9 @@ make test-unit
 # Run UI tests
 make test-ui
 
+# Run a single test class
+make test-one TEST=BackupViewModelTests
+
 # View coverage report
 make coverage
 
@@ -127,15 +133,15 @@ make clean
 
 The project includes comprehensive unit and UI tests:
 
-- **Unit Tests**: Model validation, ViewModel logic, data transformations
-- **UI Tests**: User flow verification, screen rendering tests
+- **Unit Tests** — Model validation, ViewModel logic, data transformations
+- **UI Tests** — User flow verification, screen rendering tests
 
 Run tests with:
 ```bash
 make test-unit
 ```
 
-View coverage reports at: [codecov.io/gh/an01ku/money-manager-ios](https://codecov.io/gh/an01ku/money-manager-ios)
+View coverage reports at [codecov.io/gh/an01ku/money-manager-ios](https://codecov.io/gh/an01ku/money-manager-ios).
 
 ## Contributing
 
@@ -153,8 +159,4 @@ This project is for personal use. All rights reserved.
 
 ---
 
-<div align="center">
-
-Built with SwiftUI
-
-</div>
+<p align="center">Built with ❤️ and SwiftUI</p>
