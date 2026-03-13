@@ -11,7 +11,7 @@
   
   [ci-badge]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg
   [ci-url]: https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml
-  [coverage-badge]: https://codecov.io/gh/an01ku/money-manager-ios/branch/main/graph/badge.svg
+  [coverage-badge]: https://codecov.io/gh/an01ku/money-manager-ios/branch/feat%2Fmvp/graph/badge.svg
   [coverage-url]: https://codecov.io/gh/an01ku/money-manager-ios
   [ios-badge]: https://img.shields.io/badge/iOS-17%2B-blue
   [swift-badge]: https://img.shields.io/badge/Swift-5.9-orange
