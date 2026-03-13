@@ -7,6 +7,9 @@ struct RecurringExpensesView: View {
     private var recurringExpenses: [RecurringExpense]
     
     @State private var viewModel = RecurringExpensesViewModel()
+    @State private var rowTapped = false
+    @State private var deleteTriggered = false
+    @State private var addTriggered = false
     
     var body: some View {
         Group {
@@ -22,15 +25,23 @@ struct RecurringExpensesView: View {
                         Section("Active") {
                             ForEach(viewModel.activeExpenses) { expense in
                                 RecurringExpenseRow(expense: expense, onTap: {
-                                    HapticManager.impact(.light)
+                                    rowTapped = true
                                     viewModel.editingExpense = expense
                                 })
+                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .onChange(of: rowTapped) { _, newValue in
+                                    if newValue { rowTapped = false }
+                                }
                             }
                             .onDelete { indexSet in
-                                HapticManager.notification(.warning)
+                                deleteTriggered = true
                                 for index in indexSet {
                                     viewModel.deactivateExpense(at: index)
                                 }
+                            }
+                            .sensoryFeedback(.warning, trigger: deleteTriggered)
+                            .onChange(of: deleteTriggered) { _, newValue in
+                                if newValue { deleteTriggered = false }
                             }
                         }
                     }
@@ -39,15 +50,23 @@ struct RecurringExpensesView: View {
                         Section("Paused") {
                             ForEach(viewModel.pausedExpenses) { expense in
                                 RecurringExpenseRow(expense: expense, onTap: {
-                                    HapticManager.impact(.light)
+                                    rowTapped = true
                                     viewModel.editingExpense = expense
                                 })
+                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .onChange(of: rowTapped) { _, newValue in
+                                    if newValue { rowTapped = false }
+                                }
                             }
                             .onDelete { indexSet in
-                                HapticManager.notification(.warning)
+                                deleteTriggered = true
                                 for index in indexSet {
                                     viewModel.deactivateExpense(at: index + viewModel.activeExpenses.count)
                                 }
+                            }
+                            .sensoryFeedback(.warning, trigger: deleteTriggered)
+                            .onChange(of: deleteTriggered) { _, newValue in
+                                if newValue { deleteTriggered = false }
                             }
                         }
                     }
@@ -59,10 +78,14 @@ struct RecurringExpensesView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: {
-                    HapticManager.impact(.medium)
+                    addTriggered = true
                     viewModel.showAddSheet = true
                 }) {
                     Image(systemName: "plus")
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
+                .onChange(of: addTriggered) { _, newValue in
+                    if newValue { addTriggered = false }
                 }
                 .accessibilityLabel("Add recurring expense")
             }

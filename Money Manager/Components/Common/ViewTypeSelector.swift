@@ -14,12 +14,13 @@ enum ViewType: String, CaseIterable {
 
 struct ViewTypeSelector: View {
     @Binding var selectedView: ViewType
+    @State private var selectionChanged = false
     
     var body: some View {
         HStack(spacing: 12) {
             ForEach(ViewType.allCases, id: \.self) { viewType in
                 Button(action: {
-                    HapticManager.selection()
+                    selectionChanged = true
                     selectedView = viewType
                 }) {
                     Text(viewType.rawValue)
@@ -32,6 +33,10 @@ struct ViewTypeSelector: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.borderless)
+                .sensoryFeedback(.selection, trigger: selectionChanged)
+                .onChange(of: selectionChanged) { _, newValue in
+                    if newValue { selectionChanged = false }
+                }
             }
             Spacer()
         }

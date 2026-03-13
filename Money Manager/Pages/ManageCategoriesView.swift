@@ -6,6 +6,11 @@ struct ManageCategoriesView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
     @State private var viewModel = ManageCategoriesViewModel()
+    @State private var rowTapped = false
+    @State private var deleteTriggered = false
+    @State private var hideTriggered = false
+    @State private var restoreTriggered = false
+    @State private var addTriggered = false
     
     private var predefinedCategories: [CustomCategory] {
         customCategories.filter { $0.isPredefined && !$0.isHidden }
@@ -25,16 +30,24 @@ struct ManageCategoriesView: View {
                 Section {
                     ForEach(predefinedCategories) { category in
                         CategoryRow(category: category, onTap: {
-                            HapticManager.impact(.light)
+                            rowTapped = true
                             viewModel.categoryToEdit = category
                         })
+                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                        .onChange(of: rowTapped) { _, newValue in
+                            if newValue { rowTapped = false }
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if category.isDeletable {
                                 Button(role: .destructive) {
-                                    HapticManager.notification(.warning)
+                                    deleteTriggered = true
                                     viewModel.deleteCategory(category)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
+                                }
+                                .sensoryFeedback(.warning, trigger: deleteTriggered)
+                                .onChange(of: deleteTriggered) { _, newValue in
+                                    if newValue { deleteTriggered = false }
                                 }
                             }
                         }
@@ -50,24 +63,36 @@ struct ManageCategoriesView: View {
                 Section("Your Categories") {
                     ForEach(userCategories) { category in
                         CategoryRow(category: category, onTap: {
-                            HapticManager.impact(.light)
+                            rowTapped = true
                             viewModel.categoryToEdit = category
                         })
+                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                        .onChange(of: rowTapped) { _, newValue in
+                            if newValue { rowTapped = false }
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
-                                HapticManager.notification(.warning)
+                                deleteTriggered = true
                                 viewModel.deleteCategory(category)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .sensoryFeedback(.warning, trigger: deleteTriggered)
+                            .onChange(of: deleteTriggered) { _, newValue in
+                                if newValue { deleteTriggered = false }
+                            }
                             
                             Button {
-                                HapticManager.impact(.light)
+                                hideTriggered = true
                                 viewModel.hideCategory(category)
                             } label: {
                                 Label("Hide", systemImage: "eye.slash")
                             }
                             .tint(.orange)
+                            .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
+                            .onChange(of: hideTriggered) { _, newValue in
+                                if newValue { hideTriggered = false }
+                            }
                         }
                     }
                 }
@@ -77,8 +102,12 @@ struct ManageCategoriesView: View {
                 Section("Hidden Categories") {
                     ForEach(hiddenCategories) { category in
                         HiddenCategoryRow(category: category) {
-                            HapticManager.notification(.success)
+                            restoreTriggered = true
                             viewModel.restoreCategory(category)
+                        }
+                        .sensoryFeedback(.success, trigger: restoreTriggered)
+                        .onChange(of: restoreTriggered) { _, newValue in
+                            if newValue { restoreTriggered = false }
                         }
                     }
                 }
@@ -88,11 +117,15 @@ struct ManageCategoriesView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    HapticManager.impact(.medium)
+                    addTriggered = true
                     viewModel.showAddCategory = true
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(AppColors.accent)
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
+                .onChange(of: addTriggered) { _, newValue in
+                    if newValue { addTriggered = false }
                 }
                 .accessibilityLabel("Add category")
             }

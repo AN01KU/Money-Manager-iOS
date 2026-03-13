@@ -7,6 +7,9 @@ struct AddCategorySheet: View {
     
     let allCategories: [CustomCategory]
     @State private var viewModel = AddCategoryViewModel()
+    @State private var iconTapped = false
+    @State private var colorTapped = false
+    @State private var saveSuccess = false
     
     var body: some View {
         NavigationStack {
@@ -16,14 +19,22 @@ struct AddCategorySheet: View {
                 selectedColor: $viewModel.selectedColor,
                 colorConflictCategory: viewModel.colorConflictCategory,
                 onSelectIcon: { icon in
-                    HapticManager.impact(.light)
+                    iconTapped = true
                     viewModel.selectedIcon = icon
                 },
                 onSelectColor: { color in
-                    HapticManager.impact(.light)
+                    colorTapped = true
                     viewModel.selectedColor = color
                 }
             )
+            .sensoryFeedback(.impact(weight: .light), trigger: iconTapped)
+            .onChange(of: iconTapped) { _, newValue in
+                if newValue { iconTapped = false }
+            }
+            .sensoryFeedback(.impact(weight: .light), trigger: colorTapped)
+            .onChange(of: colorTapped) { _, newValue in
+                if newValue { colorTapped = false }
+            }
             .navigationTitle("New Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -45,13 +56,17 @@ struct AddCategorySheet: View {
                     viewModel.confirmSaveDespiteColorWarning()
                     Task {
                         if await viewModel.save() {
-                            HapticManager.notification(.success)
+                            saveSuccess = true
                             dismiss()
                         }
                     }
                 }
             } message: {
                 Text(viewModel.colorWarningMessage)
+            }
+            .sensoryFeedback(.success, trigger: saveSuccess)
+            .onChange(of: saveSuccess) { _, newValue in
+                if newValue { saveSuccess = false }
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext, allCategories: allCategories)
@@ -67,7 +82,7 @@ struct AddCategorySheet: View {
             Button("Add") {
                 Task {
                     if await viewModel.save() {
-                        HapticManager.notification(.success)
+                        saveSuccess = true
                         dismiss()
                     }
                 }

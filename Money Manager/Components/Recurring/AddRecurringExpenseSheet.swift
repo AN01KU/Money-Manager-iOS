@@ -5,6 +5,11 @@ struct AddRecurringExpenseSheet: View {
     @Environment(\.modelContext) private var modelContext
     
     @State private var viewModel = AddRecurringExpenseViewModel()
+    @State private var amount100Tapped = false
+    @State private var amount500Tapped = false
+    @State private var amount1000Tapped = false
+    @State private var categoryTapped = false
+    @State private var saveSuccess = false
     
     var body: some View {
         NavigationStack {
@@ -32,13 +37,30 @@ struct AddRecurringExpenseSheet: View {
                         
                         HStack(spacing: 12) {
                             QuickAmountButton(amount: 100) {
-                                HapticManager.impact(.light); viewModel.amount = "100"
+                                amount100Tapped = true
+                                viewModel.amount = "100"
                             }
+                            .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
+                            .onChange(of: amount100Tapped) { _, newValue in
+                                if newValue { amount100Tapped = false }
+                            }
+                            
                             QuickAmountButton(amount: 500) {
-                                HapticManager.impact(.light); viewModel.amount = "500"
+                                amount500Tapped = true
+                                viewModel.amount = "500"
                             }
+                            .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
+                            .onChange(of: amount500Tapped) { _, newValue in
+                                if newValue { amount500Tapped = false }
+                            }
+                            
                             QuickAmountButton(amount: 1000) {
-                                HapticManager.impact(.light); viewModel.amount = "1000"
+                                amount1000Tapped = true
+                                viewModel.amount = "1000"
+                            }
+                            .sensoryFeedback(.impact(weight: .light), trigger: amount1000Tapped)
+                            .onChange(of: amount1000Tapped) { _, newValue in
+                                if newValue { amount1000Tapped = false }
                             }
                         }
                     }
@@ -50,7 +72,7 @@ struct AddRecurringExpenseSheet: View {
                             .foregroundStyle(.secondary)
                         
                         Button(action: {
-                            HapticManager.impact(.light)
+                            categoryTapped = true
                             viewModel.showCategoryPicker = true
                         }) {
                             HStack {
@@ -67,6 +89,10 @@ struct AddRecurringExpenseSheet: View {
                             .padding()
                             .background(Color(.systemGray6))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
+                        .onChange(of: categoryTapped) { _, newValue in
+                            if newValue { categoryTapped = false }
                         }
                     }
                     .padding(.vertical, 8)
@@ -124,7 +150,7 @@ struct AddRecurringExpenseSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         if viewModel.save() {
-                            HapticManager.notification(.success)
+                            saveSuccess = true
                             dismiss()
                         }
                     }
@@ -139,6 +165,10 @@ struct AddRecurringExpenseSheet: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage)
+            }
+            .sensoryFeedback(.success, trigger: saveSuccess)
+            .onChange(of: saveSuccess) { _, newValue in
+                if newValue { saveSuccess = false }
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext)

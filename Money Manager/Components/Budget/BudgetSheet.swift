@@ -18,6 +18,8 @@ struct BudgetSheet: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var errorTriggered = false
+    @State private var successTriggered = false
     @FocusState private var isAmountFocused: Bool
     
     var body: some View {
@@ -79,8 +81,13 @@ struct BudgetSheet: View {
                 Text(errorMessage)
             }
             .onChange(of: showError) { _, show in
-                if show { HapticManager.notification(.error) }
+                if show { errorTriggered = true }
             }
+            .sensoryFeedback(.error, trigger: errorTriggered)
+            .onChange(of: errorTriggered) { _, newValue in
+                if newValue { errorTriggered = false }
+            }
+            .sensoryFeedback(.success, trigger: successTriggered)
             .onAppear {
                 loadExistingBudget()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -143,7 +150,7 @@ struct BudgetSheet: View {
         }
         
         isSaving = false
-        HapticManager.notification(.success)
+        successTriggered = true
         dismiss()
     }
     

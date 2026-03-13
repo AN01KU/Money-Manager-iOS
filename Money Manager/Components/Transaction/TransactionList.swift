@@ -12,6 +12,8 @@ struct TransactionList: View {
     let expenses: [Expense]
     @State private var selectedExpense: Expense?
     @State private var swipedExpenseID: PersistentIdentifier?
+    @State private var rowTapped = false
+    @State private var deleteTriggered = false
     var onDelete: ((Expense) -> Void)?
     
     var groupedExpenses: [(String, [Expense])] {
@@ -63,15 +65,19 @@ struct TransactionList: View {
                                 }
                             ),
                             onTap: {
-                                HapticManager.impact(.light)
+                                rowTapped = true
                                 selectedExpense = expense
                             },
                             onDelete: {
-                                HapticManager.notification(.warning)
+                                deleteTriggered = true
                                 onDelete?(expense)
                             }
                         ) {
                             TransactionRow(expense: expense)
+                        }
+                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                        .onChange(of: rowTapped) { _, newValue in
+                            if newValue { rowTapped = false }
                         }
                     }
                 }

@@ -13,6 +13,7 @@ struct EmptyStateView: View {
     let message: String
     var actionTitle: String?
     var action: (() -> Void)?
+    @State private var buttonTapped = false
     
     init(
         icon: String = "tray",
@@ -43,7 +44,10 @@ struct EmptyStateView: View {
                 .foregroundStyle(.secondary)
             
             if let actionTitle = actionTitle, let action = action {
-                Button(action: { HapticManager.impact(.medium); action() }) {
+                Button(action: {
+                    buttonTapped = true
+                    action()
+                }) {
                     Text(actionTitle)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
@@ -51,6 +55,10 @@ struct EmptyStateView: View {
                         .padding(.vertical, 12)
                         .background(AppColors.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: buttonTapped)
+                .onChange(of: buttonTapped) { _, newValue in
+                    if newValue { buttonTapped = false }
                 }
                 .padding(.top, 8)
             }

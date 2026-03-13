@@ -7,6 +7,17 @@ struct AddExpenseView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
     @State private var viewModel: AddExpenseViewModel
+    @State private var amount100Tapped = false
+    @State private var amount500Tapped = false
+    @State private var amount1000Tapped = false
+    @State private var categoryTapped = false
+    @State private var dateTapped = false
+    @State private var timeTapped = false
+    @State private var todayTapped = false
+    @State private var saveSuccess = false
+    @State private var errorTriggered = false
+    @State private var dateSelectionToggled = false
+    @State private var timeSelectionToggled = false
     
     init(mode: AddExpenseMode = .personal()) {
         _viewModel = State(wrappedValue: AddExpenseViewModel(mode: mode))
@@ -33,7 +44,7 @@ struct AddExpenseView: View {
                     if viewModel.isSaving {
                         ProgressView()
                     } else {
-                        Button("Save") { viewModel.save { HapticManager.notification(.success); dismiss() } }
+                        Button("Save") { viewModel.save { saveSuccess = true; dismiss() } }
                             .fontWeight(.semibold)
                             .disabled(!viewModel.isValid)
                     }
@@ -54,7 +65,11 @@ struct AddExpenseView: View {
                 Text(viewModel.errorMessage)
             }
             .onChange(of: viewModel.showError) { _, show in
-                if show { HapticManager.notification(.error) }
+                if show { errorTriggered = true }
+            }
+            .sensoryFeedback(.error, trigger: errorTriggered)
+            .onChange(of: errorTriggered) { _, newValue in
+                if newValue { errorTriggered = false }
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext)
@@ -75,9 +90,21 @@ struct AddExpenseView: View {
                     .fontWeight(.semibold)
                 
                 HStack(spacing: 12) {
-                    QuickAmountButton(amount: 100) { HapticManager.impact(.light); viewModel.amount = "100" }
-                    QuickAmountButton(amount: 500) { HapticManager.impact(.light); viewModel.amount = "500" }
-                    QuickAmountButton(amount: 1000) { HapticManager.impact(.light); viewModel.amount = "1000" }
+                    QuickAmountButton(amount: 100) { amount100Tapped = true; viewModel.amount = "100" }
+                    .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
+                    .onChange(of: amount100Tapped) { _, newValue in
+                        if newValue { amount100Tapped = false }
+                    }
+                    QuickAmountButton(amount: 500) { amount500Tapped = true; viewModel.amount = "500" }
+                    .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
+                    .onChange(of: amount500Tapped) { _, newValue in
+                        if newValue { amount500Tapped = false }
+                    }
+                    QuickAmountButton(amount: 1000) { amount1000Tapped = true; viewModel.amount = "1000" }
+                    .sensoryFeedback(.impact(weight: .light), trigger: amount1000Tapped)
+                    .onChange(of: amount1000Tapped) { _, newValue in
+                        if newValue { amount1000Tapped = false }
+                    }
                 }
             }
             .padding(.vertical, 8)
@@ -87,7 +114,7 @@ struct AddExpenseView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
-                Button(action: { HapticManager.impact(.light); viewModel.showCategoryPicker = true }) {
+                Button(action: { categoryTapped = true; viewModel.showCategoryPicker = true }) {
                     HStack {
                         if let custom = customCategories.first(where: { $0.name == viewModel.selectedCategory && !$0.isHidden }) {
                             Image(systemName: custom.icon)
@@ -109,6 +136,10 @@ struct AddExpenseView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
+                .onChange(of: categoryTapped) { _, newValue in
+                    if newValue { categoryTapped = false }
+                }
             }
             .padding(.vertical, 8)
         }
@@ -121,7 +152,7 @@ struct AddExpenseView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
-                Button(action: { HapticManager.impact(.light); viewModel.showDatePicker = true }) {
+                Button(action: { dateTapped = true; viewModel.showDatePicker = true }) {
                     HStack {
                         Text(viewModel.formatDate(viewModel.selectedDate))
                         Spacer()
@@ -132,11 +163,18 @@ struct AddExpenseView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .sensoryFeedback(.impact(weight: .light), trigger: dateTapped)
+                .onChange(of: dateTapped) { _, newValue in
+                    if newValue { dateTapped = false }
+                }
                 
                 HStack(spacing: 12) {
-                    QuickDateButton(label: "Today") { HapticManager.impact(.light); viewModel.selectedDate = Date() }
+                    QuickDateButton(label: "Today") { todayTapped = true; viewModel.selectedDate = Date() }
+                    .sensoryFeedback(.impact(weight: .light), trigger: todayTapped)
+                    .onChange(of: todayTapped) { _, newValue in
+                        if newValue { todayTapped = false }
+                    }
                     QuickDateButton(label: "Yesterday") {
-                        HapticManager.impact(.light)
                         viewModel.selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                     }
                 }
@@ -147,7 +185,7 @@ struct AddExpenseView: View {
                 Toggle("Include Time", isOn: $viewModel.hasTime)
                 
                 if viewModel.hasTime {
-                    Button(action: { HapticManager.impact(.light); viewModel.showTimePicker = true }) {
+                    Button(action: { timeTapped = true; viewModel.showTimePicker = true }) {
                         HStack {
                             Text(viewModel.formatTime(viewModel.selectedTime))
                             Spacer()
@@ -157,6 +195,10 @@ struct AddExpenseView: View {
                         .padding()
                         .background(Color(.systemGray6))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .sensoryFeedback(.impact(weight: .light), trigger: timeTapped)
+                    .onChange(of: timeTapped) { _, newValue in
+                        if newValue { timeTapped = false }
                     }
                 }
             }
@@ -224,6 +266,7 @@ struct CategoryPickerView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedCategory: String
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @State private var selectionToggled = false
     
     private var visiblePredefined: [CustomCategory] {
         customCategories.filter { $0.isPredefined && !$0.isHidden }
@@ -240,9 +283,13 @@ struct CategoryPickerView: View {
                     Section("Your Categories") {
                         ForEach(visibleCustom) { category in
                             CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
-                                HapticManager.selection()
+                                selectionToggled = true
                                 selectedCategory = category.name
                                 dismiss()
+                            }
+                            .sensoryFeedback(.selection, trigger: selectionToggled)
+                            .onChange(of: selectionToggled) { _, newValue in
+                                if newValue { selectionToggled = false }
                             }
                         }
                     }
@@ -251,9 +298,13 @@ struct CategoryPickerView: View {
                 Section("Default Categories") {
                     ForEach(visiblePredefined) { category in
                         CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
-                            HapticManager.selection()
+                            selectionToggled = true
                             selectedCategory = category.name
                             dismiss()
+                        }
+                        .sensoryFeedback(.selection, trigger: selectionToggled)
+                        .onChange(of: selectionToggled) { _, newValue in
+                            if newValue { selectionToggled = false }
                         }
                     }
                 }
