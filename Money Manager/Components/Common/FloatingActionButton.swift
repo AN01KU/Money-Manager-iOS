@@ -32,7 +32,7 @@ struct FloatingActionButton: View {
 
 #Preview {
     ZStack(alignment: .bottomTrailing) {
-        Color.gray.opacity(0.1)
+        AppColors.grayLight
         FloatingActionButton(icon: "plus", action: {})
             .padding()
     }

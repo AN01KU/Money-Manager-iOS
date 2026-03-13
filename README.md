@@ -17,7 +17,7 @@
   <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
     <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
-  <img src="https://img.shields.io/badge/iOS-17.6%2B-blue" alt="iOS 17.6+">
+  <img src="https://img.shields.io/badge/iOS-18.0%2B-blue" alt="iOS 18.0+">
   <img src="https://img.shields.io/badge/Swift-6.0-orange" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-26%2B-purple" alt="Xcode 26+">
 </p>
@@ -65,7 +65,7 @@
 
 | Requirement | Version |
 |-------------|---------|
-| iOS | 17.6+ |
+| iOS | 18.0+ |
 | Xcode | 26.0+ |
 | Swift | 6.0 |
 

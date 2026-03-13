@@ -5,17 +5,13 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            Overview()
-                .tabItem {
-                    Label("Overview", systemImage: "house.fill")
-                }
-                .tag(0)
+            Tab("Overview", systemImage: "house.fill", value: 0) {
+                Overview()
+            }
             
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .tag(1)
+            Tab("Settings", systemImage: "gearshape.fill", value: 1) {
+                SettingsView()
+            }
         }
         .tint(.teal)
         .onChange(of: selectedTab) { _, _ in

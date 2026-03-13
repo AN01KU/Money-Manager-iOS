@@ -83,7 +83,7 @@ struct CategorySpendingRow: View {
             
             Text(spending.categoryName)
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .lineLimit(1)
             
             Spacer()
@@ -91,7 +91,7 @@ struct CategorySpendingRow: View {
             Text("\(spending.percentage)%")
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
     }
 }
@@ -114,7 +114,7 @@ struct CategoryDetailRow: View {
                 
                 Image(systemName: spending.icon)
                     .font(.body)
-                    .foregroundColor(spending.color)
+                    .foregroundStyle(spending.color)
             }
             
             VStack(alignment: .leading, spacing: 6) {
@@ -122,14 +122,14 @@ struct CategoryDetailRow: View {
                     Text(spending.categoryName)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     
                     Spacer()
                     
                     Text(CurrencyFormatter.format(spending.amount))
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 
                 GeometryReader { geometry in

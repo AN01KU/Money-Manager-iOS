@@ -23,10 +23,10 @@ struct BudgetCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Monthly Budget")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(CurrencyFormatter.format(budget.limit))
                         .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 
                 Spacer()
@@ -34,7 +34,7 @@ struct BudgetCard: View {
                 Button(action: { HapticManager.impact(.light); onEdit() }) {
                     Image(systemName: "pencil.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.teal)
+                        .foregroundStyle(AppColors.accent)
                 }
                 .accessibilityLabel("Edit budget")
             }
@@ -46,23 +46,23 @@ struct BudgetCard: View {
                 HStack {
                     Text("Spent")
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text(CurrencyFormatter.format(spent))
                         .font(.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                 }
                 
                 HStack {
                     Text("Remaining")
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text(CurrencyFormatter.format(remaining))
                         .font(.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(remaining > 0 ? .green : .red)
+                        .foregroundStyle(remaining > 0 ? .green : .red)
                 }
             }
             
@@ -74,7 +74,7 @@ struct BudgetCard: View {
                 Spacer()
                 Text("\(percentage)% used")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             // Daily Average (if within current month)
@@ -84,7 +84,7 @@ struct BudgetCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Daily Average")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text(CurrencyFormatter.format(dailyAverage))
                             .font(.body)
                             .fontWeight(.medium)
@@ -93,7 +93,7 @@ struct BudgetCard: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("Days Remaining")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\(daysRemaining)")
                             .font(.body)
                             .fontWeight(.medium)
@@ -139,11 +139,11 @@ struct BudgetProgressBar: View {
     
     private var progressColors: [Color] {
         if percentage <= 50 {
-            return [Color.green, Color.green.opacity(0.7)]
+            return [AppColors.budgetSafe, AppColors.budgetSafe.opacity(0.7)]
         } else if percentage <= 80 {
-            return [Color.orange, Color.orange.opacity(0.7)]
+            return [AppColors.budgetCaution, AppColors.budgetCaution.opacity(0.7)]
         } else {
-            return [Color.red, Color.red.opacity(0.7)]
+            return [AppColors.budgetDanger, AppColors.budgetDanger.opacity(0.7)]
         }
     }
 }

@@ -32,7 +32,7 @@ struct EmptyStateView: View {
         VStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text(title)
                 .font(.title2)
@@ -40,16 +40,16 @@ struct EmptyStateView: View {
             
             Text(message)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             if let actionTitle = actionTitle, let action = action {
                 Button(action: { HapticManager.impact(.medium); action() }) {
                     Text(actionTitle)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Color.teal)
+                        .background(AppColors.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.top, 8)

@@ -27,7 +27,7 @@ struct BudgetSheet: View {
                     HStack {
                         Text(CurrencyFormatter.currentSymbol)
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("0", text: $budgetAmount)
                             .keyboardType(.numberPad)
                             .font(.title2)
@@ -45,7 +45,7 @@ struct BudgetSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Budget Preview")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Text(CurrencyFormatter.format(amount))
                                 .font(.title3)
                                 .fontWeight(.semibold)
@@ -56,12 +56,12 @@ struct BudgetSheet: View {
             .navigationTitle("Set Budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if isSaving {
                         ProgressView()
                     } else {

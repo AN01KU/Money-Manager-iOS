@@ -25,10 +25,10 @@ struct ViewTypeSelector: View {
                     Text(viewType.rawValue)
                         .font(.body)
                         .fontWeight(.medium)
-                        .foregroundColor(selectedView == viewType ? .teal : .secondary)
+                        .foregroundStyle(selectedView == viewType ? AppColors.accent : .secondary)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
-                        .background(selectedView == viewType ? Color.teal.opacity(0.1) : Color(.systemGray6))
+                        .background(selectedView == viewType ? AppColors.accentLight : Color(.systemGray6))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.borderless)

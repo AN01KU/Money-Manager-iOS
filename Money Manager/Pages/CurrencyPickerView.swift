@@ -33,22 +33,22 @@ struct CurrencyPickerView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(Color.teal.opacity(0.12))
+                                .fill(AppColors.accentSubtle)
                                 .frame(width: 40, height: 40)
 
                             Text(currency.symbol)
                                 .font(.headline)
-                                .foregroundColor(.teal)
+                                .foregroundStyle(AppColors.accent)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(currency.name)
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(currency.code)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -57,7 +57,7 @@ struct CurrencyPickerView: View {
                             Image(systemName: "checkmark")
                                 .font(.body)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.teal)
+                                .foregroundStyle(AppColors.accent)
                         }
                     }
                 }

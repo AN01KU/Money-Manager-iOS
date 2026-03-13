@@ -76,7 +76,7 @@ struct OnboardingView: View {
             
             Image(systemName: page.icon)
                 .font(.system(size: 80))
-                .foregroundColor(page.color)
+                .foregroundStyle(page.color)
                 .accessibilityHidden(true)
             
             Text(page.title)
@@ -86,7 +86,7 @@ struct OnboardingView: View {
             
             Text(page.description)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
@@ -104,7 +104,7 @@ struct OnboardingView: View {
             HStack(spacing: 8) {
                 ForEach(0..<pages.count, id: \.self) { index in
                     Capsule()
-                        .fill(index == currentPage ? Color.teal : Color(.systemGray4))
+                        .fill(index == currentPage ? AppColors.accent : Color(.systemGray4))
                         .frame(width: index == currentPage ? 24 : 8, height: 8)
                         .animation(.easeInOut(duration: 0.2), value: currentPage)
                 }
@@ -118,10 +118,10 @@ struct OnboardingView: View {
                 } label: {
                     Text("Get Started")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.teal)
+                        .background(AppColors.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .accessibilityLabel("Get started with Money Manager")
@@ -133,7 +133,7 @@ struct OnboardingView: View {
                     } label: {
                         Text("Skip")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .accessibilityLabel("Skip onboarding")
                     
@@ -150,7 +150,7 @@ struct OnboardingView: View {
                                 .font(.headline)
                             Image(systemName: "arrow.right")
                         }
-                        .foregroundColor(.teal)
+                        .foregroundStyle(AppColors.accent)
                     }
                     .accessibilityLabel("Next page")
                 }

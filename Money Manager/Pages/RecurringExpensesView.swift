@@ -61,7 +61,7 @@ struct RecurringExpensesView: View {
         .navigationTitle("Recurring")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button(action: {
                     HapticManager.impact(.medium)
                     viewModel.showAddSheet = true
@@ -117,19 +117,19 @@ struct RecurringExpenseRow: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(expense.isActive ? categoryColor.opacity(0.2) : Color.gray.opacity(0.2))
+                    .fill(expense.isActive ? categoryColor.opacity(0.2) : AppColors.grayMedium)
                     .frame(width: 48, height: 48)
                 
                 Image(systemName: categoryIcon)
                     .font(.title3)
-                    .foregroundColor(expense.isActive ? categoryColor : .secondary)
+                    .foregroundStyle(expense.isActive ? categoryColor : .secondary)
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundColor(expense.isActive ? .primary : .secondary)
+                    .foregroundStyle(expense.isActive ? .primary : .secondary)
                 
                 HStack(spacing: 6) {
                     Text(expense.frequency.capitalized)
@@ -137,8 +137,8 @@ struct RecurringExpenseRow: View {
                         .fontWeight(.medium)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(expense.isActive ? Color.teal.opacity(0.1) : Color.gray.opacity(0.1))
-                        .foregroundColor(expense.isActive ? .teal : .secondary)
+                        .background(expense.isActive ? AppColors.accentLight : AppColors.grayLight)
+                        .foregroundStyle(expense.isActive ? AppColors.accent : .secondary)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     
                     if !expense.isActive {
@@ -147,15 +147,15 @@ struct RecurringExpenseRow: View {
                             .fontWeight(.medium)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.orange.opacity(0.1))
-                            .foregroundColor(.orange)
+                            .background(AppColors.warning.opacity(0.1))
+                            .foregroundStyle(AppColors.warning)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
                 
                 Text(expense.isActive ? "Next: \(expense.nextOccurrence?.relativeString ?? "Unknown")" : "Last: \(expense.lastOccurrence?.shortDateString ?? "Never")")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -164,7 +164,7 @@ struct RecurringExpenseRow: View {
                 Text(CurrencyFormatter.format(expense.amount))
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundColor(expense.isActive ? .red : .secondary)
+                    .foregroundStyle(expense.isActive ? AppColors.expense : .secondary)
                 
                 Toggle("", isOn: Binding(
                     get: { expense.isActive },
@@ -174,7 +174,7 @@ struct RecurringExpenseRow: View {
                     }
                 ))
                 .labelsHidden()
-                .tint(.teal)
+                .tint(AppColors.accent)
             }
         }
         .padding()
@@ -197,7 +197,7 @@ struct AddRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Name *")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         TextField("e.g., Netflix, Rent", text: $viewModel.name)
                             .textInputAutocapitalization(.sentences)
@@ -207,7 +207,7 @@ struct AddRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Amount *")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         TextField("0.00", text: $viewModel.amount)
                             .keyboardType(.decimalPad)
@@ -231,7 +231,7 @@ struct AddRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Category *")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         Button(action: {
                             HapticManager.impact(.light)
@@ -242,11 +242,11 @@ struct AddRecurringExpenseSheet: View {
                                     Text(viewModel.selectedCategory)
                                 } else {
                                     Text("Select Category")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding()
                             .background(Color(.systemGray6))
@@ -260,7 +260,7 @@ struct AddRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Frequency")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         Picker("Frequency", selection: $viewModel.frequency) {
                             ForEach(viewModel.frequencies, id: \.self) { freq in
@@ -299,13 +299,13 @@ struct AddRecurringExpenseSheet: View {
             .navigationTitle("Add Recurring")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         if viewModel.save() {
                             HapticManager.notification(.success)
@@ -373,7 +373,7 @@ struct EditRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Name *")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         TextField("e.g., Netflix, Rent", text: $name)
                             .textInputAutocapitalization(.sentences)
@@ -383,7 +383,7 @@ struct EditRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Amount *")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         TextField("0.00", text: $amount)
                             .keyboardType(.decimalPad)
@@ -395,7 +395,7 @@ struct EditRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Category *")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         Button(action: {
                             HapticManager.impact(.light)
@@ -406,11 +406,11 @@ struct EditRecurringExpenseSheet: View {
                                     Text(selectedCategory)
                                 } else {
                                     Text("Select Category")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding()
                             .background(Color(.systemGray6))
@@ -424,7 +424,7 @@ struct EditRecurringExpenseSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Frequency")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         Picker("Frequency", selection: $frequency) {
                             ForEach(frequencies, id: \.self) { freq in
@@ -463,13 +463,13 @@ struct EditRecurringExpenseSheet: View {
             .navigationTitle("Edit Recurring")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         save()
                     }

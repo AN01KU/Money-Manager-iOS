@@ -29,10 +29,10 @@ struct DateFilterSelector: View {
                         .font(.caption)
                     Text(formatDate(selectedDate))
                         .font(.body)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -52,7 +52,7 @@ struct DateFilterSelector: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                 }
-                .foregroundColor(.teal)
+                .foregroundStyle(AppColors.accent)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))
@@ -75,7 +75,7 @@ struct DateFilterSelector: View {
                 .navigationTitle("Select Date")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") {
                             showDatePicker = false
                         }

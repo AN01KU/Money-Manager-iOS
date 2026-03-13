@@ -22,7 +22,7 @@ struct ExportDataView: View {
         .navigationTitle("Backup")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
                         viewModel.selectedImportFormat = .json
@@ -142,21 +142,21 @@ struct ExportDataView: View {
                 Label("Expenses", systemImage: "creditcard.fill")
                 Spacer()
                 Text("\(expenses.count)")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             HStack {
                 Label("Budgets", systemImage: "chart.bar.fill")
                 Spacer()
                 Text("\(budgets.count)")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             HStack {
                 Label("Categories", systemImage: "folder.fill")
                 Spacer()
                 Text("\(categories.count)")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
