@@ -5,7 +5,7 @@ struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
-    @StateObject private var viewModel = ManageCategoriesViewModel()
+    @State private var viewModel = ManageCategoriesViewModel()
     
     private var predefinedCategories: [CustomCategory] {
         customCategories.filter { $0.isPredefined && !$0.isHidden }
@@ -176,7 +176,7 @@ struct AddCategorySheet: View {
     @Environment(\.modelContext) private var modelContext
     
     let allCategories: [CustomCategory]
-    @StateObject private var viewModel = AddCategoryViewModel()
+    @State private var viewModel = AddCategoryViewModel()
     
     var body: some View {
         NavigationStack {
@@ -335,10 +335,10 @@ struct EditCategorySheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    @StateObject private var viewModel: EditCategoryViewModel
+    @State private var viewModel: EditCategoryViewModel
     
     init(category: CustomCategory, allCategories: [CustomCategory]) {
-        _viewModel = StateObject(wrappedValue: EditCategoryViewModel(category: category, allCategories: allCategories))
+        _viewModel = State(wrappedValue: EditCategoryViewModel(category: category, allCategories: allCategories))
     }
     
     var body: some View {

@@ -9,7 +9,7 @@ struct Overview: View {
     
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     
-    @StateObject private var viewModel = OverviewViewModel()
+    @State private var viewModel = OverviewViewModel()
     
     var body: some View {
         NavigationStack {

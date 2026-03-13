@@ -6,11 +6,11 @@ struct TransactionDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let expense: Expense
-    @StateObject private var viewModel: TransactionDetailViewModel
+    @State private var viewModel: TransactionDetailViewModel
     
     init(expense: Expense) {
         self.expense = expense
-        _viewModel = StateObject(wrappedValue: TransactionDetailViewModel(expense: expense))
+        _viewModel = State(wrappedValue: TransactionDetailViewModel(expense: expense))
     }
     
     private var groupExpenseContent: some View {

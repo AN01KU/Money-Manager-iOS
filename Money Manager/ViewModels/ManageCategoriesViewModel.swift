@@ -1,13 +1,12 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class ManageCategoriesViewModel: ObservableObject {
-    @Published var showAddCategory = false
-    @Published var categoryToEdit: CustomCategory?
-    @Published var categoryToDelete: CustomCategory?
-    @Published var showDeleteConfirmation = false
+@Observable class ManageCategoriesViewModel {
+    var showAddCategory = false
+    var categoryToEdit: CustomCategory?
+    var categoryToDelete: CustomCategory?
+    var showDeleteConfirmation = false
     
     private var modelContext: ModelContext?
     
@@ -65,11 +64,11 @@ class ManageCategoriesViewModel: ObservableObject {
 }
 
 @MainActor
-class CategoryEditorViewModel: ObservableObject {
-    @Published var selectedIcon: String
-    @Published var selectedColor: String
-    @Published var showColorWarning = false
-    @Published var colorWarningMessage = ""
+@Observable class CategoryEditorViewModel {
+    var selectedIcon: String
+    var selectedColor: String
+    var showColorWarning = false
+    var colorWarningMessage = ""
     
     var allCategories: [CustomCategory] = []
     private var pendingSaveAfterWarning = false
@@ -124,10 +123,10 @@ class CategoryEditorViewModel: ObservableObject {
 
 @MainActor
 class AddCategoryViewModel: CategoryEditorViewModel {
-    @Published var name = ""
-    @Published var isSaving = false
-    @Published var showError = false
-    @Published var errorMessage = ""
+    var name = ""
+    var isSaving = false
+    var showError = false
+    var errorMessage = ""
     
     var modelContext: ModelContext?
     
@@ -173,10 +172,10 @@ class AddCategoryViewModel: CategoryEditorViewModel {
 
 @MainActor
 class EditCategoryViewModel: CategoryEditorViewModel {
-    @Published var name: String
-    @Published var isSaving = false
-    @Published var showError = false
-    @Published var errorMessage = ""
+    var name: String
+    var isSaving = false
+    var showError = false
+    var errorMessage = ""
     
     let category: CustomCategory
     var modelContext: ModelContext?

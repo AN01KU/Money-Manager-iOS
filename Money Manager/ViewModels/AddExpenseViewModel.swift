@@ -1,27 +1,26 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 enum AddExpenseMode {
     case personal(editing: Expense? = nil)
 }
 
 @MainActor
-class AddExpenseViewModel: ObservableObject {
-    @Published var amount = ""
-    @Published var selectedCategory = ""
-    @Published var description = ""
-    @Published var notes = ""
-    @Published var showCategoryPicker = false
-    @Published var showError = false
-    @Published var errorMessage = ""
-    @Published var isSaving = false
+@Observable class AddExpenseViewModel {
+    var amount = ""
+    var selectedCategory = ""
+    var description = ""
+    var notes = ""
+    var showCategoryPicker = false
+    var showError = false
+    var errorMessage = ""
+    var isSaving = false
     
-    @Published var selectedDate = Date()
-    @Published var selectedTime = Date()
-    @Published var hasTime = true
-    @Published var showDatePicker = false
-    @Published var showTimePicker = false
+    var selectedDate = Date()
+    var selectedTime = Date()
+    var hasTime = true
+    var showDatePicker = false
+    var showTimePicker = false
     
     let mode: AddExpenseMode
     private var modelContext: ModelContext?

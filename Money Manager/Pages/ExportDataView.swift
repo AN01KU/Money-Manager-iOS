@@ -9,7 +9,7 @@ struct ExportDataView: View {
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
     
-    @StateObject private var viewModel = BackupViewModel()
+    @State private var viewModel = BackupViewModel()
     
     @State private var showImportPicker = false
     
