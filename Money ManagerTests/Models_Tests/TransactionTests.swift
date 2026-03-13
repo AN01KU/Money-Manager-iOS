@@ -7,13 +7,13 @@ struct TransactionModelTests {
     @Test
     func testTransactionInitializationWithDefaultValues() {
         let transaction = Transaction(
-            category: .food,
+            category: .foodDining,
             description: "Lunch",
             amount: 500,
             date: Date()
         )
         
-        #expect(transaction.category == .food)
+        #expect(transaction.category == .foodDining)
         #expect(transaction.description == "Lunch")
         #expect(transaction.amount == 500)
         #expect(transaction.isRecurring == false)
