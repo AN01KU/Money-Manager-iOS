@@ -59,10 +59,10 @@ import SwiftData
             filteredExpenses = dateFiltered
         } else {
             filteredExpenses = dateFiltered.filter { expense in
-                expense.category.localizedCaseInsensitiveContains(searchText) ||
-                (expense.expenseDescription?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                (expense.notes?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                (expense.groupName?.localizedCaseInsensitiveContains(searchText) ?? false)
+                expense.category.localizedStandardContains(searchText) ||
+                (expense.expenseDescription?.localizedStandardContains(searchText) ?? false) ||
+                (expense.notes?.localizedStandardContains(searchText) ?? false) ||
+                (expense.groupName?.localizedStandardContains(searchText) ?? false)
             }
         }
         
