@@ -68,6 +68,14 @@ jobs:
           flags: unittests
           options: -J 'Money Manager'
           fail_ci_if_error: false
+          
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test_results.xcresult
+          retention-days: 30
 
   deploy:
     name: Deploy
