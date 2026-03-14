@@ -23,20 +23,22 @@ build:
 		-destination "$(DESTINATION)" \
 		$(SIGNING)
 
-test: test-unit test-ui
-
+test:
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST)
+	
 test-unit:
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests"
-
+	
+test-ui:
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests"
+	
 test-one:
 	@echo "Usage: make test-one TEST=BackupViewModelTests"
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/$(TEST)"
-
-test-ui:
-	rm -rf $(TEST_RESULTS)
-	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests"
 
 coverage:
 	xcrun xccov view --report $(TEST_RESULTS) 2>/dev/null | head -10
