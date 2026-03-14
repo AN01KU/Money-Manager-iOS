@@ -17,4 +17,4 @@ DerivedData/
 Pods/
 
 # Test results
-test_results.xcresult/
+# test_results.xcresult/
