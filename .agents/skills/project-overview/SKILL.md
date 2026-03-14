@@ -1,5 +1,5 @@
 ---
-name: project-overview
+name: money-manager-overview
 description: Get comprehensive insights into the money-manager-ios project - a personal finance iOS app built with SwiftUI. Use this skill to understand project architecture, data models, ViewModels, directory structure, and development patterns. This skill helps AI agents navigate the codebase and find relevant files for specific tasks.
 ---
 
@@ -199,6 +199,82 @@ All ViewModels use the modern `@Observable` macro (iOS 17+):
 6. **Category colors** defined in `PredefinedCategory.swift`
 7. **Color theme** in `AppColors.swift`
 8. **Use `CurrencyFormatter`** for amount display
+
+---
+
+## Code Reuse & Shared Components
+
+When adding new code, ALWAYS check existing shared components first to avoid duplication.
+
+### Common Helpers (`Helpers/`)
+| File | Purpose |
+|------|---------|
+| `AppColors.swift` | Brand colors, semantic colors, budget status colors, grays |
+| `AppConstants.swift` | Animation durations, quick amounts, formatting, UI measurements, validation |
+| `CategorySeeder.swift` | Default category seeding logic |
+
+### Common Components (`Components/Common/`)
+| File | Purpose |
+|------|---------|
+| `CurrencyFormatter.swift` | Currency formatting, symbols, multi-currency support |
+| `FloatingActionButton.swift` | Reusable FAB component |
+| `EmptyStateView.swift` | Empty state placeholder |
+| `MonthSelector.swift` | Month picker |
+| `DateFilterSelector.swift` | Date range filter |
+| `ViewTypeSelector.swift` | View toggle (daily/monthly) |
+
+### Using Shared Components
+- **Colors**: Use `AppColors.accent`, `AppColors.expense`, `AppColors.budgetSafe`, etc.
+- **Constants**: Use `AppConstants.Animation.quick`, `AppConstants.UI.cornerRadius`, etc.
+- **Currency**: Always use `CurrencyFormatter.format(amount)` for displaying amounts
+- **Custom colors**: Use `Color(hex: "...")` from `PredefinedCategory.swift`
+
+### Adding New Shared Code
+If new shared code is needed:
+1. Check if it belongs in `Helpers/` (constants, utilities) or `Components/Common/` (reusable UI)
+2. Update this skill document with the new shared component
+3. Document the purpose in code comments
+
+---
+
+## Development Commands
+
+Always use the Makefile for building and testing - do NOT use xcodebuild directly.
+
+### Build
+```bash
+make build
+```
+
+### Running Tests
+
+**IMPORTANT - Test Suite Selection:**
+- When fixing/updating/adding test suites, ONLY run that specific test suite to save time and resources:
+```bash
+make test-one TEST=ExpenseTests
+make test-one TEST=AddExpenseViewModelTests
+```
+
+- Run all unit tests (includes all test suites):
+```bash
+make test-unit
+```
+
+- Run all UI tests (slow - see note below):
+```bash
+make test-ui
+```
+
+**UI Tests Note:**
+- UI tests are slow and resource-intensive
+- AI agents should NOT run UI tests automatically
+- UI tests should be run by the end user manually
+- After any test run (unit or UI), ALWAYS check test results from the stored results files in the project folder
+
+**Viewing Test Results:**
+- Do NOT use `grep`, `tail`, `head` or similar commands on test output
+- Test results are stored in the project folder after each run
+- Check the test results directly from the results files
 
 ---
 
