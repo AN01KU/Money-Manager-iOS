@@ -44,7 +44,10 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
-      - name: Run Tests
+      - name: Save committed test results for coverage
+        run: cp -r test_results.xcresult test_results_full.xcresult
+
+      - name: Run Unit Tests
         run: make test-unit
 
       - name: Install xcresultparser
@@ -66,8 +69,7 @@ jobs:
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: ./test_results.xcresult
-          flags: unittests
+          files: ./test_results_full.xcresult
           name: money-manager-ios
           fail_ci_if_error: false
 
