@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://codecov.io/gh/an01ku/money-manager-ios">
-    <img src="https://codecov.io/gh/AN01KU/Money-Manager-iOS/branch/feat%2Fmvp/graph/badge.svg" alt="Coverage">
+    <img src="https://codecov.io/gh/AN01KU/Money-Manager-iOS/branch/feat%2Fmvp/graph/badge.svg?token=WDZ116OWL1" alt="Coverage">
   </a>
   <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
     <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
