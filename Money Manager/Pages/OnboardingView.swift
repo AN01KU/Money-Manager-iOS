@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct OnboardingPage: Identifiable {
     let id = UUID()

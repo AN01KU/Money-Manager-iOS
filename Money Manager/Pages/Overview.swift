@@ -127,6 +127,7 @@ struct Overview: View {
 
 // MARK: - Preview Helpers
 
+@MainActor
 private func previewContainer(
     expenses: [Expense] = [],
     budgets: [MonthlyBudget] = []
