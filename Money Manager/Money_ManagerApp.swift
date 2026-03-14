@@ -3,6 +3,7 @@ import SwiftData
 
 #if DEBUG
 private let useTestData = CommandLine.arguments.contains("useTestData")
+private let skipOnboarding = CommandLine.arguments.contains("skipOnboarding")
 #endif
 
 @main
