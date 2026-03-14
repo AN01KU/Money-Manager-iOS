@@ -379,4 +379,42 @@ struct EditCategoryViewModelTests {
         
         #expect(remaining.isEmpty)
     }
+    
+    @Test
+    func testConfirmDeleteReassignsExpensesToOther() {
+        let category = CustomCategory(
+            name: "Food",
+            icon: "fork.knife",
+            color: "#FF0000",
+            isPredefined: false,
+            predefinedKey: nil
+        )
+        
+        let expense1 = Expense(amount: 100, category: "Food", date: Date())
+        let expense2 = Expense(amount: 200, category: "Food", date: Date())
+        let expense3 = Expense(amount: 300, category: "Other", date: Date())
+        
+        let schema = Schema([Expense.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        context.insert(category)
+        context.insert(expense1)
+        context.insert(expense2)
+        context.insert(expense3)
+        try? context.save()
+        
+        let viewModel = ManageCategoriesViewModel()
+        viewModel.configure(customCategories: [category], modelContext: context)
+        viewModel.deleteCategory(category)
+        viewModel.confirmDelete()
+        
+        let expenseDescriptor = FetchDescriptor<Expense>()
+        let expenses = (try? context.fetch(expenseDescriptor)) ?? []
+        
+        #expect(expenses[0].category == "Other")
+        #expect(expenses[1].category == "Other")
+        #expect(expenses[2].category == "Other")
+    }
 }

@@ -56,6 +56,18 @@ import SwiftData
     
     func confirmDelete() {
         guard let category = categoryToDelete else { return }
+        let categoryName = category.name
+        
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate { $0.category == categoryName }
+        )
+        if let expenses = try? modelContext?.fetch(descriptor) {
+            for expense in expenses {
+                expense.category = "Other"
+                expense.updatedAt = Date()
+            }
+        }
+        
         categoryToDelete = nil
         showDeleteConfirmation = false
         modelContext?.delete(category)

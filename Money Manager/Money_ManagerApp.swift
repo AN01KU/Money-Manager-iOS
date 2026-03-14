@@ -23,6 +23,7 @@ struct Money_ManagerApp: App {
             container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             
             CategorySeeder.seedIfNeeded(context: container.mainContext)
+            RecurringExpenseService.generatePendingExpenses(context: container.mainContext)
             
             #if DEBUG
             if useTestData {

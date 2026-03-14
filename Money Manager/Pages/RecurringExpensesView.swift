@@ -57,16 +57,17 @@ struct RecurringExpensesView: View {
                                 .onChange(of: rowTapped) { _, newValue in
                                     if newValue { rowTapped = false }
                                 }
-                            }
-                            .onDelete { indexSet in
-                                deleteTriggered = true
-                                for index in indexSet {
-                                    viewModel.deactivateExpense(at: index + viewModel.activeExpenses.count)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteTriggered = true
+                                        if let index = viewModel.pausedExpenses.firstIndex(where: { $0.id == expense.id }) {
+                                            viewModel.deleteExpense(at: index)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    .tint(.red)
                                 }
-                            }
-                            .sensoryFeedback(.warning, trigger: deleteTriggered)
-                            .onChange(of: deleteTriggered) { _, newValue in
-                                if newValue { deleteTriggered = false }
                             }
                         }
                     }

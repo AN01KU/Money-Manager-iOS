@@ -115,6 +115,42 @@ struct RecurringExpensesViewModelTests {
         #expect(viewModel.activeExpenses.count == 1)
         #expect(viewModel.activeExpenses.first?.name == "Gym")
     }
+    
+    @Test
+    func testDeleteExpenseDoesNothingForInvalidIndex() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let paused = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        
+        viewModel.configure(expenses: [paused], modelContext: nil)
+        
+        viewModel.deleteExpense(at: 5)
+        
+        #expect(viewModel.pausedExpenses.count == 1)
+    }
+    
+    @Test
+    func testDeleteExpenseRemovesFromDatabase() {
+        let paused = RecurringExpense(name: "ToDelete", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        context.insert(paused)
+        try? context.save()
+        
+        let viewModel = RecurringExpensesViewModel()
+        viewModel.configure(expenses: [paused], modelContext: context)
+        
+        viewModel.deleteExpense(at: 0)
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let remaining = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(remaining.isEmpty)
+    }
 }
 
 @MainActor
