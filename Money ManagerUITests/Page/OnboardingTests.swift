@@ -14,7 +14,7 @@ final class OnboardingTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "--resetOnboarding"]
         app.launch()
     }
     
@@ -32,32 +32,20 @@ final class OnboardingTests: XCTestCase {
     
     func testCanNavigateThroughOnboardingPages() throws {
         // Skip button should exist
-        let skipButton = app.buttons["Skip"]
+        let skipButton = app.buttons["Skip onboarding"]
         XCTAssertTrue(skipButton.waitForExistence(timeout: 3), "Skip button should exist")
         
         // Get Started button should not exist on first page
-        let getStartedButton = app.buttons["Get Started"]
+        let getStartedButton = app.buttons["Get started with Money Manager"]
         XCTAssertFalse(getStartedButton.exists, "Get Started should not exist on first page")
         
-        // Swipe left to go to next page (or tap next if exists)
-        let nextButton = app.buttons.element(boundBy: 0)
-        if nextButton.exists && nextButton.label != "Skip" {
-            nextButton.tap()
-        }
-        
-        // Should be able to reach the last page
-        // Keep swiping until Get Started appears
-        for _ in 0..<5 {
-            if getStartedButton.waitForExistence(timeout: 1) {
-                break
-            }
-            app.swipeLeft()
-        }
+        // Swipe left to go to next page
+        app.swipeLeft()
     }
     
     func testGetStartedCompletesOnboarding() throws {
         // Navigate to last page (Get Started should be visible)
-        let getStartedButton = app.buttons["Get Started"]
+        let getStartedButton = app.buttons["Get started with Money Manager"]
         
         // Swipe through all pages to get to the last one
         for _ in 0..<5 {
@@ -78,7 +66,7 @@ final class OnboardingTests: XCTestCase {
     }
     
     func testSkipButtonCompletesOnboarding() throws {
-        let skipButton = app.buttons["Skip"]
+        let skipButton = app.buttons["Skip onboarding"]
         XCTAssertTrue(skipButton.waitForExistence(timeout: 3), "Skip button should exist")
         
         // Tap skip

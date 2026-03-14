@@ -14,7 +14,7 @@ final class NavigationTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "--skipOnboarding", "useTestData"]
+        app.launchArguments = ["--uitesting", "--skipOnboarding", "--useTestData"]
         app.launch()
     }
     
@@ -29,12 +29,6 @@ final class NavigationTests: XCTestCase {
         let overviewTab = app.tabBars.buttons["Overview"]
         XCTAssertTrue(overviewTab.waitForExistence(timeout: 3), "Overview tab should exist")
     }
-    
-    // MARK: - Groups tab tests disabled (feature removed for offline-only v1)
-    // func testGroupsTabExists() throws { ... }
-    // func testSwitchToGroupsTab() throws { ... }
-    // func testReturnToOverviewTab() throws { ... }
-    // func testTabStatePersists() throws { ... }
     
     func testSettingsTabExists() throws {
         let settingsTab = app.tabBars.buttons["Settings"]
