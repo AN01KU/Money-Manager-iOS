@@ -2,8 +2,9 @@ import SwiftUI
 import SwiftData
 
 #if DEBUG
-private let useTestData = CommandLine.arguments.contains("useTestData")
-private let skipOnboarding = CommandLine.arguments.contains("skipOnboarding")
+private let useTestData = CommandLine.arguments.contains("--useTestData")
+private let skipOnboarding = CommandLine.arguments.contains("--skipOnboarding")
+private let resetOnboarding = CommandLine.arguments.contains("--resetOnboarding")
 #endif
 
 @main
@@ -11,6 +12,15 @@ struct Money_ManagerApp: App {
     let container: ModelContainer
     
     init() {
+        #if DEBUG
+        if skipOnboarding {
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        }
+        if resetOnboarding {
+            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        }
+        #endif
+        
         let schema = Schema([
             Expense.self,
             RecurringExpense.self,
