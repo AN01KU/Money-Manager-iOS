@@ -11,6 +11,10 @@ struct ManageCategoriesView: View {
     @State private var hideTriggered = false
     @State private var restoreTriggered = false
     @State private var addTriggered = false
+    @State private var showResetMenu = false
+    
+    @State private var lastDeleteCount = 0
+    @State private var lastResetCount = 0
     
     private var predefinedCategories: [CustomCategory] {
         customCategories.filter { $0.isPredefined && !$0.isHidden }
@@ -45,6 +49,7 @@ struct ManageCategoriesView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .tint(.red)
                                 .sensoryFeedback(.warning, trigger: deleteTriggered)
                                 .onChange(of: deleteTriggered) { _, newValue in
                                     if newValue { deleteTriggered = false }
@@ -77,6 +82,7 @@ struct ManageCategoriesView: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .tint(.red)
                             .sensoryFeedback(.warning, trigger: deleteTriggered)
                             .onChange(of: deleteTriggered) { _, newValue in
                                 if newValue { deleteTriggered = false }
@@ -115,7 +121,29 @@ struct ManageCategoriesView: View {
         }
         .navigationTitle("Categories")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showResetMenu = true
+                        viewModel.restoreDefaults(modelContext: modelContext)
+                    } label: {
+                        Label("Restore Defaults", systemImage: "arrow.counterclockwise")
+                    }
+                    
+                    Button(role: .destructive) {
+                        showResetMenu = true
+                        viewModel.resetAll(modelContext: modelContext)
+                    } label: {
+                        Label("Reset All Categories", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: showResetMenu)
+                .onChange(of: showResetMenu) { _, newValue in
+                    if newValue { showResetMenu = false }
+                }
+                
                 Button {
                     addTriggered = true
                     viewModel.showAddCategory = true
@@ -146,6 +174,8 @@ struct ManageCategoriesView: View {
         } message: {
             Text("This will permanently remove \"\(viewModel.categoryToDelete?.name ?? "")\". Existing expenses using this category will keep their category name.")
         }
+        .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.deleteConfirmedTrigger)
+        .sensoryFeedback(.success, trigger: viewModel.resetTrigger)
         .onAppear {
             viewModel.configure(modelContext: modelContext)
         }

@@ -56,10 +56,63 @@ import SwiftData
     
     func confirmDelete() {
         guard let category = categoryToDelete else { return }
-        modelContext?.delete(category)
-        try? modelContext?.save()
         categoryToDelete = nil
         showDeleteConfirmation = false
+        modelContext?.delete(category)
+        try? modelContext?.save()
+        deleteConfirmedTrigger += 1
+    }
+    
+    var deleteConfirmedTrigger: Int = 0
+    
+    func restoreDefaults(modelContext: ModelContext?) {
+        guard let context = modelContext else { return }
+        
+        let descriptor = FetchDescriptor<CustomCategory>(
+            predicate: #Predicate { $0.isPredefined == true }
+        )
+        guard let categories = try? context.fetch(descriptor) else { return }
+        
+        for category in categories {
+            if let key = category.predefinedKey,
+               let predefined = PredefinedCategory.allCases.first(where: { $0.key == key }) {
+                category.isHidden = false
+                category.name = predefined.rawValue
+                category.icon = predefined.icon
+                category.color = predefined.defaultColorHex
+                category.updatedAt = Date()
+            }
+        }
+        
+        try? context.save()
+        resetTrigger += 1
+    }
+    
+    var resetTrigger: Int = 0
+    
+    func resetAll(modelContext: ModelContext?) {
+        guard let context = modelContext else { return }
+        
+        let allDescriptor = FetchDescriptor<CustomCategory>()
+        guard let allCategories = try? context.fetch(allDescriptor) else { return }
+        
+        for category in allCategories {
+            context.delete(category)
+        }
+        
+        for predefined in PredefinedCategory.allCases {
+            let category = CustomCategory(
+                name: predefined.rawValue,
+                icon: predefined.icon,
+                color: predefined.defaultColorHex,
+                isPredefined: true,
+                predefinedKey: predefined.key
+            )
+            context.insert(category)
+        }
+        
+        try? context.save()
+        resetTrigger += 1
     }
 }
 
