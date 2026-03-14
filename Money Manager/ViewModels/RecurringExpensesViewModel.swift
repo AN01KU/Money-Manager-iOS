@@ -41,6 +41,24 @@ import SwiftData
         expense.updatedAt = Date()
         try? modelContext?.save()
     }
+    
+    func deleteExpense(at index: Int) {
+        guard index < pausedExpenses.count else { return }
+        let recurring = pausedExpenses[index]
+        let recurringId = recurring.id
+        
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate { $0.recurringExpenseId == recurringId }
+        )
+        if let expenses = try? modelContext?.fetch(descriptor) {
+            for expense in expenses {
+                expense.recurringExpenseId = nil
+            }
+        }
+        
+        modelContext?.delete(recurring)
+        try? modelContext?.save()
+    }
 }
 
 @MainActor
