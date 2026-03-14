@@ -20,7 +20,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +36,7 @@ jobs:
   test:
     name: Tests
     needs: build
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
   deploy:
     name: Deploy
     needs: [build, test]
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, macOS, ARM64]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
