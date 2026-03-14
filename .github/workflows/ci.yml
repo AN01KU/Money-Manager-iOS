@@ -64,6 +64,8 @@ jobs:
         with:
           files: ./test_results.xcresult
           name: money-manager-ios
+          flags: unittests
+          options: -J 'Money Manager'
           fail_ci_if_error: false
 
   deploy:
