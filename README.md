@@ -12,6 +12,9 @@
 
 <p align="center">
   <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/an01ku/033326e501c79498db6612f301b99034/raw/coverage-badge.json" alt="Coverage">
+  </a>
+  <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
     <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <img src="https://img.shields.io/badge/iOS-18.0%2B-blue" alt="iOS 18.0+">
