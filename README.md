@@ -11,15 +11,12 @@
 </p>
 
 <p align="center">
-  <a href="https://codecov.io/gh/an01ku/money-manager-ios">
-    <img src="https://codecov.io/gh/AN01KU/Money-Manager-iOS/branch/feat%2Fmvp/graph/badge.svg?token=WDZ116OWL1" alt="Coverage">
-  </a>
   <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
     <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <img src="https://img.shields.io/badge/iOS-18.0%2B-blue" alt="iOS 18.0+">
   <img src="https://img.shields.io/badge/Swift-6.0-orange" alt="Swift 6.0">
-  <img src="https://img.shields.io/badge/Xcode-26%2B-purple" alt="Xcode 26+">
+  <img src="https://img.shields.io/badge/Xcode-16.4%2B-purple" alt="Xcode 16.4+">
 </p>
 
 ## Features
@@ -66,7 +63,7 @@
 | Requirement | Version |
 |-------------|---------|
 | iOS | 18.0+ |
-| Xcode | 26.0+ |
+| Xcode | 16.4+ |
 | Swift | 6.0 |
 
 ## Architecture
@@ -87,7 +84,7 @@ Money Manager/
 
 ### Prerequisites
 
-1. Install [Xcode](https://developer.apple.com/xcode/) 26.0 or later
+1. Install [Xcode](https://developer.apple.com/xcode/) 16.4 or later
 2. An Apple Developer account (for running on device)
 
 ### Installation
@@ -141,7 +138,7 @@ Run tests with:
 make test-unit
 ```
 
-View coverage reports at [codecov.io/gh/an01ku/money-manager-ios](https://codecov.io/gh/an01ku/money-manager-ios).
+View coverage locally with `make coverage`.
 
 ## Contributing
 

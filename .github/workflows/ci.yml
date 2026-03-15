@@ -14,13 +14,18 @@ on:
       - release/**
       - feat/**
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   XCODE_VERSION: ""
 
 jobs:
-  build:
-    name: Build
+  build-and-test:
+    name: Build & Test
     runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -33,42 +38,54 @@ jobs:
       - name: Build
         run: make build
 
-  test:
-    name: Tests
-    needs: build
-    runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-
       - name: Run All Tests
         run: make test
 
       - name: Install xcresultparser
+        if: always()
         run: |
-          brew install xcresultparser
+          which xcresultparser || brew install xcresultparser
 
       - name: Convert xcresult to JUnit XML
         if: always()
         run: |
           xcresultparser -o junit ./test_results.xcresult > ./test_results.xml || true
 
-      - name: Upload test results to Codecov
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
         if: always()
-        uses: codecov/test-results-action@v1
         with:
-          files: ./test_results.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
+          report_paths: './test_results.xml'
 
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Extract Coverage
+        if: always()
+        run: |
+          COVERAGE=$(xcrun xccov view --report --json ./test_results.xcresult | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for t in data.get('targets', []):
+              if t.get('name', '') == 'Money Manager.app':
+                  print(f\"{t['lineCoverage']*100:.1f}\")
+                  break
+          ")
+          echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
+          echo "### 📊 Code Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Money Manager.app**: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+
+      - name: Update Coverage Badge
+        if: github.event_name == 'push'  # TODO: revert to main-only after testing
+        uses: schneegans/dynamic-badges-action@v1.7.0
         with:
-          files: ./test_results.xcresult
-          name: money-manager-ios
-          flags: unittests
-          options: -J 'Money Manager'
-          fail_ci_if_error: false
-          
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-badge.json
+          label: coverage
+          message: ${{ env.COVERAGE }}%
+          valColorRange: ${{ env.COVERAGE }}
+          minColorRange: 0
+          maxColorRange: 100
+
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: always()
@@ -79,7 +96,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [build, test]
+    needs: [build-and-test]
     runs-on: [self-hosted, macOS, ARM64]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
