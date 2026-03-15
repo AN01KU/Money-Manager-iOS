@@ -5,8 +5,6 @@ on:
     branches:
       - main
       - develop
-      - release/**
-      - feat/**
     paths:
       - 'Money Manager/**'
       - 'Money ManagerTests/**'
@@ -14,11 +12,6 @@ on:
       - 'Money Manager.xcodeproj/**'
       - '.github/workflows/ci.yml'
   pull_request:
-    branches:
-      - main
-      - develop
-      - release/**
-      - feat/**
     paths:
       - 'Money Manager/**'
       - 'Money ManagerTests/**'
@@ -34,22 +27,39 @@ permissions:
   checks: write
   contents: read
 
-env:
-  XCODE_VERSION: ""
-
 jobs:
   build-and-test:
     name: Build & Test
     runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 60
+    timeout-minutes: 30
+    env:
+      MIN_XCODE_VERSION: '16.4'
+      MIN_MACOS_VERSION: '15.0'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        if: env.XCODE_VERSION != ''
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Verify environment
+        run: |
+          XCODE_VERSION=$(xcodebuild -version | head -1 | awk '{print $2}')
+          MACOS_VERSION=$(sw_vers -productVersion)
+          echo "Xcode: $XCODE_VERSION (min: ${{ env.MIN_XCODE_VERSION }})"
+          echo "macOS: $MACOS_VERSION (min: ${{ env.MIN_MACOS_VERSION }})"
+          if [ "$(printf '%s\n' "${{ env.MIN_XCODE_VERSION }}" "$XCODE_VERSION" | sort -V | head -1)" != "${{ env.MIN_XCODE_VERSION }}" ]; then
+            echo "::error::Xcode $XCODE_VERSION is below minimum ${{ env.MIN_XCODE_VERSION }}"
+            exit 1
+          fi
+          if [ "$(printf '%s\n' "${{ env.MIN_MACOS_VERSION }}" "$MACOS_VERSION" | sort -V | head -1)" != "${{ env.MIN_MACOS_VERSION }}" ]; then
+            echo "::error::macOS $MACOS_VERSION is below minimum ${{ env.MIN_MACOS_VERSION }}"
+            exit 1
+          fi
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
         with:
-          xcode-version: ${{ env.XCODE_VERSION }}
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('Money Manager.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-deriveddata-
 
       - name: Build
         run: make build
@@ -76,21 +86,31 @@ jobs:
       - name: Extract Coverage
         if: always()
         run: |
-          COVERAGE=$(xcrun xccov view --report --json ./test_results.xcresult | python3 -c "
+          COVERAGE=$(xcrun xccov view --report --json ./test_results.xcresult 2>/dev/null | python3 -c "
           import json, sys
-          data = json.load(sys.stdin)
-          for t in data.get('targets', []):
-              if t.get('name', '') == 'Money Manager.app':
-                  print(f\"{t['lineCoverage']*100:.1f}\")
-                  break
-          ")
+          try:
+              data = json.load(sys.stdin)
+              for t in data.get('targets', []):
+                  if t.get('name', '') == 'Money Manager.app':
+                      print(f\"{t['lineCoverage']*100:.1f}\")
+                      sys.exit(0)
+              print('0.0')
+          except:
+              print('0.0')
+          " || echo "0.0")
           echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
           echo "### 📊 Code Coverage" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Money Manager.app**: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
 
+      - name: Check Coverage Threshold
+        run: |
+          if (( $(echo "${{ env.COVERAGE }} < 50" | bc -l) )); then
+            echo "::warning::Coverage ${{ env.COVERAGE }}% is below 50% threshold"
+          fi
+
       - name: Update Coverage Badge
-        if: github.event_name == 'push'  # TODO: revert to main-only after testing
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -109,13 +129,3 @@ jobs:
           name: test-results
           path: test_results.xcresult
           retention-days: 30
-
-  deploy:
-    name: Deploy
-    needs: [build-and-test]
-    runs-on: [self-hosted, macOS, ARM64]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to TestFlight
-        run: echo "TODO - Add TestFlight deployment steps"
