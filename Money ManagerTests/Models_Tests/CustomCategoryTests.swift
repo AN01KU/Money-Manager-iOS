@@ -45,4 +45,24 @@ struct CustomCategoryModelTests {
         
         #expect(category.name == "")
     }
+    
+    // MARK: - isDeletable
+    
+    @Test
+    func isDeletableReturnsTrueForNonOtherCategory() {
+        let category = CustomCategory(name: "Groceries", icon: "cart", color: "#FF0000", isPredefined: true, predefinedKey: "foodDining")
+        #expect(category.isDeletable == true)
+    }
+    
+    @Test
+    func isDeletableReturnsFalseForOtherCategory() {
+        let category = CustomCategory(name: "Other", icon: "ellipsis.circle.fill", color: "#95A5A6", isPredefined: true, predefinedKey: "other")
+        #expect(category.isDeletable == false)
+    }
+    
+    @Test
+    func isDeletableReturnsTrueForCustomCategory() {
+        let category = CustomCategory(name: "Pets", icon: "pawprint", color: "#FF0000")
+        #expect(category.isDeletable == true)
+    }
 }

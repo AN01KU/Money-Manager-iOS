@@ -176,27 +176,6 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testUpdateFilterModeTriggersRecalculate() {
-        let viewModel = OverviewViewModel()
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        
-        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
-        
-        viewModel.filterMode = .daily
-        
-        #expect(viewModel.filterMode == .daily)
-    }
-    
-    @Test
-    func testUpdateSelectedDateTriggersRecalculate() {
-        let viewModel = OverviewViewModel()
-        
-        viewModel.selectedDate = Date()
-        
-        #expect(viewModel.selectedDate != nil)
-    }
-    
-    @Test
     func testCategorySpendingEmptyWhenNoExpenses() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
@@ -635,5 +614,109 @@ struct OverviewViewModelTests {
         let descriptor = FetchDescriptor<MonthlyBudget>()
         let budgets = (try? context.fetch(descriptor)) ?? []
         #expect(budgets.isEmpty)
+    }
+    
+    // MARK: - Delete Expense Flow
+    
+    @Test
+    func testDeleteExpenseSetsExpenseToDelete() {
+        let viewModel = OverviewViewModel()
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        
+        viewModel.deleteExpense(expense)
+        
+        #expect(viewModel.expenseToDelete?.amount == 100)
+    }
+    
+    @Test
+    func testCancelDeleteExpenseClearsExpenseToDelete() {
+        let viewModel = OverviewViewModel()
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        
+        viewModel.deleteExpense(expense)
+        #expect(viewModel.expenseToDelete != nil)
+        
+        viewModel.cancelDeleteExpense()
+        #expect(viewModel.expenseToDelete == nil)
+    }
+    
+    @Test
+    func testConfirmDeleteExpenseMarksAsDeleted() {
+        let viewModel = OverviewViewModel()
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+        
+        viewModel.deleteExpense(expense)
+        viewModel.confirmDeleteExpense()
+        
+        #expect(expense.isDeleted == true)
+        #expect(viewModel.expenseToDelete == nil)
+    }
+    
+    @Test
+    func testConfirmDeleteExpenseDoesNothingWhenNoExpenseToDelete() {
+        let viewModel = OverviewViewModel()
+        viewModel.configure(allExpenses: [], budgets: [], customCategories: [], modelContext: nil)
+        
+        viewModel.confirmDeleteExpense()
+        
+        #expect(viewModel.expenseToDelete == nil)
+    }
+    
+    @Test
+    func testConfirmDeleteExpenseRecalculates() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense1 = Expense(amount: 100, category: "Food", date: Date())
+        let expense2 = Expense(amount: 200, category: "Transport", date: Date())
+        
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
+        #expect(viewModel.totalSpent == 300)
+        
+        viewModel.deleteExpense(expense1)
+        viewModel.confirmDeleteExpense()
+        
+        #expect(viewModel.totalSpent == 200)
+        #expect(viewModel.filteredExpenses.count == 1)
+    }
+    
+    // MARK: - Daily Budget Limit
+    
+    @Test
+    func testDailyBudgetLimitCalculatedInDailyMode() {
+        let viewModel = OverviewViewModel()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: Date())
+        let month = calendar.component(.month, from: Date())
+        
+        let budget = MonthlyBudget(year: year, month: month, limit: 3000)
+        
+        viewModel.filterMode = .daily
+        viewModel.selectedDate = Date()
+        viewModel.configure(allExpenses: [], budgets: [budget], customCategories: [], modelContext: nil)
+        
+        let daysInMonth = calendar.range(of: .day, in: .month, for: Date())!.count
+        let expectedDaily = 3000.0 / Double(daysInMonth)
+        
+        #expect(viewModel.dailyBudgetLimit == expectedDaily)
+    }
+    
+    @Test
+    func testDailyBudgetLimitIsZeroInMonthlyMode() {
+        let viewModel = OverviewViewModel()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: Date())
+        let month = calendar.component(.month, from: Date())
+        
+        let budget = MonthlyBudget(year: year, month: month, limit: 3000)
+        
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        viewModel.configure(allExpenses: [], budgets: [budget], customCategories: [], modelContext: nil)
+        
+        #expect(viewModel.dailyBudgetLimit == 0)
     }
 }

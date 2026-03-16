@@ -5,132 +5,93 @@ import Testing
 
 struct RecurringExpenseModelTests {
     
+    // MARK: - Initialization
+    
     @Test
-    func testExpenseHasRequiredProperties() {
-        let expense = Expense(
+    func initSetsRequiredProperties() {
+        let expense = RecurringExpense(
+            name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            date: Date(),
-            expenseDescription: "Netflix"
+            frequency: "monthly"
         )
         
+        #expect(expense.name == "Netflix")
         #expect(expense.amount == 649)
         #expect(expense.category == "Entertainment")
-        #expect(expense.expenseDescription == "Netflix")
+        #expect(expense.frequency == "monthly")
     }
     
     @Test
-    func testExpenseDefaultValues() {
-        let expense = Expense(
-            amount: 5000,
-            category: "Debt & Payments",
-            date: Date()
+    func initSetsDefaults() {
+        let expense = RecurringExpense(
+            name: "Test",
+            amount: 100,
+            category: "Other",
+            frequency: "daily"
         )
         
-        #expect(expense.id != nil)
-        #expect(expense.createdAt != nil)
-        #expect(expense.updatedAt != nil)
-        #expect(expense.isDeleted == false)
-        #expect(expense.time == nil)
+        #expect(expense.isActive == true)
+        #expect(expense.dayOfMonth == nil)
+        #expect(expense.daysOfWeek == nil)
+        #expect(expense.endDate == nil)
+        #expect(expense.lastAddedDate == nil)
         #expect(expense.notes == nil)
-        #expect(expense.recurringExpenseId == nil)
-        #expect(expense.groupId == nil)
-        #expect(expense.groupName == nil)
     }
     
     @Test
-    func testExpenseWithGroupData() {
-        let groupId = UUID()
+    func initSetsAllOptionalParameters() {
+        let startDate = Date()
+        let endDate = Calendar.current.date(byAdding: .year, value: 1, to: startDate)!
+        let lastAdded = Calendar.current.date(byAdding: .day, value: -5, to: startDate)!
         
-        let expense = Expense(
-            amount: 999,
-            category: "Utilities",
-            date: Date(),
-            expenseDescription: "Subscription",
-            groupId: groupId,
-            groupName: "Roommates"
+        let expense = RecurringExpense(
+            name: "Gym",
+            amount: 500,
+            category: "Health",
+            frequency: "weekly",
+            dayOfMonth: 15,
+            daysOfWeek: [1, 3, 5],
+            startDate: startDate,
+            endDate: endDate,
+            isActive: false,
+            lastAddedDate: lastAdded,
+            notes: "Monthly gym membership"
         )
         
-        #expect(expense.groupId == groupId)
-        #expect(expense.groupName == "Roommates")
+        #expect(expense.dayOfMonth == 15)
+        #expect(expense.daysOfWeek == [1, 3, 5])
+        #expect(expense.startDate == startDate)
+        #expect(expense.endDate == endDate)
+        #expect(expense.isActive == false)
+        #expect(expense.lastAddedDate == lastAdded)
+        #expect(expense.notes == "Monthly gym membership")
     }
     
     @Test
-    func testExpenseWithRecurringExpenseId() {
-        let recurringId = UUID()
+    func initGeneratesUniqueIds() {
+        let expense1 = RecurringExpense(name: "A", amount: 100, category: "Other", frequency: "daily")
+        let expense2 = RecurringExpense(name: "B", amount: 200, category: "Other", frequency: "daily")
         
-        let expense = Expense(
-            amount: 15000,
-            category: "Housing",
-            date: Date(),
-            expenseDescription: "Rent",
-            recurringExpenseId: recurringId
-        )
-        
-        #expect(expense.recurringExpenseId == recurringId)
+        #expect(expense1.id != expense2.id)
     }
     
     @Test
-    func testExpenseWithNegativeAmount() {
-        let expense = Expense(
-            amount: -100,
-            category: "Other",
-            date: Date(),
-            notes: "Refund"
-        )
+    func initSetsTimestamps() {
+        let expense = RecurringExpense(name: "Test", amount: 100, category: "Other", frequency: "daily")
         
-        #expect(expense.amount == -100)
-        #expect(expense.notes == "Refund")
+        #expect(expense.createdAt <= Date())
+        #expect(expense.updatedAt <= Date())
     }
     
-    @Test
-    func testExpenseWithZeroAmount() {
-        let expense = Expense(
-            amount: 0,
-            category: "Entertainment",
-            date: Date(),
-            expenseDescription: "Free Trial"
-        )
-        
-        #expect(expense.amount == 0)
-    }
+    // MARK: - Mutability
     
     @Test
-    func testExpenseWithAllOptionalFields() {
-        let expenseTime = Date()
-        let groupId = UUID()
-        let recurringId = UUID()
+    func isActiveCanBeToggled() {
+        let expense = RecurringExpense(name: "Test", amount: 100, category: "Other", frequency: "daily")
         
-        let expense = Expense(
-            amount: 100,
-            category: "Other",
-            date: Date(),
-            time: expenseTime,
-            expenseDescription: "Test",
-            notes: "Test notes",
-            recurringExpenseId: recurringId,
-            groupId: groupId,
-            groupName: "Test Group"
-        )
-        
-        #expect(expense.time == expenseTime)
-        #expect(expense.expenseDescription == "Test")
-        #expect(expense.notes == "Test notes")
-        #expect(expense.recurringExpenseId == recurringId)
-        #expect(expense.groupId == groupId)
-        #expect(expense.groupName == "Test Group")
-    }
-    
-    @Test
-    func testExpenseCanBeMarkedAsDeleted() {
-        let expense = Expense(
-            amount: 100,
-            category: "Other",
-            date: Date()
-        )
-        
-        #expect(expense.isDeleted == false)
-        expense.isDeleted = true
-        #expect(expense.isDeleted == true)
+        #expect(expense.isActive == true)
+        expense.isActive = false
+        #expect(expense.isActive == false)
     }
 }
