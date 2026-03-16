@@ -11,8 +11,6 @@ struct AddExpenseView: View {
     @State private var amount500Tapped = false
     @State private var amount1000Tapped = false
     @State private var categoryTapped = false
-    @State private var dateTapped = false
-    @State private var timeTapped = false
     @State private var todayTapped = false
     @State private var saveSuccess = false
     @State private var errorTriggered = false
@@ -52,12 +50,6 @@ struct AddExpenseView: View {
             }
             .sheet(isPresented: $viewModel.showCategoryPicker) {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
-            }
-            .sheet(isPresented: $viewModel.showDatePicker) {
-                DatePickerSheet(selectedDate: $viewModel.selectedDate)
-            }
-            .sheet(isPresented: $viewModel.showTimePicker) {
-                TimePickerSheet(selectedTime: $viewModel.selectedTime)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
@@ -152,21 +144,9 @@ struct AddExpenseView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
-                Button(action: { dateTapped = true; viewModel.showDatePicker = true }) {
-                    HStack {
-                        Text(viewModel.formatDate(viewModel.selectedDate))
-                        Spacer()
-                        Image(systemName: "chevron.down")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .sensoryFeedback(.impact(weight: .light), trigger: dateTapped)
-                .onChange(of: dateTapped) { _, newValue in
-                    if newValue { dateTapped = false }
-                }
+                DatePicker("Select Date", selection: $viewModel.selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
                 
                 HStack(spacing: 12) {
                     QuickDateButton(label: "Today") { todayTapped = true; viewModel.selectedDate = Date() }
@@ -185,21 +165,9 @@ struct AddExpenseView: View {
                 Toggle("Include Time", isOn: $viewModel.hasTime)
                 
                 if viewModel.hasTime {
-                    Button(action: { timeTapped = true; viewModel.showTimePicker = true }) {
-                        HStack {
-                            Text(viewModel.formatTime(viewModel.selectedTime))
-                            Spacer()
-                            Image(systemName: "chevron.down")
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    .sensoryFeedback(.impact(weight: .light), trigger: timeTapped)
-                    .onChange(of: timeTapped) { _, newValue in
-                        if newValue { timeTapped = false }
-                    }
+                    DatePicker("Select Time", selection: $viewModel.selectedTime, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
                 }
             }
             .padding(.vertical, 8)

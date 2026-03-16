@@ -19,8 +19,6 @@ enum AddExpenseMode {
     var selectedDate = Date()
     var selectedTime = Date()
     var hasTime = true
-    var showDatePicker = false
-    var showTimePicker = false
     
     let mode: AddExpenseMode
     private var modelContext: ModelContext?
