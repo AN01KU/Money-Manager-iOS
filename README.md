@@ -69,6 +69,16 @@
 | Xcode | 16.4+ |
 | Swift | 6.0 |
 
+## Screenshots
+
+| Overview | Breakdown | Add Expense |
+|:--------:|:----------:|:----------:|
+| <img src="Screenshots/expenses-list.png" width="200"/> | <img src="Screenshots/expenses-breakdown.png" width="200"/> | <img src="Screenshots/expense-add.png" width="200"/> |
+
+| Category | Recurring Expense |Settings | 
+|:--------:|:--------:|:--------:| 
+| <img src="Screenshots/categories.png" width="200"/> | <img src="Screenshots/expense-recurring-list.png" width="200"/> | <img src="Screenshots/settings.png" width="200"/> |
+
 ## Architecture
 
 ```
