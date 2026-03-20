@@ -9,6 +9,7 @@ import SwiftData
     var showAddExpense = false
     var showBudgetSheet = false
     var searchText = "" { didSet { recalculate() } }
+    var selectedCategoryFilter: String? { didSet { recalculate() } }
     
     var filteredExpenses: [Expense] = []
     var currentBudget: MonthlyBudget?
@@ -55,16 +56,22 @@ import SwiftData
             }
         }
         
-        if searchText.isEmpty {
-            filteredExpenses = dateFiltered
-        } else {
-            filteredExpenses = dateFiltered.filter { expense in
+        var result = dateFiltered
+        
+        if !searchText.isEmpty {
+            result = result.filter { expense in
                 expense.category.localizedStandardContains(searchText) ||
                 (expense.expenseDescription?.localizedStandardContains(searchText) ?? false) ||
                 (expense.notes?.localizedStandardContains(searchText) ?? false) ||
                 (expense.groupName?.localizedStandardContains(searchText) ?? false)
             }
         }
+        
+        if let categoryFilter = selectedCategoryFilter {
+            result = result.filter { $0.category == categoryFilter }
+        }
+        
+        filteredExpenses = result
         
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
@@ -109,6 +116,16 @@ import SwiftData
         let budget = MonthlyBudget(year: year, month: month, limit: defaultBudgetLimit)
         modelContext.insert(budget)
         try? modelContext.save()
+    }
+    
+    func filterByCategory(_ categoryName: String) {
+        selectedCategoryFilter = categoryName
+        selectedView = .daily
+    }
+    
+    func clearCategoryFilter() {
+        selectedCategoryFilter = nil
+        selectedView = .categories
     }
     
     func deleteExpense(_ expense: Expense) {

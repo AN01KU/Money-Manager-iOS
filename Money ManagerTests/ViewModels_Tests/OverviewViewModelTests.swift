@@ -719,4 +719,170 @@ struct OverviewViewModelTests {
         
         #expect(viewModel.dailyBudgetLimit == 0)
     }
+    
+    // MARK: - Category Filter Tests
+    
+    @Test
+    func testFilterByCategoryShowsOnlyMatchingExpenses() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
+        let expense2 = Expense(amount: 200, category: "Transport", date: Date())
+        let expense3 = Expense(amount: 150, category: "Food & Dining", date: Date())
+        
+        viewModel.configure(allExpenses: [expense1, expense2, expense3], budgets: [], customCategories: [], modelContext: nil)
+        viewModel.filterByCategory("Food & Dining")
+        
+        #expect(viewModel.filteredExpenses.count == 2)
+        #expect(viewModel.filteredExpenses.allSatisfy { $0.category == "Food & Dining" })
+        #expect(viewModel.totalSpent == 250)
+    }
+    
+    @Test
+    func testFilterByCategorySwitchesToDailyView() {
+        let viewModel = OverviewViewModel()
+        viewModel.selectedView = .categories
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+        
+        viewModel.filterByCategory("Food & Dining")
+        
+        #expect(viewModel.selectedView == .daily)
+    }
+    
+    @Test
+    func testClearCategoryFilterShowsAllExpenses() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
+        let expense2 = Expense(amount: 200, category: "Transport", date: Date())
+        
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
+        viewModel.filterByCategory("Food & Dining")
+        #expect(viewModel.filteredExpenses.count == 1)
+        
+        viewModel.clearCategoryFilter()
+        
+        #expect(viewModel.filteredExpenses.count == 2)
+        #expect(viewModel.totalSpent == 300)
+    }
+    
+    @Test
+    func testClearCategoryFilterSwitchesToCategoriesView() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+        
+        viewModel.filterByCategory("Food & Dining")
+        #expect(viewModel.selectedView == .daily)
+        
+        viewModel.clearCategoryFilter()
+        
+        #expect(viewModel.selectedView == .categories)
+        #expect(viewModel.selectedCategoryFilter == nil)
+    }
+    
+    @Test
+    func testCategoryFilterCombinesWithSearchText() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date(), expenseDescription: "Lunch")
+        let expense2 = Expense(amount: 200, category: "Food & Dining", date: Date(), expenseDescription: "Dinner")
+        let expense3 = Expense(amount: 300, category: "Transport", date: Date(), expenseDescription: "Lunch ride")
+        
+        viewModel.configure(allExpenses: [expense1, expense2, expense3], budgets: [], customCategories: [], modelContext: nil)
+        viewModel.filterByCategory("Food & Dining")
+        viewModel.searchText = "Lunch"
+        
+        #expect(viewModel.filteredExpenses.count == 1)
+        #expect(viewModel.filteredExpenses.first?.expenseDescription == "Lunch")
+    }
+    
+    @Test
+    func testCategoryFilterReturnsEmptyForNonExistentCategory() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+        
+        viewModel.filterByCategory("Entertainment")
+        
+        #expect(viewModel.filteredExpenses.isEmpty)
+        #expect(viewModel.totalSpent == 0)
+    }
+    
+    @Test
+    func testCategoryFilterPersistsAcrossDateChanges() {
+        let viewModel = OverviewViewModel()
+        let calendar = Calendar.current
+        
+        let jan15 = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+        let feb15 = calendar.date(from: DateComponents(year: 2026, month: 2, day: 15))!
+        
+        let janFood = Expense(amount: 100, category: "Food & Dining", date: jan15)
+        let janTransport = Expense(amount: 200, category: "Transport", date: jan15)
+        let febFood = Expense(amount: 300, category: "Food & Dining", date: feb15)
+        
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = jan15
+        viewModel.configure(allExpenses: [janFood, janTransport, febFood], budgets: [], customCategories: [], modelContext: nil)
+        
+        viewModel.filterByCategory("Food & Dining")
+        #expect(viewModel.filteredExpenses.count == 1)
+        #expect(viewModel.totalSpent == 100)
+        
+        viewModel.selectedDate = feb15
+        #expect(viewModel.filteredExpenses.count == 1)
+        #expect(viewModel.totalSpent == 300)
+        #expect(viewModel.selectedCategoryFilter == "Food & Dining")
+    }
+    
+    @Test
+    func testCategoryFilterUpdatedTotalSpent() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
+        let expense2 = Expense(amount: 200, category: "Transport", date: Date())
+        let expense3 = Expense(amount: 50, category: "Food & Dining", date: Date())
+        
+        viewModel.configure(allExpenses: [expense1, expense2, expense3], budgets: [], customCategories: [], modelContext: nil)
+        #expect(viewModel.totalSpent == 350)
+        
+        viewModel.filterByCategory("Food & Dining")
+        #expect(viewModel.totalSpent == 150)
+    }
+    
+    @Test
+    func testSettingCategoryFilterDirectlyTriggersRecalculate() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        
+        let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
+        let expense2 = Expense(amount: 200, category: "Transport", date: Date())
+        
+        viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
+        #expect(viewModel.filteredExpenses.count == 2)
+        
+        viewModel.selectedCategoryFilter = "Transport"
+        
+        #expect(viewModel.filteredExpenses.count == 1)
+        #expect(viewModel.filteredExpenses.first?.category == "Transport")
+    }
 }
