@@ -46,9 +46,38 @@ struct Overview: View {
                         ViewTypeSelector(selectedView: $viewModel.selectedView)
                             .padding(.horizontal)
                         
+                        if let categoryFilter = viewModel.selectedCategoryFilter {
+                            HStack(spacing: 8) {
+                                Label(categoryFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                Button {
+                                    withAnimation {
+                                        viewModel.clearCategoryFilter()
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.body)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(AppColors.accentLight)
+                            .clipShape(Capsule())
+                            .padding(.horizontal)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        
                         if viewModel.selectedView == .categories {
                             if !viewModel.categorySpending.isEmpty {
-                                CategoryChart(categorySpending: viewModel.categorySpending)
+                                CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
+                                    withAnimation {
+                                        viewModel.filterByCategory(categoryName)
+                                    }
+                                }
                                     .padding(.horizontal)
                             } else {
                                 EmptyStateView(

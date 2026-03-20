@@ -10,6 +10,7 @@ import Charts
 
 struct CategoryChart: View {
     let categorySpending: [CategorySpending]
+    var onCategoryTapped: ((String) -> Void)?
     
     private var pieData: [CategorySpending] {
         let sorted = categorySpending.sorted { $0.amount > $1.amount }
@@ -56,7 +57,12 @@ struct CategoryChart: View {
             if !categorySpending.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(categorySpending) { spending in
-                        CategoryDetailRow(spending: spending, maxAmount: categorySpending.first?.amount ?? 1)
+                        Button {
+                            onCategoryTapped?(spending.categoryName)
+                        } label: {
+                            CategoryDetailRow(spending: spending, maxAmount: categorySpending.first?.amount ?? 1)
+                        }
+                        .buttonStyle(.plain)
                         
                         if spending.id != categorySpending.last?.id {
                             Divider()
