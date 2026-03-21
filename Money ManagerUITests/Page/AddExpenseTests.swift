@@ -119,7 +119,10 @@ final class AddExpenseTests: XCTestCase {
         openAddExpenseScreen()
         
         app.buttons["Select Category"].tap()
-        app.buttons["Transport"].firstMatch.tap()
+        
+        let transportButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
+        XCTAssertTrue(transportButton.waitForExistence(timeout: 3), "Transport category should appear")
+        transportButton.tap()
         
         // Verify category is selected (button text should change)
         let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
@@ -131,18 +134,15 @@ final class AddExpenseTests: XCTestCase {
     func testDatePickerOpens() throws {
         openAddExpenseScreen()
         
-        let dateButton = app.buttons.containing(NSPredicate(format: "label CONTAINS '2026' OR label CONTAINS '2025' OR label CONTAINS 'January' OR label CONTAINS 'February' OR label CONTAINS 'March' OR label CONTAINS 'April' OR label CONTAINS 'May' OR label CONTAINS 'June' OR label CONTAINS 'July' OR label CONTAINS 'August' OR label CONTAINS 'September' OR label CONTAINS 'October' OR label CONTAINS 'November' OR label CONTAINS 'December'")).firstMatch
+        let datePicker = app.datePickers.firstMatch
+        XCTAssertTrue(datePicker.waitForExistence(timeout: 3), "Date picker should exist")
         
-        if dateButton.waitForExistence(timeout: 2) {
-            dateButton.tap()
-            
-            // Look for date picker elements
-            let datePicker = app.datePickers.firstMatch
-            let calendar = app.otherElements.containing(NSPredicate(format: "label CONTAINS 'Calendar' OR label CONTAINS 'Picker'")).firstMatch
-            
-            let pickerExists = datePicker.waitForExistence(timeout: 2) || calendar.waitForExistence(timeout: 2)
-            XCTAssertTrue(pickerExists, "Date picker should appear")
-        }
+        // Tap the date picker to expand it
+        datePicker.tap()
+        
+        // Look for expanded calendar or wheel elements
+        let calendar = app.datePickers.firstMatch
+        XCTAssertTrue(calendar.waitForExistence(timeout: 2), "Date picker should be interactive")
     }
     
     // MARK: - Description Field
@@ -181,7 +181,9 @@ final class AddExpenseTests: XCTestCase {
         
         // Select category
         app.buttons["Select Category"].tap()
-        app.buttons["Shopping"].firstMatch.tap()
+        let shoppingButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Shopping'")).firstMatch
+        XCTAssertTrue(shoppingButton.waitForExistence(timeout: 3), "Shopping category should appear")
+        shoppingButton.tap()
         
         // Add description
         let descField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description'")).firstMatch

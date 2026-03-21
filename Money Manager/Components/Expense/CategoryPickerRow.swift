@@ -21,5 +21,6 @@ struct CategoryPickerRow: View {
             }
         }
         .foregroundStyle(.primary)
+        .accessibilityIdentifier(category.name)
     }
 }
