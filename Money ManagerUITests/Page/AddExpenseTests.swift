@@ -120,9 +120,17 @@ final class AddExpenseTests: XCTestCase {
         
         app.buttons["Select Category"].tap()
         
-        let transportButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
-        XCTAssertTrue(transportButton.waitForExistence(timeout: 3), "Transport category should appear")
-        transportButton.tap()
+        // Wait for category picker sheet to appear
+        let pickerNav = app.navigationBars["Select Category"]
+        XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
+        
+        // Transport is near the bottom of the alphabetically sorted list — scroll to it
+        let transportText = app.staticTexts["Transport"].firstMatch
+        if !transportText.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(transportText.waitForExistence(timeout: 3), "Transport category should appear")
+        transportText.tap()
         
         // Verify category is selected (button text should change)
         let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
@@ -181,9 +189,9 @@ final class AddExpenseTests: XCTestCase {
         
         // Select category
         app.buttons["Select Category"].tap()
-        let shoppingButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Shopping'")).firstMatch
-        XCTAssertTrue(shoppingButton.waitForExistence(timeout: 3), "Shopping category should appear")
-        shoppingButton.tap()
+        let shoppingText = app.staticTexts["Shopping"]
+        XCTAssertTrue(shoppingText.waitForExistence(timeout: 3), "Shopping category should appear")
+        shoppingText.tap()
         
         // Add description
         let descField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description'")).firstMatch
