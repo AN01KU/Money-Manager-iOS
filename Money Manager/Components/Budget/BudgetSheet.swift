@@ -122,7 +122,10 @@ struct BudgetSheet: View {
         let year = calendar.component(.year, from: selectedMonth)
         let month = calendar.component(.month, from: selectedMonth)
         
-        // Save locally first — this is the source of truth
+        let budgetID: UUID
+        let action: String
+        let httpMethod: String
+        
         if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
             predicate: #Predicate<MonthlyBudget> { budget in
                 budget.year == year && budget.month == month
@@ -130,6 +133,9 @@ struct BudgetSheet: View {
         )).first {
             existing.limit = amount
             existing.updatedAt = Date()
+            budgetID = existing.id
+            action = "update"
+            httpMethod = "PUT"
         } else {
             let budget = MonthlyBudget(
                 year: year,
@@ -137,12 +143,36 @@ struct BudgetSheet: View {
                 limit: amount
             )
             modelContext.insert(budget)
+            budgetID = budget.id
+            action = "create"
+            httpMethod = "POST"
         }
         
         defaultBudgetLimit = amount
         
         do {
             try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(CreateBudgetRequest(
+                year: year,
+                month: month,
+                limit: String(format: "%.2f", amount)
+            ))
+            ChangeQueueManager.shared.enqueue(
+                entityType: "budget",
+                entityID: budgetID,
+                action: action,
+                endpoint: "/budgets",
+                httpMethod: httpMethod,
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                }
+            }
         } catch {
             errorMessage = "Failed to save budget locally"
             showError = true

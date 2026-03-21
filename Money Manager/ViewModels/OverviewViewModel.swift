@@ -133,12 +133,30 @@ import SwiftData
     }
     
     func confirmDeleteExpense() {
-        guard let expense = expenseToDelete else { return }
+        guard let expense = expenseToDelete, let modelContext = modelContext else { return }
+        
         expense.isDeleted = true
         expense.updatedAt = Date()
         
         do {
-            try modelContext?.save()
+            try modelContext.save()
+            
+            ChangeQueueManager.shared.enqueue(
+                entityType: "expense",
+                entityID: expense.id,
+                action: "delete",
+                endpoint: "/expenses",
+                httpMethod: "DELETE",
+                payload: nil,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                }
+            }
+            
             recalculate()
         } catch {
             print("Error deleting expense: \(error)")

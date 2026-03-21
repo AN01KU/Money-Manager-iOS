@@ -71,7 +71,7 @@ enum AddExpenseMode {
     
     func save(completion: @escaping () -> Void) {
         guard let amountValue = Double(amount), amountValue > 0 else {
-            errorMessage = "Amount must be greater than 0"
+            errorMessage = "Failed to parse amount"
             showError = true
             return
         }
@@ -90,6 +90,12 @@ enum AddExpenseMode {
                                         of: selectedDate) ?? selectedDate
         }
         
+        let expenseID: UUID
+        let action: String
+        let endpoint: String
+        let httpMethod: String
+        var payload: Data?
+        
         if case .personal(let existing) = mode, let existingExpense = existing {
             existingExpense.amount = amountValue
             existingExpense.category = selectedCategory
@@ -98,6 +104,11 @@ enum AddExpenseMode {
             existingExpense.expenseDescription = description.isEmpty ? nil : description
             existingExpense.notes = notes.isEmpty ? nil : notes
             existingExpense.updatedAt = Date()
+            expenseID = existingExpense.id
+            action = "update"
+            endpoint = "/expenses"
+            httpMethod = "PUT"
+            payload = try? APIClient.apiEncoder.encode(existingExpense.toUpdateRequest())
         } else {
             let expense = Expense(
                 amount: amountValue,
@@ -108,10 +119,31 @@ enum AddExpenseMode {
                 notes: notes.isEmpty ? nil : notes
             )
             modelContext.insert(expense)
+            expenseID = expense.id
+            action = "create"
+            endpoint = "/expenses"
+            httpMethod = "POST"
+            payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
         }
         
         do {
             try modelContext.save()
+            
+            ChangeQueueManager.shared.enqueue(
+                entityType: "expense",
+                entityID: expenseID,
+                action: action,
+                endpoint: endpoint,
+                httpMethod: httpMethod,
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                }
+            }
         } catch {
             errorMessage = "Failed to save expense"
             showError = true

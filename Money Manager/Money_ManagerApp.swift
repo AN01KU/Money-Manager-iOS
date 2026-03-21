@@ -10,6 +10,8 @@ private let resetOnboarding = CommandLine.arguments.contains("--resetOnboarding"
 @main
 struct Money_ManagerApp: App {
     let container: ModelContainer
+    @State private var authService = AuthService.shared
+    @Environment(\.scenePhase) private var scenePhase
     
     init() {
         #if DEBUG
@@ -25,7 +27,8 @@ struct Money_ManagerApp: App {
             Expense.self,
             RecurringExpense.self,
             CustomCategory.self,
-            MonthlyBudget.self
+            MonthlyBudget.self,
+            PendingChange.self
         ])
         
         let modelConfiguration = ModelConfiguration(schema: schema)
@@ -45,6 +48,10 @@ struct Money_ManagerApp: App {
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
+        
+        NetworkMonitor.shared.startMonitoring()
+        
+        SyncEngine.shared.configure(container: container)
     }
     
     #if DEBUG
@@ -66,7 +73,35 @@ struct Money_ManagerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    Task {
+                        await authService.checkAuthState()
+                        if authService.isAuthenticated {
+                            await SyncEngine.shared.syncOnLaunch()
+                        }
+                    }
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    handleScenePhaseChange(newPhase)
+                }
         }
         .modelContainer(container)
+    }
+    
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        switch phase {
+        case .active:
+            if authService.isAuthenticated {
+                Task {
+                    await SyncEngine.shared.syncOnReconnect()
+                }
+            }
+        case .background:
+            break
+        case .inactive:
+            break
+        @unknown default:
+            break
+        }
     }
 }

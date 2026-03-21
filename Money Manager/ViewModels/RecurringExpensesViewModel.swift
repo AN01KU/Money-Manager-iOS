@@ -35,29 +35,72 @@ import SwiftData
     }
     
     func toggleExpense(at index: Int) {
-        guard index < allRecurringExpenses.count else { return }
+        guard index < allRecurringExpenses.count, let modelContext = modelContext else { return }
         let expense = allRecurringExpenses[index]
         expense.isActive.toggle()
         expense.updatedAt = Date()
-        try? modelContext?.save()
+        
+        do {
+            try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(expense.toUpdateRequest())
+            ChangeQueueManager.shared.enqueue(
+                entityType: "recurring",
+                entityID: expense.id,
+                action: "update",
+                endpoint: "/recurring-expenses",
+                httpMethod: "PUT",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                }
+            }
+        } catch {
+            print("Error toggling expense: \(error)")
+        }
     }
     
     func deleteExpense(at index: Int) {
-        guard index < pausedExpenses.count else { return }
+        guard index < pausedExpenses.count, let modelContext = modelContext else { return }
         let recurring = pausedExpenses[index]
         let recurringId = recurring.id
         
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { $0.recurringExpenseId == recurringId }
         )
-        if let expenses = try? modelContext?.fetch(descriptor) {
+        if let expenses = try? modelContext.fetch(descriptor) {
             for expense in expenses {
                 expense.recurringExpenseId = nil
             }
         }
         
-        modelContext?.delete(recurring)
-        try? modelContext?.save()
+        modelContext.delete(recurring)
+        
+        do {
+            try modelContext.save()
+            
+            ChangeQueueManager.shared.enqueue(
+                entityType: "recurring",
+                entityID: recurringId,
+                action: "delete",
+                endpoint: "/recurring-expenses",
+                httpMethod: "DELETE",
+                payload: nil,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                }
+            }
+        } catch {
+            print("Error deleting expense: \(error)")
+        }
     }
 }
 
@@ -129,6 +172,23 @@ import SwiftData
         
         do {
             try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(recurringExpense.toCreateRequest())
+            ChangeQueueManager.shared.enqueue(
+                entityType: "recurring",
+                entityID: recurringExpense.id,
+                action: "create",
+                endpoint: "/recurring-expenses",
+                httpMethod: "POST",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                }
+            }
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"
             showError = true
