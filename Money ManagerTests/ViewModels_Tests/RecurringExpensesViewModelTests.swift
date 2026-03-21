@@ -10,10 +10,9 @@ struct RecurringExpensesViewModelTests {
     func testActiveExpensesFiltersOutInactive() {
         let viewModel = RecurringExpensesViewModel()
         
-        let active1 = Expense(amount: 649, category: "Entertainment", date: Date(), expenseDescription: "Netflix", isRecurring: true, frequency: "monthly")
-        let active2 = Expense(amount: 500, category: "Health", date: Date(), expenseDescription: "Gym", isRecurring: true, frequency: "monthly")
-        let inactive = Expense(amount: 100, category: "Other", date: Date(), expenseDescription: "Old", isRecurring: true, frequency: "monthly")
-        inactive.isActive = false
+        let active1 = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly")
+        let active2 = RecurringExpense(name: "Gym", amount: 500, category: "Health", frequency: "monthly")
+        let inactive = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
         
         viewModel.configure(expenses: [active1, active2, inactive], modelContext: nil)
         
@@ -24,8 +23,7 @@ struct RecurringExpensesViewModelTests {
     func testActiveExpensesReturnsEmptyWhenAllInactive() {
         let viewModel = RecurringExpensesViewModel()
         
-        let inactive = Expense(amount: 100, category: "Other", date: Date(), expenseDescription: "Old", isRecurring: true, frequency: "monthly")
-        inactive.isActive = false
+        let inactive = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
         
         viewModel.configure(expenses: [inactive], modelContext: nil)
         
@@ -33,16 +31,125 @@ struct RecurringExpensesViewModelTests {
     }
     
     @Test
-    func testActiveExpensesOnlyIncludesRecurring() {
+    func testPausedExpensesReturnsOnlyInactive() {
         let viewModel = RecurringExpensesViewModel()
         
-        let recurring = Expense(amount: 649, category: "Entertainment", date: Date(), expenseDescription: "Netflix", isRecurring: true, frequency: "monthly")
-        let nonRecurring = Expense(amount: 500, category: "Food", date: Date(), expenseDescription: "Lunch")
+        let active1 = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly")
+        let active2 = RecurringExpense(name: "Gym", amount: 500, category: "Health", frequency: "monthly")
+        let inactive = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
         
-        viewModel.configure(expenses: [recurring, nonRecurring], modelContext: nil)
+        viewModel.configure(expenses: [active1, active2, inactive], modelContext: nil)
+        
+        #expect(viewModel.pausedExpenses.count == 1)
+        #expect(viewModel.pausedExpenses.first?.name == "Old")
+    }
+    
+    @Test
+    func testAllRecurringExpensesReturnsAll() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let active = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly")
+        let inactive = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        
+        viewModel.configure(expenses: [active, inactive], modelContext: nil)
+        
+        #expect(viewModel.allRecurringExpenses.count == 2)
+    }
+    
+    @Test
+    func testToggleExpenseSwapsActiveState() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let active = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        
+        viewModel.configure(expenses: [active], modelContext: nil)
         
         #expect(viewModel.activeExpenses.count == 1)
-        #expect(viewModel.activeExpenses.first?.expenseDescription == "Netflix")
+        
+        viewModel.toggleExpense(at: 0)
+        
+        #expect(active.isActive == false)
+    }
+    
+    @Test
+    func testDeactivateExpenseSetsIsActiveToFalse() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let active = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        
+        viewModel.configure(expenses: [active], modelContext: nil)
+        
+        #expect(viewModel.activeExpenses.count == 1)
+        
+        viewModel.deactivateExpense(at: 0)
+        
+        #expect(active.isActive == false)
+    }
+    
+    @Test
+    func testDeactivateExpenseDoesNothingForInvalidIndex() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let active = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        
+        viewModel.configure(expenses: [active], modelContext: nil)
+        
+        viewModel.deactivateExpense(at: 5)
+        
+        #expect(active.isActive == true)
+    }
+    
+    @Test
+    func testDeactivateExpenseRemovesFromActiveList() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let active1 = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        let active2 = RecurringExpense(name: "Gym", amount: 500, category: "Health", frequency: "monthly", isActive: true)
+        
+        viewModel.configure(expenses: [active1, active2], modelContext: nil)
+        
+        #expect(viewModel.activeExpenses.count == 2)
+        
+        viewModel.deactivateExpense(at: 0)
+        
+        #expect(viewModel.activeExpenses.count == 1)
+        #expect(viewModel.activeExpenses.first?.name == "Gym")
+    }
+    
+    @Test
+    func testDeleteExpenseDoesNothingForInvalidIndex() {
+        let viewModel = RecurringExpensesViewModel()
+        
+        let paused = RecurringExpense(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        
+        viewModel.configure(expenses: [paused], modelContext: nil)
+        
+        viewModel.deleteExpense(at: 5)
+        
+        #expect(viewModel.pausedExpenses.count == 1)
+    }
+    
+    @Test
+    func testDeleteExpenseRemovesFromDatabase() {
+        let paused = RecurringExpense(name: "ToDelete", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        context.insert(paused)
+        try? context.save()
+        
+        let viewModel = RecurringExpensesViewModel()
+        viewModel.configure(expenses: [paused], modelContext: context)
+        
+        viewModel.deleteExpense(at: 0)
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let remaining = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(remaining.isEmpty)
     }
 }
 
@@ -183,5 +290,166 @@ struct AddRecurringExpenseViewModelTests {
         #expect(viewModel.frequencies.contains("weekly"))
         #expect(viewModel.frequencies.contains("monthly"))
         #expect(viewModel.frequencies.contains("yearly"))
+    }
+    
+    @Test
+    func testSaveWithModelContextPersistsRecurringExpense() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Netflix"
+        viewModel.amount = "649"
+        viewModel.selectedCategory = "Entertainment"
+        viewModel.frequency = "monthly"
+        viewModel.dayOfMonth = 1
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        
+        let result = viewModel.save()
+        
+        #expect(result == true)
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        #expect(expenses.count == 1)
+        #expect(expenses.first?.name == "Netflix")
+        #expect(expenses.first?.amount == 649)
+    }
+    
+    @Test
+    func testSaveSetsDayOfMonthOnlyForMonthly() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Test"
+        viewModel.amount = "100"
+        viewModel.selectedCategory = "Food"
+        viewModel.frequency = "monthly"
+        viewModel.dayOfMonth = 15
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        viewModel.save()
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(expenses.first?.dayOfMonth == 15)
+    }
+    
+    @Test
+    func testSaveDoesNotSetDayOfMonthForNonMonthly() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Test"
+        viewModel.amount = "100"
+        viewModel.selectedCategory = "Food"
+        viewModel.frequency = "weekly"
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        viewModel.save()
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(expenses.first?.dayOfMonth == nil)
+    }
+    
+    @Test
+    func testSaveWithEndDatePersistsEndDate() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Subscription"
+        viewModel.amount = "100"
+        viewModel.selectedCategory = "Entertainment"
+        viewModel.hasEndDate = true
+        viewModel.endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        viewModel.save()
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(expenses.first?.endDate != nil)
+    }
+    
+    @Test
+    func testSaveWithoutEndDateSetsNilEndDate() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Subscription"
+        viewModel.amount = "100"
+        viewModel.selectedCategory = "Entertainment"
+        viewModel.hasEndDate = false
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        viewModel.save()
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(expenses.first?.endDate == nil)
+    }
+    
+    @Test
+    func testSaveWithNotesPersistsNotes() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Test"
+        viewModel.amount = "100"
+        viewModel.selectedCategory = "Food"
+        viewModel.notes = "Test notes"
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        viewModel.save()
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(expenses.first?.notes == "Test notes")
+    }
+    
+    @Test
+    func testSaveWithEmptyNotesSetsNil() {
+        let viewModel = AddRecurringExpenseViewModel()
+        viewModel.name = "Test"
+        viewModel.amount = "100"
+        viewModel.selectedCategory = "Food"
+        viewModel.notes = ""
+        
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        
+        viewModel.configure(modelContext: context)
+        viewModel.save()
+        
+        let descriptor = FetchDescriptor<RecurringExpense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+        
+        #expect(expenses.first?.notes == nil)
     }
 }

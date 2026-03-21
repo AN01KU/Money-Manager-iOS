@@ -1,105 +1,172 @@
-# Money Manager
+<!-- Money Manager iOS App -->
 
-A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending — all from your pocket.
+<p align="center">
+  <img src="Money Manager/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" width="120" alt="Money Manager" style="border-radius: 22%;">
+</p>
 
-> **Note:** This app is under active development. Features and UI are subject to change.
+<h1 align="center">Money Manager</h1>
 
-## Why Money Manager?
+<p align="center">
+  A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
+</p>
 
-Most expense trackers are either too simple or bloated with features you don't need. Money Manager strikes the right balance — it handles your personal expenses, recurring bills, monthly budgets, **and** group expense splitting in one clean interface. No subscriptions, no ads, just your money, organized.
+<p align="center">
+  <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/an01ku/033326e501c79498db6612f301b99034/raw/money-manager-ios-coverage.json" alt="Coverage">
+  </a>
+  <a href="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml">
+    <img src="https://github.com/an01ku/money-manager-ios/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <img src="https://img.shields.io/badge/iOS-18.0%2B-blue" alt="iOS 18.0+">
+  <img src="https://img.shields.io/badge/Swift-6.0-orange" alt="Swift 6.0">
+  <img src="https://img.shields.io/badge/Xcode-16.4%2B-purple" alt="Xcode 16.4+">
+</p>
 
 ## Features
 
-### 💰 Personal Expense Tracking
+### Expense Tracking
 - Log expenses with amounts, categories, notes, and dates
 - Quick-add with preset amounts for fast entry
 - View and filter transactions by day or month
-- Detailed transaction history with search
+- Detailed transaction history with search functionality
 
-### 📊 Budget Management
+### Budget Management
 - Set monthly budgets and track spending against them
 - Visual breakdown of spending by category
 - Dashboard with projected spending, daily averages, and remaining budget
 - Over-budget alerts to keep you on track
 
-### 🔁 Recurring Expenses
+### Recurring Expenses
 - Set up recurring expenses (daily, weekly, monthly)
 - Flexible scheduling — choose specific days of the week or month
 - Skip weekends or specific dates
 - Auto-generates expenses so you never forget a bill
 
-### 👥 Group Expense Splitting
-- Create groups for trips, roommates, dinners, or any shared cost
-- Add shared expenses and split them across group members
-- Track balances — see who owes whom
-- Record settlements to clear debts
-
-### 🏷️ Custom Categories
+### Categories
 - Comes with predefined spending categories
 - Create your own categories with custom names, colors, and icons
 - Organize expenses the way that makes sense to you
 
-### 🌐 Sync & Offline Support
-- Cloud sync via backend API — access your data across sessions
-- Offline-first: log expenses without internet, sync when you're back online
-- Pending sync indicator so you always know your data status
-
-### ⚙️ Settings & Preferences
-- Multi-currency support — pick your preferred currency
-- Export data (coming soon — CSV/PDF)
-- Authentication with secure keychain storage
+### Additional Features
+- Multi-currency support
+- Export data to CSV/JSON formats
+- All data stored locally on device
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| UI | SwiftUI |
+| Component | Technology |
+|-----------|------------|
+| UI Framework | SwiftUI |
 | Architecture | MVVM |
-| Local Persistence | SwiftData |
+| Local Storage | SwiftData |
 | Charts | Swift Charts |
-| Networking | URLSession + async/await |
-| Auth | Token-based (Keychain storage) |
-| Sync | Custom offline-first sync service |
 
 ## Requirements
 
-- iOS 17.0+
-- Xcode 15.0+
-- Swift 5.9+
+| Requirement | Version |
+|-------------|---------|
+| iOS | 18.0+ |
+| Xcode | 16.4+ |
+| Swift | 6.0 |
 
-## Getting Started
+## Screenshots
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/an01ku/money-manager-ios.git
-   ```
-2. Open `Money Manager.xcodeproj` in Xcode
-3. Select a simulator or connected device
-4. Build and run (⌘R)
+| Overview | Breakdown | Add Expense |
+|:--------:|:----------:|:----------:|
+| <img src="Screenshots/expenses-list.png" width="200"/> | <img src="Screenshots/expenses-breakdown.png" width="200"/> | <img src="Screenshots/expense-add.png" width="200"/> |
 
-### Build & Test via Makefile
+| Category | Recurring Expense |Settings | 
+|:--------:|:--------:|:--------:| 
+| <img src="Screenshots/categories.png" width="200"/> | <img src="Screenshots/expense-recurring-list.png" width="200"/> | <img src="Screenshots/settings.png" width="200"/> |
 
-```bash
-make build       # Build the project
-make test        # Run unit tests
-make test-ui     # Run UI tests
-make clean       # Clean build artifacts
-```
-
-## Project Structure
+## Architecture
 
 ```
 Money Manager/
-├── Models/          # Data models (Expense, Budget, Category, Split, etc.)
-├── ViewModels/      # MVVM view models for each screen
-├── Pages/           # Full-screen views (Overview, Budgets, Groups, Auth, etc.)
-├── Components/      # Reusable UI components (Budget/, Category/, Transaction/, Common/)
-├── Services/        # API, Sync, Data, Keychain, and Error handling services
-├── Helpers/         # App constants and utilities
+├── Models/           # Data models (Expense, Budget, Category, etc.)
+├── ViewModels/       # Business logic and state management
+├── Pages/            # Screen-level views
+├── Components/       # Reusable UI components
+├── Services/         # Keychain and core services
+├── Helpers/          # Constants and utilities
 ├── ContentView.swift
 └── Money_ManagerApp.swift
 ```
 
+## Getting Started
+
+### Prerequisites
+
+1. Install [Xcode](https://developer.apple.com/xcode/) 16.4 or later
+2. An Apple Developer account (for running on device)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/an01ku/money-manager-ios.git
+   cd money-manager-ios
+   ```
+
+2. Open the project in Xcode:
+   ```bash
+   open Money\ Manager.xcodeproj
+   ```
+
+3. Select a simulator or connected device
+
+4. Build and run: `Cmd + R`
+
+### Development Commands
+
+```bash
+# Build the project
+make build
+
+# Run unit tests
+make test-unit
+
+# Run UI tests
+make test-ui
+
+# Run a single test class
+make test-one TEST=BackupViewModelTests
+
+# View coverage report
+make coverage
+
+# Clean build artifacts
+make clean
+```
+
+## Testing
+
+The project includes comprehensive unit and UI tests:
+
+- **Unit Tests** — Model validation, ViewModel logic, data transformations
+- **UI Tests** — User flow verification, screen rendering tests
+
+Run tests with:
+```bash
+make test-unit
+```
+
+View coverage locally with `make coverage`.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
 ## License
 
-This project is for personal use.
+This project is for personal use. All rights reserved.
+
+---
+
+<p align="center">Built with ❤️ and SwiftUI</p>

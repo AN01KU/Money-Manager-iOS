@@ -3,12 +3,13 @@ import SwiftData
 
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
+    @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
     @Query private var budgets: [MonthlyBudget]
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     
-    @StateObject private var viewModel = OverviewViewModel()
+    @State private var viewModel = OverviewViewModel()
     
     var body: some View {
         NavigationStack {
@@ -18,7 +19,18 @@ struct Overview: View {
                         DateFilterSelector(selectedDate: $viewModel.selectedDate, filterMode: $viewModel.filterMode)
                             .padding(.horizontal)
                         
-                        if let budget = viewModel.currentBudget {
+                        if viewModel.filterMode == .daily, viewModel.dailyBudgetLimit > 0 {
+                            BudgetOverviewCard(
+                                budget: MonthlyBudget(
+                                    year: Calendar.current.component(.year, from: viewModel.selectedDate),
+                                    month: Calendar.current.component(.month, from: viewModel.selectedDate),
+                                    limit: viewModel.dailyBudgetLimit
+                                ),
+                                spent: viewModel.totalSpent,
+                                isDaily: true
+                            )
+                            .padding(.horizontal)
+                        } else if let budget = viewModel.currentBudget {
                             BudgetOverviewCard(
                                 budget: budget,
                                 spent: viewModel.totalSpent
@@ -34,9 +46,38 @@ struct Overview: View {
                         ViewTypeSelector(selectedView: $viewModel.selectedView)
                             .padding(.horizontal)
                         
+                        if let categoryFilter = viewModel.selectedCategoryFilter {
+                            HStack(spacing: 8) {
+                                Label(categoryFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                Button {
+                                    withAnimation {
+                                        viewModel.clearCategoryFilter()
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.body)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(AppColors.accentLight)
+                            .clipShape(Capsule())
+                            .padding(.horizontal)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        
                         if viewModel.selectedView == .categories {
                             if !viewModel.categorySpending.isEmpty {
-                                CategoryChart(categorySpending: viewModel.categorySpending)
+                                CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
+                                    withAnimation {
+                                        viewModel.filterByCategory(categoryName)
+                                    }
+                                }
                                     .padding(.horizontal)
                             } else {
                                 EmptyStateView(
@@ -55,7 +96,9 @@ struct Overview: View {
                                 )
                                     .padding(.horizontal)
                             } else {
-                                TransactionList(expenses: viewModel.filteredExpenses)
+                                TransactionList(expenses: viewModel.filteredExpenses) { expense in
+                                    viewModel.deleteExpense(expense)
+                                }
                                     .padding(.horizontal)
                             }
                         }
@@ -77,29 +120,35 @@ struct Overview: View {
             .sheet(isPresented: $viewModel.showBudgetSheet) {
                 BudgetSheet(selectedMonth: viewModel.selectedDate)
             }
+            .alert("Delete Expense?", isPresented: Binding(
+                get: { viewModel.expenseToDelete != nil },
+                set: { if !$0 { viewModel.cancelDeleteExpense() } }
+            )) {
+                Button("Cancel", role: .cancel) {
+                    viewModel.cancelDeleteExpense()
+                }
+                Button("Delete", role: .destructive) {
+                    viewModel.confirmDeleteExpense()
+                }
+            } message: {
+                if let expense = viewModel.expenseToDelete {
+                    Text("Are you sure you want to delete \"\(expense.expenseDescription ?? expense.category)\"? This action cannot be undone.")
+                }
+            }
             .task(id: viewModel.selectedDate) {
                 viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
             }
-            .task {
-                viewModel.loadTestDataIfNeeded(modelContext: modelContext)
-            }
             .onAppear {
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, customCategories: customCategories, modelContext: modelContext)
             }
-            .onChange(of: allExpenses) { _, _ in
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            .onChange(of: allExpenses) { _, newValue in
+                viewModel.configure(allExpenses: newValue, budgets: budgets, customCategories: customCategories, modelContext: modelContext)
             }
-            .onChange(of: budgets) { _, _ in
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, modelContext: modelContext)
+            .onChange(of: budgets) { _, newValue in
+                viewModel.configure(allExpenses: allExpenses, budgets: newValue, customCategories: customCategories, modelContext: modelContext)
             }
-            .onChange(of: viewModel.searchText) { _, _ in
-                viewModel.recalculate()
-            }
-            .onChange(of: viewModel.filterMode) { _, _ in
-                viewModel.recalculate()
-            }
-            .onChange(of: viewModel.selectedDate) { _, _ in
-                viewModel.recalculate()
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.configure(allExpenses: allExpenses, budgets: budgets, customCategories: newValue, modelContext: modelContext)
             }
         }
     }
@@ -107,6 +156,7 @@ struct Overview: View {
 
 // MARK: - Preview Helpers
 
+@MainActor
 private func previewContainer(
     expenses: [Expense] = [],
     budgets: [MonthlyBudget] = []

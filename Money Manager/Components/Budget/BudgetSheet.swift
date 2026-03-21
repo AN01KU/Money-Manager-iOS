@@ -18,6 +18,8 @@ struct BudgetSheet: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var errorTriggered = false
+    @State private var successTriggered = false
     @FocusState private var isAmountFocused: Bool
     
     var body: some View {
@@ -27,7 +29,7 @@ struct BudgetSheet: View {
                     HStack {
                         Text(CurrencyFormatter.currentSymbol)
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("0", text: $budgetAmount)
                             .keyboardType(.numberPad)
                             .font(.title2)
@@ -45,7 +47,7 @@ struct BudgetSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Budget Preview")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Text(CurrencyFormatter.format(amount))
                                 .font(.title3)
                                 .fontWeight(.semibold)
@@ -56,12 +58,12 @@ struct BudgetSheet: View {
             .navigationTitle("Set Budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if isSaving {
                         ProgressView()
                     } else {
@@ -78,9 +80,18 @@ struct BudgetSheet: View {
             } message: {
                 Text(errorMessage)
             }
+            .onChange(of: showError) { _, show in
+                if show { errorTriggered = true }
+            }
+            .sensoryFeedback(.error, trigger: errorTriggered)
+            .onChange(of: errorTriggered) { _, newValue in
+                if newValue { errorTriggered = false }
+            }
+            .sensoryFeedback(.success, trigger: successTriggered)
             .onAppear {
                 loadExistingBudget()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(500))
                     isAmountFocused = true
                 }
             }
@@ -139,18 +150,8 @@ struct BudgetSheet: View {
             return
         }
         
-        // Queue for backend sync in background if authenticated
-        if APIService.shared.isAuthenticated {
-            let request = SetBudgetRequest(amount: String(amount), month: month, year: year)
-            SyncService.shared.queueForSync(
-                itemType: .budget,
-                itemId: UUID(),
-                action: .create,
-                payload: request
-            )
-        }
-        
         isSaving = false
+        successTriggered = true
         dismiss()
     }
     

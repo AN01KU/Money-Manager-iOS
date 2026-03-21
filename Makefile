@@ -1,9 +1,20 @@
 PROJECT = Money Manager.xcodeproj
 SCHEME = Money Manager
-DESTINATION = platform=iOS Simulator,name=iPhone 17
+SIMULATOR_ID := $(shell xcrun simctl list devices available | grep -E "iPhone [0-9]+" | tail -1 | awk -F '[()]' '{print $$2}')
+DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_ID)
 SIGNING = CODE_SIGNING_ALLOWED=NO
+COVERAGE = -enableCodeCoverage YES
+TEST_RESULTS = ./test_results.xcresult
 
-.PHONY: build test test-unit test-ui clean
+XCODEBUILD_TEST = xcodebuild test \
+	-project "$(PROJECT)" \
+	-scheme "$(SCHEME)" \
+	-destination "$(DESTINATION)" \
+	$(SIGNING) \
+	$(COVERAGE) \
+	-resultBundlePath "$(TEST_RESULTS)"
+
+.PHONY: build test test-unit test-ui coverage clean
 
 build:
 	xcodebuild build \
@@ -12,26 +23,29 @@ build:
 		-destination "$(DESTINATION)" \
 		$(SIGNING)
 
-test: test-unit
-
+test:
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST)
+	
 test-unit:
-	xcodebuild test \
-		-project "$(PROJECT)" \
-		-scheme "$(SCHEME)" \
-		-destination "$(DESTINATION)" \
-		-only-testing:"Money ManagerTests" \
-		$(SIGNING)
-
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests"
+	
 test-ui:
-	xcodebuild test \
-		-project "$(PROJECT)" \
-		-scheme "$(SCHEME)" \
-		-destination "$(DESTINATION)" \
-		-only-testing:"Money ManagerUITests" \
-		$(SIGNING)
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests"
+	
+test-one:
+	@echo "Usage: make test-one TEST=BackupViewModelTests"
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/$(TEST)"
+
+coverage:
+	xcrun xccov view --report $(TEST_RESULTS) 2>/dev/null | head -10
 
 clean:
 	xcodebuild clean \
 		-project "$(PROJECT)" \
 		-scheme "$(SCHEME)"
 	rm -rf ~/Library/Developer/Xcode/DerivedData
+	rm -rf $(TEST_RESULTS)

@@ -15,3 +15,6 @@ DerivedData/
 
 # CocoaPods
 Pods/
+
+# Test results
+test_results.xcresult/

@@ -14,7 +14,7 @@ final class AddExpenseTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "useTestData"]
+        app.launchArguments = ["--uitesting", "--skipOnboarding", "--useTestData"]
         app.launch()
     }
     

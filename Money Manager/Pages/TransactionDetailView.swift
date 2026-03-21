@@ -4,44 +4,16 @@ import SwiftData
 struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    @ObservedObject private var apiService = APIService.shared
-    
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let expense: Expense
-    @StateObject private var viewModel: TransactionDetailViewModel
+    @State private var viewModel: TransactionDetailViewModel
+    @State private var editTapped = false
+    @State private var deleteTapped = false
+    @State private var deleteSuccess = false
     
     init(expense: Expense) {
         self.expense = expense
-        _viewModel = StateObject(wrappedValue: TransactionDetailViewModel(expense: expense))
-    }
-    
-    private var groupExpenseContent: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(expense.groupName ?? "Unknown Group")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                
-                Text(apiService.isAuthenticated ? "Tap to view group details" : "Sign in to view group details")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            if apiService.isAuthenticated {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } else {
-                Image(systemName: "lock.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-        .background(Color.teal.opacity(0.1))
-        .cornerRadius(12)
+        _viewModel = State(wrappedValue: TransactionDetailViewModel(expense: expense))
     }
     
     var body: some View {
@@ -52,37 +24,30 @@ struct TransactionDetailView: View {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "person.2.fill")
-                                    .foregroundColor(.teal)
+                                    .foregroundStyle(AppColors.accent)
                                 Text("Group Expense")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.teal)
+                                    .foregroundStyle(AppColors.accent)
                                 Spacer()
                             }
                             
-                            if apiService.isAuthenticated {
-                                NavigationLink(value: viewModel.getGroupForNavigation()) { 
-                                    groupExpenseContent
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            } else {
-                                groupExpenseContent
-                            }
+                            GroupExpenseContent(groupName: expense.groupName)
                         }
                         .padding()
                         .background(Color(.systemGray6))
-                        .cornerRadius(16)
+.clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     
                     VStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill((viewModel.category?.color ?? Color.gray).opacity(0.2))
+                                .fill(viewModel.categoryColor.opacity(0.2))
                                 .frame(width: 80, height: 80)
                             
-                            Image(systemName: viewModel.category?.icon ?? "ellipsis.circle.fill")
+                            Image(systemName: viewModel.categoryIcon)
                                 .font(.system(size: 40))
-                                .foregroundColor(viewModel.category?.color ?? Color.gray)
+                                .foregroundStyle(viewModel.categoryColor)
                         }
                         
                         Text(expense.category)
@@ -91,11 +56,11 @@ struct TransactionDetailView: View {
                         
                         Text(CurrencyFormatter.format(expense.amount))
                             .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(.red)
+                            .foregroundStyle(AppColors.expense)
                         
                         Text(viewModel.formatDateAndTime(expense.date, time: expense.time))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.top)
                     
@@ -116,46 +81,56 @@ struct TransactionDetailView: View {
                             DetailRow(label: "Last Modified", value: viewModel.formatFullDate(expense.updatedAt))
                         }
                         
-                        if expense.isRecurring {
+                        if expense.recurringExpenseId != nil {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                    .foregroundColor(.teal)
+                                    .foregroundStyle(AppColors.accent)
                                 Text("This is a recurring expense")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding()
-                            .background(Color.teal.opacity(0.1))
-                            .cornerRadius(8)
+                            .background(AppColors.accentLight)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
                     .padding()
                     .background(Color(.systemGray6))
-                    .cornerRadius(16)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     
                     HStack(spacing: 16) {
                         Button(action: {
+                            editTapped = true
                             viewModel.showEditSheet = true
                         }) {
                             Text("Edit")
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.teal)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                                .background(AppColors.accent)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
+                        .onChange(of: editTapped) { _, newValue in
+                            if newValue { editTapped = false }
                         }
                         
                         Button(action: {
+                            deleteTapped = true
                             viewModel.showDeleteAlert = true
                         }) {
                             Text("Delete")
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.red)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                                .background(AppColors.expense)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .sensoryFeedback(.warning, trigger: deleteTapped)
+                        .onChange(of: deleteTapped) { _, newValue in
+                            if newValue { deleteTapped = false }
                         }
                     }
                     .padding(.horizontal)
@@ -164,11 +139,8 @@ struct TransactionDetailView: View {
             }
             .navigationTitle("Transaction Details")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: SplitGroup.self) { group in
-                GroupDetailView(group: group)
-            }
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -180,13 +152,17 @@ struct TransactionDetailView: View {
             .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    viewModel.deleteExpense { dismiss() }
+                    viewModel.deleteExpense { deleteSuccess = true; dismiss() }
                 }
             } message: {
                 Text("This action cannot be undone.")
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext)
+                viewModel.customCategories = customCategories
+            }
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.customCategories = newValue
             }
         }
     }
@@ -200,10 +176,10 @@ struct DetailRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(value)
                 .font(.body)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
     }
 }

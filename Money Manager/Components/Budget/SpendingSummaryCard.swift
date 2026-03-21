@@ -15,13 +15,13 @@ struct SpendingSummaryCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("This Month")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Total Spent")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(CurrencyFormatter.format(totalSpent))
                         .font(.title2)
                         .fontWeight(.bold)
@@ -32,7 +32,7 @@ struct SpendingSummaryCard: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Transactions")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("\(transactionCount)")
                         .font(.title2)
                         .fontWeight(.bold)
@@ -41,8 +41,10 @@ struct SpendingSummaryCard: View {
         }
         .padding()
         .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("This month, total spent \(CurrencyFormatter.format(totalSpent)), \(transactionCount) transactions")
     }
 }
 
