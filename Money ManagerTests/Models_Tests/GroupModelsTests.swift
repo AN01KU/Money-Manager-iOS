@@ -1,3 +1,5 @@
+// MARK: - Commented out: backend/auth/groups code removed in offline-v1
+/*
 import Foundation
 import SwiftData
 import Testing
@@ -156,3 +158,4 @@ struct GroupModelsTests {
         #expect(expense.group?.id == groupId)
     }
 }
+*/

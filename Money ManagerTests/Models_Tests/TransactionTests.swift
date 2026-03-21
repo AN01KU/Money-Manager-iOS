@@ -7,13 +7,13 @@ struct TransactionModelTests {
     @Test
     func testTransactionInitializationWithDefaultValues() {
         let transaction = Transaction(
-            category: .food,
+            category: .foodDining,
             description: "Lunch",
             amount: 500,
             date: Date()
         )
         
-        #expect(transaction.category == .food)
+        #expect(transaction.category == .foodDining)
         #expect(transaction.description == "Lunch")
         #expect(transaction.amount == 500)
         #expect(transaction.isRecurring == false)
@@ -50,7 +50,7 @@ struct TransactionModelTests {
     
     @Test
     func testTransactionWithDifferentCategories() {
-        let categories: [Money_Manager.Category] = [.food, .transport, .utilities, .shopping, .housing, .healthMedical, .entertainment, .travel]
+        let categories: [PredefinedCategory] = [.foodDining, .transport, .utilities, .shopping, .housing, .healthMedical, .entertainment, .travel]
         
         for category in categories {
             let transaction = Transaction(category: category, description: "Test", amount: 100, date: Date())

@@ -1,19 +1,27 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class RecurringExpensesViewModel: ObservableObject {
-    @Published var expenses: [Expense] = []
-    @Published var showAddSheet = false
+@Observable class RecurringExpensesViewModel {
+    var expenses: [RecurringExpense] = []
+    var showAddSheet = false
+    var editingExpense: RecurringExpense?
     
-    var activeExpenses: [Expense] {
-        expenses.filter { $0.isRecurring && $0.isActive }
+    var activeExpenses: [RecurringExpense] {
+        expenses.filter { $0.isActive }
+    }
+    
+    var pausedExpenses: [RecurringExpense] {
+        expenses.filter { !$0.isActive }
+    }
+    
+    var allRecurringExpenses: [RecurringExpense] {
+        expenses
     }
     
     private var modelContext: ModelContext?
     
-    func configure(expenses: [Expense], modelContext: ModelContext?) {
+    func configure(expenses: [RecurringExpense], modelContext: ModelContext?) {
         self.expenses = expenses
         self.modelContext = modelContext
     }
@@ -24,42 +32,49 @@ class RecurringExpensesViewModel: ObservableObject {
         expense.isActive = false
         expense.updatedAt = Date()
         try? modelContext?.save()
+    }
+    
+    func toggleExpense(at index: Int) {
+        guard index < allRecurringExpenses.count else { return }
+        let expense = allRecurringExpenses[index]
+        expense.isActive.toggle()
+        expense.updatedAt = Date()
+        try? modelContext?.save()
+    }
+    
+    func deleteExpense(at index: Int) {
+        guard index < pausedExpenses.count else { return }
+        let recurring = pausedExpenses[index]
+        let recurringId = recurring.id
         
-        if APIService.shared.isAuthenticated {
-            let request = UpdatePersonalExpenseRequest(
-                amount: nil,
-                description: nil,
-                notes: nil,
-                isRecurring: nil,
-                frequency: nil,
-                dayOfMonth: nil,
-                daysOfWeek: nil,
-                isActive: false
-            )
-            SyncService.shared.queueForSync(
-                itemType: .personalExpense,
-                itemId: expense.id,
-                action: .update,
-                payload: request
-            )
+        let descriptor = FetchDescriptor<Expense>(
+            predicate: #Predicate { $0.recurringExpenseId == recurringId }
+        )
+        if let expenses = try? modelContext?.fetch(descriptor) {
+            for expense in expenses {
+                expense.recurringExpenseId = nil
+            }
         }
+        
+        modelContext?.delete(recurring)
+        try? modelContext?.save()
     }
 }
 
 @MainActor
-class AddRecurringExpenseViewModel: ObservableObject {
-    @Published var name: String = ""
-    @Published var amount: String = ""
-    @Published var selectedCategory: String = ""
-    @Published var frequency: String = "monthly"
-    @Published var startDate: Date = Date()
-    @Published var hasEndDate: Bool = false
-    @Published var endDate: Date = Date()
-    @Published var dayOfMonth: Int = 1
-    @Published var notes: String = ""
-    @Published var showCategoryPicker = false
-    @Published var showError = false
-    @Published var errorMessage = ""
+@Observable class AddRecurringExpenseViewModel {
+    var name: String = ""
+    var amount: String = ""
+    var selectedCategory: String = ""
+    var frequency: String = "monthly"
+    var startDate: Date = Date()
+    var hasEndDate: Bool = false
+    var endDate: Date = Date()
+    var dayOfMonth: Int = 1
+    var notes: String = ""
+    var showCategoryPicker = false
+    var showError = false
+    var errorMessage = ""
     
     let frequencies = ["daily", "weekly", "monthly", "yearly"]
     
@@ -99,19 +114,18 @@ class AddRecurringExpenseViewModel: ObservableObject {
         
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         
-        let expense = Expense(
+        let recurringExpense = RecurringExpense(
+            name: trimmedName,
             amount: amountValue,
             category: selectedCategory,
-            date: startDate,
-            expenseDescription: trimmedName,
-            notes: notes.isEmpty ? nil : notes,
-            isRecurring: true,
             frequency: frequency,
             dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
-            recurringEndDate: hasEndDate ? endDate : nil
+            startDate: startDate,
+            endDate: hasEndDate ? endDate : nil,
+            notes: notes.isEmpty ? nil : notes
         )
         
-        modelContext.insert(expense)
+        modelContext.insert(recurringExpense)
         
         do {
             try modelContext.save()
@@ -119,27 +133,6 @@ class AddRecurringExpenseViewModel: ObservableObject {
             errorMessage = "Failed to save: \(error.localizedDescription)"
             showError = true
             return false
-        }
-        
-        if APIService.shared.isAuthenticated {
-            let request = CreatePersonalExpenseRequest(
-                category: selectedCategory,
-                amount: String(format: "%.2f", amountValue),
-                description: trimmedName,
-                notes: notes.isEmpty ? nil : notes,
-                expenseDate: ISO8601DateFormatter().string(from: startDate),
-                isRecurring: true,
-                frequency: frequency,
-                dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
-                daysOfWeek: nil,
-                recurringEndDate: hasEndDate ? ISO8601DateFormatter().string(from: endDate) : nil
-            )
-            SyncService.shared.queueForSync(
-                itemType: .personalExpense,
-                itemId: expense.id,
-                action: .create,
-                payload: request
-            )
         }
         
         return true

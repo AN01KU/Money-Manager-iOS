@@ -5,76 +5,115 @@ struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
-    @StateObject private var viewModel = ManageCategoriesViewModel()
+    @State private var viewModel = ManageCategoriesViewModel()
+    @State private var rowTapped = false
+    @State private var deleteTriggered = false
+    @State private var hideTriggered = false
+    @State private var restoreTriggered = false
+    @State private var addTriggered = false
+    @State private var showResetMenu = false
+    
+    @State private var lastDeleteCount = 0
+    @State private var lastResetCount = 0
+    
+    private var predefinedCategories: [CustomCategory] {
+        customCategories.filter { $0.isPredefined && !$0.isHidden }
+    }
+    
+    private var userCategories: [CustomCategory] {
+        customCategories.filter { !$0.isPredefined && !$0.isHidden }
+    }
+    
+    private var hiddenCategories: [CustomCategory] {
+        customCategories.filter { $0.isHidden }
+    }
     
     var body: some View {
         List {
-            Section {
-                ForEach(PredefinedCategory.allCases) { category in
-                    HStack(spacing: 12) {
-                        Image(systemName: category.icon)
-                            .foregroundColor(category.color)
-                            .frame(width: 28)
-                        
-                        Text(category.rawValue)
-                            .font(.body)
-                        
-                        Spacer()
-                        
-                        Text("Default")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color(.systemGray5))
-                            .cornerRadius(6)
-                    }
-                }
-            } header: {
-                Text("Default Categories")
-            } footer: {
-                Text("Default categories cannot be edited or removed.")
-            }
-            
-            if !viewModel.visibleCategories.isEmpty {
-                Section("Your Categories") {
-                    ForEach(viewModel.visibleCategories) { category in
-                        HStack(spacing: 12) {
-                            Image(systemName: category.icon)
-                                .foregroundColor(Color(hex: category.color))
-                                .frame(width: 28)
-                            
-                            Text(category.name)
-                                .font(.body)
+            if !predefinedCategories.isEmpty {
+                Section {
+                    ForEach(predefinedCategories) { category in
+                        CategoryRow(category: category, onTap: {
+                            rowTapped = true
+                            viewModel.categoryToEdit = category
+                        })
+                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                        .onChange(of: rowTapped) { _, newValue in
+                            if newValue { rowTapped = false }
                         }
-                    }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            viewModel.hideCategory(at: index)
-                        }
-                    }
-                }
-            }
-            
-            if !viewModel.hiddenCategories.isEmpty {
-                Section("Hidden Categories") {
-                    ForEach(viewModel.hiddenCategories) { category in
-                        HStack(spacing: 12) {
-                            Image(systemName: category.icon)
-                                .foregroundColor(Color(hex: category.color).opacity(0.5))
-                                .frame(width: 28)
-                            
-                            Text(category.name)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Button("Restore") {
-                                viewModel.restoreCategory(category)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if category.isDeletable {
+                                Button(role: .destructive) {
+                                    deleteTriggered = true
+                                    viewModel.deleteCategory(category)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .tint(.red)
+                                .sensoryFeedback(.warning, trigger: deleteTriggered)
+                                .onChange(of: deleteTriggered) { _, newValue in
+                                    if newValue { deleteTriggered = false }
+                                }
                             }
-                            .font(.caption)
-                            .foregroundColor(.teal)
+                        }
+                    }
+                } header: {
+                    Text("Default Categories")
+                } footer: {
+                    Text("Tap to edit icon, color, or name. Swipe to delete (except Other).")
+                }
+            }
+            
+            if !userCategories.isEmpty {
+                Section("Your Categories") {
+                    ForEach(userCategories) { category in
+                        CategoryRow(category: category, onTap: {
+                            rowTapped = true
+                            viewModel.categoryToEdit = category
+                        })
+                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                        .onChange(of: rowTapped) { _, newValue in
+                            if newValue { rowTapped = false }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleteTriggered = true
+                                viewModel.deleteCategory(category)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(.red)
+                            .sensoryFeedback(.warning, trigger: deleteTriggered)
+                            .onChange(of: deleteTriggered) { _, newValue in
+                                if newValue { deleteTriggered = false }
+                            }
+                            
+                            Button {
+                                hideTriggered = true
+                                viewModel.hideCategory(category)
+                            } label: {
+                                Label("Hide", systemImage: "eye.slash")
+                            }
+                            .tint(.orange)
+                            .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
+                            .onChange(of: hideTriggered) { _, newValue in
+                                if newValue { hideTriggered = false }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if !hiddenCategories.isEmpty {
+                Section("Hidden Categories") {
+                    ForEach(hiddenCategories) { category in
+                        HiddenCategoryRow(category: category) {
+                            restoreTriggered = true
+                            viewModel.restoreCategory(category)
+                        }
+                        .sensoryFeedback(.success, trigger: restoreTriggered)
+                        .onChange(of: restoreTriggered) { _, newValue in
+                            if newValue { restoreTriggered = false }
                         }
                     }
                 }
@@ -82,132 +121,88 @@ struct ManageCategoriesView: View {
         }
         .navigationTitle("Categories")
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showResetMenu = true
+                        viewModel.restoreDefaults(modelContext: modelContext)
+                    } label: {
+                        Label("Restore Defaults", systemImage: "arrow.counterclockwise")
+                    }
+                    
+                    Button(role: .destructive) {
+                        showResetMenu = true
+                        viewModel.resetAll(modelContext: modelContext)
+                    } label: {
+                        Label("Reset All Categories", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: showResetMenu)
+                .onChange(of: showResetMenu) { _, newValue in
+                    if newValue { showResetMenu = false }
+                }
+                
                 Button {
+                    addTriggered = true
                     viewModel.showAddCategory = true
                 } label: {
                     Image(systemName: "plus")
-                        .foregroundColor(.teal)
+                        .foregroundStyle(AppColors.accent)
                 }
+                .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
+                .onChange(of: addTriggered) { _, newValue in
+                    if newValue { addTriggered = false }
+                }
+                .accessibilityLabel("Add category")
             }
         }
         .sheet(isPresented: $viewModel.showAddCategory) {
-            AddCategorySheet()
+            AddCategorySheet(allCategories: customCategories)
         }
+        .sheet(item: $viewModel.categoryToEdit) { category in
+            EditCategorySheet(category: category, allCategories: customCategories)
+        }
+        .alert("Delete Category?", isPresented: $viewModel.showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                viewModel.categoryToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                viewModel.confirmDelete()
+            }
+        } message: {
+            Text("This will permanently remove \"\(viewModel.categoryToDelete?.name ?? "")\". Existing expenses using this category will keep their category name.")
+        }
+        .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.deleteConfirmedTrigger)
+        .sensoryFeedback(.success, trigger: viewModel.resetTrigger)
         .onAppear {
-            viewModel.configure(customCategories: customCategories, modelContext: modelContext)
-        }
-        .onChange(of: customCategories) { _, _ in
-            viewModel.configure(customCategories: customCategories, modelContext: modelContext)
+            viewModel.configure(modelContext: modelContext)
         }
     }
 }
 
-struct AddCategorySheet: View {
-    @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
-    
-    @StateObject private var viewModel = AddCategoryViewModel()
+struct HiddenCategoryRow: View {
+    let category: CustomCategory
+    let onRestore: () -> Void
     
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Name")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        TextField("e.g., Subscriptions, Pets", text: $viewModel.name)
-                            .textInputAutocapitalization(.words)
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                Section("Icon") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 16) {
-                        ForEach(viewModel.iconOptions, id: \.self) { icon in
-                            Button {
-                                viewModel.selectedIcon = icon
-                            } label: {
-                                Image(systemName: icon)
-                                    .font(.title2)
-                                    .foregroundColor(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor) : .secondary)
-                                    .frame(width: 44, height: 44)
-                                    .background(viewModel.selectedIcon == icon ? Color(hex: viewModel.selectedColor).opacity(0.12) : Color.clear)
-                                    .cornerRadius(10)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                Section("Color") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 12) {
-                        ForEach(viewModel.colorOptions, id: \.self) { color in
-                            Button {
-                                viewModel.selectedColor = color
-                            } label: {
-                                Circle()
-                                    .fill(Color(hex: color))
-                                    .frame(width: 32, height: 32)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.primary, lineWidth: viewModel.selectedColor == color ? 2.5 : 0)
-                                            .padding(-3)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                Section("Preview") {
-                    HStack(spacing: 12) {
-                        Image(systemName: viewModel.selectedIcon)
-                            .font(.title2)
-                            .foregroundColor(Color(hex: viewModel.selectedColor))
-                            .frame(width: 36)
-                        
-                        Text(viewModel.name.isEmpty ? "Category Name" : viewModel.name)
-                            .font(.body)
-                            .foregroundColor(viewModel.name.isEmpty ? .secondary : .primary)
-                    }
-                    .padding(.vertical, 4)
-                }
+        HStack(spacing: 12) {
+            Image(systemName: category.icon)
+                .foregroundStyle(Color(hex: category.color).opacity(0.5))
+                .frame(width: 28)
+            
+            Text(category.name)
+                .font(.body)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+            
+            Button("Restore") {
+                onRestore()
             }
-            .navigationTitle("New Category")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if viewModel.isSaving {
-                        ProgressView()
-                    } else {
-                        Button("Add") {
-                            Task {
-                                if await viewModel.save() {
-                                    dismiss()
-                                }
-                            }
-                        }
-                        .fontWeight(.semibold)
-                        .disabled(viewModel.name.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                }
-            }
-            .alert("Error", isPresented: $viewModel.showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.errorMessage)
-            }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext)
-            }
+            .font(.caption)
+            .foregroundStyle(AppColors.accent)
         }
     }
 }

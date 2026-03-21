@@ -10,6 +10,7 @@ import SwiftUI
 struct BudgetOverviewCard: View {
     let budget: MonthlyBudget
     let spent: Double
+    var isDaily: Bool = false
     
     private var percentage: Int {
         guard budget.limit > 0 else { return 0 }
@@ -24,10 +25,10 @@ struct BudgetOverviewCard: View {
                     .fontWeight(.bold)
                 Text("/ \(CurrencyFormatter.format(budget.limit))")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 Text("Budget")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             HStack(spacing: 12) {
@@ -36,12 +37,14 @@ struct BudgetOverviewCard: View {
                 Text("\(percentage)%")
                     .font(.body)
                     .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(isDaily ? "Daily" : "Monthly") budget, \(CurrencyFormatter.format(spent)) of \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used")
     }
 }
 

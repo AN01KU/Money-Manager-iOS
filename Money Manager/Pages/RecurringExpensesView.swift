@@ -3,14 +3,17 @@ import SwiftData
 
 struct RecurringExpensesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Expense> { $0.isRecurring }, sort: \Expense.expenseDescription)
-    private var recurringExpenses: [Expense]
+    @Query(sort: \RecurringExpense.name)
+    private var recurringExpenses: [RecurringExpense]
     
-    @StateObject private var viewModel = RecurringExpensesViewModel()
+    @State private var viewModel = RecurringExpensesViewModel()
+    @State private var rowTapped = false
+    @State private var deleteTriggered = false
+    @State private var addTriggered = false
     
     var body: some View {
         Group {
-            if viewModel.activeExpenses.isEmpty {
+            if viewModel.allRecurringExpenses.isEmpty {
                 EmptyStateView(
                     icon: "arrow.clockwise.circle.fill",
                     title: "No recurring expenses",
@@ -18,12 +21,54 @@ struct RecurringExpensesView: View {
                 )
             } else {
                 List {
-                    ForEach(viewModel.activeExpenses) { expense in
-                        RecurringExpenseRow(expense: expense)
+                    if !viewModel.activeExpenses.isEmpty {
+                        Section("Active") {
+                            ForEach(viewModel.activeExpenses) { expense in
+                                RecurringExpenseRow(expense: expense, onTap: {
+                                    rowTapped = true
+                                    viewModel.editingExpense = expense
+                                })
+                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .onChange(of: rowTapped) { _, newValue in
+                                    if newValue { rowTapped = false }
+                                }
+                            }
+                            .onDelete { indexSet in
+                                deleteTriggered = true
+                                for index in indexSet {
+                                    viewModel.deactivateExpense(at: index)
+                                }
+                            }
+                            .sensoryFeedback(.warning, trigger: deleteTriggered)
+                            .onChange(of: deleteTriggered) { _, newValue in
+                                if newValue { deleteTriggered = false }
+                            }
+                        }
                     }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            viewModel.deactivateExpense(at: index)
+                    
+                    if !viewModel.pausedExpenses.isEmpty {
+                        Section("Paused") {
+                            ForEach(viewModel.pausedExpenses) { expense in
+                                RecurringExpenseRow(expense: expense, onTap: {
+                                    rowTapped = true
+                                    viewModel.editingExpense = expense
+                                })
+                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .onChange(of: rowTapped) { _, newValue in
+                                    if newValue { rowTapped = false }
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteTriggered = true
+                                        if let index = viewModel.pausedExpenses.firstIndex(where: { $0.id == expense.id }) {
+                                            viewModel.deleteExpense(at: index)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    .tint(.red)
+                                }
+                            }
                         }
                     }
                 }
@@ -32,239 +77,31 @@ struct RecurringExpensesView: View {
         .navigationTitle("Recurring")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button(action: {
+                    addTriggered = true
                     viewModel.showAddSheet = true
                 }) {
                     Image(systemName: "plus")
                 }
+                .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
+                .onChange(of: addTriggered) { _, newValue in
+                    if newValue { addTriggered = false }
+                }
+                .accessibilityLabel("Add recurring expense")
             }
         }
         .sheet(isPresented: $viewModel.showAddSheet) {
             AddRecurringExpenseSheet()
         }
+        .sheet(item: $viewModel.editingExpense) { expense in
+            EditRecurringExpenseSheet(expense: expense)
+        }
         .onAppear {
             viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
         }
-        .onChange(of: recurringExpenses) { _, _ in
-            viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
-        }
-    }
-}
-
-struct RecurringExpenseRow: View {
-    @Bindable var expense: Expense
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    
-    private var displayName: String {
-        expense.expenseDescription ?? expense.category
-    }
-    
-    private var categoryIcon: String {
-        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == expense.category }) {
-            return predefined.icon
-        }
-        if let custom = customCategories.first(where: { $0.name == expense.category }) {
-            return custom.icon
-        }
-        return "ellipsis.circle.fill"
-    }
-    
-    private var categoryColor: Color {
-        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == expense.category }) {
-            return predefined.color
-        }
-        if let custom = customCategories.first(where: { $0.name == expense.category }) {
-            return Color(hex: custom.color)
-        }
-        return .secondary
-    }
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: categoryIcon)
-                .font(.title2)
-                .foregroundColor(categoryColor)
-                .frame(width: 36)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(displayName)
-                    .fontWeight(.semibold)
-                
-                Text(CurrencyFormatter.format(expense.amount))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            if let frequency = expense.frequency {
-                Text(frequency.capitalized)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.teal.opacity(0.1))
-                    .foregroundColor(.teal)
-                    .cornerRadius(6)
-            }
-            
-            Toggle("", isOn: Binding(
-                get: { expense.isActive },
-                set: { newValue in
-                    expense.isActive = newValue
-                    expense.updatedAt = Date()
-                }
-            ))
-            .labelsHidden()
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct AddRecurringExpenseSheet: View {
-    @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
-    
-    @StateObject private var viewModel = AddRecurringExpenseViewModel()
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Name *")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        TextField("e.g., Netflix, Rent", text: $viewModel.name)
-                            .textInputAutocapitalization(.sentences)
-                    }
-                    .padding(.vertical, 8)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Amount *")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        TextField("0.00", text: $viewModel.amount)
-                            .keyboardType(.decimalPad)
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        HStack(spacing: 12) {
-                            QuickAmountButton(amount: 100) {
-                                viewModel.amount = "100"
-                            }
-                            QuickAmountButton(amount: 500) {
-                                viewModel.amount = "500"
-                            }
-                            QuickAmountButton(amount: 1000) {
-                                viewModel.amount = "1000"
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Category *")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Button(action: {
-                            viewModel.showCategoryPicker = true
-                        }) {
-                            HStack {
-                                if let category = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
-                                    Image(systemName: category.icon)
-                                        .foregroundColor(category.color)
-                                    Text(viewModel.selectedCategory)
-                                } else {
-                                    Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)
-                                        .foregroundColor(viewModel.selectedCategory.isEmpty ? .secondary : .primary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.down")
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
-                
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Frequency")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Picker("Frequency", selection: $viewModel.frequency) {
-                            ForEach(viewModel.frequencies, id: \.self) { freq in
-                                Text(freq.capitalized).tag(freq)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    .padding(.vertical, 8)
-                    
-                    if viewModel.frequency == "monthly" {
-                        Picker("Day of Month", selection: $viewModel.dayOfMonth) {
-                            ForEach(1...28, id: \.self) { day in
-                                Text("\(day)").tag(day)
-                            }
-                        }
-                    }
-                    
-                    DatePicker("Start Date", selection: $viewModel.startDate, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                    
-                    Toggle("Set End Date", isOn: $viewModel.hasEndDate)
-                    
-                    if viewModel.hasEndDate {
-                        DatePicker("End Date", selection: $viewModel.endDate, in: viewModel.startDate..., displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                    }
-                }
-                
-                Section("Details") {
-                    TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
-                        .lineLimit(3...6)
-                        .textInputAutocapitalization(.sentences)
-                }
-            }
-            .navigationTitle("Add Recurring")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        if viewModel.save() {
-                            dismiss()
-                        }
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!viewModel.isValid)
-                }
-            }
-            .sheet(isPresented: $viewModel.showCategoryPicker) {
-                CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
-            }
-            .alert("Error", isPresented: $viewModel.showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.errorMessage)
-            }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext)
-            }
+        .onChange(of: recurringExpenses) { _, newValue in
+            viewModel.configure(expenses: newValue, modelContext: modelContext)
         }
     }
 }
@@ -272,6 +109,6 @@ struct AddRecurringExpenseSheet: View {
 #Preview {
     NavigationStack {
         RecurringExpensesView()
-            .modelContainer(for: Expense.self)
+            .modelContainer(for: RecurringExpense.self)
     }
 }

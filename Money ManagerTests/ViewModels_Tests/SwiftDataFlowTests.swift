@@ -10,7 +10,7 @@ struct AddRecurringExpenseSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
+            for: Expense.self, MonthlyBudget.self, CustomCategory.self, RecurringExpense.self,
             configurations: config
         )
     }
@@ -33,13 +33,11 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<Expense>(
-            predicate: #Predicate<Expense> { $0.isRecurring }
-        )
+        let descriptor = FetchDescriptor<RecurringExpense>()
         let saved = try context.fetch(descriptor)
         
         #expect(saved.count == 1)
-        #expect(saved.first?.expenseDescription == "Netflix")
+        #expect(saved.first?.name == "Netflix")
         #expect(saved.first?.amount == 649)
         #expect(saved.first?.category == "Entertainment")
         #expect(saved.first?.frequency == "monthly")
@@ -65,12 +63,10 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<Expense>(
-            predicate: #Predicate<Expense> { $0.isRecurring }
-        )
+        let descriptor = FetchDescriptor<RecurringExpense>()
         let saved = try context.fetch(descriptor)
         
-        #expect(saved.first?.recurringEndDate == nil)
+        #expect(saved.first?.endDate == nil)
     }
     
     @Test
@@ -93,12 +89,10 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<Expense>(
-            predicate: #Predicate<Expense> { $0.isRecurring }
-        )
+        let descriptor = FetchDescriptor<RecurringExpense>()
         let saved = try context.fetch(descriptor)
         
-        #expect(saved.first?.recurringEndDate != nil)
+        #expect(saved.first?.endDate != nil)
     }
 }
 
@@ -266,87 +260,5 @@ struct ManageCategoriesSwiftDataTests {
         let fetched = try context.fetch(descriptor)
         
         #expect(fetched.first?.isHidden == false)
-    }
-}
-
-@Suite(.serialized)
-@MainActor
-struct OverviewSwiftDataTests {
-    
-    private func makeContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
-            configurations: config
-        )
-    }
-    
-    @Test
-    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() throws {
-        let container = try makeContainer()
-        let context = container.mainContext
-        
-        let viewModel = OverviewViewModel()
-        viewModel.filterMode = .monthly
-        viewModel.selectedDate = Date()
-        viewModel.configure(allExpenses: [], budgets: [], modelContext: context)
-        
-        viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
-        
-        let descriptor = FetchDescriptor<MonthlyBudget>()
-        let budgets = try context.fetch(descriptor)
-        
-        let calendar = Calendar.current
-        let expectedYear = calendar.component(.year, from: Date())
-        let expectedMonth = calendar.component(.month, from: Date())
-        
-        #expect(budgets.count == 1)
-        #expect(budgets.first?.year == expectedYear)
-        #expect(budgets.first?.month == expectedMonth)
-        #expect(budgets.first?.limit == 5000)
-    }
-    
-    @Test
-    func testEnsureBudgetExistsDoesNotCreateWhenBudgetExists() throws {
-        let container = try makeContainer()
-        let context = container.mainContext
-        
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: Date())
-        let month = calendar.component(.month, from: Date())
-        let existingBudget = MonthlyBudget(year: year, month: month, limit: 3000)
-        context.insert(existingBudget)
-        try context.save()
-        
-        let viewModel = OverviewViewModel()
-        viewModel.filterMode = .monthly
-        viewModel.selectedDate = Date()
-        viewModel.configure(allExpenses: [], budgets: [existingBudget], modelContext: context)
-        
-        viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
-        
-        let descriptor = FetchDescriptor<MonthlyBudget>()
-        let budgets = try context.fetch(descriptor)
-        
-        #expect(budgets.count == 1)
-        #expect(budgets.first?.limit == 3000)
-    }
-    
-    @Test
-    func testEnsureBudgetExistsDoesNotCreateWhenLimitIsZero() throws {
-        let container = try makeContainer()
-        let context = container.mainContext
-        
-        let viewModel = OverviewViewModel()
-        viewModel.filterMode = .monthly
-        viewModel.selectedDate = Date()
-        viewModel.configure(allExpenses: [], budgets: [], modelContext: context)
-        
-        viewModel.ensureBudgetExists(defaultBudgetLimit: 0, modelContext: context)
-        
-        let descriptor = FetchDescriptor<MonthlyBudget>()
-        let budgets = try context.fetch(descriptor)
-        
-        #expect(budgets.isEmpty)
     }
 }

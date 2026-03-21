@@ -6,16 +6,17 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct Transaction: Identifiable {
     let id: UUID
-    let category: Category
+    let category: PredefinedCategory
     let description: String
     let amount: Double
     let date: Date
     let isRecurring: Bool
     
-    init(id: UUID = UUID(), category: Category, description: String, amount: Double, date: Date, isRecurring: Bool = false) {
+    init(id: UUID = UUID(), category: PredefinedCategory, description: String, amount: Double, date: Date, isRecurring: Bool = false) {
         self.id = id
         self.category = category
         self.description = description
