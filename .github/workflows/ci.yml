@@ -18,7 +18,7 @@ on:
       - 'Money ManagerUITests/**'
       - 'Money Manager.xcodeproj/**'
       - '.github/workflows/ci.yml'
-
+      
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
