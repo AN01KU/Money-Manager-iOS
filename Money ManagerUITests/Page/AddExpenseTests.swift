@@ -189,7 +189,16 @@ final class AddExpenseTests: XCTestCase {
         
         // Select category
         app.buttons["Select Category"].tap()
-        let shoppingText = app.staticTexts["Shopping"]
+        
+        // Wait for category picker sheet
+        let pickerNav = app.navigationBars["Select Category"]
+        XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
+        
+        // Shopping is near the bottom of the alphabetically sorted list — scroll if needed
+        let shoppingText = app.staticTexts["Shopping"].firstMatch
+        if !shoppingText.isHittable {
+            app.swipeUp()
+        }
         XCTAssertTrue(shoppingText.waitForExistence(timeout: 3), "Shopping category should appear")
         shoppingText.tap()
         
