@@ -5,7 +5,7 @@
 
 import Foundation
 
-enum APIError: Error, LocalizedError {
+enum APIError: Error, LocalizedError, Equatable {
     case invalidURL
     case invalidResponse
     case httpError(statusCode: Int, message: String?)
@@ -17,6 +17,7 @@ enum APIError: Error, LocalizedError {
     case conflict
     case serverError
     case unknown
+    case missingTestData(String)
     
     var errorDescription: String? {
         switch self {
@@ -42,6 +43,31 @@ enum APIError: Error, LocalizedError {
             return "Server error. Please try again later."
         case .unknown:
             return "An unknown error occurred"
+        case .missingTestData(let context):
+            return "Missing test data: \(context)"
+        }
+    }
+    
+    static func == (lhs: APIError, rhs: APIError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidURL, .invalidURL),
+             (.invalidResponse, .invalidResponse),
+             (.unauthorized, .unauthorized),
+             (.notFound, .notFound),
+             (.conflict, .conflict),
+             (.serverError, .serverError),
+             (.unknown, .unknown):
+            return true
+        case let (.httpError(lCode, lMsg), .httpError(rCode, rMsg)):
+            return lCode == rCode && lMsg == rMsg
+        case (.decodingError, .decodingError),
+             (.encodingError, .encodingError),
+             (.networkError, .networkError):
+            return true
+        case let (.missingTestData(lCtx), .missingTestData(rCtx)):
+            return lCtx == rCtx
+        default:
+            return false
         }
     }
 }

@@ -14,8 +14,6 @@ XCODEBUILD_TEST = xcodebuild test \
 	$(COVERAGE) \
 	-resultBundlePath "$(TEST_RESULTS)"
 
-.PHONY: build test test-unit test-ui coverage clean
-
 build:
 	xcodebuild build \
 		-project "$(PROJECT)" \
@@ -34,6 +32,12 @@ test-unit:
 test-ui:
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests"
+	
+test-api:
+	@echo "Running API integration tests sequentially (backend must be running at localhost:8080)"
+	@echo ""
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/APIIntegrationTests" -parallel-testing-enabled NO
 	
 test-one:
 	@echo "Usage: make test-one TEST=BackupViewModelTests"

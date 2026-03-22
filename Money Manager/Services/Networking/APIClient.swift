@@ -17,6 +17,8 @@ final class APIClient {
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     
+    private var _testToken: String?
+    
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = AppConstants.API.defaultTimeout
@@ -36,6 +38,16 @@ final class APIClient {
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
     }
+    
+    #if DEBUG
+    func setTestToken(_ token: String?) {
+        _testToken = token
+    }
+    
+    func clearTestToken() {
+        _testToken = nil
+    }
+    #endif
     
     static var apiEncoder: JSONEncoder {
         let encoder = JSONEncoder()
@@ -113,7 +125,7 @@ final class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        if let token = KeychainHelper.shared.getToken() {
+        if let token = _testToken ?? KeychainHelper.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         

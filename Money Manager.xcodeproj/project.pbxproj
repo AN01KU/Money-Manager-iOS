@@ -29,16 +29,6 @@
 		6B8D066B2F1672DA00C93A9B /* Money ManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Money ManagerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6B5E852C2F6DC6B90088A8B4 /* Exceptions for "Money Manager" folder in "Money Manager" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Money-Manager-Info.plist",
-			);
-			target = 6B6A4C4D2EFD151B00B81C49 /* Money Manager */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6B62AB4E2F464BCD004EA7DF /* Money ManagerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -47,9 +37,6 @@
 		};
 		6B6A4C502EFD151B00B81C49 /* Money Manager */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6B5E852C2F6DC6B90088A8B4 /* Exceptions for "Money Manager" folder in "Money Manager" target */,
-			);
 			path = "Money Manager";
 			sourceTree = "<group>";
 		};
