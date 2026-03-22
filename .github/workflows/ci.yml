@@ -97,7 +97,11 @@ jobs:
               print('0.0')
           except:
               print('0.0')
-          " || echo "0.0")
+          " 2>/dev/null || true)
+          COVERAGE=$(echo "${COVERAGE}" | tail -1 | tr -d '[:space:]')
+          if [ -z "${COVERAGE}" ] || ! echo "${COVERAGE}" | grep -qE '^[0-9]+\.?[0-9]*$'; then
+            COVERAGE="0.0"
+          fi
           echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
           echo "### 📊 Code Coverage" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -105,8 +109,10 @@ jobs:
 
       - name: Check Coverage Threshold
         run: |
-          if (( $(echo "${{ env.COVERAGE }} < 50" | bc -l) )); then
-            echo "::warning::Coverage ${{ env.COVERAGE }}% is below 50% threshold"
+          COVERAGE="${{ env.COVERAGE }}"
+          if [ -z "${COVERAGE}" ]; then COVERAGE="0.0"; fi
+          if (( $(echo "${COVERAGE} < 50" | bc -l) )); then
+            echo "::warning::Coverage ${COVERAGE}% is below 50% threshold"
           fi
 
       - name: Update Coverage Badge
