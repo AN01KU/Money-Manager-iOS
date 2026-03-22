@@ -10,7 +10,8 @@ import SwiftUI
 struct CurrencyPickerView: View {
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var searchText = ""
-
+    @State private var selectionToggled = false
+    
     private var filteredCurrencies: [(code: String, name: String, symbol: String)] {
         if searchText.isEmpty {
             return CurrencyFormatter.supportedCurrencies
@@ -22,32 +23,33 @@ struct CurrencyPickerView: View {
             $0.symbol.contains(query)
         }
     }
-
+    
     var body: some View {
         List {
             ForEach(filteredCurrencies, id: \.code) { currency in
                 Button {
+                    selectionToggled = true
                     selectedCurrency = currency.code
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(Color.teal.opacity(0.12))
+                                .fill(AppColors.accentSubtle)
                                 .frame(width: 40, height: 40)
 
                             Text(currency.symbol)
                                 .font(.headline)
-                                .foregroundColor(.teal)
+                                .foregroundStyle(AppColors.accent)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(currency.name)
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(currency.code)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -56,9 +58,13 @@ struct CurrencyPickerView: View {
                             Image(systemName: "checkmark")
                                 .font(.body)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.teal)
+                                .foregroundStyle(AppColors.accent)
                         }
                     }
+                }
+                .sensoryFeedback(.selection, trigger: selectionToggled)
+                .onChange(of: selectionToggled) { _, newValue in
+                    if newValue { selectionToggled = false }
                 }
             }
         }

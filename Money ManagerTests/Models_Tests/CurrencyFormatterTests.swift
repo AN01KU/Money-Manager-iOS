@@ -82,4 +82,42 @@ struct CurrencyFormatterTests {
         
         #expect(formatted.contains("9,999,999") || formatted.contains("99,99,999"))
     }
+    
+    @Test
+    func testFormatUsesDefaultWithoutDecimalsParameter() {
+        let formatted = CurrencyFormatter.format(100.50)
+        
+        #expect(formatted.contains("101") || formatted.contains("100"))
+    }
+    
+    @Test
+    func testCurrencySymbolsContainsExpectedCurrencies() {
+        #expect(CurrencyFormatter.currencySymbols["USD"] == "$")
+        #expect(CurrencyFormatter.currencySymbols["EUR"] == "€")
+        #expect(CurrencyFormatter.currencySymbols["GBP"] == "£")
+        #expect(CurrencyFormatter.currencySymbols["JPY"] == "¥")
+    }
+    
+    @Test
+    func testSupportedCurrenciesHaveValidData() {
+        for currency in CurrencyFormatter.supportedCurrencies {
+            #expect(!currency.code.isEmpty)
+            #expect(!currency.name.isEmpty)
+            #expect(!currency.symbol.isEmpty)
+        }
+    }
+    
+    @Test
+    func testFormatVerySmallAmount() {
+        let formatted = CurrencyFormatter.format(0.01, showDecimals: true)
+        
+        #expect(formatted.contains("0.01") || formatted.contains(".01"))
+    }
+    
+    @Test
+    func testFormatWithoutSymbolWithLargeDecimal() {
+        let formatted = CurrencyFormatter.formatWithoutSymbol(1234567)
+        
+        #expect(formatted.contains("1,234,567") || formatted.contains("12,34,567"))
+    }
 }

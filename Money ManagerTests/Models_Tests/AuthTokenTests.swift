@@ -1,3 +1,5 @@
+// MARK: - Commented out: backend/auth/groups code removed in offline-v1
+/*
 //
 //  AuthTokenTests.swift
 //  Money ManagerTests
@@ -28,3 +30,4 @@ struct AuthTokenTests {
         #expect(authToken.token == tokenString)
     }
 }
+*/

@@ -1,60 +1,35 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class OverviewViewModel: ObservableObject {
-    @Published var selectedView: ViewType = .daily
-    @Published var selectedDate: Date = Date()
-    @Published var filterMode: FilterMode = .monthly
-    @Published var showAddExpense = false
-    @Published var showBudgetSheet = false
-    @Published var searchText = ""
-    @Published var testDataLoaded = false
+@Observable class OverviewViewModel {
+    var selectedView: ViewType = .daily
+    var selectedDate: Date = Date() { didSet { recalculate() } }
+    var filterMode: FilterMode = .monthly { didSet { recalculate() } }
+    var showAddExpense = false
+    var showBudgetSheet = false
+    var searchText = "" { didSet { recalculate() } }
+    var selectedCategoryFilter: String? { didSet { recalculate() } }
     
-    @Published var filteredExpenses: [Expense] = []
-    @Published var currentBudget: MonthlyBudget?
-    @Published var totalSpent: Double = 0
-    @Published var categorySpending: [CategorySpending] = []
+    var filteredExpenses: [Expense] = []
+    var currentBudget: MonthlyBudget?
+    var dailyBudgetLimit: Double = 0
+    var totalSpent: Double = 0
+    var categorySpending: [CategorySpending] = []
+    var expenseToDelete: Expense?
     
     private var allExpenses: [Expense] = []
     private var budgets: [MonthlyBudget] = []
+    private var customCategories: [CustomCategory] = []
     private var modelContext: ModelContext?
     
-    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], modelContext: ModelContext?) {
+    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], customCategories: [CustomCategory], modelContext: ModelContext?) {
         self.allExpenses = allExpenses
         self.budgets = budgets
+        self.customCategories = customCategories
         self.modelContext = modelContext
         
-        let groupExpenses = allExpenses.filter { $0.groupId != nil }
-        print("[Overview] configure — total: \(allExpenses.count), group: \(groupExpenses.count), budgets: \(budgets.count)")
-        
-        // Log all expenses with their categories
-        print("[Overview] All expenses categories:")
-        for expense in allExpenses.prefix(20) {
-            print("  - \(expense.expenseDescription ?? "?") | category: '\(expense.category)' | \(expense.amount) | date: \(expense.date)")
-        }
-        
         recalculate()
-    }
-    
-    func updateSearchText(_ text: String) {
-        searchText = text
-        recalculate()
-    }
-    
-    func updateFilterMode(_ mode: FilterMode) {
-        filterMode = mode
-        recalculate()
-    }
-    
-    func updateSelectedDate(_ date: Date) {
-        selectedDate = date
-        recalculate()
-    }
-    
-    func updateSelectedView(_ view: ViewType) {
-        selectedView = view
     }
     
     func recalculate() {
@@ -81,74 +56,55 @@ class OverviewViewModel: ObservableObject {
             }
         }
         
-        if searchText.isEmpty {
-            filteredExpenses = dateFiltered
-        } else {
-            filteredExpenses = dateFiltered.filter { expense in
-                expense.category.localizedCaseInsensitiveContains(searchText) ||
-                (expense.expenseDescription?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                (expense.notes?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                (expense.groupName?.localizedCaseInsensitiveContains(searchText) ?? false)
+        var result = dateFiltered
+        
+        if !searchText.isEmpty {
+            result = result.filter { expense in
+                expense.category.localizedStandardContains(searchText) ||
+                (expense.expenseDescription?.localizedStandardContains(searchText) ?? false) ||
+                (expense.notes?.localizedStandardContains(searchText) ?? false) ||
+                (expense.groupName?.localizedStandardContains(searchText) ?? false)
             }
         }
+        
+        if let categoryFilter = selectedCategoryFilter {
+            result = result.filter { $0.category == categoryFilter }
+        }
+        
+        filteredExpenses = result
         
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
         currentBudget = budgets.first { $0.year == year && $0.month == month }
+        
+        if filterMode == .daily, let budget = currentBudget {
+            let range = calendar.range(of: .day, in: .month, for: selectedDate)!
+            let daysInMonth = range.count
+            dailyBudgetLimit = budget.limit / Double(daysInMonth)
+        } else {
+            dailyBudgetLimit = 0
+        }
         
         totalSpent = filteredExpenses.reduce(0) { $0 + $1.amount }
         
         let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
         let total = totalSpent
         
-        print("[Overview] recalculate — filtered: \(filteredExpenses.count), grouped categories: \(grouped.keys.count)")
-        for (category, expenses) in grouped {
-            let sum = expenses.reduce(0) { $0 + $1.amount }
-            print("  Category '\(category)': \(expenses.count) expenses, total: \(sum)")
-        }
-        
         if total > 0 {
-            categorySpending = grouped.map { category, expenses in
+            categorySpending = grouped.map { categoryName, expenses in
                 let amount = expenses.reduce(0) { $0 + $1.amount }
                 let percentage = Int((amount / total) * 100)
+                let (icon, color) = resolveCategory(categoryName)
                 return CategorySpending(
-                    category: Category.fromString(category),
+                    categoryName: categoryName,
+                    icon: icon,
+                    color: color,
                     amount: amount,
                     percentage: percentage
                 )
             }.sorted { $0.amount > $1.amount }
-            print("[Overview] Category spending: \(categorySpending.map { "\($0.category.rawValue): \($0.amount) (\($0.percentage)%)" }.joined(separator: ", "))")
         } else {
             categorySpending = []
-        }
-    }
-    
-    func loadTestDataIfNeeded(modelContext: ModelContext) {
-        guard !testDataLoaded, useTestData else { return }
-        testDataLoaded = true
-        
-        try? modelContext.delete(model: Expense.self)
-        try? modelContext.delete(model: MonthlyBudget.self)
-        
-        let personalExpenses = TestData.generatePersonalExpenses()
-        for expense in personalExpenses {
-            modelContext.insert(expense)
-        }
-        let groupExpenses = TestData.getGroupExpensesForOverview()
-        for expense in groupExpenses {
-            modelContext.insert(expense)
-        }
-        for budget in TestData.generateBudgets() {
-            modelContext.insert(budget)
-        }
-        for recurring in TestData.generateRecurringExpenses() {
-            modelContext.insert(recurring)
-        }
-        
-        try? modelContext.save()
-        print("[Overview] Test data loaded — personal: \(personalExpenses.count), group: \(groupExpenses.count)")
-        for expense in groupExpenses {
-            print("  [Group] \(expense.expenseDescription ?? "?") | \(expense.category) | \(expense.amount) | group: \(expense.groupName ?? "nil") | date: \(expense.date)")
         }
     }
     
@@ -160,5 +116,47 @@ class OverviewViewModel: ObservableObject {
         let budget = MonthlyBudget(year: year, month: month, limit: defaultBudgetLimit)
         modelContext.insert(budget)
         try? modelContext.save()
+    }
+    
+    func filterByCategory(_ categoryName: String) {
+        selectedCategoryFilter = categoryName
+        selectedView = .daily
+    }
+    
+    func clearCategoryFilter() {
+        selectedCategoryFilter = nil
+        selectedView = .categories
+    }
+    
+    func deleteExpense(_ expense: Expense) {
+        expenseToDelete = expense
+    }
+    
+    func confirmDeleteExpense() {
+        guard let expense = expenseToDelete else { return }
+        expense.isDeleted = true
+        expense.updatedAt = Date()
+        
+        do {
+            try modelContext?.save()
+            recalculate()
+        } catch {
+            print("Error deleting expense: \(error)")
+        }
+        expenseToDelete = nil
+    }
+    
+    func cancelDeleteExpense() {
+        expenseToDelete = nil
+    }
+    
+    func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
+        if let custom = customCategories.first(where: { $0.name == categoryName && !$0.isHidden }) {
+            return (custom.icon, Color(hex: custom.color))
+        }
+        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == categoryName }) {
+            return (predefined.icon, predefined.color)
+        }
+        return ("ellipsis.circle.fill", Color(hex: "#95A5A6"))
     }
 }

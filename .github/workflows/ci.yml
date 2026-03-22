@@ -4,85 +4,133 @@ on:
   push:
     branches:
       - main
-      - development
+    paths:
+      - 'Money Manager/**'
+      - 'Money ManagerTests/**'
+      - 'Money ManagerUITests/**'
+      - 'Money Manager.xcodeproj/**'
+      - '.github/workflows/ci.yml'
   pull_request:
-    branches:
-      - main
-      - development
+    paths:
+      - 'Money Manager/**'
+      - 'Money ManagerTests/**'
+      - 'Money ManagerUITests/**'
+      - 'Money Manager.xcodeproj/**'
+      - '.github/workflows/ci.yml'
+      
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-env:
-  PROJECT: Money Manager.xcodeproj
-  SCHEME: Money Manager
-  XCODE_VERSION: "26.2"
+permissions:
+  checks: write
+  contents: read
 
 jobs:
-  build:
-    name: Build
-    runs-on: macos-26
+  build-and-test:
+    name: Build & Test
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    env:
+      MIN_XCODE_VERSION: '16.4'
+      MIN_MACOS_VERSION: '15.0'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
-
-      - name: Resolve Simulator
-        id: sim
+      - name: Verify environment
         run: |
-          DEVICE=$(xcrun simctl list devices available -j | python3 -c "import sys,json; devs=json.load(sys.stdin)['devices']; print(next(d['udid'] for rt in sorted(devs.keys(), reverse=True) for d in devs[rt] if 'iPhone' in d['name'] and d['isAvailable']))")
-          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+          XCODE_VERSION=$(xcodebuild -version | head -1 | awk '{print $2}')
+          MACOS_VERSION=$(sw_vers -productVersion)
+          echo "Xcode: $XCODE_VERSION (min: ${{ env.MIN_XCODE_VERSION }})"
+          echo "macOS: $MACOS_VERSION (min: ${{ env.MIN_MACOS_VERSION }})"
+          if [ "$(printf '%s\n' "${{ env.MIN_XCODE_VERSION }}" "$XCODE_VERSION" | sort -V | head -1)" != "${{ env.MIN_XCODE_VERSION }}" ]; then
+            echo "::error::Xcode $XCODE_VERSION is below minimum ${{ env.MIN_XCODE_VERSION }}"
+            exit 1
+          fi
+          if [ "$(printf '%s\n' "${{ env.MIN_MACOS_VERSION }}" "$MACOS_VERSION" | sort -V | head -1)" != "${{ env.MIN_MACOS_VERSION }}" ]; then
+            echo "::error::macOS $MACOS_VERSION is below minimum ${{ env.MIN_MACOS_VERSION }}"
+            exit 1
+          fi
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('Money Manager.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-deriveddata-
 
       - name: Build
+        run: make build
+
+      - name: Run All Tests
+        run: make test
+
+      - name: Install xcresultparser
+        if: always()
         run: |
-          xcodebuild build \
-            -project "$PROJECT" \
-            -scheme "$SCHEME" \
-            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device }}" \
-            CODE_SIGNING_ALLOWED=NO
+          which xcresultparser || brew install xcresultparser
 
-  test:
-    name: Tests
-    needs: build
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v4
+      - name: Convert xcresult to JUnit XML
+        if: always()
+        run: |
+          xcresultparser -o junit ./test_results.xcresult > ./test_results.xml || true
 
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: always()
         with:
-          xcode-version: ${{ env.XCODE_VERSION }}
+          report_paths: './test_results.xml'
 
-      - name: Resolve Simulator
-        id: sim
+      - name: Extract Coverage
+        if: always()
         run: |
-          DEVICE=$(xcrun simctl list devices available -j | python3 -c "import sys,json; devs=json.load(sys.stdin)['devices']; print(next(d['udid'] for rt in sorted(devs.keys(), reverse=True) for d in devs[rt] if 'iPhone' in d['name'] and d['isAvailable']))")
-          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+          COVERAGE=$(xcrun xccov view --report --json ./test_results.xcresult 2>/dev/null | python3 -c "
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              for t in data.get('targets', []):
+                  if t.get('name', '') == 'Money Manager.app':
+                      print(f\"{t['lineCoverage']*100:.1f}\")
+                      sys.exit(0)
+              print('0.0')
+          except:
+              print('0.0')
+          " 2>/dev/null || true)
+          COVERAGE=$(echo "${COVERAGE}" | tail -1 | tr -d '[:space:]')
+          if [ -z "${COVERAGE}" ] || ! echo "${COVERAGE}" | grep -qE '^[0-9]+\.?[0-9]*$'; then
+            COVERAGE="0.0"
+          fi
+          echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
+          echo "### 📊 Code Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Money Manager.app**: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
 
-      - name: Run Unit Tests
+      - name: Check Coverage Threshold
         run: |
-          xcodebuild test \
-            -project "$PROJECT" \
-            -scheme "$SCHEME" \
-            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device }}" \
-            -only-testing:"Money ManagerTests" \
-            CODE_SIGNING_ALLOWED=NO
+          COVERAGE="${{ env.COVERAGE }}"
+          if [ -z "${COVERAGE}" ]; then COVERAGE="0.0"; fi
+          if (( $(echo "${COVERAGE} < 50" | bc -l) )); then
+            echo "::warning::Coverage ${COVERAGE}% is below 50% threshold"
+          fi
 
-      # - name: Run UI Tests
-      #   run: |
-      #     xcodebuild test \
-      #       -project "$PROJECT" \
-      #       -scheme "$SCHEME" \
-      #       -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device }}" \
-      #       -only-testing:"Money ManagerUITests" \
-      #       CODE_SIGNING_ALLOWED=NO
+      - name: Update Coverage Badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: money-manager-ios-coverage.json
+          label: coverage
+          message: ${{ env.COVERAGE }}%
+          valColorRange: ${{ env.COVERAGE }}
+          minColorRange: 0
+          maxColorRange: 100
 
-  deploy:
-    name: Deploy
-    needs: [build, test]
-    runs-on: macos-26
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to TestFlight
-        run: echo "TODO - Add TestFlight deployment steps"
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test_results.xcresult
+          retention-days: 30

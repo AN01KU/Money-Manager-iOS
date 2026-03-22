@@ -6,27 +6,52 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct TransactionRow: View {
     let expense: Expense
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     
-    var category: PredefinedCategory? {
-        PredefinedCategory.allCases.first { $0.rawValue == expense.category }
+    init(expense: Expense) {
+        self.expense = expense
+    }
+    
+    private var resolvedIcon: String {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return custom.icon
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+    }
+    
+    private var resolvedColor: Color {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return Color(hex: custom.color)
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
     }
     
     var body: some View {
         HStack(spacing: 12) {
-            CategoryIconView(category: category)
+            ZStack {
+                Circle()
+                    .fill(resolvedColor.opacity(0.2))
+                    .frame(width: 48, height: 48)
+                
+                Image(systemName: resolvedIcon)
+                    .font(.title3)
+                    .foregroundStyle(resolvedColor)
+            }
+            .accessibilityHidden(true)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.category)
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text(expense.expenseDescription ?? "No description")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 if let groupName = expense.groupName {
                     HStack(spacing: 4) {
@@ -36,7 +61,7 @@ struct TransactionRow: View {
                             .font(.caption2)
                             .fontWeight(.medium)
                     }
-                    .foregroundColor(.teal)
+                    .foregroundStyle(AppColors.accent)
                 }
             }
             
@@ -46,41 +71,27 @@ struct TransactionRow: View {
                 Text(CurrencyFormatter.format(expense.amount))
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                 
                 if let time = expense.time {
                     Text(formatTime(time))
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(expense.category), \(expense.expenseDescription ?? "No description"), \(CurrencyFormatter.format(expense.amount))")
     }
     
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)
-    }
-}
-
-struct CategoryIconView: View {
-    let category: PredefinedCategory?
-    
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill((category?.color ?? Color.gray).opacity(0.2))
-                .frame(width: 48, height: 48)
-            
-            Image(systemName: category?.icon ?? "ellipsis.circle.fill")
-                .font(.title3)
-                .foregroundColor(category?.color ?? Color.gray)
-        }
     }
 }
 
@@ -95,4 +106,5 @@ struct CategoryIconView: View {
         )
     )
     .padding()
+    .modelContainer(for: [CustomCategory.self], inMemory: true)
 }

@@ -16,11 +16,14 @@ struct DateFilterSelector: View {
     @Binding var selectedDate: Date
     @Binding var filterMode: FilterMode
     @State private var showDatePicker = false
+    @State private var datePickerTapped = false
+    @State private var filterToggled = false
     
     var body: some View {
         HStack(spacing: 12) {
             // Date Picker Button
             Button(action: {
+                datePickerTapped = true
                 showDatePicker = true
             }) {
                 HStack {
@@ -28,19 +31,24 @@ struct DateFilterSelector: View {
                         .font(.caption)
                     Text(formatDate(selectedDate))
                         .font(.body)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .sensoryFeedback(.impact(weight: .light), trigger: datePickerTapped)
+            .onChange(of: datePickerTapped) { _, newValue in
+                if newValue { datePickerTapped = false }
             }
             
             // Filter Mode Toggle
             Button(action: {
+                filterToggled = true
                 filterMode = filterMode == .daily ? .monthly : .daily
             }) {
                 HStack(spacing: 6) {
@@ -50,11 +58,15 @@ struct DateFilterSelector: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                 }
-                .foregroundColor(.teal)
+                .foregroundStyle(AppColors.accent)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .sensoryFeedback(.selection, trigger: filterToggled)
+            .onChange(of: filterToggled) { _, newValue in
+                if newValue { filterToggled = false }
             }
             
             Spacer()
@@ -73,7 +85,7 @@ struct DateFilterSelector: View {
                 .navigationTitle("Select Date")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") {
                             showDatePicker = false
                         }

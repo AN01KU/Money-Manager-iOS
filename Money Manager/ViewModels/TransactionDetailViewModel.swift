@@ -1,18 +1,27 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 @MainActor
-class TransactionDetailViewModel: ObservableObject {
-    @Published var showEditSheet = false
-    @Published var showDeleteAlert = false
-    @Published var selectedGroup: SplitGroup?
+@Observable class TransactionDetailViewModel {
+    var showEditSheet = false
+    var showDeleteAlert = false
     
     let expense: Expense
     private var modelContext: ModelContext?
+    var customCategories: [CustomCategory] = []
     
-    var category: PredefinedCategory? {
-        PredefinedCategory.allCases.first { $0.rawValue == expense.category }
+    var categoryIcon: String {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return custom.icon
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+    }
+    
+    var categoryColor: Color {
+        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
+            return Color(hex: custom.color)
+        }
+        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
     }
     
     var isGroupExpense: Bool {
@@ -37,16 +46,6 @@ class TransactionDetailViewModel: ObservableObject {
         } catch {
             print("Error deleting expense: \(error)")
         }
-    }
-    
-    func getGroupForNavigation() -> SplitGroup? {
-        guard let groupId = expense.groupId, let groupName = expense.groupName else { return nil }
-        return SplitGroup(
-            id: groupId,
-            name: groupName,
-            createdBy: UUID(),
-            createdAt: ISO8601DateFormatter().string(from: Date())
-        )
     }
     
     func formatAmount(_ amount: Double) -> String {

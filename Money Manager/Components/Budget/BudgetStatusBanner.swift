@@ -16,7 +16,7 @@ struct BudgetStatusBanner: View {
         HStack(spacing: 12) {
             Image(systemName: statusIcon)
                 .font(.title2)
-                .foregroundColor(statusColor)
+                .foregroundStyle(statusColor)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(statusTitle)
@@ -24,15 +24,17 @@ struct BudgetStatusBanner: View {
                     .fontWeight(.semibold)
                 Text(statusMessage)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
         }
         .padding()
         .background(statusColor.opacity(0.1))
-        .foregroundColor(statusColor)
-        .cornerRadius(12)
+        .foregroundStyle(statusColor)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(statusTitle), \(statusMessage)")
     }
     
     private var statusIcon: String {
@@ -47,11 +49,11 @@ struct BudgetStatusBanner: View {
     
     private var statusColor: Color {
         if percentage > 100 {
-            return .red
+            return AppColors.budgetDanger
         } else if percentage > 80 {
-            return .orange
+            return AppColors.budgetCaution
         } else {
-            return .green
+            return AppColors.budgetSafe
         }
     }
     

@@ -5,120 +5,93 @@ import Testing
 
 struct RecurringExpenseModelTests {
     
+    // MARK: - Initialization
+    
     @Test
-    func testRecurringExpenseDefaultsIsActiveToTrue() {
-        let expense = Expense(
+    func initSetsRequiredProperties() {
+        let expense = RecurringExpense(
+            name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            date: Date(),
-            expenseDescription: "Netflix",
-            isRecurring: true,
             frequency: "monthly"
+        )
+        
+        #expect(expense.name == "Netflix")
+        #expect(expense.amount == 649)
+        #expect(expense.category == "Entertainment")
+        #expect(expense.frequency == "monthly")
+    }
+    
+    @Test
+    func initSetsDefaults() {
+        let expense = RecurringExpense(
+            name: "Test",
+            amount: 100,
+            category: "Other",
+            frequency: "daily"
         )
         
         #expect(expense.isActive == true)
+        #expect(expense.dayOfMonth == nil)
+        #expect(expense.daysOfWeek == nil)
+        #expect(expense.endDate == nil)
+        #expect(expense.lastAddedDate == nil)
+        #expect(expense.notes == nil)
     }
     
     @Test
-    func testRecurringExpenseEndDateIsNilWhenNotProvided() {
-        let expense = Expense(
-            amount: 5000,
-            category: "Debt & Payments",
-            date: Date(),
-            expenseDescription: "Insurance",
-            isRecurring: true,
-            frequency: "monthly"
-        )
-        
-        #expect(expense.recurringEndDate == nil)
-    }
-    
-    @Test
-    func testRecurringExpenseEndDateIsStoredWhenProvided() {
+    func initSetsAllOptionalParameters() {
         let startDate = Date()
         let endDate = Calendar.current.date(byAdding: .year, value: 1, to: startDate)!
+        let lastAdded = Calendar.current.date(byAdding: .day, value: -5, to: startDate)!
         
-        let expense = Expense(
-            amount: 999,
-            category: "Utilities",
-            date: startDate,
-            expenseDescription: "Subscription",
-            isRecurring: true,
-            frequency: "monthly",
-            recurringEndDate: endDate
+        let expense = RecurringExpense(
+            name: "Gym",
+            amount: 500,
+            category: "Health",
+            frequency: "weekly",
+            dayOfMonth: 15,
+            daysOfWeek: [1, 3, 5],
+            startDate: startDate,
+            endDate: endDate,
+            isActive: false,
+            lastAddedDate: lastAdded,
+            notes: "Monthly gym membership"
         )
         
-        #expect(expense.recurringEndDate == endDate)
+        #expect(expense.dayOfMonth == 15)
+        #expect(expense.daysOfWeek == [1, 3, 5])
+        #expect(expense.startDate == startDate)
+        #expect(expense.endDate == endDate)
+        #expect(expense.isActive == false)
+        #expect(expense.lastAddedDate == lastAdded)
+        #expect(expense.notes == "Monthly gym membership")
     }
     
     @Test
-    func testRecurringExpenseDayOfMonthBoundaryValues() {
-        let expense1 = Expense(
-            amount: 15000,
-            category: "Housing",
-            date: Date(),
-            expenseDescription: "Rent",
-            isRecurring: true,
-            frequency: "monthly",
-            dayOfMonth: 1
-        )
+    func initGeneratesUniqueIds() {
+        let expense1 = RecurringExpense(name: "A", amount: 100, category: "Other", frequency: "daily")
+        let expense2 = RecurringExpense(name: "B", amount: 200, category: "Other", frequency: "daily")
         
-        let expense2 = Expense(
-            amount: 5000,
-            category: "Debt & Payments",
-            date: Date(),
-            expenseDescription: "Credit Card",
-            isRecurring: true,
-            frequency: "monthly",
-            dayOfMonth: 28
-        )
-        
-        #expect(expense1.dayOfMonth == 1)
-        #expect(expense2.dayOfMonth == 28)
+        #expect(expense1.id != expense2.id)
     }
     
     @Test
-    func testRecurringExpenseWithNegativeAmount() {
-        let expense = Expense(
-            amount: -100,
-            category: "Other",
-            date: Date(),
-            expenseDescription: "Refund",
-            isRecurring: true,
-            frequency: "monthly"
-        )
+    func initSetsTimestamps() {
+        let expense = RecurringExpense(name: "Test", amount: 100, category: "Other", frequency: "daily")
         
-        #expect(expense.amount == -100)
+        #expect(expense.createdAt <= Date())
+        #expect(expense.updatedAt <= Date())
     }
     
-    @Test
-    func testRecurringExpenseWithZeroAmount() {
-        let expense = Expense(
-            amount: 0,
-            category: "Entertainment",
-            date: Date(),
-            expenseDescription: "Free Trial",
-            isRecurring: true,
-            frequency: "monthly"
-        )
-        
-        #expect(expense.amount == 0)
-    }
+    // MARK: - Mutability
     
     @Test
-    func testRecurringExpenseSupportsDifferentFrequencies() {
-        let frequencies = ["daily", "weekly", "monthly", "yearly"]
+    func isActiveCanBeToggled() {
+        let expense = RecurringExpense(name: "Test", amount: 100, category: "Other", frequency: "daily")
         
-        for frequency in frequencies {
-            let expense = Expense(
-                amount: 100,
-                category: "Other",
-                date: Date(),
-                expenseDescription: "Test \(frequency)",
-                isRecurring: true,
-                frequency: frequency
-            )
-            #expect(expense.frequency == frequency)
-        }
+        #expect(expense.isActive == true)
+        expense.isActive = false
+        #expect(expense.isActive == false)
     }
 }

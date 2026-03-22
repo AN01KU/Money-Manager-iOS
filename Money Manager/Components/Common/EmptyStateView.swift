@@ -13,6 +13,7 @@ struct EmptyStateView: View {
     let message: String
     var actionTitle: String?
     var action: (() -> Void)?
+    @State private var buttonTapped = false
     
     init(
         icon: String = "tray",
@@ -32,7 +33,7 @@ struct EmptyStateView: View {
         VStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text(title)
                 .font(.title2)
@@ -40,23 +41,32 @@ struct EmptyStateView: View {
             
             Text(message)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             if let actionTitle = actionTitle, let action = action {
-                Button(action: action) {
+                Button(action: {
+                    buttonTapped = true
+                    action()
+                }) {
                     Text(actionTitle)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Color.teal)
-                        .cornerRadius(12)
+                        .background(AppColors.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: buttonTapped)
+                .onChange(of: buttonTapped) { _, newValue in
+                    if newValue { buttonTapped = false }
                 }
                 .padding(.top, 8)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(title). \(message)")
     }
 }
 

@@ -1,3 +1,5 @@
+// MARK: - Commented out: GroupDetailViewModel removed in offline-v1
+/*
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -305,3 +307,5 @@ struct GroupDetailViewModelTests {
         #expect(amounts == amounts.sorted(by: >))
     }
 }
+
+*/

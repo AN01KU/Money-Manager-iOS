@@ -1,187 +1,304 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import Money_Manager
 
 @MainActor
 struct AddExpenseViewModelTests {
     
+    private func makeContext() -> ModelContext {
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        return ModelContext(container)
+    }
+    
+    // MARK: - Validation
+    
     @Test
-    func testEqualShareTextCalculatesCorrectly() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "1000"
-        let userId = UUID()
-        viewModel.selectedMembers = [userId]
+    func testIsValidRequiresPositiveAmountAndCategory() {
+        let vm = AddExpenseViewModel(mode: .personal())
         
-        let result = viewModel.equalShareText
+        #expect(vm.isValid == false) // empty amount + category
         
-        #expect(result.contains("1,000") || result.contains("₹1,000"))
+        vm.amount = "500"
+        #expect(vm.isValid == false) // empty category
+        
+        vm.selectedCategory = "Food"
+        #expect(vm.isValid == true)
+        
+        vm.amount = "0"
+        #expect(vm.isValid == false) // zero amount
+        
+        vm.amount = "-10"
+        #expect(vm.isValid == false) // negative
+        
+        vm.amount = "abc"
+        #expect(vm.isValid == false) // non-numeric
+    }
+    
+    // MARK: - Navigation Title
+    
+    @Test
+    func testNavigationTitle() {
+        let addVM = AddExpenseViewModel(mode: .personal())
+        #expect(addVM.navigationTitle == "Add Expense")
+        
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let editVM = AddExpenseViewModel(mode: .personal(editing: expense))
+        #expect(editVM.navigationTitle == "Edit Expense")
+    }
+    
+    // MARK: - Setup from existing expense
+    
+    @Test
+    func testSetupPopulatesFieldsFromExpense() {
+        let expense = Expense(
+            amount: 250.50,
+            category: "Transport",
+            date: Date(),
+            time: Date(),
+            expenseDescription: "Taxi",
+            notes: "Airport trip"
+        )
+        let vm = AddExpenseViewModel(mode: .personal(editing: expense))
+        vm.setup()
+        
+        #expect(vm.amount == "250.50")
+        #expect(vm.selectedCategory == "Transport")
+        #expect(vm.description == "Taxi")
+        #expect(vm.notes == "Airport trip")
+        #expect(vm.hasTime == true)
     }
     
     @Test
-    func testEqualShareTextWithMultipleMembers() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "300"
-        viewModel.selectedMembers = [UUID(), UUID(), UUID()]
+    func testSetupWithNoTimeExpense() {
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let vm = AddExpenseViewModel(mode: .personal(editing: expense))
+        vm.setup()
         
-        let result = viewModel.equalShareText
-        
-        #expect(result.contains("100"))
+        #expect(vm.hasTime == false)
+        #expect(vm.description == "")
+        #expect(vm.notes == "")
     }
     
     @Test
-    func testEqualShareTextReturnsZeroWhenNoMembers() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "1000"
-        viewModel.selectedMembers = []
+    func testSetupDoesNothingForNewExpenseMode() {
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.setup()
         
-        let result = viewModel.equalShareText
+        #expect(vm.amount.isEmpty)
+        #expect(vm.selectedCategory.isEmpty)
+    }
+    
+    // MARK: - Format helpers
+    
+    @Test
+    func testFormatDateAndTime() {
+        let vm = AddExpenseViewModel(mode: .personal())
+        let date = Calendar.current.date(from: DateComponents(year: 2026, month: 3, day: 15))!
         
-        #expect(result.contains("0"))
+        let dateStr = vm.formatDate(date)
+        #expect(dateStr.contains("Mar") || dateStr.contains("15"))
+        
+        let timeStr = vm.formatTime(date)
+        #expect(!timeStr.isEmpty)
+    }
+    
+    // MARK: - Save: new expense
+    
+    @Test
+    func testSaveCreatesNewExpense() throws {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
+        
+        vm.amount = "150.75"
+        vm.selectedCategory = "Food & Dining"
+        vm.description = "Lunch"
+        vm.notes = "With team"
+        vm.hasTime = true
+        
+        var completed = false
+        vm.save { completed = true }
+        
+        #expect(completed == true)
+        #expect(vm.isSaving == false)
+        #expect(vm.showError == false)
+        
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+        #expect(expenses.count == 1)
+        #expect(expenses.first?.amount == 150.75)
+        #expect(expenses.first?.category == "Food & Dining")
+        #expect(expenses.first?.expenseDescription == "Lunch")
+        #expect(expenses.first?.notes == "With team")
+        #expect(expenses.first?.time != nil)
     }
     
     @Test
-    func testCustomSplitTotalSumsCorrectly() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        let user1 = UUID()
-        let user2 = UUID()
-        viewModel.selectedMembers = [user1, user2]
-        viewModel.customAmounts = [user1: "250.50", user2: "249.50"]
+    func testSaveWithoutTimeSetTimeToNil() throws {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
         
-        let result = viewModel.customSplitTotal
+        vm.amount = "100"
+        vm.selectedCategory = "Transport"
+        vm.hasTime = false
         
-        #expect(result == 500.0)
+        vm.save {}
+        
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+        #expect(expenses.first?.time == nil)
     }
     
     @Test
-    func testCustomSplitTotalIgnoresInvalidAmounts() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        let user1 = UUID()
-        let user2 = UUID()
-        viewModel.selectedMembers = [user1, user2]
-        viewModel.customAmounts = [user1: "250", user2: "invalid"]
+    func testSaveWithEmptyDescriptionAndNotesSetsNil() throws {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
         
-        let result = viewModel.customSplitTotal
+        vm.amount = "50"
+        vm.selectedCategory = "Other"
+        vm.description = ""
+        vm.notes = ""
         
-        #expect(result == 250.0)
+        vm.save {}
+        
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+        #expect(expenses.first?.expenseDescription == nil)
+        #expect(expenses.first?.notes == nil)
+    }
+    
+    // MARK: - Save: edit existing expense
+    
+    @Test
+    func testSaveUpdatesExistingExpense() throws {
+        let context = makeContext()
+        let existing = Expense(
+            amount: 100,
+            category: "Food",
+            date: Date(),
+            time: Date(),
+            expenseDescription: "Old",
+            notes: "Old note"
+        )
+        context.insert(existing)
+        try context.save()
+        
+        let vm = AddExpenseViewModel(mode: .personal(editing: existing))
+        vm.configure(modelContext: context)
+        
+        vm.amount = "200"
+        vm.selectedCategory = "Transport"
+        vm.description = "Updated"
+        vm.notes = ""
+        vm.hasTime = false
+        
+        var completed = false
+        vm.save { completed = true }
+        
+        #expect(completed == true)
+        #expect(existing.amount == 200)
+        #expect(existing.category == "Transport")
+        #expect(existing.expenseDescription == "Updated")
+        #expect(existing.notes == nil)
+        #expect(existing.time == nil)
+    }
+    
+    // MARK: - Save: validation failures
+    
+    @Test
+    func testSaveFailsWithZeroAmount() {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
+        vm.amount = "0"
+        vm.selectedCategory = "Food"
+        
+        var completed = false
+        vm.save { completed = true }
+        
+        #expect(completed == false)
+        #expect(vm.showError == true)
+        #expect(vm.errorMessage.contains("Amount"))
     }
     
     @Test
-    func testSplitMatchesTotalReturnsTrueWhenMatching() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "500"
-        let user1 = UUID()
-        let user2 = UUID()
-        viewModel.selectedMembers = [user1, user2]
-        viewModel.customAmounts = [user1: "250", user2: "250"]
+    func testSaveFailsWithNonNumericAmount() {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
+        vm.amount = "abc"
+        vm.selectedCategory = "Food"
         
-        let result = viewModel.splitMatchesTotal
+        var completed = false
+        vm.save { completed = true }
         
-        #expect(result == true)
+        #expect(completed == false)
+        #expect(vm.showError == true)
     }
     
     @Test
-    func testSplitMatchesTotalReturnsFalseWhenNotMatching() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "500"
-        let user1 = UUID()
-        let user2 = UUID()
-        viewModel.selectedMembers = [user1, user2]
-        viewModel.customAmounts = [user1: "200", user2: "200"]
+    func testSaveWithNoModelContextDoesNothing() {
+        let vm = AddExpenseViewModel(mode: .personal())
+        // No configure() call — modelContext is nil
+        vm.amount = "100"
+        vm.selectedCategory = "Food"
         
-        let result = viewModel.splitMatchesTotal
+        var completed = false
+        vm.save { completed = true }
         
-        #expect(result == false)
+        #expect(completed == false)
+    }
+    
+    // MARK: - Save: date handling
+    
+    @Test
+    func testSaveSetsCorrectDateWithTime() throws {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
+        
+        let specificDate = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 15))!
+        let specificTime = Calendar.current.date(from: DateComponents(hour: 14, minute: 30))!
+        
+        vm.amount = "100"
+        vm.selectedCategory = "Food"
+        vm.selectedDate = specificDate
+        vm.selectedTime = specificTime
+        vm.hasTime = true
+        
+        vm.save {}
+        
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+        let saved = expenses.first!
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: saved.date)
+        #expect(components.year == 2026)
+        #expect(components.month == 6)
+        #expect(components.day == 15)
+        #expect(components.hour == 14)
+        #expect(components.minute == 30)
     }
     
     @Test
-    func testSplitMatchesTotalReturnsFalseForInvalidAmount() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "invalid"
+    func testSaveSetsStartOfDayWhenNoTime() throws {
+        let context = makeContext()
+        let vm = AddExpenseViewModel(mode: .personal())
+        vm.configure(modelContext: context)
         
-        let result = viewModel.splitMatchesTotal
+        let specificDate = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 15, hour: 18, minute: 45))!
         
-        #expect(result == false)
-    }
-    
-    @Test
-    func testIsValidForPersonalExpenseWithValidData() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "500"
-        viewModel.selectedCategory = "Food & Dining"
+        vm.amount = "100"
+        vm.selectedCategory = "Food"
+        vm.selectedDate = specificDate
+        vm.hasTime = false
         
-        #expect(viewModel.isValid == true)
-    }
-    
-    @Test
-    func testIsValidFailsWithInvalidAmount() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "0"
-        viewModel.selectedCategory = "Food & Dining"
+        vm.save {}
         
-        #expect(viewModel.isValid == false)
-    }
-    
-    @Test
-    func testIsValidFailsWithNegativeAmount() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "-100"
-        viewModel.selectedCategory = "Food & Dining"
-        
-        #expect(viewModel.isValid == false)
-    }
-    
-    @Test
-    func testIsValidFailsWithEmptyCategory() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "500"
-        viewModel.selectedCategory = ""
-        
-        #expect(viewModel.isValid == false)
-    }
-    
-    @Test
-    func testBuildSplitsEqualSplitWithRounding() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "100"
-        let user1 = UUID()
-        let user2 = UUID()
-        let user3 = UUID()
-        viewModel.selectedMembers = [user1, user2, user3]
-        viewModel.splitType = .equal
-        
-        let splits = viewModel.buildSplits()
-        
-        #expect(splits.count == 3)
-        let total = splits.compactMap { Double($0.amount) }.reduce(0, +)
-        #expect(abs(total - 100) < 0.01)
-    }
-    
-    @Test
-    func testBuildSplitsCustomSplit() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        viewModel.amount = "500"
-        let user1 = UUID()
-        let user2 = UUID()
-        viewModel.selectedMembers = [user1, user2]
-        viewModel.splitType = .custom
-        viewModel.customAmounts = [user1: "300", user2: "200"]
-        
-        let splits = viewModel.buildSplits()
-        
-        #expect(splits.count == 2)
-    }
-    
-    @Test
-    func testToggleMemberAddsAndRemoves() {
-        let viewModel = AddExpenseViewModel(mode: .personal())
-        let userId = UUID()
-        
-        #expect(viewModel.selectedMembers.isEmpty)
-        
-        viewModel.toggleMember(userId)
-        #expect(viewModel.selectedMembers.contains(userId))
-        
-        viewModel.toggleMember(userId)
-        #expect(!viewModel.selectedMembers.contains(userId))
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+        let saved = expenses.first!
+        let components = Calendar.current.dateComponents([.hour, .minute], from: saved.date)
+        #expect(components.hour == 0)
+        #expect(components.minute == 0)
     }
 }

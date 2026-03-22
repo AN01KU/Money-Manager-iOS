@@ -1,10 +1,14 @@
 import SwiftUI
 
-let useTestData: Bool = CommandLine.arguments.contains("useTestData")
-
 struct ContentView: View {
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    
     var body: some View {
-        MainTabView()
+        if hasCompletedOnboarding {
+            MainTabView()
+        } else {
+            OnboardingView()
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import SwiftData
 import Testing
 @testable import Money_Manager
@@ -6,8 +7,23 @@ import Testing
 @MainActor
 struct TransactionDetailViewModelTests {
     
+    // MARK: - Initial State
+    
     @Test
-    func testIsGroupExpenseReturnsTrueWhenGroupIdAndNamePresent() {
+    func initialState() {
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        #expect(viewModel.showEditSheet == false)
+        #expect(viewModel.showDeleteAlert == false)
+        #expect(viewModel.customCategories.isEmpty)
+        #expect(viewModel.expense.amount == 100)
+    }
+    
+    // MARK: - isGroupExpense
+    
+    @Test
+    func isGroupExpenseWhenBothPresent() {
         let expense = Expense(amount: 100, category: "Food", date: Date(), groupId: UUID(), groupName: "Trip")
         let viewModel = TransactionDetailViewModel(expense: expense)
         
@@ -15,7 +31,7 @@ struct TransactionDetailViewModelTests {
     }
     
     @Test
-    func testIsGroupExpenseReturnsFalseWhenNoGroupId() {
+    func isGroupExpenseWhenMissingGroupId() {
         let expense = Expense(amount: 100, category: "Food", date: Date(), groupName: "Trip")
         let viewModel = TransactionDetailViewModel(expense: expense)
         
@@ -23,134 +39,180 @@ struct TransactionDetailViewModelTests {
     }
     
     @Test
-    func testIsGroupExpenseReturnsFalseWhenNoGroupName() {
+    func isGroupExpenseWhenMissingGroupName() {
         let expense = Expense(amount: 100, category: "Food", date: Date(), groupId: UUID())
         let viewModel = TransactionDetailViewModel(expense: expense)
         
         #expect(viewModel.isGroupExpense == false)
     }
     
+    // MARK: - categoryIcon
+    
     @Test
-    func testCategoryReturnsCorrectPredefinedCategory() {
+    func categoryIconForPredefinedCategory() {
         let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
         
-        #expect(viewModel.category == .foodDining)
+        #expect(viewModel.categoryIcon == "fork.knife.circle.fill")
     }
     
     @Test
-    func testCategoryReturnsNilForNonMatching() {
+    func categoryIconFallbackForUnknownCategory() {
         let expense = Expense(amount: 100, category: "Unknown Category", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
         
-        #expect(viewModel.category == nil)
+        #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
     }
     
     @Test
-    func testFormatAmountWithDecimalPlaces() {
-        let expense = Expense(amount: 1234.56, category: "Food", date: Date())
+    func categoryIconPrefersCustomCategory() {
+        let expense = Expense(amount: 100, category: "Pets", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
         
-        let result = viewModel.formatAmount(1234.56)
+        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        viewModel.customCategories = [custom]
         
-        #expect(result.contains("1,234") || result.contains("1234"))
+        #expect(viewModel.categoryIcon == "pawprint.fill")
     }
     
     @Test
-    func testFormatAmountWithWholeNumber() {
+    func categoryIconIgnoresHiddenCustomCategory() {
+        let expense = Expense(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        custom.isHidden = true
+        viewModel.customCategories = [custom]
+        
+        // Falls through to predefined/fallback since custom is hidden
+        #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
+    }
+    
+    // MARK: - categoryColor
+    
+    @Test
+    func categoryColorForPredefinedCategory() {
+        let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        #expect(viewModel.categoryColor == PredefinedCategory.foodDining.color)
+    }
+    
+    @Test
+    func categoryColorFallbackForUnknownCategory() {
+        let expense = Expense(amount: 100, category: "Unknown Category", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        #expect(viewModel.categoryColor == .gray)
+    }
+    
+    @Test
+    func categoryColorPrefersCustomCategory() {
+        let expense = Expense(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        viewModel.customCategories = [custom]
+        
+        #expect(viewModel.categoryColor == Color(hex: "#FF0000"))
+    }
+    
+    @Test
+    func categoryColorIgnoresHiddenCustomCategory() {
+        let expense = Expense(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(expense: expense)
+        
+        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        custom.isHidden = true
+        viewModel.customCategories = [custom]
+        
+        // Falls through to fallback since custom is hidden
+        #expect(viewModel.categoryColor == .gray)
+    }
+    
+    // MARK: - configure
+    
+    @Test
+    func configureWithSwiftDataContext() throws {
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+        
         let expense = Expense(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
+        viewModel.configure(modelContext: context)
         
-        let result = viewModel.formatAmount(100)
-        
-        #expect(result.contains("100"))
-    }
-    
-    @Test
-    func testFormatDateAndTimeWithTimeIncluded() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        let result = viewModel.formatDateAndTime(Date(), time: Date())
-        
-        #expect(!result.isEmpty)
-    }
-    
-    @Test
-    func testFormatDateAndTimeWithoutTime() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        let result = viewModel.formatDateAndTime(Date(), time: nil)
-        
-        #expect(!result.isEmpty)
-    }
-    
-    @Test
-    func testFormatFullDateReturnsNonEmptyString() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        let result = viewModel.formatFullDate(Date())
-        
-        #expect(!result.isEmpty)
-    }
-    
-    @Test
-    func testDeleteExpenseSetsIsDeletedToTrue() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        var deleted = false
-        viewModel.deleteExpense { 
-            deleted = true
+        // Verify deleteExpense works with a real context (completion called)
+        var completionCalled = false
+        viewModel.deleteExpense {
+            completionCalled = true
         }
-        
+        #expect(completionCalled == true)
         #expect(expense.isDeleted == true)
     }
     
+    // MARK: - deleteExpense
+    
     @Test
-    func testGetGroupForNavigationReturnsGroup() {
-        let groupId = UUID()
-        let expense = Expense(amount: 100, category: "Food", date: Date(), groupId: groupId, groupName: "Trip")
+    func deleteExpenseSetsIsDeletedAndUpdatedAt() {
+        let expense = Expense(amount: 100, category: "Food", date: Date())
+        let originalUpdatedAt = expense.updatedAt
         let viewModel = TransactionDetailViewModel(expense: expense)
         
-        let result = viewModel.getGroupForNavigation()
+        var completionCalled = false
+        viewModel.deleteExpense {
+            completionCalled = true
+        }
         
-        #expect(result != nil)
-        #expect(result?.id == groupId)
-        #expect(result?.name == "Trip")
+        #expect(expense.isDeleted == true)
+        #expect(expense.updatedAt >= originalUpdatedAt)
+        #expect(completionCalled == true)
+    }
+    
+    // MARK: - formatAmount
+    
+    @Test
+    func formatAmountWithDecimals() {
+        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
+        
+        let result = viewModel.formatAmount(1234.56)
+        #expect(result.contains("1,234") || result.contains("1234"))
+        #expect(result.contains("56"))
     }
     
     @Test
-    func testGetGroupForNavigationReturnsNilWhenNoGroup() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
+    func formatAmountWholeNumber() {
+        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
         
-        let result = viewModel.getGroupForNavigation()
-        
-        #expect(result == nil)
+        let result = viewModel.formatAmount(100)
+        #expect(result.contains("100"))
     }
     
+    // MARK: - formatDateAndTime
+    
     @Test
-    func testFormatDateAndTimeWithSpecificTimeContainsTime() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func formatDateAndTimeWithTime() {
+        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
         let calendar = Calendar.current
-        let date = calendar.startOfDay(for: Date())
+        
+        var dateComponents = DateComponents()
+        dateComponents.year = 2026
+        dateComponents.month = 1
+        dateComponents.day = 15
+        let date = calendar.date(from: dateComponents)!
         let time = calendar.date(bySettingHour: 14, minute: 30, second: 0, of: date)!
         
         let result = viewModel.formatDateAndTime(date, time: time)
         
+        #expect(result.contains("Jan") || result.contains("January"))
+        #expect(result.contains("15"))
         #expect(result.contains("2:30") || result.contains("14:30"))
     }
     
     @Test
-    func testFormatDateAndTimeWithNilTimeContainsNoTime() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func formatDateAndTimeWithoutTime() {
+        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
         let calendar = Calendar.current
         let date = calendar.startOfDay(for: Date())
         
@@ -164,25 +226,13 @@ struct TransactionDetailViewModelTests {
         #expect(result == expectedDateOnly)
     }
     
+    // MARK: - formatFullDate
+    
     @Test
-    func testFormatDateAndTimeKnownDateAndTimeContainsBoth() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
+    func formatFullDateReturnsFormattedString() {
+        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
         
-        var dateComponents = DateComponents()
-        dateComponents.year = 2026
-        dateComponents.month = 1
-        dateComponents.day = 15
-        let calendar = Calendar.current
-        let date = calendar.date(from: dateComponents)!
-        
-        let time = calendar.date(bySettingHour: 14, minute: 30, second: 0, of: date)!
-        
-        let result = viewModel.formatDateAndTime(date, time: time)
-        
-        #expect(result.contains("Jan") || result.contains("January"))
-        #expect(result.contains("15"))
-        #expect(result.contains("2026"))
-        #expect(result.contains("2:30") || result.contains("14:30"))
+        let result = viewModel.formatFullDate(Date())
+        #expect(!result.isEmpty)
     }
 }

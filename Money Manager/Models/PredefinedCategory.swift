@@ -62,37 +62,47 @@ enum PredefinedCategory: String, CaseIterable, Identifiable {
     }
     
     var color: Color {
+        Color(hex: defaultColorHex)
+    }
+    
+    var defaultColorHex: String {
         switch self {
-        case .foodDining:
-            return Color(hex: "#FF6B6B")
-        case .transport:
-            return Color(hex: "#4ECDC4")
-        case .housing:
-            return Color(hex: "#45B7D1")
-        case .healthMedical:
-            return Color(hex: "#96CEB4")
-        case .shopping:
-            return Color(hex: "#FFEAA7")
-        case .utilities:
-            return Color(hex: "#DDA15E")
-        case .entertainment:
-            return Color(hex: "#BC6C25")
-        case .travel:
-            return Color(hex: "#8E44AD")
-        case .workProfessional:
-            return Color(hex: "#34495E")
-        case .education:
-            return Color(hex: "#3498DB")
-        case .debtPayments:
-            return Color(hex: "#2C3E50")
-        case .booksMedia:
-            return Color(hex: "#E74C3C")
-        case .familyKids:
-            return Color(hex: "#F39C12")
-        case .gifts:
-            return Color(hex: "#E91E63")
-        case .other:
-            return Color(hex: "#95A5A6")
+        case .foodDining: return "#FF6B6B"
+        case .transport: return "#4ECDC4"
+        case .housing: return "#45B7D1"
+        case .healthMedical: return "#96CEB4"
+        case .shopping: return "#FFEAA7"
+        case .utilities: return "#DDA15E"
+        case .entertainment: return "#BC6C25"
+        case .travel: return "#8E44AD"
+        case .workProfessional: return "#34495E"
+        case .education: return "#3498DB"
+        case .debtPayments: return "#2C3E50"
+        case .booksMedia: return "#E74C3C"
+        case .familyKids: return "#F39C12"
+        case .gifts: return "#E91E63"
+        case .other: return "#95A5A6"
+        }
+    }
+    
+    /// A stable identifier for linking CustomCategory back to this enum case.
+    var key: String {
+        switch self {
+        case .foodDining: return "foodDining"
+        case .transport: return "transport"
+        case .housing: return "housing"
+        case .healthMedical: return "healthMedical"
+        case .shopping: return "shopping"
+        case .utilities: return "utilities"
+        case .entertainment: return "entertainment"
+        case .travel: return "travel"
+        case .workProfessional: return "workProfessional"
+        case .education: return "education"
+        case .debtPayments: return "debtPayments"
+        case .booksMedia: return "booksMedia"
+        case .familyKids: return "familyKids"
+        case .gifts: return "gifts"
+        case .other: return "other"
         }
     }
 }

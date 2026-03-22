@@ -14,7 +14,7 @@ final class AddExpenseTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "useTestData"]
+        app.launchArguments = ["--uitesting", "--skipOnboarding", "--useTestData"]
         app.launch()
     }
     
@@ -119,7 +119,18 @@ final class AddExpenseTests: XCTestCase {
         openAddExpenseScreen()
         
         app.buttons["Select Category"].tap()
-        app.buttons["Transport"].firstMatch.tap()
+        
+        // Wait for category picker sheet to appear
+        let pickerNav = app.navigationBars["Select Category"]
+        XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
+        
+        // Transport is near the bottom of the alphabetically sorted list — scroll to it
+        let transportText = app.staticTexts["Transport"].firstMatch
+        if !transportText.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(transportText.waitForExistence(timeout: 3), "Transport category should appear")
+        transportText.tap()
         
         // Verify category is selected (button text should change)
         let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
@@ -131,18 +142,15 @@ final class AddExpenseTests: XCTestCase {
     func testDatePickerOpens() throws {
         openAddExpenseScreen()
         
-        let dateButton = app.buttons.containing(NSPredicate(format: "label CONTAINS '2026' OR label CONTAINS '2025' OR label CONTAINS 'January' OR label CONTAINS 'February' OR label CONTAINS 'March' OR label CONTAINS 'April' OR label CONTAINS 'May' OR label CONTAINS 'June' OR label CONTAINS 'July' OR label CONTAINS 'August' OR label CONTAINS 'September' OR label CONTAINS 'October' OR label CONTAINS 'November' OR label CONTAINS 'December'")).firstMatch
+        let datePicker = app.datePickers.firstMatch
+        XCTAssertTrue(datePicker.waitForExistence(timeout: 3), "Date picker should exist")
         
-        if dateButton.waitForExistence(timeout: 2) {
-            dateButton.tap()
-            
-            // Look for date picker elements
-            let datePicker = app.datePickers.firstMatch
-            let calendar = app.otherElements.containing(NSPredicate(format: "label CONTAINS 'Calendar' OR label CONTAINS 'Picker'")).firstMatch
-            
-            let pickerExists = datePicker.waitForExistence(timeout: 2) || calendar.waitForExistence(timeout: 2)
-            XCTAssertTrue(pickerExists, "Date picker should appear")
-        }
+        // Tap the date picker to expand it
+        datePicker.tap()
+        
+        // Look for expanded calendar or wheel elements
+        let calendar = app.datePickers.firstMatch
+        XCTAssertTrue(calendar.waitForExistence(timeout: 2), "Date picker should be interactive")
     }
     
     // MARK: - Description Field
@@ -181,7 +189,9 @@ final class AddExpenseTests: XCTestCase {
         
         // Select category
         app.buttons["Select Category"].tap()
-        app.buttons["Shopping"].firstMatch.tap()
+        let shoppingText = app.staticTexts["Shopping"]
+        XCTAssertTrue(shoppingText.waitForExistence(timeout: 3), "Shopping category should appear")
+        shoppingText.tap()
         
         // Add description
         let descField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description'")).firstMatch

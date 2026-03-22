@@ -10,23 +10,29 @@ import SwiftUI
 struct MonthSelector: View {
     @Binding var selectedMonth: Date
     @State private var showDatePicker = false
+    @State private var buttonTapped = false
     
     var body: some View {
         Button(action: {
+            buttonTapped = true
             showDatePicker = true
         }) {
             HStack {
                 Text(formatMonth(selectedMonth))
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 Image(systemName: "chevron.down")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: buttonTapped)
+        .onChange(of: buttonTapped) { _, newValue in
+            if newValue { buttonTapped = false }
         }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
@@ -42,7 +48,7 @@ struct MonthSelector: View {
                 .navigationTitle("Select Month")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") {
                             showDatePicker = false
                         }
