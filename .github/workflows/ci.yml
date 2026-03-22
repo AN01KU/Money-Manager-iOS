@@ -10,6 +10,9 @@ on:
       - 'Money ManagerUITests/**'
       - 'Money Manager.xcodeproj/**'
       - '.github/workflows/ci.yml'
+    paths-ignore:
+      - 'AGENTS.md'
+      - '.agents/**'
   pull_request:
     paths:
       - 'Money Manager/**'
@@ -17,6 +20,9 @@ on:
       - 'Money ManagerUITests/**'
       - 'Money Manager.xcodeproj/**'
       - '.github/workflows/ci.yml'
+    paths-ignore:
+      - 'AGENTS.md'
+      - '.agents/**'
       
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
