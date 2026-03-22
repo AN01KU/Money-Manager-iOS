@@ -89,7 +89,7 @@ final class APIClient {
         let _: EmptyResponse = try await perform(request)
     }
     
-    func deleteMessage(_ endpoint: String) async throws -> MessageResponse {
+    func deleteMessage(_ endpoint: String) async throws -> APIMessageResponse {
         let request = try buildRequest(endpoint: endpoint, method: "DELETE")
         return try await perform(request)
     }

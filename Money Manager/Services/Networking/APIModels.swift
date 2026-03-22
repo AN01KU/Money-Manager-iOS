@@ -63,30 +63,6 @@ struct APICustomCategory: Codable {
     let updated_at: Date
 }
 
-struct PaginatedResponse<T: Codable>: Codable {
-    let data: [T]
-    let pagination: Pagination
-}
-
-struct ListResponse<T: Codable>: Codable {
-    let data: [T]
-}
-
-struct Pagination: Codable {
-    let limit: Int
-    let offset: Int
-    let total: Int
-}
-
-struct MessageResponse: Codable {
-    let message: String
-}
-
-struct AuthResponse: Codable {
-    let token: String
-    let user: APIUser
-}
-
 struct APIUser: Codable {
     let id: UUID
     let email: String
@@ -94,18 +70,42 @@ struct APIUser: Codable {
     let created_at: Date
 }
 
-struct LoginRequest: Codable {
-    let email: String
-    let password: String
+struct APIAuthResponse: Codable {
+    let token: String
+    let user: APIUser
 }
 
-struct SignupRequest: Codable {
+struct APIPaginatedResponse<T: Codable>: Codable {
+    let data: [T]
+    let pagination: APIPagination
+}
+
+struct APIListResponse<T: Codable>: Codable {
+    let data: [T]
+}
+
+struct APIPagination: Codable {
+    let limit: Int
+    let offset: Int
+    let total: Int
+}
+
+struct APIMessageResponse: Codable {
+    let message: String
+}
+
+struct APISignupRequest: Codable {
     let email: String
     let username: String
     let password: String
 }
 
-struct CreateExpenseRequest: Codable {
+struct APILoginRequest: Codable {
+    let email: String
+    let password: String
+}
+
+struct APICreateExpenseRequest: Codable {
     let amount: String
     let category: String
     let date: Date
@@ -117,7 +117,7 @@ struct CreateExpenseRequest: Codable {
     let group_name: String?
 }
 
-struct UpdateExpenseRequest: Codable {
+struct APIUpdateExpenseRequest: Codable {
     let amount: String?
     let category: String?
     let date: Date?
@@ -130,7 +130,7 @@ struct UpdateExpenseRequest: Codable {
     let group_name: String?
 }
 
-struct CreateRecurringExpenseRequest: Codable {
+struct APICreateRecurringExpenseRequest: Codable {
     let name: String
     let amount: String
     let category: String
@@ -143,7 +143,7 @@ struct CreateRecurringExpenseRequest: Codable {
     let notes: String?
 }
 
-struct UpdateRecurringExpenseRequest: Codable {
+struct APIUpdateRecurringExpenseRequest: Codable {
     let name: String?
     let amount: String?
     let category: String?
@@ -156,27 +156,70 @@ struct UpdateRecurringExpenseRequest: Codable {
     let notes: String?
 }
 
-struct CreateBudgetRequest: Codable {
+struct APICreateBudgetRequest: Codable {
     let year: Int
     let month: Int
     let limit: String
 }
 
-struct UpdateBudgetRequest: Codable {
+struct APIUpdateBudgetRequest: Codable {
     let year: Int?
     let month: Int?
     let limit: String?
 }
 
-struct CreateCategoryRequest: Codable {
+struct APICreateCategoryRequest: Codable {
     let name: String
     let icon: String
     let color: String
 }
 
-struct UpdateCategoryRequest: Codable {
+struct APIUpdateCategoryRequest: Codable {
     let name: String?
     let icon: String?
     let color: String?
     let is_hidden: Bool?
+}
+
+struct APIMonthlyDashboardResponse: Codable {
+    let totalExpenses: String?
+    let total_expenses: String?
+    let expenseCount: Int?
+    let expense_count: Int?
+    let categoryBreakdown: [APICategoryBreakdown]?
+    let category_breakdown: [APICategoryBreakdown]?
+    let budgetStatus: APIBudgetStatus?
+    let budget_status: APIBudgetStatus?
+
+    enum CodingKeys: String, CodingKey {
+        case totalExpenses = "totalExpenses"
+        case total_expenses = "total_expenses"
+        case expenseCount = "expenseCount"
+        case expense_count = "expense_count"
+        case categoryBreakdown = "categoryBreakdown"
+        case category_breakdown = "category_breakdown"
+        case budgetStatus = "budgetStatus"
+        case budget_status = "budget_status"
+    }
+}
+
+struct APICategoryBreakdown: Codable {
+    let category: String?
+    let total: String?
+    let amount: String?
+    let count: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case category
+        case total
+        case amount
+        case count
+    }
+}
+
+struct APIBudgetStatus: Codable {
+    let limit: String
+    let spent: String
+    let remaining: String
+    let percentage: Double
 }

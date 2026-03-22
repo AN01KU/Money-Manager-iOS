@@ -153,7 +153,7 @@ struct BudgetSheet: View {
         do {
             try modelContext.save()
             
-            let payload = try? APIClient.apiEncoder.encode(CreateBudgetRequest(
+            let payload = try? APIClient.apiEncoder.encode(APICreateBudgetRequest(
                 year: year,
                 month: month,
                 limit: String(format: "%.2f", amount)

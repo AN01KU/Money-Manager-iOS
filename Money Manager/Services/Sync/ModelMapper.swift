@@ -6,8 +6,8 @@
 import Foundation
 
 extension Expense {
-    func toCreateRequest() -> CreateExpenseRequest {
-        CreateExpenseRequest(
+    func toCreateRequest() -> APICreateExpenseRequest {
+        APICreateExpenseRequest(
             amount: String(format: "%.2f", amount),
             category: category,
             date: date,
@@ -20,8 +20,8 @@ extension Expense {
         )
     }
     
-    func toUpdateRequest() -> UpdateExpenseRequest {
-        UpdateExpenseRequest(
+    func toUpdateRequest() -> APIUpdateExpenseRequest {
+        APIUpdateExpenseRequest(
             amount: String(format: "%.2f", amount),
             category: category,
             date: date,
@@ -51,8 +51,8 @@ extension Expense {
 }
 
 extension RecurringExpense {
-    func toCreateRequest() -> CreateRecurringExpenseRequest {
-        CreateRecurringExpenseRequest(
+    func toCreateRequest() -> APICreateRecurringExpenseRequest {
+        APICreateRecurringExpenseRequest(
             name: name,
             amount: String(format: "%.2f", amount),
             category: category,
@@ -66,8 +66,8 @@ extension RecurringExpense {
         )
     }
     
-    func toUpdateRequest() -> UpdateRecurringExpenseRequest {
-        UpdateRecurringExpenseRequest(
+    func toUpdateRequest() -> APIUpdateRecurringExpenseRequest {
+        APIUpdateRecurringExpenseRequest(
             name: name,
             amount: String(format: "%.2f", amount),
             category: category,
@@ -98,16 +98,16 @@ extension RecurringExpense {
 }
 
 extension MonthlyBudget {
-    func toCreateRequest() -> CreateBudgetRequest {
-        CreateBudgetRequest(
+    func toCreateRequest() -> APICreateBudgetRequest {
+        APICreateBudgetRequest(
             year: year,
             month: month,
             limit: String(format: "%.2f", limit)
         )
     }
     
-    func toUpdateRequest() -> UpdateBudgetRequest {
-        UpdateBudgetRequest(
+    func toUpdateRequest() -> APIUpdateBudgetRequest {
+        APIUpdateBudgetRequest(
             year: year,
             month: month,
             limit: String(format: "%.2f", limit)
@@ -123,16 +123,16 @@ extension MonthlyBudget {
 }
 
 extension CustomCategory {
-    func toCreateRequest() -> CreateCategoryRequest {
-        CreateCategoryRequest(
+    func toCreateRequest() -> APICreateCategoryRequest {
+        APICreateCategoryRequest(
             name: name,
             icon: icon,
             color: color
         )
     }
     
-    func toUpdateRequest() -> UpdateCategoryRequest {
-        UpdateCategoryRequest(
+    func toUpdateRequest() -> APIUpdateCategoryRequest {
+        APIUpdateCategoryRequest(
             name: name,
             icon: icon,
             color: color,

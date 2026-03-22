@@ -126,7 +126,7 @@ final class ChangeQueueManager {
             guard let payload = change.payload else { return }
             let _: EmptyResponse = try await apiClient.put(endpoint, rawBody: payload)
         case "DELETE":
-            let _: MessageResponse = try await apiClient.deleteMessage(endpoint)
+            let _: APIMessageResponse = try await apiClient.deleteMessage(endpoint)
         default:
             return
         }

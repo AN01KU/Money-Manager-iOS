@@ -102,7 +102,7 @@ final class SyncEngine {
     
     private func pullBudgets(context: ModelContext) async {
         do {
-            let response: ListResponse<APIMonthlyBudget> = try await apiClient.get("/budgets")
+            let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get("/budgets")
             upsertBudgets(response.data, context: context)
         } catch {
             print("Failed to pull budgets: \(error)")
@@ -131,7 +131,7 @@ final class SyncEngine {
                     URLQueryItem(name: "is_deleted", value: "false")
                 ]
                 
-                let response: PaginatedResponse<APIExpense> = try await apiClient.get("/expenses", queryItems: queryItems)
+                let response: APIPaginatedResponse<APIExpense> = try await apiClient.get("/expenses", queryItems: queryItems)
                 allExpenses.append(contentsOf: response.data)
                 
                 if response.data.count < limit || offset + response.data.count >= response.pagination.total {

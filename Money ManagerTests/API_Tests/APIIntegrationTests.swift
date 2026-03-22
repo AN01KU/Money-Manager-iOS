@@ -3,6 +3,7 @@ import Testing
 @testable import Money_Manager
 
 @Suite(.serialized)
+@MainActor
 struct APIIntegrationTests {
     
     private let testPassword: String = "Test123!"
@@ -23,15 +24,15 @@ struct APIIntegrationTests {
         return decimalA == decimalB
     }
     
-    private mutating func ensureAuthenticated() async throws {
+    private func ensureAuthenticated() async throws {
         if Self.authToken.isEmpty {
             await delay(200)
             
             let email = "api_\(UUID().uuidString.prefix(8))@test.com"
             let username = "user_\(UUID().uuidString.prefix(8))"
             
-            let signupRequest = SignupRequest(email: email, username: username, password: testPassword)
-            let signupResponse: AuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
+            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword)
+            let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
             
             Self.authToken = signupResponse.token
             Self.authEmail = email
@@ -48,8 +49,8 @@ struct APIIntegrationTests {
         let email = "api_\(UUID().uuidString.prefix(8))@test.com"
         let username = "user_\(UUID().uuidString.prefix(8))"
         
-        let request = SignupRequest(email: email, username: username, password: testPassword)
-        let response: AuthResponse = try await APIClient.shared.post("/auth/signup", body: request)
+        let request = APISignupRequest(email: email, username: username, password: testPassword)
+        let response: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: request)
         
         #expect(!response.token.isEmpty)
         #expect(response.user.email == email)
@@ -66,7 +67,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = CreateCategoryRequest(
+        let request = APICreateCategoryRequest(
             name: "Test Cat \(UUID().uuidString.prefix(8))",
             icon: "star.circle.fill",
             color: "#FF5733"
@@ -91,7 +92,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = CreateCategoryRequest(
+        let createRequest = APICreateCategoryRequest(
             name: "Update Test \(UUID().uuidString.prefix(8))",
             icon: "star.fill",
             color: "#FF5733"
@@ -101,7 +102,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let updateName = "Updated \(UUID().uuidString.prefix(4))"
-        let updateRequest = UpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, is_hidden: nil)
+        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, is_hidden: nil)
         let updated: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: updateRequest)
         
         #expect(updated.name == updateName)
@@ -112,7 +113,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = CreateCategoryRequest(
+        let createRequest = APICreateCategoryRequest(
             name: "Delete Me \(UUID().uuidString.prefix(8))",
             icon: "trash.fill",
             color: "#FF5733"
@@ -121,7 +122,7 @@ struct APIIntegrationTests {
         
         await delay(200)
         
-        let _: MessageResponse = try await APIClient.shared.deleteMessage("/categories/\(created.id)")
+        let _: APIMessageResponse = try await APIClient.shared.deleteMessage("/categories/\(created.id)")
         
         await delay(200)
         
@@ -136,7 +137,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = CreateBudgetRequest(year: 2026, month: 12, limit: "5000.00")
+        let request = APICreateBudgetRequest(year: 2026, month: 12, limit: "5000.00")
         let response: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
         
         #expect(compareAmount(response.limit, request.limit))
@@ -147,9 +148,9 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let response: ListResponse<APIMonthlyBudget> = try await APIClient.shared.get("/budgets")
+        let response: APIListResponse<APIMonthlyBudget> = try await APIClient.shared.get("/budgets")
         
-        #expect(response.data != nil)
+        #expect(!response.data.isEmpty)
     }
     
     @Test("Update budget modifies limit")
@@ -157,12 +158,12 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = CreateBudgetRequest(year: 2026, month: 9, limit: "1000.00")
+        let createRequest = APICreateBudgetRequest(year: 2026, month: 9, limit: "1000.00")
         let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: createRequest)
         
         await delay(200)
         
-        let updateRequest = UpdateBudgetRequest(year: nil, month: nil, limit: "1500.00")
+        let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: "1500.00")
         let updated: APIMonthlyBudget = try await APIClient.shared.put("/budgets/\(created.id)", body: updateRequest)
         
         #expect(compareAmount(updated.limit, "1500"))
@@ -173,7 +174,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = CreateBudgetRequest(year: 2025, month: 12, limit: "999.00")
+        let request = APICreateBudgetRequest(year: 2025, month: 12, limit: "999.00")
         let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
         
         await delay(200)
@@ -189,7 +190,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let request = CreateRecurringExpenseRequest(
+        let request = APICreateRecurringExpenseRequest(
             name: "Netflix \(UUID().uuidString.prefix(4))",
             amount: "15.99",
             category: "Entertainment",
@@ -214,7 +215,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let request = CreateRecurringExpenseRequest(
+        let request = APICreateRecurringExpenseRequest(
             name: "Gym \(UUID().uuidString.prefix(4))",
             amount: "50.00",
             category: "Health & Medical",
@@ -241,7 +242,7 @@ struct APIIntegrationTests {
         
         let response: [APIRecurringExpense] = try await APIClient.shared.get("/recurring-expenses")
         
-        #expect(response != nil)
+        #expect(!response.isEmpty)
     }
     
     @Test("Get recurring expense by id")
@@ -250,7 +251,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let createRequest = CreateRecurringExpenseRequest(
+        let createRequest = APICreateRecurringExpenseRequest(
             name: "Get Test \(UUID().uuidString.prefix(4))",
             amount: "5.00",
             category: "Other",
@@ -277,7 +278,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let createRequest = CreateRecurringExpenseRequest(
+        let createRequest = APICreateRecurringExpenseRequest(
             name: "Update Test \(UUID().uuidString.prefix(4))",
             amount: "10.00",
             category: "Entertainment",
@@ -293,7 +294,7 @@ struct APIIntegrationTests {
         
         await delay(200)
         
-        let updateRequest = UpdateRecurringExpenseRequest(
+        let updateRequest = APIUpdateRecurringExpenseRequest(
             name: nil, amount: "12.00", category: nil, frequency: nil,
             day_of_month: nil, days_of_week: nil, start_date: nil, end_date: nil,
             is_active: false, notes: nil
@@ -310,7 +311,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let createRequest = CreateRecurringExpenseRequest(
+        let createRequest = APICreateRecurringExpenseRequest(
             name: "Delete Test \(UUID().uuidString.prefix(4))",
             amount: "8.00",
             category: "Other",
@@ -336,7 +337,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = CreateExpenseRequest(
+        let request = APICreateExpenseRequest(
             amount: "25.50",
             category: "Food & Dining",
             date: Date(),
@@ -359,7 +360,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = CreateExpenseRequest(
+        let request = APICreateExpenseRequest(
             amount: "45.00",
             category: "Shopping",
             date: Date(),
@@ -383,10 +384,9 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let response: PaginatedResponse<APIExpense> = try await APIClient.shared.get("/expenses")
+        let response: APIPaginatedResponse<APIExpense> = try await APIClient.shared.get("/expenses")
         
-        #expect(response.data != nil)
-        #expect(response.pagination != nil)
+        #expect(!response.data.isEmpty)
     }
     
     @Test("Get expense by id")
@@ -394,7 +394,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = CreateExpenseRequest(
+        let createRequest = APICreateExpenseRequest(
             amount: "100.00",
             category: "Transport",
             date: Date(),
@@ -419,7 +419,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = CreateExpenseRequest(
+        let createRequest = APICreateExpenseRequest(
             amount: "50.00",
             category: "Food & Dining",
             date: Date(),
@@ -434,7 +434,7 @@ struct APIIntegrationTests {
         
         await delay(200)
         
-        let updateRequest = UpdateExpenseRequest(
+        let updateRequest = APIUpdateExpenseRequest(
             amount: "55.00", category: nil, date: nil, time: nil,
             description: "After update", notes: nil, is_deleted: nil,
             recurring_expense_id: nil, group_id: nil, group_name: nil
@@ -450,7 +450,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = CreateExpenseRequest(
+        let createRequest = APICreateExpenseRequest(
             amount: "75.00",
             category: "Shopping",
             date: Date(),
@@ -483,56 +483,20 @@ struct APIIntegrationTests {
         let month = Calendar.current.component(.month, from: Date())
         let year = Calendar.current.component(.year, from: Date())
         
-        let response: MonthlyDashboardResponse = try await APIClient.shared.get("/dashboard/monthly", queryItems: [
+        let response: APIMonthlyDashboardResponse = try await APIClient.shared.get("/dashboard/monthly", queryItems: [
             URLQueryItem(name: "month", value: "\(month)"),
             URLQueryItem(name: "year", value: "\(year)")
         ])
         
         #expect(response.totalExpenses != nil || response.total_expenses != nil)
     }
-}
-
-// MARK: - Dashboard Response
-
-struct MonthlyDashboardResponse: Codable {
-    let totalExpenses: String?
-    let total_expenses: String?
-    let expenseCount: Int?
-    let expense_count: Int?
-    let categoryBreakdown: [CategoryBreakdown]?
-    let category_breakdown: [CategoryBreakdown]?
-    let budgetStatus: BudgetStatus?
-    let budget_status: BudgetStatus?
-
-    enum CodingKeys: String, CodingKey {
-        case totalExpenses = "totalExpenses"
-        case total_expenses = "total_expenses"
-        case expenseCount = "expenseCount"
-        case expense_count = "expense_count"
-        case categoryBreakdown = "categoryBreakdown"
-        case category_breakdown = "category_breakdown"
-        case budgetStatus = "budgetStatus"
-        case budget_status = "budget_status"
+    
+    // MARK: - Cleanup
+    
+    @Test("Cleanup: delete test user")
+    func testCleanupDeleteUser() async throws {
+        guard !Self.authToken.isEmpty else { return }
+        await delay(200)
+        try await APIClient.shared.delete("/me")
     }
-}
-
-struct CategoryBreakdown: Codable {
-    let category: String?
-    let total: String?
-    let amount: String?
-    let count: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case category
-        case total
-        case amount
-        case count
-    }
-}
-
-struct BudgetStatus: Codable {
-    let limit: String
-    let spent: String
-    let remaining: String
-    let percentage: Double
 }

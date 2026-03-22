@@ -64,8 +64,8 @@ final class AuthService {
         errorMessage = nil
         
         do {
-            let request = LoginRequest(email: email, password: password)
-            let response: AuthResponse = try await apiClient.post("/auth/login", body: request)
+            let request = APILoginRequest(email: email, password: password)
+            let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
             
             keychain.saveToken(response.token)
             keychain.saveUserID(response.user.id)
@@ -91,8 +91,8 @@ final class AuthService {
         errorMessage = nil
         
         do {
-            let request = SignupRequest(email: email, username: username, password: password)
-            let response: AuthResponse = try await apiClient.post("/auth/signup", body: request)
+            let request = APISignupRequest(email: email, username: username, password: password)
+            let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             
             keychain.saveToken(response.token)
             keychain.saveUserID(response.user.id)
