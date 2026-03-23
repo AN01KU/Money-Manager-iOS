@@ -7,7 +7,6 @@ import SwiftUI
 
 struct SignupView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var authService = AuthService.shared
     @State private var email = ""
     @State private var username = ""
     @State private var password = ""
@@ -139,7 +138,7 @@ struct SignupView: View {
         Task {
             do {
                 try await authService.signup(email: email, username: username, password: password)
-                await SyncEngine.shared.fullSync()
+                await syncService.fullSync()
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

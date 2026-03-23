@@ -158,7 +158,7 @@ struct BudgetSheet: View {
                 month: month,
                 limit: String(format: "%.2f", amount)
             ))
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "budget",
                 entityID: budgetID,
                 action: action,
@@ -170,7 +170,7 @@ struct BudgetSheet: View {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {

@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var authService = AuthService.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     
     var body: some View {

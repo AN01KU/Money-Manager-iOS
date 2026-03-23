@@ -6,7 +6,7 @@
 import Foundation
 
 @Observable
-final class AuthService {
+final class AuthService: AuthServiceProtocol {
     static let shared = AuthService()
     
     var isAuthenticated: Bool = false

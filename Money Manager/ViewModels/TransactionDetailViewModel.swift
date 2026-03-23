@@ -37,18 +37,18 @@ import SwiftData
     }
     
     func deleteExpense(completion: @escaping () -> Void) {
+        expense.isDeleted = true
+        expense.updatedAt = Date()
+        
         guard let modelContext = modelContext else {
             completion()
             return
         }
         
-        expense.isDeleted = true
-        expense.updatedAt = Date()
-        
         do {
             try modelContext.save()
             
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "expense",
                 entityID: expense.id,
                 action: "delete",
@@ -60,7 +60,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
             

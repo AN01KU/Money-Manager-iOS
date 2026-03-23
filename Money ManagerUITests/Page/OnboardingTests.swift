@@ -14,7 +14,7 @@ final class OnboardingTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "--resetOnboarding"]
+        app.launchArguments = getTestAppLaunchArguments(true)
         app.launch()
     }
     

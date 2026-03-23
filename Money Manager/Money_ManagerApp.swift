@@ -2,15 +2,22 @@ import SwiftUI
 import SwiftData
 
 #if DEBUG
-private let useTestData = CommandLine.arguments.contains("--useTestData")
-private let skipOnboarding = CommandLine.arguments.contains("--skipOnboarding")
-private let resetOnboarding = CommandLine.arguments.contains("--resetOnboarding")
+private let processInfo = ProcessInfo.processInfo
+private let useTestData = processInfo.useTestData
+private let skipOnboarding = processInfo.skipOnboarding
+private let resetOnboarding = processInfo.resetOnboarding
+private let useMockServices = processInfo.useMockServices
 #endif
+
+// MARK:  GLOBAL Services
+private var serviceFactory = ServiceFactory(useMockServices)
+let authService: AuthServiceProtocol = serviceFactory.authService
+let syncService: SyncServiceProtocol = serviceFactory.syncService
+let changeQueueManager = serviceFactory.changeQueueManager
 
 @main
 struct Money_ManagerApp: App {
     let container: ModelContainer
-    @State private var authService = AuthService.shared
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
@@ -51,7 +58,7 @@ struct Money_ManagerApp: App {
         
         NetworkMonitor.shared.startMonitoring()
         
-        SyncEngine.shared.configure(container: container)
+        syncService.configure(container: container)
     }
     
     #if DEBUG
@@ -77,7 +84,7 @@ struct Money_ManagerApp: App {
                     Task {
                         await authService.checkAuthState()
                         if authService.isAuthenticated {
-                            await SyncEngine.shared.syncOnLaunch()
+                            await syncService.syncOnLaunch()
                         }
                     }
                 }
@@ -93,7 +100,7 @@ struct Money_ManagerApp: App {
         case .active:
             if authService.isAuthenticated {
                 Task {
-                    await SyncEngine.shared.syncOnReconnect()
+                    await syncService.syncOnReconnect()
                 }
             }
         case .background:

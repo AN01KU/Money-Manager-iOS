@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var authService = AuthService.shared
-    @State private var syncEngine = SyncEngine.shared
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var showLogoutConfirmation = false
     @State private var isSyncing = false
@@ -70,7 +68,7 @@ struct SettingsView: View {
             HStack {
                 Label("Status", systemImage: "arrow.triangle.2.circlepath")
                 Spacer()
-                if syncEngine.isSyncing {
+                if syncService.isSyncing {
                     ProgressView()
                         .scaleEffect(0.8)
                     Text("Syncing...")
@@ -86,7 +84,7 @@ struct SettingsView: View {
                 }
             }
             
-            if let lastSync = syncEngine.lastSyncedAt {
+            if let lastSync = syncService.lastSyncedAt {
                 HStack {
                     Text("Last Synced")
                     Spacer()
@@ -181,13 +179,13 @@ struct SettingsView: View {
     // MARK: - Actions
     
     private var pendingChangesCount: Int {
-        ChangeQueueManager.shared.pendingCount
+        changeQueueManager.pendingCount
     }
     
     private func syncNow() {
         isSyncing = true
         Task {
-            await syncEngine.syncOnReconnect()
+            await syncService.syncOnReconnect()
             isSyncing = false
         }
     }

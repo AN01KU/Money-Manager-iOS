@@ -6,7 +6,6 @@
 import SwiftUI
 
 struct LoginView: View {
-    @State private var authService = AuthService.shared
     @State private var email = ""
     @State private var password = ""
     @State private var showSignup = false
@@ -124,7 +123,7 @@ struct LoginView: View {
         Task {
             do {
                 try await authService.login(email: email, password: password)
-                await SyncEngine.shared.fullSync()
+                await syncService.fullSync()
             } catch {
                 errorMessage = error.localizedDescription
             }

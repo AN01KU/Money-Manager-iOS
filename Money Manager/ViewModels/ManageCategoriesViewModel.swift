@@ -31,16 +31,16 @@ import SwiftData
     }
     
     func hideCategory(_ category: CustomCategory) {
-        guard let modelContext = modelContext else { return }
-        
         category.isHidden = true
         category.updatedAt = Date()
+        
+        guard let modelContext = modelContext else { return }
         
         do {
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "update",
@@ -52,7 +52,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -76,7 +76,7 @@ import SwiftData
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "update",
@@ -88,7 +88,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -124,7 +124,7 @@ import SwiftData
         do {
             try modelContext.save()
             
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "category",
                 entityID: categoryId,
                 action: "delete",
@@ -136,7 +136,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -166,8 +166,8 @@ import SwiftData
                 category.updatedAt = Date()
                 
                 do {
-                    let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-                    ChangeQueueManager.shared.enqueue(
+                    let payload = try APIClient.apiEncoder.encode(category.toUpdateRequest())
+                    changeQueueManager.enqueue(
                         entityType: "category",
                         entityID: category.id,
                         action: "update",
@@ -187,7 +187,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: context)
+                    await changeQueueManager.replayAll(context: context)
                 }
             }
         } catch {
@@ -324,7 +324,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "create",
@@ -336,7 +336,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -381,8 +381,6 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     }
     
     func save() -> Bool {
-        guard let modelContext = modelContext else { return false }
-        
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         
         guard !trimmedName.isEmpty else {
@@ -392,6 +390,8 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         }
         
         guard checkColorConflict() else { return false }
+        
+        guard let modelContext = modelContext else { return false }
         
         isSaving = true
         resetColorWarning()
@@ -405,7 +405,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "update",
@@ -417,7 +417,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {

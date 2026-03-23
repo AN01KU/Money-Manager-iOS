@@ -35,16 +35,18 @@ import SwiftData
     }
     
     func toggleExpense(at index: Int) {
-        guard index < allRecurringExpenses.count, let modelContext = modelContext else { return }
+        guard index < allRecurringExpenses.count else { return }
         let expense = allRecurringExpenses[index]
         expense.isActive.toggle()
         expense.updatedAt = Date()
+        
+        guard let modelContext = modelContext else { return }
         
         do {
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(expense.toUpdateRequest())
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "recurring",
                 entityID: expense.id,
                 action: "update",
@@ -56,7 +58,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -83,7 +85,7 @@ import SwiftData
         do {
             try modelContext.save()
             
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "recurring",
                 entityID: recurringId,
                 action: "delete",
@@ -95,7 +97,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -174,7 +176,7 @@ import SwiftData
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(recurringExpense.toCreateRequest())
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "recurring",
                 entityID: recurringExpense.id,
                 action: "create",
@@ -186,7 +188,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {

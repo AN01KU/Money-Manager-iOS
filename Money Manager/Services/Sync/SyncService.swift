@@ -1,5 +1,5 @@
 //
-//  SyncEngine.swift
+//  SyncService.swift
 //  Money Manager
 //
 
@@ -7,14 +7,13 @@ import Foundation
 import SwiftData
 
 @Observable
-final class SyncEngine {
-    static let shared = SyncEngine()
+final class SyncService: SyncServiceProtocol {
+    static let shared = SyncService()
     
     var isSyncing: Bool = false
     var lastSyncedAt: Date?
     
     private let apiClient = APIClient.shared
-    private let changeQueueManager = ChangeQueueManager.shared
     private let networkMonitor = NetworkMonitor.shared
     private var modelContainer: ModelContainer?
     
@@ -37,14 +36,14 @@ final class SyncEngine {
     }
     
     @objc private func handleNetworkAvailable() {
-        guard AuthService.shared.isAuthenticated else { return }
+        guard authService.isAuthenticated else { return }
         Task {
             await syncOnReconnect()
         }
     }
     
     func syncOnLaunch() async {
-        guard AuthService.shared.isAuthenticated else { return }
+        guard authService.isAuthenticated else { return }
         guard let container = modelContainer else { return }
         
         let context = ModelContext(container)

@@ -6,7 +6,7 @@
 import Foundation
 import SwiftData
 
-final class ChangeQueueManager {
+final class ChangeQueueManager: ChangeQueueManagerProtocol {
     static let shared = ChangeQueueManager()
     
     private let apiClient = APIClient.shared

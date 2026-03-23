@@ -129,7 +129,7 @@ enum AddExpenseMode {
         do {
             try modelContext.save()
             
-            ChangeQueueManager.shared.enqueue(
+            changeQueueManager.enqueue(
                 entityType: "expense",
                 entityID: expenseID,
                 action: action,
@@ -141,7 +141,7 @@ enum AddExpenseMode {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await ChangeQueueManager.shared.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext)
                 }
             }
         } catch {

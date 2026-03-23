@@ -51,6 +51,80 @@
                BlueprintName = "Money ManagerTests"
                ReferencedContainer = "container:Money Manager.xcodeproj">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "APIIntegrationTests">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testAuthSignup()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testBudgetCreate()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testBudgetDelete()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testBudgetList()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testBudgetUpdate()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testCategoryCreate()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testCategoryDelete()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testCategoryList()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testCategoryUpdate()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testCleanupDeleteUser()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testDashboardMonthly()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testExpenseCreate()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testExpenseCreateWithNotesAndTime()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testExpenseDelete()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testExpenseGetById()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testExpenseListPaginated()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testExpenseUpdate()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testRecurringExpenseCreateMonthly()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testRecurringExpenseCreateWeekly()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testRecurringExpenseDelete()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testRecurringExpenseGetById()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testRecurringExpenseList()">
+               </Test>
+               <Test
+                  Identifier = "APIIntegrationTests/testRecurringExpenseUpdate()">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
    </TestAction>

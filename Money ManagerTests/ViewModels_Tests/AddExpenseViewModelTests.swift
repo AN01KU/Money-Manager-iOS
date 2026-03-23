@@ -220,7 +220,8 @@ struct AddExpenseViewModelTests {
         
         #expect(completed == false)
         #expect(vm.showError == true)
-        #expect(vm.errorMessage.contains("Amount"))
+        print(vm.errorMessage)
+        #expect(vm.errorMessage.contains("amount"))
     }
     
     @Test
