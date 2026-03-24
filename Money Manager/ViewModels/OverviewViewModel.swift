@@ -38,16 +38,24 @@ import SwiftData
         let dateFiltered: [Expense]
         if filterMode == .daily {
             let startOfDay = calendar.startOfDay(for: selectedDate)
-            let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay)!
-            
+            guard let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) else {
+                filteredExpenses = []
+                return
+            }
+
             dateFiltered = allExpenses.filter { expense in
                 !expense.isDeleted &&
                 expense.date >= startOfDay &&
                 expense.date <= endOfDay
             }
         } else {
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate))!
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
+            guard
+                let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
+                let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+            else {
+                filteredExpenses = []
+                return
+            }
             
             dateFiltered = allExpenses.filter { expense in
                 !expense.isDeleted &&
@@ -78,8 +86,7 @@ import SwiftData
         currentBudget = budgets.first { $0.year == year && $0.month == month }
         
         if filterMode == .daily, let budget = currentBudget {
-            let range = calendar.range(of: .day, in: .month, for: selectedDate)!
-            let daysInMonth = range.count
+            let daysInMonth = calendar.range(of: .day, in: .month, for: selectedDate)?.count ?? 30
             dailyBudgetLimit = budget.limit / Double(daysInMonth)
         } else {
             dailyBudgetLimit = 0
@@ -171,12 +178,6 @@ import SwiftData
     }
     
     func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
-        if let custom = customCategories.first(where: { $0.name == categoryName && !$0.isHidden }) {
-            return (custom.icon, Color(hex: custom.color))
-        }
-        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == categoryName }) {
-            return (predefined.icon, predefined.color)
-        }
-        return ("ellipsis.circle.fill", Color(hex: "#95A5A6"))
+        CategoryResolver.resolve(categoryName, customCategories: customCategories)
     }
 }

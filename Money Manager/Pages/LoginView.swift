@@ -38,7 +38,7 @@ struct LoginView: View {
                 .padding(24)
             }
             .background(Color(.systemBackground))
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showSignup) {
                 SignupView()
             }

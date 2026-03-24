@@ -11,17 +11,11 @@ import SwiftData
     var customCategories: [CustomCategory] = []
     
     var categoryIcon: String {
-        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
-            return custom.icon
-        }
-        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+        CategoryResolver.resolve(expense.category, customCategories: customCategories).icon
     }
-    
+
     var categoryColor: Color {
-        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
-            return Color(hex: custom.color)
-        }
-        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
+        CategoryResolver.resolve(expense.category, customCategories: customCategories).color
     }
     
     var isGroupExpense: Bool {
@@ -71,10 +65,7 @@ import SwiftData
     }
     
     func formatAmount(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
+        amount.formatted(.number.precision(.fractionLength(0...2)))
     }
     
     func formatDateAndTime(_ date: Date, time: Date?) -> String {
