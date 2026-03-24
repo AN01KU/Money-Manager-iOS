@@ -14,7 +14,7 @@ final class SessionStore {
 
     private var modelContainer: ModelContainer?
 
-    private init() {}
+    init() {}
 
     func configure(container: ModelContainer) {
         modelContainer = container

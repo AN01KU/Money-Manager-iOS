@@ -12,7 +12,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     private let apiClient = APIClient.shared
     private var modelContainer: ModelContainer?
     
-    private init() {}
+    init() {}
     
     func configure(container: ModelContainer) {
         self.modelContainer = container
