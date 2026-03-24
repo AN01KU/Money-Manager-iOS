@@ -20,6 +20,7 @@
   <img src="https://img.shields.io/badge/iOS-18.0%2B-blue" alt="iOS 18.0+">
   <img src="https://img.shields.io/badge/Swift-6.0-orange" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-16.4%2B-purple" alt="Xcode 16.4+">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
 </p>
 
 ## Features
@@ -47,10 +48,16 @@
 - Create your own categories with custom names, colors, and icons
 - Organize expenses the way that makes sense to you
 
+### Server Sync
+- Syncs expenses, budgets, categories, and recurring expenses with a backend server
+- Offline-first — all data is stored locally and changes are queued when offline
+- Replays queued changes automatically on reconnect
+- Account-based with token authentication
+
 ### Additional Features
 - Multi-currency support
 - Export data to CSV/JSON formats
-- All data stored locally on device
+- Local-first storage with optional server sync
 
 ## Tech Stack
 
@@ -60,6 +67,7 @@
 | Architecture | MVVM |
 | Local Storage | SwiftData |
 | Charts | Swift Charts |
+| Networking | URLSession |
 
 ## Requirements
 
@@ -87,7 +95,7 @@ Money Manager/
 ├── ViewModels/       # Business logic and state management
 ├── Pages/            # Screen-level views
 ├── Components/       # Reusable UI components
-├── Services/         # Keychain and core services
+├── Services/         # Networking, sync, and core services
 ├── Helpers/          # Constants and utilities
 ├── ContentView.swift
 └── Money_ManagerApp.swift
@@ -132,6 +140,9 @@ make test-ui
 # Run a single test class
 make test-one TEST=BackupViewModelTests
 
+# Run API integration tests (requires backend running at localhost:8080)
+make test-api
+
 # View coverage report
 make coverage
 
@@ -145,6 +156,7 @@ The project includes comprehensive unit and UI tests:
 
 - **Unit Tests** — Model validation, ViewModel logic, data transformations
 - **UI Tests** — User flow verification, screen rendering tests
+- **API Integration Tests** — End-to-end tests against a live backend (`make test-api`)
 
 Run tests with:
 ```bash
@@ -165,7 +177,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is for personal use. All rights reserved.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
