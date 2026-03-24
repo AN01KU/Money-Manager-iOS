@@ -59,16 +59,31 @@ struct RecurringExpensesViewModelTests {
     @Test
     func testToggleExpenseSwapsActiveState() {
         let viewModel = RecurringExpensesViewModel()
-        
+
         let active = RecurringExpense(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
-        
+
         viewModel.configure(expenses: [active], modelContext: nil)
-        
+
         #expect(viewModel.activeExpenses.count == 1)
-        
+
         viewModel.toggleExpense(at: 0)
-        
+
         #expect(active.isActive == false)
+    }
+
+    @Test
+    func test_toggleExpense_inactiveExpense_becomesActive() {
+        let viewModel = RecurringExpensesViewModel()
+
+        let inactive = RecurringExpense(name: "Old Gym", amount: 500, category: "Health", frequency: "monthly", isActive: false)
+
+        viewModel.configure(expenses: [inactive], modelContext: nil)
+
+        #expect(viewModel.pausedExpenses.count == 1)
+
+        viewModel.toggleExpense(at: 0)
+
+        #expect(inactive.isActive == true)
     }
     
     @Test

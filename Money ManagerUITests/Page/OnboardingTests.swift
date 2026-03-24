@@ -14,8 +14,15 @@ final class OnboardingTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "--resetOnboarding"]
+        app.launchArguments = getTestAppLaunchArguments(true)
         app.launch()
+
+        // resetOnboarding also resets hasSeenLogin, so LoginView appears first.
+        // Dismiss it to reach the onboarding screen.
+        let skipLogin = app.buttons["Continue without account"]
+        if skipLogin.waitForExistence(timeout: 3) {
+            skipLogin.tap()
+        }
     }
     
     override func tearDownWithError() throws {

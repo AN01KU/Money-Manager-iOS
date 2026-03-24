@@ -3,6 +3,7 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct CustomCategoryModelTests {
     
     @Test

@@ -1,33 +1,40 @@
-// MARK: - Commented out: backend/auth/groups code removed in offline-v1
-/*
-//
-//  AuthTokenTests.swift
-//  Money ManagerTests
-//
-//  Created by Ankush Ganesh on 22/02/26.
-//
-
 import Foundation
 import Testing
 @testable import Money_Manager
 
 @MainActor
 struct AuthTokenTests {
-    
+
     @Test
-    func testAuthTokenInitialization() {
+    func test_authToken_init_storesToken() {
         let token = AuthToken(token: "test-token-123")
-        
+
         #expect(token.token == "test-token-123")
-        #expect(token.createdAt != nil)
     }
-    
+
     @Test
-    func testAuthTokenStoresTokenCorrectly() {
-        let tokenString = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-        let authToken = AuthToken(token: tokenString)
-        
-        #expect(authToken.token == tokenString)
+    func test_authToken_init_setsCreatedAtToNow() {
+        let before = Date()
+        let token = AuthToken(token: "any")
+        let after = Date()
+
+        #expect(token.createdAt >= before)
+        #expect(token.createdAt <= after)
+    }
+
+    @Test
+    func test_authToken_storesJWTString() {
+        let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature"
+        let token = AuthToken(token: jwt)
+
+        #expect(token.token == jwt)
+    }
+
+    @Test
+    func test_authToken_emptyStringIsStoredAsIs() {
+        // Edge case: empty token string should be stored exactly as passed
+        let token = AuthToken(token: "")
+
+        #expect(token.token == "")
     }
 }
-*/

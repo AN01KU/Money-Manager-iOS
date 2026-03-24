@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct PredefinedCategoryTests {
     
     @Test
@@ -168,6 +169,7 @@ struct PredefinedCategoryTests {
     }
 }
 
+@MainActor
 struct ColorHexExtensionTests {
     
     @Test

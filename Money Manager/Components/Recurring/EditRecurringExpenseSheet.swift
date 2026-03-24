@@ -162,7 +162,7 @@ struct EditRecurringExpenseSheet: View {
 
     private func loadExpenseData() {
         name = expense.name
-        amount = String(format: "%.2f", expense.amount)
+        amount = expense.amount.formatted(.number.precision(.fractionLength(2)))
         selectedCategory = expense.category
         frequency = expense.frequency
         startDate = expense.startDate
@@ -203,6 +203,24 @@ struct EditRecurringExpenseSheet: View {
 
         do {
             try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(expense.toUpdateRequest())
+            changeQueueManager.enqueue(
+                entityType: "recurring",
+                entityID: expense.id,
+                action: "update",
+                endpoint: "/recurring-expenses",
+                httpMethod: "PUT",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
+            
             saveSuccess = true
             dismiss()
         } catch {

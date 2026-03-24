@@ -219,4 +219,35 @@ struct RecurringExpenseServiceTests {
         
         #expect(expenses.first?.notes == "Monthly subscription")
     }
+
+    @Test
+    func test_generatePendingExpenses_calledTwice_doesNotCreateDuplicates() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        let recurring = RecurringExpense(
+            name: "Netflix",
+            amount: 649,
+            category: "Entertainment",
+            frequency: "monthly",
+            startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
+            isActive: true
+        )
+
+        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+
+        context.insert(recurring)
+        try? context.save()
+
+        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringExpenseService.generatePendingExpenses(context: context)
+
+        let descriptor = FetchDescriptor<Expense>()
+        let expenses = (try? context.fetch(descriptor)) ?? []
+
+        #expect(expenses.count == 1)
+    }
 }

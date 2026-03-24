@@ -873,16 +873,67 @@ struct OverviewViewModelTests {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
-        
+
         let expense1 = Expense(amount: 100, category: "Food & Dining", date: Date())
         let expense2 = Expense(amount: 200, category: "Transport", date: Date())
-        
+
         viewModel.configure(allExpenses: [expense1, expense2], budgets: [], customCategories: [], modelContext: nil)
         #expect(viewModel.filteredExpenses.count == 2)
-        
+
         viewModel.selectedCategoryFilter = "Transport"
-        
+
         #expect(viewModel.filteredExpenses.count == 1)
         #expect(viewModel.filteredExpenses.first?.category == "Transport")
+    }
+
+    // MARK: - Month boundary edge cases
+
+    @Test
+    func test_monthlyFilter_includesExpenseOnLastDayOfMonth() {
+        let viewModel = OverviewViewModel()
+        let calendar = Calendar.current
+        // Last day of January 2026
+        let lastDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
+        let midJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        let expense = Expense(amount: 500, category: "Food & Dining", date: lastDayOfJan)
+
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = midJan
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+
+        #expect(viewModel.filteredExpenses.count == 1)
+    }
+
+    @Test
+    func test_monthlyFilter_excludesExpenseOnFirstDayOfNextMonth() {
+        let viewModel = OverviewViewModel()
+        let calendar = Calendar.current
+        let firstDayOfFeb = calendar.date(from: DateComponents(year: 2026, month: 2, day: 1))!
+        let midJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        let expense = Expense(amount: 500, category: "Transport", date: firstDayOfFeb)
+
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = midJan
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+
+        #expect(viewModel.filteredExpenses.isEmpty)
+    }
+
+    @Test
+    func test_monthlyFilter_includesExpenseOnFirstDayOfMonth() {
+        let viewModel = OverviewViewModel()
+        let calendar = Calendar.current
+        let firstDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
+        let midJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        let expense = Expense(amount: 300, category: "Food & Dining", date: firstDayOfJan)
+
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = midJan
+        viewModel.configure(allExpenses: [expense], budgets: [], customCategories: [], modelContext: nil)
+
+        #expect(viewModel.filteredExpenses.count == 1)
     }
 }

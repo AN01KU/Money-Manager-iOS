@@ -29,7 +29,43 @@
 		6B8D066B2F1672DA00C93A9B /* Money ManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Money ManagerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6B0270AC2F70627600D07E36 /* Exceptions for "Shared" folder in "Money ManagerUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Constants.swift,
+				TestConfig.swift,
+			);
+			target = 6B8D066A2F1672DA00C93A9B /* Money ManagerUITests */;
+		};
+		6B0270AD2F70627600D07E36 /* Exceptions for "Shared" folder in "Money ManagerTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Constants.swift,
+				TestConfig.swift,
+			);
+			target = 6B62AB4C2F464BCD004EA7DF /* Money ManagerTests */;
+		};
+		6B0270AE2F70655A00D07E36 /* Exceptions for "Shared" folder in "Money Manager" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				TestConfig.swift,
+			);
+			target = 6B6A4C4D2EFD151B00B81C49 /* Money Manager */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		6B0270A72F70625700D07E36 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6B0270AE2F70655A00D07E36 /* Exceptions for "Shared" folder in "Money Manager" target */,
+				6B0270AC2F70627600D07E36 /* Exceptions for "Shared" folder in "Money ManagerUITests" target */,
+				6B0270AD2F70627600D07E36 /* Exceptions for "Shared" folder in "Money ManagerTests" target */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		6B62AB4E2F464BCD004EA7DF /* Money ManagerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Money ManagerTests";
@@ -75,6 +111,7 @@
 		6B6A4C452EFD151B00B81C49 = {
 			isa = PBXGroup;
 			children = (
+				6B0270A72F70625700D07E36 /* Shared */,
 				6B6A4C502EFD151B00B81C49 /* Money Manager */,
 				6B8D066C2F1672DA00C93A9B /* Money ManagerUITests */,
 				6B62AB4E2F464BCD004EA7DF /* Money ManagerTests */,
@@ -131,6 +168,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				6B0270A72F70625700D07E36 /* Shared */,
 				6B6A4C502EFD151B00B81C49 /* Money Manager */,
 			);
 			name = "Money Manager";
@@ -447,6 +485,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Money Manager/Money-Manager-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -466,7 +505,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -484,6 +523,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Money Manager/Money-Manager-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -505,7 +545,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

@@ -14,7 +14,7 @@ final class RecurringExpensesTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "--skipOnboarding", "--useTestData"]
+        app.launchArguments = getTestAppLaunchArguments()
         app.launch()
     }
     

@@ -8,6 +8,17 @@
 import SwiftUI
 import SwiftData
 
+private struct ExpenseGroup: Identifiable {
+    let id: String   // the display label, e.g. "TODAY" or "JANUARY 15"
+    let expenses: [Expense]
+}
+
+private let sectionDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "MMMM dd"
+    return f
+}()
+
 struct TransactionList: View {
     let expenses: [Expense]
     @State private var selectedExpense: Expense?
@@ -15,48 +26,40 @@ struct TransactionList: View {
     @State private var rowTapped = false
     @State private var deleteTriggered = false
     var onDelete: ((Expense) -> Void)?
-    
-    var groupedExpenses: [(String, [Expense])] {
+
+    private var groupedExpenses: [ExpenseGroup] {
         let calendar = Calendar.current
-        
         var grouped: [String: [Expense]] = [:]
-        
+
         for expense in expenses {
             let expenseDate = calendar.startOfDay(for: expense.date)
-            let key: String
-            
-            if calendar.isDateInToday(expenseDate) {
-                key = "TODAY"
-            } else {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "MMMM dd"
-                key = formatter.string(from: expenseDate).uppercased()
-            }
-            
-            if grouped[key] == nil {
-                grouped[key] = []
-            }
-            grouped[key]?.append(expense)
+            let key = calendar.isDateInToday(expenseDate)
+                ? "TODAY"
+                : sectionDateFormatter.string(from: expenseDate).uppercased()
+
+            grouped[key, default: []].append(expense)
         }
-        
-        return grouped.sorted { first, second in
-            if first.key == "TODAY" { return true }
-            if second.key == "TODAY" { return false }
-            return first.key > second.key
-        }
+
+        return grouped
+            .map { ExpenseGroup(id: $0.key, expenses: $0.value) }
+            .sorted { first, second in
+                if first.id == "TODAY" { return true }
+                if second.id == "TODAY" { return false }
+                return first.id > second.id
+            }
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(groupedExpenses, id: \.0) { section in
+            ForEach(groupedExpenses) { section in
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(section.0)
+                    Text(section.id)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 4)
-                    
-                    ForEach(section.1) { expense in
+
+                    ForEach(section.expenses) { expense in
                         SwipeToDeleteRow(
                             isRevealed: Binding(
                                 get: { swipedExpenseID == expense.persistentModelID },
@@ -75,14 +78,12 @@ struct TransactionList: View {
                         ) {
                             TransactionRow(expense: expense)
                         }
-                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                        .onChange(of: rowTapped) { _, newValue in
-                            if newValue { rowTapped = false }
-                        }
                     }
                 }
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+        .onChange(of: rowTapped) { _, newValue in if newValue { rowTapped = false } }
         .sheet(item: $selectedExpense) { expense in
             TransactionDetailView(expense: expense)
         }

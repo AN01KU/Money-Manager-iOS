@@ -33,7 +33,31 @@ import SwiftData
     func hideCategory(_ category: CustomCategory) {
         category.isHidden = true
         category.updatedAt = Date()
-        try? modelContext?.save()
+        
+        guard let modelContext = modelContext else { return }
+        
+        do {
+            try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
+            changeQueueManager.enqueue(
+                entityType: "category",
+                entityID: category.id,
+                action: "update",
+                endpoint: "/categories",
+                httpMethod: "PUT",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
+        } catch {
+            print("Error hiding category: \(error)")
+        }
     }
     
     func hideCategory(at index: Int) {
@@ -43,9 +67,33 @@ import SwiftData
     }
     
     func restoreCategory(_ category: CustomCategory) {
+        guard let modelContext = modelContext else { return }
+        
         category.isHidden = false
         category.updatedAt = Date()
-        try? modelContext?.save()
+        
+        do {
+            try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
+            changeQueueManager.enqueue(
+                entityType: "category",
+                entityID: category.id,
+                action: "update",
+                endpoint: "/categories",
+                httpMethod: "PUT",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
+        } catch {
+            print("Error restoring category: \(error)")
+        }
     }
     
     func deleteCategory(_ category: CustomCategory) {
@@ -55,13 +103,14 @@ import SwiftData
     }
     
     func confirmDelete() {
-        guard let category = categoryToDelete else { return }
+        guard let category = categoryToDelete, let modelContext = modelContext else { return }
         let categoryName = category.name
+        let categoryId = category.id
         
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { $0.category == categoryName }
         )
-        if let expenses = try? modelContext?.fetch(descriptor) {
+        if let expenses = try? modelContext.fetch(descriptor) {
             for expense in expenses {
                 expense.category = "Other"
                 expense.updatedAt = Date()
@@ -70,8 +119,30 @@ import SwiftData
         
         categoryToDelete = nil
         showDeleteConfirmation = false
-        modelContext?.delete(category)
-        try? modelContext?.save()
+        modelContext.delete(category)
+        
+        do {
+            try modelContext.save()
+            
+            changeQueueManager.enqueue(
+                entityType: "category",
+                entityID: categoryId,
+                action: "delete",
+                endpoint: "/categories",
+                httpMethod: "DELETE",
+                payload: nil,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
+        } catch {
+            print("Error deleting category: \(error)")
+        }
+        
         deleteConfirmedTrigger += 1
     }
     
@@ -93,10 +164,36 @@ import SwiftData
                 category.icon = predefined.icon
                 category.color = predefined.defaultColorHex
                 category.updatedAt = Date()
+                
+                do {
+                    let payload = try APIClient.apiEncoder.encode(category.toUpdateRequest())
+                    changeQueueManager.enqueue(
+                        entityType: "category",
+                        entityID: category.id,
+                        action: "update",
+                        endpoint: "/categories",
+                        httpMethod: "PUT",
+                        payload: payload,
+                        context: context
+                    )
+                } catch {
+                    print("Error queuing category update: \(error)")
+                }
             }
         }
         
-        try? context.save()
+        do {
+            try context.save()
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: context)
+                }
+            }
+        } catch {
+            print("Error restoring defaults: \(error)")
+        }
+        
         resetTrigger += 1
     }
     
@@ -207,6 +304,8 @@ class AddCategoryViewModel: CategoryEditorViewModel {
     }
     
     func save() async -> Bool {
+        guard let modelContext = modelContext else { return false }
+        
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         
         guard checkColorConflict() else { return false }
@@ -219,10 +318,27 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             icon: selectedIcon,
             color: selectedColor
         )
-        modelContext?.insert(category)
+        modelContext.insert(category)
         
         do {
-            try modelContext?.save()
+            try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
+            changeQueueManager.enqueue(
+                entityType: "category",
+                entityID: category.id,
+                action: "create",
+                endpoint: "/categories",
+                httpMethod: "POST",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
         } catch {
             errorMessage = "Failed to save category locally"
             showError = true
@@ -275,6 +391,8 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         
         guard checkColorConflict() else { return false }
         
+        guard let modelContext = modelContext else { return false }
+        
         isSaving = true
         resetColorWarning()
         
@@ -284,7 +402,24 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         category.updatedAt = Date()
         
         do {
-            try modelContext?.save()
+            try modelContext.save()
+            
+            let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
+            changeQueueManager.enqueue(
+                entityType: "category",
+                entityID: category.id,
+                action: "update",
+                endpoint: "/categories",
+                httpMethod: "PUT",
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
         } catch {
             errorMessage = "Failed to save changes"
             showError = true

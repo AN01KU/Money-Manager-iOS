@@ -26,6 +26,13 @@ make clean                          # Clean build artifacts
 
 When fixing or adding tests, always use `make test-one TEST=<TestClass>` to run only what you touched.
 
+### Test Output Handling
+
+**IMPORTANT**: Never use `head`, `grep`, or `tail` to filter test output. The test result file is located at:
+- `./test_results.xcresult`
+
+To parse test results, use `xcrun xcresulttool get object --legacy --path ./test_results.xcresult --format json` or read the file directly.
+
 ---
 
 ## Git Guidelines

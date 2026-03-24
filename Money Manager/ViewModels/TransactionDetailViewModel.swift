@@ -11,17 +11,11 @@ import SwiftData
     var customCategories: [CustomCategory] = []
     
     var categoryIcon: String {
-        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
-            return custom.icon
-        }
-        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+        CategoryResolver.resolve(expense.category, customCategories: customCategories).icon
     }
-    
+
     var categoryColor: Color {
-        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
-            return Color(hex: custom.color)
-        }
-        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
+        CategoryResolver.resolve(expense.category, customCategories: customCategories).color
     }
     
     var isGroupExpense: Bool {
@@ -40,8 +34,30 @@ import SwiftData
         expense.isDeleted = true
         expense.updatedAt = Date()
         
+        guard let modelContext = modelContext else {
+            completion()
+            return
+        }
+        
         do {
-            try modelContext?.save()
+            try modelContext.save()
+            
+            changeQueueManager.enqueue(
+                entityType: "expense",
+                entityID: expense.id,
+                action: "delete",
+                endpoint: "/expenses",
+                httpMethod: "DELETE",
+                payload: nil,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
+            
             completion()
         } catch {
             print("Error deleting expense: \(error)")
@@ -49,10 +65,7 @@ import SwiftData
     }
     
     func formatAmount(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
+        amount.formatted(.number.precision(.fractionLength(0...2)))
     }
     
     func formatDateAndTime(_ date: Date, time: Date?) -> String {

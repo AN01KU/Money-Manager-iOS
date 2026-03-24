@@ -31,6 +31,15 @@ struct AddExpenseView: View {
                 amountSection
                 dateTimeSection
                 detailsSection
+                
+                Section {
+                    Button {
+                        viewModel.showRecurringSheet = true
+                    } label: {
+                        Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
+                            .foregroundStyle(AppColors.accent)
+                    }
+                }
             }
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -50,6 +59,9 @@ struct AddExpenseView: View {
             }
             .sheet(isPresented: $viewModel.showCategoryPicker) {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
+            }
+            .sheet(isPresented: $viewModel.showRecurringSheet) {
+                AddRecurringExpenseSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }

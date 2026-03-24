@@ -71,7 +71,7 @@ struct BudgetSheet: View {
                             saveBudget()
                         }
                         .fontWeight(.semibold)
-                        .disabled(budgetAmount.isEmpty || Double(budgetAmount) == nil || Double(budgetAmount)! <= 0)
+                        .disabled(budgetAmount.isEmpty || (Double(budgetAmount) ?? 0) <= 0)
                     }
                 }
             }
@@ -108,9 +108,9 @@ struct BudgetSheet: View {
                 budget.year == year && budget.month == month
             }
         )).first {
-            budgetAmount = String(format: "%.0f", existing.limit)
+            budgetAmount = existing.limit.formatted(.number.precision(.fractionLength(0)))
         } else if defaultBudgetLimit > 0 {
-            budgetAmount = String(format: "%.0f", defaultBudgetLimit)
+            budgetAmount = defaultBudgetLimit.formatted(.number.precision(.fractionLength(0)))
         }
     }
     
@@ -122,7 +122,10 @@ struct BudgetSheet: View {
         let year = calendar.component(.year, from: selectedMonth)
         let month = calendar.component(.month, from: selectedMonth)
         
-        // Save locally first — this is the source of truth
+        let budgetID: UUID
+        let action: String
+        let httpMethod: String
+        
         if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
             predicate: #Predicate<MonthlyBudget> { budget in
                 budget.year == year && budget.month == month
@@ -130,6 +133,9 @@ struct BudgetSheet: View {
         )).first {
             existing.limit = amount
             existing.updatedAt = Date()
+            budgetID = existing.id
+            action = "update"
+            httpMethod = "PUT"
         } else {
             let budget = MonthlyBudget(
                 year: year,
@@ -137,12 +143,35 @@ struct BudgetSheet: View {
                 limit: amount
             )
             modelContext.insert(budget)
+            budgetID = budget.id
+            action = "create"
+            httpMethod = "POST"
         }
         
         defaultBudgetLimit = amount
         
         do {
             try modelContext.save()
+            
+            let limitString = amount.formatted(.number.precision(.fractionLength(2)))
+            let payload: Data? = action == "create"
+                ? try? APIClient.apiEncoder.encode(APICreateBudgetRequest(year: year, month: month, limit: limitString))
+                : try? APIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: limitString))
+            changeQueueManager.enqueue(
+                entityType: "budget",
+                entityID: budgetID,
+                action: action,
+                endpoint: "/budgets",
+                httpMethod: httpMethod,
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext)
+                }
+            }
         } catch {
             errorMessage = "Failed to save budget locally"
             showError = true

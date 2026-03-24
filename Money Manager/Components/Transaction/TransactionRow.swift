@@ -8,6 +8,12 @@
 import SwiftUI
 import SwiftData
 
+private let timeFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    return f
+}()
+
 struct TransactionRow: View {
     let expense: Expense
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
@@ -16,19 +22,12 @@ struct TransactionRow: View {
         self.expense = expense
     }
     
-    private var resolvedIcon: String {
-        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
-            return custom.icon
-        }
-        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.icon ?? "ellipsis.circle.fill"
+    private var resolved: (icon: String, color: Color) {
+        CategoryResolver.resolve(expense.category, customCategories: customCategories)
     }
-    
-    private var resolvedColor: Color {
-        if let custom = customCategories.first(where: { $0.name == expense.category && !$0.isHidden }) {
-            return Color(hex: custom.color)
-        }
-        return PredefinedCategory.allCases.first { $0.rawValue == expense.category }?.color ?? .gray
-    }
+
+    private var resolvedIcon: String { resolved.icon }
+    private var resolvedColor: Color { resolved.color }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -89,9 +88,7 @@ struct TransactionRow: View {
     }
     
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        timeFormatter.string(from: date)
     }
 }
 

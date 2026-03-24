@@ -3,6 +3,7 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct RecurringDateHelperTests {
     
     @Test
@@ -38,7 +39,7 @@ struct RecurringDateHelperTests {
     @Test
     func testNextOccurrenceForWeeklyFrequency() {
         let pastDate = Calendar.current.date(byAdding: .weekOfYear, value: -2, to: Date())!
-        
+
         let expense = RecurringExpense(
             name: "Weekly Gym",
             amount: 500,
@@ -46,9 +47,10 @@ struct RecurringDateHelperTests {
             frequency: "weekly",
             startDate: pastDate
         )
-        
+
         let next = expense.nextOccurrence
         #expect(next != nil)
+        #expect(next! > Date())
     }
     
     @Test
@@ -87,7 +89,7 @@ struct RecurringDateHelperTests {
     @Test
     func testNextOccurrenceForYearlyFrequency() {
         let lastYear = Calendar.current.date(byAdding: .year, value: -1, to: Date())!
-        
+
         let expense = RecurringExpense(
             name: "Insurance",
             amount: 12000,
@@ -95,9 +97,10 @@ struct RecurringDateHelperTests {
             frequency: "yearly",
             startDate: lastYear
         )
-        
+
         let next = expense.nextOccurrence
         #expect(next != nil)
+        #expect(next! > Date())
     }
     
     @Test
@@ -181,6 +184,7 @@ struct RecurringDateHelperTests {
     }
 }
 
+@MainActor
 struct DateExtensionTests {
     
     @Test

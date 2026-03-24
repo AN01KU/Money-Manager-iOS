@@ -12,9 +12,11 @@ import SwiftData
     
     var currentMonthExpenses: [Expense] {
         let calendar = Calendar.current
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth))!
-        let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
-        
+        guard
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
+            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+        else { return [] }
+
         return allExpenses.filter { expense in
             !expense.isDeleted &&
             expense.date >= startOfMonth &&
@@ -46,8 +48,11 @@ import SwiftData
     var daysRemaining: Int {
         let calendar = Calendar.current
         let today = Date()
-        let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth))!)!
-        
+        guard
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
+            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+        else { return 0 }
+
         if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
             let daysLeft = calendar.dateComponents([.day], from: today, to: endOfMonth).day ?? 0
             return max(0, daysLeft)
