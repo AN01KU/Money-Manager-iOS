@@ -7,7 +7,6 @@
 
 import Foundation
 
-@MainActor
 struct CurrencyFormatter {
     static let currencySymbols: [String: String] = [
         "INR": "₹",
