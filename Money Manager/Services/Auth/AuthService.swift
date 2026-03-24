@@ -18,7 +18,7 @@ final class AuthService: AuthServiceProtocol {
     private let session = SessionStore.shared
     private let apiClient = APIClient.shared
 
-    private var sessionExpiredObserver: Any?
+    nonisolated(unsafe) private var sessionExpiredObserver: Any?
 
     private init() {
         sessionExpiredObserver = NotificationCenter.default.addObserver(
@@ -41,7 +41,18 @@ final class AuthService: AuthServiceProtocol {
 
     @MainActor
     func checkAuthState() async {
-        isAuthenticated = session.isLoggedIn
+        guard session.isLoggedIn else {
+            hasCheckedAuth = true
+            return
+        }
+        do {
+            let user: APIUser = try await apiClient.get("/me")
+            currentUser = user
+            isAuthenticated = true
+        } catch {
+            // Token is invalid or server unreachable — keep authenticated if token exists
+            isAuthenticated = session.isLoggedIn
+        }
         hasCheckedAuth = true
     }
 

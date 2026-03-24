@@ -18,7 +18,7 @@ final class SyncService: SyncServiceProtocol {
     private var modelContainer: ModelContainer?
     
     private let lastSyncKey = "last_sync_at"
-    private var networkObserver: Any?
+    nonisolated(unsafe) private var networkObserver: Any?
     
     private init() {
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date

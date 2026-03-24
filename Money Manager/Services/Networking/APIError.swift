@@ -74,8 +74,8 @@ enum APIError: Error, LocalizedError, Equatable {
 
 extension APIError {
     init(from httpResponse: HTTPURLResponse, data: Data?) {
-        let message = try? JSONDecoder().decode(ErrorResponse.self, from: data ?? Data()).message
-        
+        let message = Self.parseErrorMessage(from: data)
+
         switch httpResponse.statusCode {
         case 401:
             self = .unauthorized
@@ -89,24 +89,11 @@ extension APIError {
             self = .httpError(statusCode: httpResponse.statusCode, message: message)
         }
     }
-}
 
-private struct ErrorResponse: Decodable {
-    private let errorValue: String?
-    private let messageValue: String?
-    
-    var message: String? {
-        errorValue ?? messageValue
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case error
-        case message
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.errorValue = try container.decodeIfPresent(String.self, forKey: .error)
-        self.messageValue = try container.decodeIfPresent(String.self, forKey: .message)
+    private static func parseErrorMessage(from data: Data?) -> String? {
+        guard let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        return json["error"] as? String ?? json["message"] as? String
     }
 }

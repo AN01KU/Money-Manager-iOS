@@ -21,17 +21,12 @@ final class NetworkMonitor {
     
     func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
-            let wasConnected = self?.isConnected ?? false
             let isNowConnected = path.status == .satisfied
-            
             DispatchQueue.main.async {
+                let wasConnected = self?.isConnected ?? false
                 self?.isConnected = isNowConnected
-                
                 if !wasConnected && isNowConnected {
-                    NotificationCenter.default.post(
-                        name: .networkDidBecomeAvailable,
-                        object: nil
-                    )
+                    NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
                 }
             }
         }
