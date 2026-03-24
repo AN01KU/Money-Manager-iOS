@@ -27,7 +27,7 @@ test:
 	
 test-unit:
 	rm -rf $(TEST_RESULTS)
-	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests"
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests" -skip-testing:"Money ManagerTests/APIIntegrationTests"
 	
 test-ui:
 	rm -rf $(TEST_RESULTS)

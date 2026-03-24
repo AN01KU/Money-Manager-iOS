@@ -82,9 +82,9 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let response: [APICustomCategory] = try await APIClient.shared.get("/categories")
-        
-        #expect(!response.isEmpty)
+        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+
+        #expect(!response.data.isEmpty)
     }
     
     @Test("Update category modifies data")
@@ -126,8 +126,8 @@ struct APIIntegrationTests {
         
         await delay(200)
         
-        let categories: [APICustomCategory] = try await APIClient.shared.get("/categories")
-        #expect(!categories.contains(where: { $0.id == created.id }))
+        let categories: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
     
     // MARK: - Budget Tests
@@ -240,9 +240,9 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let response: [APIRecurringExpense] = try await APIClient.shared.get("/recurring-expenses")
-        
-        #expect(!response.isEmpty)
+        let response: APIListResponse<APIRecurringExpense> = try await APIClient.shared.get("/recurring-expenses")
+
+        #expect(!response.data.isEmpty)
     }
     
     @Test("Get recurring expense by id")

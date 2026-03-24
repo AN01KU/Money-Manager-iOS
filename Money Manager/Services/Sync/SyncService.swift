@@ -96,8 +96,8 @@ final class SyncService: SyncServiceProtocol {
     
     private func pullCategories(context: ModelContext) async {
         do {
-            let response: [APICustomCategory] = try await apiClient.get("/categories")
-            upsertCategories(response, context: context)
+            let response: APIListResponse<APICustomCategory> = try await apiClient.get("/categories")
+            upsertCategories(response.data, context: context)
         } catch {
             print("Failed to pull categories: \(error)")
         }
@@ -114,8 +114,8 @@ final class SyncService: SyncServiceProtocol {
     
     private func pullRecurringExpenses(context: ModelContext) async {
         do {
-            let response: [APIRecurringExpense] = try await apiClient.get("/recurring-expenses")
-            upsertRecurringExpenses(response, context: context)
+            let response: APIListResponse<APIRecurringExpense> = try await apiClient.get("/recurring-expenses")
+            upsertRecurringExpenses(response.data, context: context)
         } catch {
             print("Failed to pull recurring expenses: \(error)")
         }
