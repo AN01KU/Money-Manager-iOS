@@ -21,26 +21,6 @@ struct ExportDataView: View {
         }
         .navigationTitle("Backup")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        viewModel.selectedImportFormat = .json
-                        showImportPicker = true
-                    } label: {
-                        Label("Import JSON", systemImage: "doc.text")
-                    }
-                    Button {
-                        viewModel.selectedImportFormat = .csv
-                        showImportPicker = true
-                    } label: {
-                        Label("Import CSV", systemImage: "tablecells")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
-        }
         .sheet(isPresented: $viewModel.showShareSheet) {
             if let url = viewModel.exportedFileURL {
                 ShareSheet(items: [url])

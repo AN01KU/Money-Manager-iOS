@@ -85,10 +85,12 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     }
     
     func replayAll(context: ModelContext) async {
+        guard authService.isAuthenticated else { return }
+
         let descriptor = FetchDescriptor<PendingChange>(
             sortBy: [SortDescriptor(\.createdAt)]
         )
-        
+
         guard let changes = try? context.fetch(descriptor) else { return }
         
         for change in changes {

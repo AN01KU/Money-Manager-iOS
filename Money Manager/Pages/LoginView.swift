@@ -6,6 +6,9 @@
 import SwiftUI
 
 struct LoginView: View {
+    var onSkip: (() -> Void)? = nil
+
+    @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
     @State private var showSignup = false
@@ -17,12 +20,20 @@ struct LoginView: View {
             ScrollView {
                 VStack(spacing: 32) {
                     headerSection
-                    
+
                     formSection
-                    
+
                     loginButton
-                    
+
                     signupLink
+
+                    if let onSkip {
+                        Button("Continue without account") {
+                            onSkip()
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    }
                 }
                 .padding(24)
             }
@@ -62,7 +73,7 @@ struct LoginView: View {
                 .textFieldStyle(.plain)
                 .keyboardType(.emailAddress)
                 .textContentType(.emailAddress)
-                .autocapitalization(.none)
+                .textInputAutocapitalization(.never)
                 .padding()
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -124,6 +135,7 @@ struct LoginView: View {
             do {
                 try await authService.login(email: email, password: password)
                 await syncService.fullSync()
+                dismiss()
             } catch {
                 errorMessage = error.localizedDescription
             }

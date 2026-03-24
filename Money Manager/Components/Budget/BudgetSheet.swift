@@ -71,7 +71,7 @@ struct BudgetSheet: View {
                             saveBudget()
                         }
                         .fontWeight(.semibold)
-                        .disabled(budgetAmount.isEmpty || Double(budgetAmount) == nil || Double(budgetAmount)! <= 0)
+                        .disabled(budgetAmount.isEmpty || (Double(budgetAmount) ?? 0) <= 0)
                     }
                 }
             }
@@ -108,9 +108,9 @@ struct BudgetSheet: View {
                 budget.year == year && budget.month == month
             }
         )).first {
-            budgetAmount = String(format: "%.0f", existing.limit)
+            budgetAmount = existing.limit.formatted(.number.precision(.fractionLength(0)))
         } else if defaultBudgetLimit > 0 {
-            budgetAmount = String(format: "%.0f", defaultBudgetLimit)
+            budgetAmount = defaultBudgetLimit.formatted(.number.precision(.fractionLength(0)))
         }
     }
     
@@ -153,11 +153,10 @@ struct BudgetSheet: View {
         do {
             try modelContext.save()
             
-            let payload = try? APIClient.apiEncoder.encode(APICreateBudgetRequest(
-                year: year,
-                month: month,
-                limit: String(format: "%.2f", amount)
-            ))
+            let limitString = amount.formatted(.number.precision(.fractionLength(2)))
+            let payload: Data? = action == "create"
+                ? try? APIClient.apiEncoder.encode(APICreateBudgetRequest(year: year, month: month, limit: limitString))
+                : try? APIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: limitString))
             changeQueueManager.enqueue(
                 entityType: "budget",
                 entityID: budgetID,

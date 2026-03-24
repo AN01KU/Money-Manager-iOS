@@ -3,7 +3,15 @@ import SwiftUI
 struct AddRecurringExpenseSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    
+
+    private let prefillAmount: String
+    private let prefillCategory: String
+
+    init(prefillAmount: String = "", prefillCategory: String = "") {
+        self.prefillAmount = prefillAmount
+        self.prefillCategory = prefillCategory
+    }
+
     @State private var viewModel = AddRecurringExpenseViewModel()
     @State private var amount100Tapped = false
     @State private var amount500Tapped = false
@@ -172,6 +180,7 @@ struct AddRecurringExpenseSheet: View {
             }
             .onAppear {
                 viewModel.configure(modelContext: modelContext)
+                viewModel.prefill(amount: prefillAmount, category: prefillCategory)
             }
         }
     }

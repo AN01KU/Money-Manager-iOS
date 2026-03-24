@@ -125,7 +125,7 @@ final class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        if let token = _testToken ?? KeychainHelper.shared.getToken() {
+        if let token = _testToken ?? SessionStore.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
@@ -141,7 +141,6 @@ final class APIClient {
             }
             
             if httpResponse.statusCode == 401 {
-                NotificationCenter.default.post(name: .authSessionExpired, object: nil)
                 throw APIError.unauthorized
             }
             

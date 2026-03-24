@@ -18,28 +18,32 @@ final class SyncService: SyncServiceProtocol {
     private var modelContainer: ModelContainer?
     
     private let lastSyncKey = "last_sync_at"
+    private var networkObserver: Any?
     
     private init() {
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleNetworkAvailable),
-            name: .networkDidBecomeAvailable,
-            object: nil
-        )
+        networkObserver = NotificationCenter.default.addObserver(
+            forName: .networkDidBecomeAvailable,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, authService.isAuthenticated else { return }
+            Task {
+                await self.syncOnReconnect()
+            }
+        }
+    }
+    
+    deinit {
+        if let observer = networkObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
     
     func configure(container: ModelContainer) {
         self.modelContainer = container
         changeQueueManager.configure(container: container)
-    }
-    
-    @objc private func handleNetworkAvailable() {
-        guard authService.isAuthenticated else { return }
-        Task {
-            await syncOnReconnect()
-        }
     }
     
     func syncOnLaunch() async {
@@ -259,6 +263,10 @@ final class SyncService: SyncServiceProtocol {
         let descriptor = FetchDescriptor<CustomCategory>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
+        let localByPredefinedKey = Dictionary(uniqueKeysWithValues: localCategories.compactMap { cat -> (String, CustomCategory)? in
+            guard let key = cat.predefinedKey else { return nil }
+            return (key, cat)
+        })
         
         for remote in apiCategories {
             if let local = localByID[remote.id] {
@@ -271,6 +279,16 @@ final class SyncService: SyncServiceProtocol {
                     local.predefinedKey = remote.predefined_key
                     local.updatedAt = remote.updated_at
                 }
+            } else if let key = remote.predefined_key,
+                      let local = localByPredefinedKey[key] {
+                local.id = remote.id
+                local.name = remote.name
+                local.icon = remote.icon
+                local.color = remote.color
+                local.isHidden = remote.is_hidden
+                local.isPredefined = remote.is_predefined
+                local.predefinedKey = remote.predefined_key
+                local.updatedAt = remote.updated_at
             } else {
                 let category = CustomCategory(
                     id: remote.id,

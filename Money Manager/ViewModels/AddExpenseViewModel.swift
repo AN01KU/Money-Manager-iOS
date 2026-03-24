@@ -12,6 +12,7 @@ enum AddExpenseMode {
     var description = ""
     var notes = ""
     var showCategoryPicker = false
+    var showRecurringSheet = false
     var showError = false
     var errorMessage = ""
     var isSaving = false
@@ -47,7 +48,7 @@ enum AddExpenseMode {
     
     func setup() {
         if case .personal(let editing) = mode, let expense = editing {
-            amount = String(format: "%.2f", expense.amount)
+            amount = expense.amount.formatted(.number.precision(.fractionLength(2)))
             selectedCategory = expense.category
             selectedDate = expense.date
             selectedTime = expense.time ?? Date()

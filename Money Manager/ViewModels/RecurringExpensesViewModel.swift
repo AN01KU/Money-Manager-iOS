@@ -135,7 +135,12 @@ import SwiftData
     func configure(modelContext: ModelContext?) {
         self.modelContext = modelContext
     }
-    
+
+    func prefill(amount: String, category: String) {
+        self.amount = amount
+        self.selectedCategory = category
+    }
+
     func save() -> Bool {
         guard let amountValue = Double(amount), amountValue > 0 else {
             errorMessage = "Amount must be greater than 0"

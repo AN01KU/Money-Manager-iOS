@@ -24,9 +24,11 @@ struct Money_ManagerApp: App {
         #if DEBUG
         if skipOnboarding {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            UserDefaults.standard.set(true, forKey: "hasSeenLogin")
         }
         if resetOnboarding {
             UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+            UserDefaults.standard.set(false, forKey: "hasSeenLogin")
         }
         #endif
         
@@ -35,16 +37,19 @@ struct Money_ManagerApp: App {
             RecurringExpense.self,
             CustomCategory.self,
             MonthlyBudget.self,
-            PendingChange.self
+            PendingChange.self,
+            AuthToken.self
         ])
         
         let modelConfiguration = ModelConfiguration(schema: schema)
 
         do {
             container = try ModelContainer(for: schema, configurations: [modelConfiguration])
-            
-            CategorySeeder.seedIfNeeded(context: container.mainContext)
+
+            SessionStore.shared.configure(container: container)
+
             RecurringExpenseService.generatePendingExpenses(context: container.mainContext)
+            CategorySeeder.seedIfNeeded(context: container.mainContext)
             
             #if DEBUG
             if useTestData {
@@ -98,7 +103,7 @@ struct Money_ManagerApp: App {
     private func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .active:
-            if authService.isAuthenticated {
+            if authService.hasCheckedAuth && authService.isAuthenticated {
                 Task {
                     await syncService.syncOnReconnect()
                 }
