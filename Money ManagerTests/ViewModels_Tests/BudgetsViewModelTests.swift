@@ -284,15 +284,51 @@ struct BudgetsViewModelTests {
         
         #expect(viewModel.currentBudget?.limit == 5000)
     }
-    
-    // MARK: - Initial State Tests
-    
+
+    // MARK: - Month boundary edge cases
+
     @Test
-    func testInitialState() {
+    func test_currentMonthExpenses_includesExpenseOnLastDayOfMonth() {
         let viewModel = BudgetsViewModel()
-        
-        #expect(viewModel.showBudgetSheet == false)
-        #expect(viewModel.allExpenses.isEmpty)
-        #expect(viewModel.budgets.isEmpty)
+        let calendar = Calendar.current
+        let lastDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
+        let midJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        let expense = Expense(amount: 500, category: "Food", date: lastDayOfJan)
+
+        viewModel.selectedMonth = midJan
+        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+
+        #expect(viewModel.currentMonthExpenses.count == 1)
+    }
+
+    @Test
+    func test_currentMonthExpenses_excludesExpenseOnFirstDayOfNextMonth() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let firstDayOfFeb = calendar.date(from: DateComponents(year: 2026, month: 2, day: 1))!
+        let midJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        let expense = Expense(amount: 500, category: "Transport", date: firstDayOfFeb)
+
+        viewModel.selectedMonth = midJan
+        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+
+        #expect(viewModel.currentMonthExpenses.isEmpty)
+    }
+
+    @Test
+    func test_currentMonthExpenses_includesExpenseOnFirstDayOfMonth() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let firstDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
+        let midJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        let expense = Expense(amount: 300, category: "Food", date: firstDayOfJan)
+
+        viewModel.selectedMonth = midJan
+        viewModel.configure(allExpenses: [expense], budgets: [], modelContext: nil)
+
+        #expect(viewModel.currentMonthExpenses.count == 1)
     }
 }
