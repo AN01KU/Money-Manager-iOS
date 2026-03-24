@@ -3,6 +3,7 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct RecurringDateHelperTests {
     
     @Test
@@ -183,6 +184,7 @@ struct RecurringDateHelperTests {
     }
 }
 
+@MainActor
 struct DateExtensionTests {
     
     @Test

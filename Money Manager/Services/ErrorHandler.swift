@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 final class ErrorHandler {
     static let shared = ErrorHandler()
     

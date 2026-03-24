@@ -4,6 +4,7 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct CategorySpendingModelTests {
 
     @Test

@@ -4,6 +4,7 @@ import Testing
 import UniformTypeIdentifiers
 @testable import Money_Manager
 
+@MainActor
 struct ExportFormatTests {
     
     @Test
@@ -38,6 +39,7 @@ struct ExportFormatTests {
     }
 }
 
+@MainActor
 struct ExportDataTypeTests {
     
     @Test
@@ -58,6 +60,7 @@ struct ExportDataTypeTests {
     }
 }
 
+@MainActor
 struct ExportDataStructTests {
     
     @Test

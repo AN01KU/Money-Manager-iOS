@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct CategoryResolverTests {
 
     // MARK: - Predefined category
