@@ -14,6 +14,7 @@ final class SyncService: SyncServiceProtocol {
     var lastSyncedAt: Date?
     
     private let apiClient = APIClient.shared
+    private let groupService = GroupService.shared
     private let networkMonitor = NetworkMonitor.shared
     private var modelContainer: ModelContainer?
     
@@ -44,6 +45,16 @@ final class SyncService: SyncServiceProtocol {
     func configure(container: ModelContainer) {
         self.modelContainer = container
         changeQueueManager.configure(container: container)
+    }
+
+    func clearGroupData() {
+        guard let container = modelContainer else { return }
+        let context = ModelContext(container)
+        try? context.delete(model: SplitGroupModel.self)
+        try? context.delete(model: GroupMemberModel.self)
+        try? context.delete(model: GroupExpenseModel.self)
+        try? context.delete(model: GroupBalanceModel.self)
+        try? context.save()
     }
     
     func syncOnLaunch() async {
@@ -307,6 +318,113 @@ final class SyncService: SyncServiceProtocol {
         try? context.save()
     }
     
+    private func pullGroups(context: ModelContext) async {
+        do {
+            let groups = try await groupService.fetchGroups()
+            upsertGroups(groups, context: context)
+        } catch {
+            print("Failed to pull groups: \(error)")
+        }
+    }
+
+    private func upsertGroups(_ apiGroups: [APIGroupWithDetails], context: ModelContext) {
+        // Fetch all existing local models
+        let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
+        let localGroupsByID = Dictionary(uniqueKeysWithValues: localGroups.map { ($0.id, $0) })
+
+        let localMembers = (try? context.fetch(FetchDescriptor<GroupMemberModel>())) ?? []
+        let localMembersByID = Dictionary(uniqueKeysWithValues: localMembers.map { ($0.id, $0) })
+
+        let localExpenses = (try? context.fetch(FetchDescriptor<GroupExpenseModel>())) ?? []
+        let localExpensesByID = Dictionary(uniqueKeysWithValues: localExpenses.map { ($0.id, $0) })
+
+        for remote in apiGroups {
+            // Upsert group
+            let dbGroup: SplitGroupModel
+            if let existing = localGroupsByID[remote.id] {
+                existing.name = remote.name
+                dbGroup = existing
+            } else {
+                let newGroup = SplitGroupModel(
+                    id: remote.id,
+                    name: remote.name,
+                    createdBy: remote.created_by,
+                    createdAt: remote.created_at
+                )
+                context.insert(newGroup)
+                dbGroup = newGroup
+            }
+
+            // Upsert members
+            for member in remote.members {
+                if localMembersByID[member.id] == nil {
+                    let newMember = GroupMemberModel(
+                        id: member.id,
+                        email: member.email,
+                        username: member.username,
+                        joinedAt: member.createdAt ?? Date()
+                    )
+                    newMember.group = dbGroup
+                    context.insert(newMember)
+                }
+            }
+
+            // Upsert balances — replace all for this group
+            let existingBalances = (try? context.fetch(
+                FetchDescriptor<GroupBalanceModel>()
+            ))?.filter { $0.group?.id == remote.id } ?? []
+            for b in existingBalances { context.delete(b) }
+
+            for balance in remote.balances {
+                guard let amount = Double(balance.amount) else { continue }
+                let newBalance = GroupBalanceModel(userId: balance.user_id, amount: amount)
+                newBalance.group = dbGroup
+                context.insert(newBalance)
+            }
+        }
+
+        try? context.save()
+
+        // Sync group expenses separately (not included in list response)
+        Task {
+            guard let container = modelContainer else { return }
+            let expenseContext = ModelContext(container)
+            for remote in apiGroups {
+                await pullGroupExpenses(groupId: remote.id, dbGroupId: remote.id, localExpensesByID: localExpensesByID, context: expenseContext)
+            }
+        }
+    }
+
+    private func pullGroupExpenses(
+        groupId: UUID,
+        dbGroupId: UUID,
+        localExpensesByID: [UUID: GroupExpenseModel],
+        context: ModelContext
+    ) async {
+        do {
+            let details = try await groupService.fetchGroupDetails(groupId: groupId)
+            let groups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
+            guard let dbGroup = groups.first(where: { $0.id == dbGroupId }) else { return }
+
+            for expense in details.group.expenses {
+                if localExpensesByID[expense.id] == nil {
+                    let newExpense = GroupExpenseModel(
+                        id: expense.id,
+                        description: expense.description,
+                        totalAmount: Double(expense.total_amount) ?? 0,
+                        paidBy: expense.paid_by,
+                        createdAt: expense.created_at
+                    )
+                    newExpense.group = dbGroup
+                    context.insert(newExpense)
+                }
+            }
+            try? context.save()
+        } catch {
+            print("Failed to pull expenses for group \(groupId): \(error)")
+        }
+    }
+
     private func updateLastSyncTime() {
         lastSyncedAt = Date()
         UserDefaults.standard.set(lastSyncedAt, forKey: lastSyncKey)

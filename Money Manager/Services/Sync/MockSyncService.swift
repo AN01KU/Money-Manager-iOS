@@ -32,5 +32,7 @@ final class MockSyncService: SyncServiceProtocol {
         isSyncing = false
         lastSyncedAt = Date()
     }
+
+    func clearGroupData() {}
 }
 #endif

@@ -98,6 +98,7 @@ final class AuthService: AuthServiceProtocol {
     func logout() {
         session.clearSession()
         UserDefaults.standard.removeObject(forKey: "last_sync_at")
+        syncService.clearGroupData()
         currentUser = nil
         isAuthenticated = false
     }

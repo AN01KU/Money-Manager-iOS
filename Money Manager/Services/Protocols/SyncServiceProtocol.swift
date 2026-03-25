@@ -14,4 +14,5 @@ protocol SyncServiceProtocol: AnyObject {
     func syncOnLaunch() async
     func syncOnReconnect() async
     func fullSync() async
+    func clearGroupData()
 }
