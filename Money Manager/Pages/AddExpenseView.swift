@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct AddExpenseView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 

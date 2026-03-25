@@ -21,16 +21,27 @@ final class GroupDetailViewModel {
     var isLoading = false
     var selectedSection: GroupSection = .expenses
 
+    // Errors
+    var errorMessage: String?
+    var showError: Bool {
+        get { errorMessage != nil }
+        set { if !newValue { errorMessage = nil } }
+    }
+
     // Add member
     var showAddMember = false
     var addMemberError: String?
+    var showAddMemberError: Bool {
+        get { addMemberError != nil }
+        set { if !newValue { addMemberError = nil } }
+    }
     var pendingMemberEmails: Set<String> = []
 
     // Add expense / settle
     var showAddExpense = false
     var showSettlement = false
 
-    private let groupService: GroupServiceProtocol
+    let groupService: GroupServiceProtocol
 
     init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared) {
         self.group = group
@@ -57,14 +68,14 @@ final class GroupDetailViewModel {
 
     func loadData() async {
         isLoading = true
+        errorMessage = nil
         do {
             let details = try await groupService.fetchGroupDetails(groupId: group.id)
             expenses = details.group.expenses
             members  = details.group.members
             balances = details.group.balances
         } catch {
-            // Non-fatal — show whatever came in from list response
-            print("GroupDetail load error: \(error)")
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
         isLoading = false
     }

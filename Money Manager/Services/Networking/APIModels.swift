@@ -198,11 +198,6 @@ struct APIGroupMember: Codable, Identifiable, Sendable {
     let email: String
     let username: String
     let createdAt: Date?
-
-    enum CodingKeys: String, CodingKey {
-        case id, email, username
-        case createdAt = "createdAt"
-    }
 }
 
 struct APIGroupBalance: Codable, Sendable {

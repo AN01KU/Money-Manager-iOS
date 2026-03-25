@@ -20,7 +20,7 @@ final class GroupsListViewModel {
     var selectedTab: GroupsTab = .groups
     var searchText = ""
 
-    private let groupService: GroupServiceProtocol
+    let groupService: GroupServiceProtocol
 
     init(groupService: GroupServiceProtocol = GroupService.shared) {
         self.groupService = groupService
@@ -51,10 +51,9 @@ final class GroupsListViewModel {
 
     var filteredActivity: [(expense: APIGroupExpense, groupName: String)] {
         guard !searchText.isEmpty else { return recentActivity }
-        let query = searchText.lowercased()
         return recentActivity.filter {
-            $0.groupName.lowercased().contains(query) ||
-            $0.expense.description.lowercased().contains(query)
+            $0.groupName.localizedStandardContains(searchText) ||
+            $0.expense.description.localizedStandardContains(searchText)
         }
     }
 
