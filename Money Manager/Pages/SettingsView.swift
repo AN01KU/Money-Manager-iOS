@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var showLoginSheet = false
+    @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
 
     var body: some View {
@@ -22,7 +23,10 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showLoginSheet) {
-                LoginView()
+                LoginView(isDismissable: true)
+            }
+            .sheet(isPresented: $showSignupSheet) {
+                SignupView()
             }
             .confirmationDialog("Log Out", isPresented: $showLogoutConfirmation, titleVisibility: .visible) {
                 Button("Log Out", role: .destructive) {
@@ -39,33 +43,38 @@ struct SettingsView: View {
 
     private var loginPromptSection: some View {
         Section {
-            Button {
-                showLoginSheet = true
-            } label: {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.accent.opacity(0.12))
-                            .frame(width: 56, height: 56)
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(AppColors.accent.opacity(0.12))
+                        .frame(width: 56, height: 56)
 
-                        Image(systemName: "person.crop.circle.badge.plus")
-                            .font(.title2)
-                            .foregroundStyle(AppColors.accent)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Sign in to sync")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
-
-                        Text("Back up your data across devices")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.title2)
+                        .foregroundStyle(AppColors.accent)
                 }
-                .padding(.vertical, 4)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Guest Mode")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    Text("Sign in to sync across devices")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .padding(.vertical, 4)
+
+            Button("Sign In") {
+                showLoginSheet = true
+            }
+            .foregroundStyle(AppColors.accent)
+
+            Button("Create Account") {
+                showSignupSheet = true
+            }
+            .foregroundStyle(AppColors.accent)
         }
     }
 

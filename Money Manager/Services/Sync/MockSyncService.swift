@@ -33,6 +33,8 @@ final class MockSyncService: SyncServiceProtocol {
         lastSyncedAt = Date()
     }
 
+    func bootstrapAfterSignup() async {}
+
     func clearGroupData() {}
 }
 #endif

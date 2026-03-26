@@ -8,7 +8,7 @@ import Foundation
 extension Expense {
     func toCreateRequest() -> APICreateExpenseRequest {
         APICreateExpenseRequest(
-            amount: String(format: "%.2f", amount),
+            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
             time: time,
@@ -19,10 +19,10 @@ extension Expense {
             group_name: groupName
         )
     }
-    
+
     func toUpdateRequest() -> APIUpdateExpenseRequest {
         APIUpdateExpenseRequest(
-            amount: String(format: "%.2f", amount),
+            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
             time: time,
@@ -54,7 +54,7 @@ extension RecurringExpense {
     func toCreateRequest() -> APICreateRecurringExpenseRequest {
         APICreateRecurringExpenseRequest(
             name: name,
-            amount: String(format: "%.2f", amount),
+            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             frequency: frequency,
             day_of_month: dayOfMonth,
@@ -65,11 +65,11 @@ extension RecurringExpense {
             notes: notes
         )
     }
-    
+
     func toUpdateRequest() -> APIUpdateRecurringExpenseRequest {
         APIUpdateRecurringExpenseRequest(
             name: name,
-            amount: String(format: "%.2f", amount),
+            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             frequency: frequency,
             day_of_month: dayOfMonth,
@@ -102,7 +102,7 @@ extension MonthlyBudget {
         APICreateBudgetRequest(
             year: year,
             month: month,
-            limit: String(format: "%.2f", limit)
+            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
         )
     }
     
@@ -110,7 +110,7 @@ extension MonthlyBudget {
         APIUpdateBudgetRequest(
             year: year,
             month: month,
-            limit: String(format: "%.2f", limit)
+            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
         )
     }
     

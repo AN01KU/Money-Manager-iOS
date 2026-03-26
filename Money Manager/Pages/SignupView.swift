@@ -66,7 +66,7 @@ struct SignupView: View {
                 .textFieldStyle(.plain)
                 .keyboardType(.emailAddress)
                 .textContentType(.emailAddress)
-                .autocapitalization(.none)
+                .textInputAutocapitalization(.never)
                 .padding()
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -74,7 +74,7 @@ struct SignupView: View {
             TextField("Username", text: $username)
                 .textFieldStyle(.plain)
                 .textContentType(.username)
-                .autocapitalization(.none)
+                .textInputAutocapitalization(.never)
                 .padding()
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -138,7 +138,7 @@ struct SignupView: View {
         Task {
             do {
                 try await authService.signup(email: email, username: username, password: password)
-                await syncService.fullSync()
+                await syncService.bootstrapAfterSignup()
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

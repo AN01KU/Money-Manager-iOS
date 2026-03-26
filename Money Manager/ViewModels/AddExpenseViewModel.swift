@@ -130,10 +130,6 @@ enum SplitType: String, CaseIterable {
         }
     }
 
-    func displayName(for member: APIGroupMember) -> String {
-        member.email.components(separatedBy: "@").first?.capitalized ?? member.email
-    }
-
     func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -263,7 +259,7 @@ enum SplitType: String, CaseIterable {
         if splitType == .equal {
             let share = amountValue / Double(max(selectedMembers.count, 1))
             splits = selectedMembers.map {
-                APIExpenseSplit(userId: $0, amount: String(format: "%.2f", share))
+                APIExpenseSplit(userId: $0, amount: share.formatted(.number.precision(.fractionLength(2)).grouping(.never)))
             }
         } else {
             splits = selectedMembers.compactMap { id in
@@ -276,7 +272,7 @@ enum SplitType: String, CaseIterable {
             groupId: group.id,
             description: description.trimmingCharacters(in: .whitespaces),
             category: selectedCategory,
-            totalAmount: String(format: "%.2f", amountValue),
+            totalAmount: amountValue.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             splits: splits
         )
 

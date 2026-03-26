@@ -80,13 +80,93 @@ final class SyncService: SyncServiceProtocol {
     
     func fullSync() async {
         guard let container = modelContainer else { return }
-        
+
         isSyncing = true
         defer { isSyncing = false }
-        
+
         let context = ModelContext(container)
         await pullAllFromServer(context: context)
         updateLastSyncTime()
+    }
+
+    func bootstrapAfterSignup() async {
+        guard let container = modelContainer else { return }
+
+        isSyncing = true
+        defer { isSyncing = false }
+
+        let context = ModelContext(container)
+
+        // 1. Pull server-seeded categories (reconciles predefined by key)
+        await pullCategories(context: context)
+
+        // 2. Enqueue all local user data as creates
+        enqueueLocalData(context: context)
+
+        // 3. Push everything to server
+        await changeQueueManager.replayAll(context: context)
+
+        // 4. Pull canonical state
+        await pullFromServer(context: context)
+        updateLastSyncTime()
+    }
+
+    private func enqueueLocalData(context: ModelContext) {
+        let expenses = (try? context.fetch(FetchDescriptor<Expense>())) ?? []
+        for expense in expenses where !expense.isDeleted {
+            let payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
+            changeQueueManager.enqueue(
+                entityType: "expense",
+                entityID: expense.id,
+                action: "create",
+                endpoint: "/expenses",
+                httpMethod: "POST",
+                payload: payload,
+                context: context
+            )
+        }
+
+        let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
+        for category in categories where !category.isPredefined {
+            let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
+            changeQueueManager.enqueue(
+                entityType: "category",
+                entityID: category.id,
+                action: "create",
+                endpoint: "/categories",
+                httpMethod: "POST",
+                payload: payload,
+                context: context
+            )
+        }
+
+        let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
+        for budget in budgets {
+            let payload = try? APIClient.apiEncoder.encode(budget.toCreateRequest())
+            changeQueueManager.enqueue(
+                entityType: "budget",
+                entityID: budget.id,
+                action: "create",
+                endpoint: "/budgets",
+                httpMethod: "POST",
+                payload: payload,
+                context: context
+            )
+        }
+
+        let recurring = (try? context.fetch(FetchDescriptor<RecurringExpense>())) ?? []
+        for expense in recurring {
+            let payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
+            changeQueueManager.enqueue(
+                entityType: "recurring",
+                entityID: expense.id,
+                action: "create",
+                endpoint: "/recurring-expenses",
+                httpMethod: "POST",
+                payload: payload,
+                context: context
+            )
+        }
     }
     
     private func pullFromServer(context: ModelContext) async {
