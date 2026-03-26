@@ -38,6 +38,7 @@ struct Money_ManagerApp: App {
             CustomCategory.self,
             MonthlyBudget.self,
             PendingChange.self,
+            FailedChange.self,
             AuthToken.self,
             SplitGroupModel.self,
             GroupMemberModel.self,

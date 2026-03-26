@@ -1,10 +1,14 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
+    #if DEBUG
+    @State private var showSyncDebug = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -19,6 +23,9 @@ struct SettingsView: View {
                 if authService.isAuthenticated {
                     accountSection
                 }
+                #if DEBUG
+                debugSection
+                #endif
                 aboutSection
             }
             .navigationTitle("Settings")
@@ -168,6 +175,23 @@ struct SettingsView: View {
             }
         }
     }
+
+    // MARK: - Debug (DEBUG builds only)
+
+    #if DEBUG
+    @ViewBuilder
+    private var debugSection: some View {
+        Section {
+            NavigationLink {
+                SyncDebugView()
+            } label: {
+                Label("Sync Debug", systemImage: "antenna.radiowaves.left.and.right")
+            }
+        } header: {
+            Text("Debug")
+        }
+    }
+    #endif
 
     // MARK: - About
 

@@ -7,7 +7,7 @@ import SwiftData
     var showDeleteAlert = false
     
     let expense: Expense
-    private var modelContext: ModelContext?
+    var modelContext: ModelContext?
     var customCategories: [CustomCategory] = []
     
     var categoryIcon: String {
@@ -22,12 +22,11 @@ import SwiftData
         expense.groupId != nil && expense.groupName != nil
     }
     
-    init(expense: Expense) {
+    private let changeQueue: ChangeQueueManagerProtocol
+
+    init(expense: Expense, changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
         self.expense = expense
-    }
-    
-    func configure(modelContext: ModelContext?) {
-        self.modelContext = modelContext
+        self.changeQueue = changeQueue
     }
     
     func deleteExpense(completion: @escaping () -> Void) {
@@ -42,7 +41,7 @@ import SwiftData
         do {
             try modelContext.save()
             
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "expense",
                 entityID: expense.id,
                 action: "delete",
@@ -54,7 +53,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
             

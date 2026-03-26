@@ -138,17 +138,18 @@ struct Overview: View {
             .task(id: viewModel.selectedDate) {
                 viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
             }
-            .onAppear {
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, customCategories: customCategories, modelContext: modelContext)
+            .task {
+                viewModel.modelContext = modelContext
+                viewModel.update(allExpenses: allExpenses, budgets: budgets, customCategories: customCategories)
             }
             .onChange(of: allExpenses) { _, newValue in
-                viewModel.configure(allExpenses: newValue, budgets: budgets, customCategories: customCategories, modelContext: modelContext)
+                viewModel.update(allExpenses: newValue, budgets: budgets, customCategories: customCategories)
             }
             .onChange(of: budgets) { _, newValue in
-                viewModel.configure(allExpenses: allExpenses, budgets: newValue, customCategories: customCategories, modelContext: modelContext)
+                viewModel.update(allExpenses: allExpenses, budgets: newValue, customCategories: customCategories)
             }
             .onChange(of: customCategories) { _, newValue in
-                viewModel.configure(allExpenses: allExpenses, budgets: budgets, customCategories: newValue, modelContext: modelContext)
+                viewModel.update(allExpenses: allExpenses, budgets: budgets, customCategories: newValue)
             }
         }
     }

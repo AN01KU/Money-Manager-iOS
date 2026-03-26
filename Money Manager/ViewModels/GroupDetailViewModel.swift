@@ -42,18 +42,20 @@ final class GroupDetailViewModel {
     var showSettlement = false
 
     let groupService: GroupServiceProtocol
+    private let auth: AuthServiceProtocol
 
-    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared) {
+    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, auth: AuthServiceProtocol = authService) {
         self.group = group
         self.members = group.members
         self.balances = group.balances
         self.groupService = groupService
+        self.auth = auth
     }
 
     // MARK: - Computed
 
     var currentUserId: UUID? {
-        authService.currentUser?.id
+        auth.currentUser?.id
     }
 
     var groupTotal: Double {
@@ -120,12 +122,11 @@ final class GroupDetailViewModel {
     // MARK: - Helpers
 
     func displayName(for member: APIGroupMember) -> String {
-        member.email.components(separatedBy: "@").first?.capitalized ?? member.email
+        member.username
     }
 
     func displayName(forId userId: UUID) -> String {
-        guard let member = members.first(where: { $0.id == userId }) else { return "Unknown" }
-        return displayName(for: member)
+        members.first(where: { $0.id == userId })?.username ?? "Unknown"
     }
 
     func isPending(_ member: APIGroupMember) -> Bool {

@@ -21,15 +21,17 @@ final class GroupsListViewModel {
     var searchText = ""
 
     let groupService: GroupServiceProtocol
+    private let auth: AuthServiceProtocol
 
-    init(groupService: GroupServiceProtocol = GroupService.shared) {
+    init(groupService: GroupServiceProtocol = GroupService.shared, auth: AuthServiceProtocol = authService) {
         self.groupService = groupService
+        self.auth = auth
     }
 
     // MARK: - Computed
 
     var currentUserId: UUID? {
-        authService.currentUser?.id
+        auth.currentUser?.id
     }
 
     var filteredGroups: [APIGroupWithDetails] {
@@ -113,6 +115,6 @@ final class GroupsListViewModel {
     }
 
     func displayName(for member: APIGroupMember) -> String {
-        member.email.components(separatedBy: "@").first?.capitalized ?? member.email
+        member.username
     }
 }

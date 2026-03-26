@@ -69,8 +69,8 @@ struct EditCategorySheet: View {
             .onChange(of: saveSuccess) { _, newValue in
                 if newValue { saveSuccess = false }
             }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext)
+            .task {
+                viewModel.modelContext = modelContext
             }
         }
     }

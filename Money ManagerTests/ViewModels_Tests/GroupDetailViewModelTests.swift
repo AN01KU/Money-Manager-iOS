@@ -294,10 +294,10 @@ struct GroupDetailViewModelTests {
     // MARK: - displayName
 
     @Test
-    func test_displayName_extractsLocalPartAndCapitalises() {
+    func test_displayName_returnsUsername() {
         let vm = GroupDetailViewModel(group: makeGroup())
         let member = makeMember(email: "charlie@example.com")
-        #expect(vm.displayName(for: member) == "Charlie")
+        #expect(vm.displayName(for: member) == member.username)
     }
 
     @Test
@@ -311,6 +311,6 @@ struct GroupDetailViewModelTests {
         let vm = GroupDetailViewModel(group: makeGroup())
         let alice = makeMember(email: "alice@example.com")
         vm.members = [alice]
-        #expect(vm.displayName(forId: alice.id) == "Alice")
+        #expect(vm.displayName(forId: alice.id) == alice.username)
     }
 }

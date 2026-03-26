@@ -97,11 +97,12 @@ struct RecurringExpensesView: View {
         .sheet(item: $viewModel.editingExpense) { expense in
             EditRecurringExpenseSheet(expense: expense)
         }
-        .onAppear {
-            viewModel.configure(expenses: recurringExpenses, modelContext: modelContext)
+        .task {
+            viewModel.modelContext = modelContext
+            viewModel.update(expenses: recurringExpenses)
         }
         .onChange(of: recurringExpenses) { _, newValue in
-            viewModel.configure(expenses: newValue, modelContext: modelContext)
+            viewModel.update(expenses: newValue)
         }
     }
 }

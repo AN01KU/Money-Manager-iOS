@@ -68,8 +68,9 @@ struct AddCategorySheet: View {
             .onChange(of: saveSuccess) { _, newValue in
                 if newValue { saveSuccess = false }
             }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext, allCategories: allCategories)
+            .task {
+                viewModel.modelContext = modelContext
+                viewModel.allCategories = allCategories
             }
         }
     }

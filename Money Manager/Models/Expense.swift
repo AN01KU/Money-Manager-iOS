@@ -24,10 +24,13 @@ final class Expense {
     var isDeleted: Bool
     
     var recurringExpenseId: UUID?
-    
+
     var groupId: UUID?
     var groupName: String?
-    
+
+    /// UUID of the linked CustomCategory. Nil for expenses created before this field was added.
+    var categoryId: UUID?
+
     init(
         id: UUID = UUID(),
         amount: Double,
@@ -38,7 +41,8 @@ final class Expense {
         notes: String? = nil,
         recurringExpenseId: UUID? = nil,
         groupId: UUID? = nil,
-        groupName: String? = nil
+        groupName: String? = nil,
+        categoryId: UUID? = nil
     ) {
         self.id = id
         self.amount = amount
@@ -53,5 +57,6 @@ final class Expense {
         self.isDeleted = false
         self.groupId = groupId
         self.groupName = groupName
+        self.categoryId = categoryId
     }
 }

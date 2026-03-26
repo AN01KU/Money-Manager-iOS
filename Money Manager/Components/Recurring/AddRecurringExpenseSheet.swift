@@ -1,8 +1,10 @@
 import SwiftUI
+import SwiftData
 
 struct AddRecurringExpenseSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     private let prefillAmount: String
     private let prefillCategory: String
@@ -178,9 +180,13 @@ struct AddRecurringExpenseSheet: View {
             .onChange(of: saveSuccess) { _, newValue in
                 if newValue { saveSuccess = false }
             }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext)
+            .task {
+                viewModel.modelContext = modelContext
+                viewModel.customCategories = customCategories
                 viewModel.prefill(amount: prefillAmount, category: prefillCategory)
+            }
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.customCategories = newValue
             }
         }
     }

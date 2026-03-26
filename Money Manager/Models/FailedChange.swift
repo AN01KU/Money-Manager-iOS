@@ -1,15 +1,11 @@
-//
-//  PendingChange.swift
-//  Money Manager
-//
-
 import Foundation
 import SwiftData
 
+/// A sync change that exceeded the maximum retry limit. Stored for inspection and manual retry.
 @Model
-final class PendingChange {
+final class FailedChange {
     @Attribute(.unique) var id: UUID
-    
+
     var entityType: String
     var entityID: UUID
     var action: String
@@ -17,9 +13,10 @@ final class PendingChange {
     var httpMethod: String
     var payload: Data?
     var createdAt: Date
+    var failedAt: Date
     var retryCount: Int
-    /// Earliest time this change can next be retried. Nil means retry immediately.
-    var nextRetryAt: Date?
+    /// Human-readable description of the last error that caused failure.
+    var lastError: String
 
     init(
         entityType: String,
@@ -27,7 +24,10 @@ final class PendingChange {
         action: String,
         endpoint: String,
         httpMethod: String,
-        payload: Data?
+        payload: Data?,
+        createdAt: Date,
+        retryCount: Int,
+        lastError: String
     ) {
         self.id = UUID()
         self.entityType = entityType
@@ -36,8 +36,9 @@ final class PendingChange {
         self.endpoint = endpoint
         self.httpMethod = httpMethod
         self.payload = payload
-        self.createdAt = Date()
-        self.retryCount = 0
-        self.nextRetryAt = nil
+        self.createdAt = createdAt
+        self.failedAt = Date()
+        self.retryCount = retryCount
+        self.lastError = lastError
     }
 }

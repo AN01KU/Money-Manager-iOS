@@ -34,8 +34,11 @@ enum SplitType: String, CaseIterable {
     var customAmounts: [UUID: String] = [:]
 
     let mode: AddExpenseMode
-    private var modelContext: ModelContext?
+    var modelContext: ModelContext?
+    var customCategories: [CustomCategory] = []
     private let groupService: GroupServiceProtocol
+    private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
     // MARK: - Computed
 
@@ -82,15 +85,16 @@ enum SplitType: String, CaseIterable {
 
     // MARK: - Init
 
-    init(mode: AddExpenseMode = .personal(), groupService: GroupServiceProtocol = GroupService.shared) {
+    init(
+        mode: AddExpenseMode = .personal(),
+        groupService: GroupServiceProtocol = GroupService.shared,
+        changeQueue: ChangeQueueManagerProtocol = changeQueueManager,
+        auth: AuthServiceProtocol = authService
+    ) {
         self.mode = mode
         self.groupService = groupService
-    }
-
-    // MARK: - Configure
-
-    func configure(modelContext: ModelContext?) {
-        self.modelContext = modelContext
+        self.changeQueue = changeQueue
+        self.auth = auth
         setup()
     }
 
@@ -107,7 +111,7 @@ enum SplitType: String, CaseIterable {
             notes = expense.notes ?? ""
 
         case .shared(_, let members, _):
-            paidByUserId = authService.currentUser?.id
+            paidByUserId = auth.currentUser?.id
             selectedMembers = Set(members.map(\.id))
         }
     }
@@ -119,6 +123,10 @@ enum SplitType: String, CaseIterable {
             get: { [self] in customAmounts[userId] ?? "" },
             set: { [self] in customAmounts[userId] = $0 }
         )
+    }
+
+    func displayName(for member: APIGroupMember) -> String {
+        member.username
     }
 
     func toggleMember(_ id: UUID) {
@@ -185,9 +193,12 @@ enum SplitType: String, CaseIterable {
         let httpMethod: String
         var payload: Data?
 
+        let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+
         if case .personal(let existing) = mode, let existingExpense = existing {
             existingExpense.amount = amountValue
             existingExpense.category = selectedCategory
+            existingExpense.categoryId = resolvedCategoryId
             existingExpense.date = expenseDate
             existingExpense.time = hasTime ? selectedTime : nil
             existingExpense.expenseDescription = description.isEmpty ? nil : description
@@ -205,7 +216,8 @@ enum SplitType: String, CaseIterable {
                 date: expenseDate,
                 time: hasTime ? selectedTime : nil,
                 expenseDescription: description.isEmpty ? nil : description,
-                notes: notes.isEmpty ? nil : notes
+                notes: notes.isEmpty ? nil : notes,
+                categoryId: resolvedCategoryId
             )
             modelContext.insert(expense)
             expenseID = expense.id
@@ -217,7 +229,7 @@ enum SplitType: String, CaseIterable {
 
         do {
             try modelContext.save()
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "expense",
                 entityID: expenseID,
                 action: action,
@@ -227,7 +239,7 @@ enum SplitType: String, CaseIterable {
                 context: modelContext
             )
             if NetworkMonitor.shared.isConnected {
-                Task { await changeQueueManager.replayAll(context: modelContext) }
+                Task { await changeQueue.replayAll(context: modelContext) }
             }
         } catch {
             errorMessage = "Failed to save expense"

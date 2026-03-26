@@ -157,8 +157,8 @@ struct TransactionDetailView: View {
             } message: {
                 Text("This action cannot be undone.")
             }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext)
+            .task {
+                viewModel.modelContext = modelContext
                 viewModel.customCategories = customCategories
             }
             .onChange(of: customCategories) { _, newValue in

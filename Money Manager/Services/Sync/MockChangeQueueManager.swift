@@ -13,6 +13,7 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     private init() {}
     
     var pendingCount: Int { 0 }
+    var failedCount: Int { 0 }
     
     func configure(container: ModelContainer) {}
     

@@ -21,7 +21,7 @@ struct AddRecurringExpenseSwiftDataTests {
         let context = container.mainContext
         
         let viewModel = AddRecurringExpenseViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "Netflix"
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
@@ -52,7 +52,7 @@ struct AddRecurringExpenseSwiftDataTests {
         let context = container.mainContext
         
         let viewModel = AddRecurringExpenseViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "Gym"
         viewModel.amount = "500"
         viewModel.selectedCategory = "Health"
@@ -77,7 +77,7 @@ struct AddRecurringExpenseSwiftDataTests {
         let endDate = Date()
         
         let viewModel = AddRecurringExpenseViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "Trial Sub"
         viewModel.amount = "99"
         viewModel.selectedCategory = "Entertainment"
@@ -114,7 +114,7 @@ struct AddCategorySwiftDataTests {
         let context = container.mainContext
         
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "Groceries"
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#FF6B6B"
@@ -140,7 +140,7 @@ struct AddCategorySwiftDataTests {
         let context = container.mainContext
         
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "  Travel  "
         viewModel.selectedIcon = "star.circle.fill"
         viewModel.selectedColor = "#3498DB"
@@ -161,13 +161,13 @@ struct AddCategorySwiftDataTests {
         let context = container.mainContext
         
         let vm1 = AddCategoryViewModel()
-        vm1.configure(modelContext: context)
+        vm1.modelContext = context
         vm1.name = "Cat1"
         vm1.selectedIcon = "tag.circle.fill"
         vm1.selectedColor = "#FF6B6B"
         
         let vm2 = AddCategoryViewModel()
-        vm2.configure(modelContext: context)
+        vm2.modelContext = context
         vm2.name = "Cat2"
         vm2.selectedIcon = "star.circle.fill"
         vm2.selectedColor = "#4ECDC4"

@@ -215,17 +215,17 @@ struct GroupsListViewModelTests {
     // MARK: - displayName(for:)
 
     @Test
-    func test_displayName_extractsUsernameFromEmail() {
+    func test_displayName_returnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", createdAt: Date())
-        #expect(vm.displayName(for: member) == "Alice")
+        #expect(vm.displayName(for: member) == "alice")
     }
 
     @Test
-    func test_displayName_withNoAtSign_returnsEmail() {
+    func test_displayName_withNoAtSign_returnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", createdAt: Date())
-        #expect(vm.displayName(for: member) == "Noatsign")
+        #expect(vm.displayName(for: member) == "noatsign")
     }
 
     // MARK: - createGroup

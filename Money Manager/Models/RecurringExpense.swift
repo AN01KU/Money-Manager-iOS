@@ -26,10 +26,13 @@ final class RecurringExpense {
     var lastAddedDate: Date?
     
     var notes: String?
-    
+
+    /// UUID of the linked CustomCategory. Nil for recurring expenses created before this field was added.
+    var categoryId: UUID?
+
     var createdAt: Date
     var updatedAt: Date
-    
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -42,7 +45,8 @@ final class RecurringExpense {
         endDate: Date? = nil,
         isActive: Bool = true,
         lastAddedDate: Date? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        categoryId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -56,6 +60,7 @@ final class RecurringExpense {
         self.isActive = isActive
         self.lastAddedDate = lastAddedDate
         self.notes = notes
+        self.categoryId = categoryId
         self.createdAt = Date()
         self.updatedAt = Date()
     }

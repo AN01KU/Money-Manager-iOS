@@ -21,14 +21,17 @@ import SwiftData
     private var allExpenses: [Expense] = []
     private var budgets: [MonthlyBudget] = []
     private var customCategories: [CustomCategory] = []
-    private var modelContext: ModelContext?
-    
-    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], customCategories: [CustomCategory], modelContext: ModelContext?) {
+    var modelContext: ModelContext?
+    private let changeQueue: ChangeQueueManagerProtocol
+
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+        self.changeQueue = changeQueue
+    }
+
+    func update(allExpenses: [Expense], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
         self.allExpenses = allExpenses
         self.budgets = budgets
         self.customCategories = customCategories
-        self.modelContext = modelContext
-        
         recalculate()
     }
     
@@ -150,7 +153,7 @@ import SwiftData
             do {
                 try modelContext.save()
                 
-                changeQueueManager.enqueue(
+                changeQueue.enqueue(
                     entityType: "expense",
                     entityID: expense.id,
                     action: "delete",
@@ -162,7 +165,7 @@ import SwiftData
                 
                 if NetworkMonitor.shared.isConnected {
                     Task {
-                        await changeQueueManager.replayAll(context: modelContext)
+                        await changeQueue.replayAll(context: modelContext)
                     }
                 }
             } catch {

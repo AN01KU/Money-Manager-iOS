@@ -85,8 +85,12 @@ struct AddExpenseView: View {
             .onChange(of: errorTriggered) { _, newValue in
                 if newValue { errorTriggered = false }
             }
-            .onAppear {
-                viewModel.configure(modelContext: modelContext)
+            .task {
+                viewModel.modelContext = modelContext
+                viewModel.customCategories = customCategories
+            }
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.customCategories = newValue
             }
         }
     }
