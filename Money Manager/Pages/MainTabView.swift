@@ -2,19 +2,28 @@ import SwiftUI
 
 enum TabItem: String, CaseIterable {
     case overview
+    case groups
     case settings
 }
 
 struct MainTabView: View {
     @State private var selectedTab: TabItem = .overview
     @State private var tabChanged = false
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Overview", systemImage: "house.fill", value: .overview) {
                 Overview()
             }
-            
+
+            Tab("Groups", systemImage: "person.2.fill", value: .groups) {
+                if authService.isAuthenticated {
+                    GroupsListView()
+                } else {
+                    GroupsLockedView()
+                }
+            }
+
             Tab("Settings", systemImage: "gearshape.fill", value: .settings) {
                 SettingsView()
             }

@@ -176,8 +176,8 @@ struct ManageCategoriesView: View {
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.deleteConfirmedTrigger)
         .sensoryFeedback(.success, trigger: viewModel.resetTrigger)
-        .onAppear {
-            viewModel.configure(modelContext: modelContext)
+        .task {
+            viewModel.modelContext = modelContext
         }
     }
 }

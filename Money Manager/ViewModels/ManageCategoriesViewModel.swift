@@ -8,8 +8,13 @@ import SwiftData
     var categoryToDelete: CustomCategory?
     var showDeleteConfirmation = false
     
-    private var modelContext: ModelContext?
-    
+    var modelContext: ModelContext?
+    private let changeQueue: ChangeQueueManagerProtocol
+
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+        self.changeQueue = changeQueue
+    }
+
     // Legacy computed properties kept for test compatibility
     var customCategories: [CustomCategory] = []
     
@@ -19,10 +24,6 @@ import SwiftData
     
     var hiddenCategories: [CustomCategory] {
         customCategories.filter { $0.isHidden }
-    }
-    
-    func configure(modelContext: ModelContext?) {
-        self.modelContext = modelContext
     }
     
     func configure(customCategories: [CustomCategory], modelContext: ModelContext?) {
@@ -40,7 +41,7 @@ import SwiftData
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "update",
@@ -52,7 +53,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -76,7 +77,7 @@ import SwiftData
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "update",
@@ -88,7 +89,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -106,17 +107,31 @@ import SwiftData
         guard let category = categoryToDelete, let modelContext = modelContext else { return }
         let categoryName = category.name
         let categoryId = category.id
-        
-        let descriptor = FetchDescriptor<Expense>(
-            predicate: #Predicate { $0.category == categoryName }
-        )
-        if let expenses = try? modelContext.fetch(descriptor) {
+
+        // Reassign all linked Expenses to "Other"
+        let expenseDescriptor = FetchDescriptor<Expense>()
+        if let expenses = try? modelContext.fetch(expenseDescriptor) {
             for expense in expenses {
-                expense.category = "Other"
-                expense.updatedAt = Date()
+                if expense.categoryId == categoryId || expense.category == categoryName {
+                    expense.category = "Other"
+                    expense.categoryId = nil
+                    expense.updatedAt = Date()
+                }
             }
         }
-        
+
+        // Reassign all linked RecurringExpenses to "Other"
+        let recurringDescriptor = FetchDescriptor<RecurringExpense>()
+        if let recurrings = try? modelContext.fetch(recurringDescriptor) {
+            for recurring in recurrings {
+                if recurring.categoryId == categoryId || recurring.category == categoryName {
+                    recurring.category = "Other"
+                    recurring.categoryId = nil
+                    recurring.updatedAt = Date()
+                }
+            }
+        }
+
         categoryToDelete = nil
         showDeleteConfirmation = false
         modelContext.delete(category)
@@ -124,7 +139,7 @@ import SwiftData
         do {
             try modelContext.save()
             
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "category",
                 entityID: categoryId,
                 action: "delete",
@@ -136,7 +151,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -167,7 +182,7 @@ import SwiftData
                 
                 do {
                     let payload = try APIClient.apiEncoder.encode(category.toUpdateRequest())
-                    changeQueueManager.enqueue(
+                    changeQueue.enqueue(
                         entityType: "category",
                         entityID: category.id,
                         action: "update",
@@ -187,7 +202,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: context)
+                    await changeQueue.replayAll(context: context)
                 }
             }
         } catch {
@@ -289,18 +304,19 @@ class AddCategoryViewModel: CategoryEditorViewModel {
     var isSaving = false
     var showError = false
     var errorMessage = ""
-    
+
     var modelContext: ModelContext?
-    
+    private let changeQueue: ChangeQueueManagerProtocol
+
     override var colorConflictCategory: String? {
         allCategories.first(where: {
             $0.color.lowercased() == selectedColor.lowercased() && !$0.isHidden
         })?.name
     }
-    
-    func configure(modelContext: ModelContext?, allCategories: [CustomCategory] = []) {
-        self.modelContext = modelContext
-        self.allCategories = allCategories
+
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+        self.changeQueue = changeQueue
+        super.init(icon: "tag.circle.fill", color: "#4ECDC4")
     }
     
     func save() async -> Bool {
@@ -324,7 +340,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "create",
@@ -336,7 +352,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -360,7 +376,8 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     
     let category: CustomCategory
     var modelContext: ModelContext?
-    
+    private let changeQueue: ChangeQueueManagerProtocol
+
     override var colorConflictCategory: String? {
         allCategories.first(where: {
             $0.id != category.id &&
@@ -368,16 +385,13 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             !$0.isHidden
         })?.name
     }
-    
-    init(category: CustomCategory, allCategories: [CustomCategory] = []) {
+
+    init(category: CustomCategory, allCategories: [CustomCategory] = [], changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
         self.category = category
         self.name = category.name
+        self.changeQueue = changeQueue
         super.init(icon: category.icon, color: category.color)
         self.allCategories = allCategories
-    }
-    
-    func configure(modelContext: ModelContext?) {
-        self.modelContext = modelContext
     }
     
     func save() -> Bool {
@@ -395,17 +409,45 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         
         isSaving = true
         resetColorWarning()
-        
+
+        let oldName = category.name
         category.name = trimmedName
         category.icon = selectedIcon
         category.color = selectedColor
         category.updatedAt = Date()
-        
+
+        // Cascade rename to all linked Expenses and RecurringExpenses
+        if oldName != trimmedName {
+            let categoryId = category.id
+
+            let expenseDescriptor = FetchDescriptor<Expense>()
+            if let expenses = try? modelContext.fetch(expenseDescriptor) {
+                for expense in expenses {
+                    if expense.categoryId == categoryId || expense.category == oldName {
+                        expense.category = trimmedName
+                        if expense.categoryId == nil { expense.categoryId = categoryId }
+                        expense.updatedAt = Date()
+                    }
+                }
+            }
+
+            let recurringDescriptor = FetchDescriptor<RecurringExpense>()
+            if let recurrings = try? modelContext.fetch(recurringDescriptor) {
+                for recurring in recurrings {
+                    if recurring.categoryId == categoryId || recurring.category == oldName {
+                        recurring.category = trimmedName
+                        if recurring.categoryId == nil { recurring.categoryId = categoryId }
+                        recurring.updatedAt = Date()
+                    }
+                }
+            }
+        }
+
         do {
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "category",
                 entityID: category.id,
                 action: "update",
@@ -417,7 +459,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {

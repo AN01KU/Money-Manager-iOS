@@ -7,6 +7,7 @@ import SwiftUI
 
 struct LoginView: View {
     var onSkip: (() -> Void)? = nil
+    var isDismissable: Bool = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
@@ -38,7 +39,14 @@ struct LoginView: View {
                 .padding(24)
             }
             .background(Color(.systemBackground))
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar(isDismissable ? .visible : .hidden, for: .navigationBar)
+            .toolbar {
+                if isDismissable {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+            }
             .sheet(isPresented: $showSignup) {
                 SignupView()
             }

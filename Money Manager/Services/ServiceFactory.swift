@@ -40,4 +40,13 @@ struct ServiceFactory {
         #endif
         return ChangeQueueManager.shared
     }()
+
+    private(set) lazy var groupService: GroupServiceProtocol = {
+        #if DEBUG
+        if useMocks || isRunningTests {
+            return MockGroupService.shared
+        }
+        #endif
+        return GroupService.shared
+    }()
 }

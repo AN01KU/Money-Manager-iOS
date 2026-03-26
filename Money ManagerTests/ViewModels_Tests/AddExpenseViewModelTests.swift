@@ -111,7 +111,7 @@ struct AddExpenseViewModelTests {
     func testSaveCreatesNewExpense() throws {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         
         vm.amount = "150.75"
         vm.selectedCategory = "Food & Dining"
@@ -139,7 +139,7 @@ struct AddExpenseViewModelTests {
     func testSaveWithoutTimeSetTimeToNil() throws {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         
         vm.amount = "100"
         vm.selectedCategory = "Transport"
@@ -155,7 +155,7 @@ struct AddExpenseViewModelTests {
     func testSaveWithEmptyDescriptionAndNotesSetsNil() throws {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         
         vm.amount = "50"
         vm.selectedCategory = "Other"
@@ -186,7 +186,7 @@ struct AddExpenseViewModelTests {
         try context.save()
         
         let vm = AddExpenseViewModel(mode: .personal(editing: existing))
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         
         vm.amount = "200"
         vm.selectedCategory = "Transport"
@@ -211,7 +211,7 @@ struct AddExpenseViewModelTests {
     func testSaveFailsWithZeroAmount() {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         vm.amount = "0"
         vm.selectedCategory = "Food"
         
@@ -228,7 +228,7 @@ struct AddExpenseViewModelTests {
     func testSaveFailsWithNonNumericAmount() {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         vm.amount = "abc"
         vm.selectedCategory = "Food"
         
@@ -258,7 +258,7 @@ struct AddExpenseViewModelTests {
     func testSaveSetsCorrectDateWithTime() throws {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         
         let specificDate = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 15))!
         let specificTime = Calendar.current.date(from: DateComponents(hour: 14, minute: 30))!
@@ -285,7 +285,7 @@ struct AddExpenseViewModelTests {
     func testSaveSetsStartOfDayWhenNoTime() throws {
         let context = makeContext()
         let vm = AddExpenseViewModel(mode: .personal())
-        vm.configure(modelContext: context)
+        vm.modelContext = context
         
         let specificDate = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 15, hour: 18, minute: 45))!
         

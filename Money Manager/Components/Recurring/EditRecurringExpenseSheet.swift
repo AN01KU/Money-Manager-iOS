@@ -4,6 +4,7 @@ import SwiftData
 struct EditRecurringExpenseSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @Bindable var expense: RecurringExpense
 
@@ -194,6 +195,7 @@ struct EditRecurringExpenseSheet: View {
         expense.name = name.trimmingCharacters(in: .whitespaces)
         expense.amount = amountValue
         expense.category = selectedCategory
+        expense.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
         expense.frequency = frequency
         expense.startDate = startDate
         expense.dayOfMonth = frequency == "monthly" ? dayOfMonth : nil

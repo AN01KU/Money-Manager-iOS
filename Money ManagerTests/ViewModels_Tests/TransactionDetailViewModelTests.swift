@@ -141,7 +141,7 @@ struct TransactionDetailViewModelTests {
         
         let expense = Expense(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(expense: expense)
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         
         // Verify deleteExpense works with a real context (completion called)
         var completionCalled = false

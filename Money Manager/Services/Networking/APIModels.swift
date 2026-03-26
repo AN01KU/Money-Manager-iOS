@@ -106,6 +106,7 @@ struct APILoginRequest: Codable {
 }
 
 struct APICreateExpenseRequest: Codable {
+    let id: UUID?
     let amount: String
     let category: String
     let date: Date
@@ -131,6 +132,7 @@ struct APIUpdateExpenseRequest: Codable {
 }
 
 struct APICreateRecurringExpenseRequest: Codable {
+    let id: UUID?
     let name: String
     let amount: String
     let category: String
@@ -157,6 +159,7 @@ struct APIUpdateRecurringExpenseRequest: Codable {
 }
 
 struct APICreateBudgetRequest: Codable {
+    let id: UUID?
     let year: Int
     let month: Int
     let limit: String
@@ -169,6 +172,7 @@ struct APIUpdateBudgetRequest: Codable {
 }
 
 struct APICreateCategoryRequest: Codable {
+    let id: UUID?
     let name: String
     let icon: String
     let color: String
@@ -180,6 +184,112 @@ struct APIUpdateCategoryRequest: Codable {
     let color: String?
     let is_hidden: Bool?
 }
+
+// MARK: - Group API Models
+
+struct APIGroup: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    let name: String
+    let created_by: UUID
+    let created_at: Date
+
+    static func == (lhs: APIGroup, rhs: APIGroup) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct APIGroupMember: Codable, Identifiable, Sendable {
+    let id: UUID
+    let email: String
+    let username: String
+    let createdAt: Date?
+}
+
+struct APIGroupBalance: Codable, Sendable {
+    let user_id: UUID
+    let amount: String
+}
+
+struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    let name: String
+    let created_by: UUID
+    let created_at: Date
+    let members: [APIGroupMember]
+    let balances: [APIGroupBalance]
+
+    static func == (lhs: APIGroupWithDetails, rhs: APIGroupWithDetails) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct APIGroupExpense: Codable, Identifiable, Sendable {
+    let id: UUID
+    let description: String
+    let amount: String
+    let user_id: UUID
+    let created_at: Date
+}
+
+struct APIGroupDetails: Codable, Sendable {
+    let group: APIGroupDetailsBody
+    let is_member: Bool
+}
+
+struct APIGroupDetailsBody: Codable, Identifiable, Sendable {
+    let id: UUID
+    let name: String
+    let created_by: UUID
+    let created_at: Date
+    let members: [APIGroupMember]
+    let balances: [APIGroupBalance]
+    let expenses: [APIGroupExpense]
+}
+
+struct APIExpenseSplit: Codable, Sendable {
+    let userId: UUID
+    let amount: String
+}
+
+struct APICreateGroupRequest: Codable, Sendable {
+    let name: String
+}
+
+struct APIAddMemberRequest: Codable, Sendable {
+    let email: String
+}
+
+struct APICreateSharedExpenseRequest: Codable, Sendable {
+    let groupId: UUID
+    let description: String
+    let category: String
+    let totalAmount: String
+    let splits: [APIExpenseSplit]
+}
+
+struct APIGroupMembersResponse: Codable, Sendable {
+    let members: [APIGroupMember]
+}
+
+struct APIGroupsListResponse: Codable, Sendable {
+    let data: [APIGroupWithDetails]
+}
+
+struct APICreateSettlementRequest: Codable, Sendable {
+    let groupId: UUID
+    let fromUser: UUID
+    let toUser: UUID
+    let amount: String
+}
+
+struct APISettlement: Codable, Identifiable, Sendable {
+    let id: UUID
+    let groupId: UUID
+    let fromUser: UUID
+    let toUser: UUID
+    let amount: String
+    let createdAt: Date
+}
+
+// MARK: - Dashboard
 
 struct APIMonthlyDashboardResponse: Codable {
     let totalExpenses: String?

@@ -8,6 +8,7 @@ import SwiftData
 
 protocol ChangeQueueManagerProtocol: AnyObject {
     var pendingCount: Int { get }
+    var failedCount: Int { get }
 
     func configure(container: ModelContainer)
     func enqueue(

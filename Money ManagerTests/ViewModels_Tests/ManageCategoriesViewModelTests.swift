@@ -241,7 +241,7 @@ struct AddCategoryViewModelTests {
     func testSaveCreatesCategory() async throws {
         let context = makeContext()
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "  Groceries  "
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#FF6B6B"
@@ -285,7 +285,8 @@ struct AddCategoryViewModelTests {
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
         
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context, allCategories: [existing])
+        viewModel.modelContext = context
+        viewModel.allCategories = [existing]
         viewModel.name = "New Category"
         viewModel.selectedColor = "#FF6B6B"
         
@@ -301,7 +302,8 @@ struct AddCategoryViewModelTests {
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
         
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context, allCategories: [existing])
+        viewModel.modelContext = context
+        viewModel.allCategories = [existing]
         viewModel.name = "New Category"
         viewModel.selectedColor = "#FF6B6B"
         
@@ -363,7 +365,7 @@ struct EditCategoryViewModelTests {
         context.insert(category)
         
         let viewModel = EditCategoryViewModel(category: category)
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "  Updated Food  "
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#00FF00"
@@ -428,7 +430,7 @@ struct EditCategoryViewModelTests {
         context.insert(cat1)
         
         let viewModel = EditCategoryViewModel(category: cat1, allCategories: [cat1, cat2])
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.selectedColor = "#00FF00"
         
         // First attempt blocked

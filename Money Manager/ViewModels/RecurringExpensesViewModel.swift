@@ -19,11 +19,15 @@ import SwiftData
         expenses
     }
     
-    private var modelContext: ModelContext?
-    
-    func configure(expenses: [RecurringExpense], modelContext: ModelContext?) {
+    var modelContext: ModelContext?
+    private let changeQueue: ChangeQueueManagerProtocol
+
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+        self.changeQueue = changeQueue
+    }
+
+    func update(expenses: [RecurringExpense]) {
         self.expenses = expenses
-        self.modelContext = modelContext
     }
     
     func deactivateExpense(at index: Int) {
@@ -46,7 +50,7 @@ import SwiftData
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(expense.toUpdateRequest())
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "recurring",
                 entityID: expense.id,
                 action: "update",
@@ -58,7 +62,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -85,7 +89,7 @@ import SwiftData
         do {
             try modelContext.save()
             
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "recurring",
                 entityID: recurringId,
                 action: "delete",
@@ -97,7 +101,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
@@ -123,17 +127,19 @@ import SwiftData
     
     let frequencies = ["daily", "weekly", "monthly", "yearly"]
     
-    private var modelContext: ModelContext?
-    
+    var modelContext: ModelContext?
+    var customCategories: [CustomCategory] = []
+    private let changeQueue: ChangeQueueManagerProtocol
+
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+        self.changeQueue = changeQueue
+    }
+
     var isValid: Bool {
         guard let amountValue = Double(amount), amountValue > 0 else {
             return false
         }
         return !name.trimmingCharacters(in: .whitespaces).isEmpty && !selectedCategory.isEmpty
-    }
-    
-    func configure(modelContext: ModelContext?) {
-        self.modelContext = modelContext
     }
 
     func prefill(amount: String, category: String) {
@@ -161,9 +167,10 @@ import SwiftData
         }
         
         guard let modelContext = modelContext else { return true }
-        
+
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
+        let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+
         let recurringExpense = RecurringExpense(
             name: trimmedName,
             amount: amountValue,
@@ -172,7 +179,8 @@ import SwiftData
             dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
             startDate: startDate,
             endDate: hasEndDate ? endDate : nil,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            categoryId: resolvedCategoryId
         )
         
         modelContext.insert(recurringExpense)
@@ -181,7 +189,7 @@ import SwiftData
             try modelContext.save()
             
             let payload = try? APIClient.apiEncoder.encode(recurringExpense.toCreateRequest())
-            changeQueueManager.enqueue(
+            changeQueue.enqueue(
                 entityType: "recurring",
                 entityID: recurringExpense.id,
                 action: "create",
@@ -193,7 +201,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {

@@ -68,6 +68,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let request = APICreateCategoryRequest(
+            id: nil,
             name: "Test Cat \(UUID().uuidString.prefix(8))",
             icon: "star.circle.fill",
             color: "#FF5733"
@@ -93,6 +94,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let createRequest = APICreateCategoryRequest(
+            id: nil,
             name: "Update Test \(UUID().uuidString.prefix(8))",
             icon: "star.fill",
             color: "#FF5733"
@@ -114,6 +116,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let createRequest = APICreateCategoryRequest(
+            id: nil,
             name: "Delete Me \(UUID().uuidString.prefix(8))",
             icon: "trash.fill",
             color: "#FF5733"
@@ -137,7 +140,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = APICreateBudgetRequest(year: 2026, month: 12, limit: "5000.00")
+        let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: "5000.00")
         let response: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
         
         #expect(compareAmount(response.limit, request.limit))
@@ -158,7 +161,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = APICreateBudgetRequest(year: 2026, month: 9, limit: "1000.00")
+        let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: "1000.00")
         let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: createRequest)
         
         await delay(200)
@@ -174,7 +177,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = APICreateBudgetRequest(year: 2025, month: 12, limit: "999.00")
+        let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: "999.00")
         let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
         
         await delay(200)
@@ -191,6 +194,7 @@ struct APIIntegrationTests {
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
         let request = APICreateRecurringExpenseRequest(
+            id: nil,
             name: "Netflix \(UUID().uuidString.prefix(4))",
             amount: "15.99",
             category: "Entertainment",
@@ -216,6 +220,7 @@ struct APIIntegrationTests {
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
         let request = APICreateRecurringExpenseRequest(
+            id: nil,
             name: "Gym \(UUID().uuidString.prefix(4))",
             amount: "50.00",
             category: "Health & Medical",
@@ -252,6 +257,7 @@ struct APIIntegrationTests {
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
         let createRequest = APICreateRecurringExpenseRequest(
+            id: nil,
             name: "Get Test \(UUID().uuidString.prefix(4))",
             amount: "5.00",
             category: "Other",
@@ -279,6 +285,7 @@ struct APIIntegrationTests {
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
         let createRequest = APICreateRecurringExpenseRequest(
+            id: nil,
             name: "Update Test \(UUID().uuidString.prefix(4))",
             amount: "10.00",
             category: "Entertainment",
@@ -312,6 +319,7 @@ struct APIIntegrationTests {
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
         let createRequest = APICreateRecurringExpenseRequest(
+            id: nil,
             name: "Delete Test \(UUID().uuidString.prefix(4))",
             amount: "8.00",
             category: "Other",
@@ -338,6 +346,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let request = APICreateExpenseRequest(
+            id: nil,
             amount: "25.50",
             category: "Food & Dining",
             date: Date(),
@@ -361,6 +370,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let request = APICreateExpenseRequest(
+            id: nil,
             amount: "45.00",
             category: "Shopping",
             date: Date(),
@@ -395,6 +405,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let createRequest = APICreateExpenseRequest(
+            id: nil,
             amount: "100.00",
             category: "Transport",
             date: Date(),
@@ -420,6 +431,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let createRequest = APICreateExpenseRequest(
+            id: nil,
             amount: "50.00",
             category: "Food & Dining",
             date: Date(),
@@ -451,6 +463,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let createRequest = APICreateExpenseRequest(
+            id: nil,
             amount: "75.00",
             category: "Shopping",
             date: Date(),

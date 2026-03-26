@@ -38,7 +38,12 @@ struct Money_ManagerApp: App {
             CustomCategory.self,
             MonthlyBudget.self,
             PendingChange.self,
-            AuthToken.self
+            FailedChange.self,
+            AuthToken.self,
+            SplitGroupModel.self,
+            GroupMemberModel.self,
+            GroupExpenseModel.self,
+            GroupBalanceModel.self
         ])
         
         let modelConfiguration = ModelConfiguration(schema: schema)

@@ -51,7 +51,6 @@
                BlueprintName = "Money ManagerTests"
                ReferencedContainer = "container:Money Manager.xcodeproj">
             </BuildableReference>
-
          </TestableReference>
       </Testables>
    </TestAction>
