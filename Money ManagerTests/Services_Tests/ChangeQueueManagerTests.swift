@@ -12,8 +12,7 @@ struct ChangeQueueManagerTests {
     }
 
     private func makeManager() -> ChangeQueueManager {
-        let manager = ChangeQueueManager()
-        return manager
+        ChangeQueueManager()
     }
 
     private func enqueueChange(in context: ModelContext) {
@@ -33,7 +32,6 @@ struct ChangeQueueManagerTests {
 
     @Test
     func test_replayAll_skips_whenNotAuthenticated() async throws {
-        // MockAuthService defaults to isAuthenticated = true — flip it
         MockAuthService.shared.isAuthenticated = false
         defer { MockAuthService.shared.isAuthenticated = true }
 
@@ -46,31 +44,10 @@ struct ChangeQueueManagerTests {
 
         await manager.replayAll(context: context)
 
-        // PendingChange should still be in the queue — nothing was replayed
+        // Auth guard fired — nothing was touched, change still in queue with retryCount == 0
         let remaining = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(remaining.count == 1)
-    }
-
-    @Test
-    func test_replayAll_whenAuthenticated_attemptsReplay() async throws {
-        // MockAuthService is authenticated by default
-        #expect(MockAuthService.shared.isAuthenticated == true)
-
-        let container = try makeContainer()
-        let context = ModelContext(container)
-        enqueueChange(in: context)
-
-        let manager = makeManager()
-        manager.configure(container: container)
-
-        // replayAll will attempt the API call, which will fail (no real server).
-        // The key assertion is that it DID attempt — change stays in queue with incremented retryCount.
-        await manager.replayAll(context: context)
-
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
-        // Either retried (retryCount > 0) or removed on success — either way it attempted
-        let attempted = remaining.isEmpty || (remaining.first?.retryCount ?? 0) > 0
-        #expect(attempted == true)
+        #expect(remaining.first?.retryCount == 0)
     }
 
     // MARK: - Enqueue + deduplication

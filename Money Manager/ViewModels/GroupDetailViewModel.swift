@@ -59,7 +59,7 @@ final class GroupDetailViewModel {
     }
 
     var groupTotal: Double {
-        expenses.compactMap { Double($0.total_amount) }.reduce(0, +)
+        expenses.compactMap { Double($0.amount) }.reduce(0, +)
     }
 
     var hasUnsettledBalances: Bool {
@@ -140,13 +140,13 @@ final class GroupDetailViewModel {
         for m in members { map[m.id] = 0 }
 
         for expense in expenses {
-            map[expense.paid_by, default: 0] += Double(expense.total_amount) ?? 0
+            map[expense.user_id, default: 0] += Double(expense.amount) ?? 0
         }
 
         // Split equally among all members for now (server is authoritative for custom splits)
         let memberCount = members.isEmpty ? 1 : members.count
         for expense in expenses {
-            let share = (Double(expense.total_amount) ?? 0) / Double(memberCount)
+            let share = (Double(expense.amount) ?? 0) / Double(memberCount)
             for m in members {
                 map[m.id, default: 0] -= share
             }

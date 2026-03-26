@@ -17,11 +17,11 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     private var modelContainer: ModelContainer?
 
     init() {}
-    
+
     func configure(container: ModelContainer) {
         self.modelContainer = container
     }
-    
+
     var pendingCount: Int {
         guard let container = modelContainer else { return 0 }
         let context = ModelContext(container)
@@ -35,7 +35,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         let descriptor = FetchDescriptor<FailedChange>()
         return (try? context.fetchCount(descriptor)) ?? 0
     }
-    
+
     func enqueue(
         entityType: String,
         entityID: UUID,
@@ -51,7 +51,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             },
             sortBy: [SortDescriptor(\.createdAt)]
         )
-        
+
         if let existingChanges = try? context.fetch(existingDescriptor),
            let existing = existingChanges.first {
             switch (existing.action, action) {
@@ -91,10 +91,10 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             )
             context.insert(change)
         }
-        
+
         try? context.save()
     }
-    
+
     func replayAll(context: ModelContext) async {
         guard authService.isAuthenticated else { return }
 
@@ -162,7 +162,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         context.delete(change)
         try? context.save()
     }
-    
+
     private func replayChange(_ change: PendingChange, context: ModelContext) async throws {
         let endpoint: String
         switch change.action {
@@ -173,7 +173,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         default:
             return
         }
-        
+
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
@@ -186,11 +186,11 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         default:
             return
         }
-        
+
         context.delete(change)
         try? context.save()
     }
-    
+
     func clearAll(context: ModelContext) {
         let descriptor = FetchDescriptor<PendingChange>()
         if let changes = try? context.fetch(descriptor) {

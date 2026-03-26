@@ -106,6 +106,7 @@ struct APILoginRequest: Codable {
 }
 
 struct APICreateExpenseRequest: Codable {
+    let id: UUID?
     let amount: String
     let category: String
     let date: Date
@@ -131,6 +132,7 @@ struct APIUpdateExpenseRequest: Codable {
 }
 
 struct APICreateRecurringExpenseRequest: Codable {
+    let id: UUID?
     let name: String
     let amount: String
     let category: String
@@ -157,6 +159,7 @@ struct APIUpdateRecurringExpenseRequest: Codable {
 }
 
 struct APICreateBudgetRequest: Codable {
+    let id: UUID?
     let year: Int
     let month: Int
     let limit: String
@@ -169,6 +172,7 @@ struct APIUpdateBudgetRequest: Codable {
 }
 
 struct APICreateCategoryRequest: Codable {
+    let id: UUID?
     let name: String
     let icon: String
     let color: String
@@ -220,8 +224,8 @@ struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
 struct APIGroupExpense: Codable, Identifiable, Sendable {
     let id: UUID
     let description: String
-    let total_amount: String
-    let paid_by: UUID
+    let amount: String
+    let user_id: UUID
     let created_at: Date
 }
 

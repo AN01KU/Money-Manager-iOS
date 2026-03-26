@@ -33,7 +33,7 @@ struct ActivityRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(CurrencyFormatter.format(Double(expense.total_amount) ?? 0, showDecimals: true))
+                Text(CurrencyFormatter.format(Double(expense.amount) ?? 0, showDecimals: true))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppColors.expense)

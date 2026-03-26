@@ -491,8 +491,8 @@ final class SyncService: SyncServiceProtocol {
                     let newExpense = GroupExpenseModel(
                         id: expense.id,
                         description: expense.description,
-                        totalAmount: Double(expense.total_amount) ?? 0,
-                        paidBy: expense.paid_by,
+                        totalAmount: Double(expense.amount) ?? 0,
+                        paidBy: expense.user_id,
                         createdAt: expense.created_at
                     )
                     newExpense.group = dbGroup

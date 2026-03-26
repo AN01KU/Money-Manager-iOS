@@ -9,10 +9,10 @@ struct GroupExpenseRow: View {
     let expense: APIGroupExpense
     let members: [APIGroupMember]
 
-    private var amount: Double { Double(expense.total_amount) ?? 0 }
+    private var amount: Double { Double(expense.amount) ?? 0 }
 
     private var paidByName: String {
-        members.first(where: { $0.id == expense.paid_by })?
+        members.first(where: { $0.id == expense.user_id })?
             .email.components(separatedBy: "@").first?.capitalized ?? "Unknown"
     }
 

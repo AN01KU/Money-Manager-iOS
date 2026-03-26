@@ -8,6 +8,7 @@ import Foundation
 extension Expense {
     func toCreateRequest() -> APICreateExpenseRequest {
         APICreateExpenseRequest(
+            id: id,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
@@ -53,6 +54,7 @@ extension Expense {
 extension RecurringExpense {
     func toCreateRequest() -> APICreateRecurringExpenseRequest {
         APICreateRecurringExpenseRequest(
+            id: id,
             name: name,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
@@ -100,6 +102,7 @@ extension RecurringExpense {
 extension MonthlyBudget {
     func toCreateRequest() -> APICreateBudgetRequest {
         APICreateBudgetRequest(
+            id: id,
             year: year,
             month: month,
             limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
@@ -125,6 +128,7 @@ extension MonthlyBudget {
 extension CustomCategory {
     func toCreateRequest() -> APICreateCategoryRequest {
         APICreateCategoryRequest(
+            id: id,
             name: name,
             icon: icon,
             color: color

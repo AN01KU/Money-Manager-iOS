@@ -29,7 +29,7 @@ struct GroupsListViewModelTests {
     }
 
     private func makeExpense(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID()) -> APIGroupExpense {
-        APIGroupExpense(id: UUID(), description: description, total_amount: totalAmount, paid_by: paidBy, created_at: Date())
+        APIGroupExpense(id: UUID(), description: description, amount: totalAmount, user_id: paidBy, created_at: Date())
     }
 
     private func makeDetails(groupId: UUID, groupName: String, expenses: [APIGroupExpense] = []) -> APIGroupDetails {
@@ -85,9 +85,9 @@ struct GroupsListViewModelTests {
     func test_load_recentActivity_sortedNewestFirst() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let older = APIGroupExpense(id: UUID(), description: "Old", total_amount: "10", paid_by: UUID(),
+        let older = APIGroupExpense(id: UUID(), description: "Old", amount: "10", user_id: UUID(),
                                     created_at: Date(timeIntervalSinceNow: -3600))
-        let newer = APIGroupExpense(id: UUID(), description: "New", total_amount: "20", paid_by: UUID(),
+        let newer = APIGroupExpense(id: UUID(), description: "New", amount: "20", user_id: UUID(),
                                     created_at: Date(timeIntervalSinceNow: -60))
         mock.stubbedGroups = [makeGroup(id: groupId)]
         mock.stubbedGroupDetails = makeDetails(groupId: groupId, groupName: "G", expenses: [older, newer])
