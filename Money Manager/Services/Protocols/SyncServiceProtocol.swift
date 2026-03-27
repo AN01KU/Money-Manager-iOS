@@ -12,7 +12,7 @@ protocol SyncServiceProtocol: AnyObject {
     var syncSuccessCount: Int { get }
     var syncFailureCount: Int { get }
 
-    func configure(container: ModelContainer)
+    func configure(container: ModelContainer, authService: AuthServiceProtocol)
     func syncOnLaunch() async
     func syncOnReconnect() async
     func fullSync() async

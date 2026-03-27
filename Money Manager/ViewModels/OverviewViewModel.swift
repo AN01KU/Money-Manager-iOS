@@ -23,9 +23,11 @@ import SwiftData
     private var customCategories: [CustomCategory] = []
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
     }
 
     func update(allExpenses: [Expense], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
@@ -165,7 +167,7 @@ import SwiftData
                 
                 if NetworkMonitor.shared.isConnected {
                     Task {
-                        await changeQueue.replayAll(context: modelContext)
+                        await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                     }
                 }
             } catch {

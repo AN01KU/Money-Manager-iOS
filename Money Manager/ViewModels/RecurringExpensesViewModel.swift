@@ -21,9 +21,11 @@ import SwiftData
     
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
     }
 
     func update(expenses: [RecurringExpense]) {
@@ -62,7 +64,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
             AppLogger.data.info("Recurring expense toggled: \(expense.id) isActive=\(expense.isActive)")
@@ -102,7 +104,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
             AppLogger.data.info("Recurring expense deleted: \(recurringId)")
@@ -132,9 +134,11 @@ import SwiftData
     var modelContext: ModelContext?
     var customCategories: [CustomCategory] = []
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
     }
 
     var isValid: Bool {
@@ -203,7 +207,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {

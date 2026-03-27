@@ -240,7 +240,7 @@ enum SplitType: String, CaseIterable {
                 context: modelContext
             )
             if NetworkMonitor.shared.isConnected {
-                Task { await changeQueue.replayAll(context: modelContext) }
+                Task { await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated) }
             }
         } catch {
             AppLogger.data.error("Failed to save expense: \(error)")

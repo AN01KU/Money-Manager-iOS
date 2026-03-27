@@ -20,7 +20,7 @@ final class MockSyncService: SyncServiceProtocol {
     
     private init() {}
     
-    func configure(container: ModelContainer) {
+    func configure(container: ModelContainer, authService: AuthServiceProtocol) {
         self.modelContainer = container
     }
     

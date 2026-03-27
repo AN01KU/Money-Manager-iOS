@@ -82,7 +82,7 @@ struct SyncDebugView: View {
                 Button {
                     isSyncing = true
                     Task {
-                        await changeQueueManager.replayAll(context: modelContext)
+                        await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
                         isSyncing = false
                     }
                 } label: {

@@ -27,7 +27,7 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
         context: ModelContext
     ) {}
     
-    func replayAll(context: ModelContext) async {}
+    func replayAll(context: ModelContext, isAuthenticated: Bool) async {}
     
     func clearAll(context: ModelContext) {}
 }

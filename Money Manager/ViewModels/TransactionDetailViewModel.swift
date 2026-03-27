@@ -23,10 +23,12 @@ import SwiftData
     }
     
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
-    init(expense: Expense, changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(expense: Expense, changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.expense = expense
         self.changeQueue = changeQueue
+        self.auth = auth
     }
     
     func deleteExpense(completion: @escaping () -> Void) {
@@ -53,7 +55,7 @@ import SwiftData
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
             

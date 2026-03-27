@@ -42,7 +42,7 @@ struct ChangeQueueManagerTests {
         let manager = makeManager()
         manager.configure(container: container)
 
-        await manager.replayAll(context: context)
+        await manager.replayAll(context: context, isAuthenticated: false)
 
         // Auth guard fired — nothing was touched, change still in queue with retryCount == 0
         let remaining = try context.fetch(FetchDescriptor<PendingChange>())

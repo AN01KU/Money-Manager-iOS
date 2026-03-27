@@ -18,34 +18,48 @@ final class SyncService: SyncServiceProtocol {
     private let apiClient = APIClient.shared
     private let groupService = GroupService.shared
     private let networkMonitor = NetworkMonitor.shared
+    private var authService: AuthServiceProtocol?
     private var modelContainer: ModelContainer?
-    
+
     private let lastSyncKey = "last_sync_at"
     nonisolated(unsafe) private var networkObserver: Any?
-    
+    nonisolated(unsafe) private var logoutObserver: Any?
+
     private init() {
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date
-        
+
         networkObserver = NotificationCenter.default.addObserver(
             forName: .networkDidBecomeAvailable,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self, authService.isAuthenticated else { return }
+            guard let self, self.authService?.isAuthenticated == true else { return }
             Task {
                 await self.syncOnReconnect()
             }
         }
+
+        logoutObserver = NotificationCenter.default.addObserver(
+            forName: .userDidLogout,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearGroupData()
+        }
     }
-    
+
     deinit {
         if let observer = networkObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = logoutObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
-    
-    func configure(container: ModelContainer) {
+
+    func configure(container: ModelContainer, authService: AuthServiceProtocol) {
         self.modelContainer = container
+        self.authService = authService
         changeQueueManager.configure(container: container)
     }
 
@@ -60,12 +74,12 @@ final class SyncService: SyncServiceProtocol {
     }
     
     func syncOnLaunch() async {
-        guard authService.isAuthenticated else { return }
+        guard authService?.isAuthenticated == true else { return }
         guard let container = modelContainer else { return }
 
         AppLogger.sync.info("Sync on launch started")
         let context = ModelContext(container)
-        await changeQueueManager.replayAll(context: context)
+        await changeQueueManager.replayAll(context: context, isAuthenticated: true)
         await pullFromServer(context: context)
         AppLogger.sync.info("Sync on launch complete")
     }
@@ -79,7 +93,7 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Sync on reconnect started")
         let context = ModelContext(container)
-        await changeQueueManager.replayAll(context: context)
+        await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
         await pullFromServer(context: context)
         AppLogger.sync.info("Sync on reconnect complete")
     }
@@ -114,7 +128,7 @@ final class SyncService: SyncServiceProtocol {
         enqueueLocalData(context: context)
 
         // 3. Push everything to server
-        await changeQueueManager.replayAll(context: context)
+        await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
 
         // 4. Pull canonical state
         await pullFromServer(context: context)

@@ -107,7 +107,7 @@ final class AuthService: AuthServiceProtocol {
     func logout() {
         session.clearSession()
         UserDefaults.standard.removeObject(forKey: "last_sync_at")
-        syncService.clearGroupData()
+        NotificationCenter.default.post(name: .userDidLogout, object: nil)
         authState = .guest
     }
 }

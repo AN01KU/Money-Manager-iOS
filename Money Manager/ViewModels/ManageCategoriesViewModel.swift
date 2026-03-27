@@ -10,9 +10,11 @@ import SwiftData
     
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
     }
 
     // Legacy computed properties kept for test compatibility
@@ -54,7 +56,7 @@ import SwiftData
             AppLogger.data.info("Category hidden: \(category.name)")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
@@ -91,7 +93,7 @@ import SwiftData
             AppLogger.data.info("Category restored: \(category.name)")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
@@ -154,7 +156,7 @@ import SwiftData
             AppLogger.data.info("Category deleted: \(categoryName)")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
@@ -206,7 +208,7 @@ import SwiftData
             AppLogger.data.info("Default categories restored")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: context)
+                    await changeQueue.replayAll(context: context, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
@@ -311,6 +313,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
 
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -318,8 +321,9 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
         super.init(icon: "tag.circle.fill", color: "#4ECDC4")
     }
     
@@ -371,7 +375,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
@@ -396,6 +400,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     let category: CustomCategory
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -405,10 +410,11 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(category: CustomCategory, allCategories: [CustomCategory] = [], changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(category: CustomCategory, allCategories: [CustomCategory] = [], changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.category = category
         self.name = category.name
         self.changeQueue = changeQueue
+        self.auth = auth
         super.init(icon: category.icon, color: category.color)
         self.allCategories = allCategories
     }
@@ -489,7 +495,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {

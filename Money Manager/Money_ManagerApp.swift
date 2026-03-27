@@ -68,7 +68,7 @@ struct Money_ManagerApp: App {
         
         NetworkMonitor.shared.startMonitoring()
         
-        syncService.configure(container: container)
+        syncService.configure(container: container, authService: authService)
     }
     
     #if DEBUG
