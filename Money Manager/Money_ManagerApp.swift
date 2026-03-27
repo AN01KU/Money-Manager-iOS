@@ -101,6 +101,10 @@ struct Money_ManagerApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     handleScenePhaseChange(newPhase)
                 }
+                .onOpenURL { url in
+                    guard let route = AppRoute(url: url) else { return }
+                    NotificationCenter.default.post(name: .appRouteReceived, object: route)
+                }
         }
         .modelContainer(container)
     }

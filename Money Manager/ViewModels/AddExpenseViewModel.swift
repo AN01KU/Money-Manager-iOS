@@ -229,6 +229,7 @@ enum SplitType: String, CaseIterable {
 
         do {
             try modelContext.save()
+            AppLogger.data.info("Expense saved: \(expenseID) action=\(action)")
             changeQueue.enqueue(
                 entityType: "expense",
                 entityID: expenseID,
@@ -242,6 +243,7 @@ enum SplitType: String, CaseIterable {
                 Task { await changeQueue.replayAll(context: modelContext) }
             }
         } catch {
+            AppLogger.data.error("Failed to save expense: \(error)")
             errorMessage = "Failed to save expense"
             showError = true
             isSaving = false

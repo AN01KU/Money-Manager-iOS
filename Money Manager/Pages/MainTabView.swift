@@ -9,16 +9,17 @@ enum TabItem: String, CaseIterable {
 struct MainTabView: View {
     @State private var selectedTab: TabItem = .overview
     @State private var tabChanged = false
+    @State private var pendingRoute: AppRoute?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Overview", systemImage: "house.fill", value: .overview) {
-                Overview()
+                Overview(pendingRoute: $pendingRoute)
             }
 
             Tab("Groups", systemImage: "person.2.fill", value: .groups) {
                 if authService.isAuthenticated {
-                    GroupsListView()
+                    GroupsListView(pendingRoute: $pendingRoute)
                 } else {
                     GroupsLockedView()
                 }
@@ -35,6 +36,16 @@ struct MainTabView: View {
         }
         .onChange(of: tabChanged) { _, newValue in
             if newValue { tabChanged = false }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .appRouteReceived)) { notification in
+            guard let route = notification.object as? AppRoute else { return }
+            switch route {
+            case .expense:
+                selectedTab = .overview
+            case .group:
+                selectedTab = .groups
+            }
+            pendingRoute = route
         }
     }
 }

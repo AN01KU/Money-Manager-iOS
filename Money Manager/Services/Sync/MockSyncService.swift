@@ -13,6 +13,8 @@ final class MockSyncService: SyncServiceProtocol {
     
     var isSyncing: Bool = false
     var lastSyncedAt: Date? = Date()
+    var syncSuccessCount: Int = 0
+    var syncFailureCount: Int = 0
     
     private var modelContainer: ModelContainer?
     
@@ -36,5 +38,7 @@ final class MockSyncService: SyncServiceProtocol {
     func bootstrapAfterSignup() async {}
 
     func clearGroupData() {}
+
+    func recordSyncError() { syncFailureCount += 1 }
 }
 #endif

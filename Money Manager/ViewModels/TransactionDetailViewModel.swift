@@ -57,9 +57,10 @@ import SwiftData
                 }
             }
             
+            AppLogger.data.info("Expense deleted: \(self.expense.id)")
             completion()
         } catch {
-            print("Error deleting expense: \(error)")
+            AppLogger.data.error("Error deleting expense: \(error)")
         }
     }
     

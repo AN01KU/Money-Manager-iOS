@@ -8,9 +8,11 @@ import SwiftUI
 struct GroupsListView: View {
     @State private var viewModel = GroupsListViewModel()
     @State private var showCreateGroup = false
+    @State private var navigationPath: [APIGroupWithDetails] = []
+    var pendingRoute: Binding<AppRoute?>?
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack(alignment: .bottomTrailing) {
                 content
                     .background(Color(.systemGroupedBackground))
@@ -38,11 +40,24 @@ struct GroupsListView: View {
             }
             .task {
                 await viewModel.load()
+                handlePendingRoute()
             }
             .refreshable {
                 await viewModel.load()
             }
+            .onChange(of: pendingRoute?.wrappedValue) { _, route in
+                guard case .group = route else { return }
+                handlePendingRoute()
+            }
         }
+    }
+
+    private func handlePendingRoute() {
+        guard let route = pendingRoute?.wrappedValue,
+              case .group(let id) = route,
+              let group = viewModel.groups.first(where: { $0.id == id }) else { return }
+        navigationPath = [group]
+        pendingRoute?.wrappedValue = nil
     }
 
     @ViewBuilder

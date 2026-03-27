@@ -4,7 +4,8 @@ import SwiftData
 struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    
+    @Query(filter: #Predicate<Expense> { !$0.isDeleted }) private var allExpenses: [Expense]
+
     @State private var viewModel = ManageCategoriesViewModel()
     @State private var rowTapped = false
     @State private var deleteTriggered = false
@@ -19,13 +20,18 @@ struct ManageCategoriesView: View {
     private var predefinedCategories: [CustomCategory] {
         customCategories.filter { $0.isPredefined && !$0.isHidden }
     }
-    
+
     private var userCategories: [CustomCategory] {
         customCategories.filter { !$0.isPredefined && !$0.isHidden }
     }
-    
+
     private var hiddenCategories: [CustomCategory] {
         customCategories.filter { $0.isHidden }
+    }
+
+    /// Count of non-deleted expenses per category name.
+    private var usageCounts: [String: Int] {
+        Dictionary(grouping: allExpenses, by: \.category).mapValues(\.count)
     }
     
     var body: some View {
@@ -33,7 +39,7 @@ struct ManageCategoriesView: View {
             if !predefinedCategories.isEmpty {
                 Section {
                     ForEach(predefinedCategories) { category in
-                        CategoryRow(category: category, onTap: {
+                        CategoryRow(category: category, usageCount: usageCounts[category.name, default: 0], onTap: {
                             rowTapped = true
                             viewModel.categoryToEdit = category
                         })
@@ -55,19 +61,30 @@ struct ManageCategoriesView: View {
                                     if newValue { deleteTriggered = false }
                                 }
                             }
+                            Button {
+                                hideTriggered = true
+                                viewModel.hideCategory(category)
+                            } label: {
+                                Label("Hide", systemImage: "eye.slash")
+                            }
+                            .tint(.orange)
+                            .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
+                            .onChange(of: hideTriggered) { _, newValue in
+                                if newValue { hideTriggered = false }
+                            }
                         }
                     }
                 } header: {
                     Text("Default Categories")
                 } footer: {
-                    Text("Tap to edit icon, color, or name. Swipe to delete (except Other).")
+                    Text("Tap to edit icon, color, or name. Swipe left to hide or delete.")
                 }
             }
             
             if !userCategories.isEmpty {
                 Section("Your Categories") {
                     ForEach(userCategories) { category in
-                        CategoryRow(category: category, onTap: {
+                        CategoryRow(category: category, usageCount: usageCounts[category.name, default: 0], onTap: {
                             rowTapped = true
                             viewModel.categoryToEdit = category
                         })
@@ -114,6 +131,21 @@ struct ManageCategoriesView: View {
                         .sensoryFeedback(.success, trigger: restoreTriggered)
                         .onChange(of: restoreTriggered) { _, newValue in
                             if newValue { restoreTriggered = false }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if category.isDeletable {
+                                Button(role: .destructive) {
+                                    deleteTriggered = true
+                                    viewModel.deleteCategory(category)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .tint(.red)
+                                .sensoryFeedback(.warning, trigger: deleteTriggered)
+                                .onChange(of: deleteTriggered) { _, newValue in
+                                    if newValue { deleteTriggered = false }
+                                }
+                            }
                         }
                     }
                 }

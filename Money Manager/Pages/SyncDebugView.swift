@@ -8,9 +8,45 @@ struct SyncDebugView: View {
     @Query(sort: \FailedChange.failedAt, order: .reverse) private var failedChanges: [FailedChange]
 
     @State private var isSyncing = false
+    @State private var isFullSyncing = false
+
+    private var totalSyncs: Int { syncService.syncSuccessCount + syncService.syncFailureCount }
+    private var successRate: String {
+        guard totalSyncs > 0 else { return "—" }
+        let pct = Int((Double(syncService.syncSuccessCount) / Double(totalSyncs)) * 100)
+        return "\(pct)%"
+    }
 
     var body: some View {
         List {
+            Section {
+                HStack {
+                    Text("Last Sync")
+                    Spacer()
+                    if let date = syncService.lastSyncedAt {
+                        Text(date.formatted(.relative(presentation: .named)))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Never")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                HStack {
+                    Text("Success / Failure")
+                    Spacer()
+                    Text("\(syncService.syncSuccessCount) / \(syncService.syncFailureCount)")
+                        .foregroundStyle(syncService.syncFailureCount > 0 ? Color.red : Color.secondary)
+                }
+                HStack {
+                    Text("Success Rate (this session)")
+                    Spacer()
+                    Text(successRate)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Sync Stats")
+            }
+
             Section {
                 HStack {
                     Text("Pending")
@@ -29,6 +65,20 @@ struct SyncDebugView: View {
             }
 
             Section {
+                Button {
+                    isFullSyncing = true
+                    Task {
+                        await syncService.fullSync()
+                        isFullSyncing = false
+                    }
+                } label: {
+                    HStack {
+                        Label("Full Sync Now", systemImage: "arrow.triangle.2.circlepath")
+                        if isFullSyncing { Spacer(); ProgressView() }
+                    }
+                }
+                .disabled(isFullSyncing || !NetworkMonitor.shared.isConnected)
+
                 Button {
                     isSyncing = true
                     Task {

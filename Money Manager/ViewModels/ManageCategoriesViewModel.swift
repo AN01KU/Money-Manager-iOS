@@ -51,13 +51,14 @@ import SwiftData
                 context: modelContext
             )
             
+            AppLogger.data.info("Category hidden: \(category.name)")
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
-            print("Error hiding category: \(error)")
+            AppLogger.data.error("Error hiding category: \(error)")
         }
     }
     
@@ -87,13 +88,14 @@ import SwiftData
                 context: modelContext
             )
             
+            AppLogger.data.info("Category restored: \(category.name)")
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
-            print("Error restoring category: \(error)")
+            AppLogger.data.error("Error restoring category: \(error)")
         }
     }
     
@@ -149,13 +151,14 @@ import SwiftData
                 context: modelContext
             )
             
+            AppLogger.data.info("Category deleted: \(categoryName)")
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: modelContext)
                 }
             }
         } catch {
-            print("Error deleting category: \(error)")
+            AppLogger.data.error("Error deleting category: \(error)")
         }
         
         deleteConfirmedTrigger += 1
@@ -192,7 +195,7 @@ import SwiftData
                         context: context
                     )
                 } catch {
-                    print("Error queuing category update: \(error)")
+                    AppLogger.data.error("Error queuing category update: \(error)")
                 }
             }
         }
@@ -200,13 +203,14 @@ import SwiftData
         do {
             try context.save()
             
+            AppLogger.data.info("Default categories restored")
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: context)
                 }
             }
         } catch {
-            print("Error restoring defaults: \(error)")
+            AppLogger.data.error("Error restoring default categories: \(error)")
         }
         
         resetTrigger += 1
@@ -321,9 +325,24 @@ class AddCategoryViewModel: CategoryEditorViewModel {
     
     func save() async -> Bool {
         guard let modelContext = modelContext else { return false }
-        
+
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
+
+        guard !trimmedName.isEmpty else {
+            errorMessage = "Category name cannot be empty"
+            showError = true
+            return false
+        }
+
+        let isDuplicate = allCategories.contains {
+            $0.name.lowercased() == trimmedName.lowercased() && !$0.isHidden
+        }
+        guard !isDuplicate else {
+            errorMessage = "\"\(trimmedName)\" already exists"
+            showError = true
+            return false
+        }
+
         guard checkColorConflict() else { return false }
         
         isSaving = true
@@ -396,13 +415,24 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     
     func save() -> Bool {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
+
         guard !trimmedName.isEmpty else {
             errorMessage = "Category name cannot be empty"
             showError = true
             return false
         }
-        
+
+        let isDuplicate = allCategories.contains {
+            $0.id != category.id &&
+            $0.name.lowercased() == trimmedName.lowercased() &&
+            !$0.isHidden
+        }
+        guard !isDuplicate else {
+            errorMessage = "\"\(trimmedName)\" already exists"
+            showError = true
+            return false
+        }
+
         guard checkColorConflict() else { return false }
         
         guard let modelContext = modelContext else { return false }

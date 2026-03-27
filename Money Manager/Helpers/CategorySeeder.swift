@@ -9,8 +9,11 @@ struct CategorySeeder {
             predicate: #Predicate { $0.isPredefined == true }
         )
         let existingCount = (try? context.fetchCount(descriptor)) ?? 0
-        guard existingCount == 0 else { return }
-        
+        guard existingCount == 0 else {
+            AppLogger.data.debug("CategorySeeder: skipped, \(existingCount) predefined categories already exist")
+            return
+        }
+
         for predefined in PredefinedCategory.allCases {
             let category = CustomCategory(
                 name: predefined.rawValue,
@@ -21,7 +24,12 @@ struct CategorySeeder {
             )
             context.insert(category)
         }
-        
-        try? context.save()
+
+        do {
+            try context.save()
+            AppLogger.data.info("CategorySeeder: seeded \(PredefinedCategory.allCases.count) predefined categories")
+        } catch {
+            AppLogger.data.error("CategorySeeder: failed to save seeded categories: \(error)")
+        }
     }
 }

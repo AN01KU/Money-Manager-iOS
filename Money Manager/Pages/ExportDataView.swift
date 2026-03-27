@@ -179,7 +179,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
                 try FileManager.default.copyItem(at: url, to: tempURL)
                 onPick(tempURL)
             } catch {
-                print("Error copying file: \(error)")
+                AppLogger.export.error("Error copying file for import: \(error)")
             }
         }
     }

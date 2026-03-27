@@ -12,7 +12,9 @@ final class SyncService: SyncServiceProtocol {
     
     var isSyncing: Bool = false
     var lastSyncedAt: Date?
-    
+    var syncSuccessCount: Int = 0
+    var syncFailureCount: Int = 0
+
     private let apiClient = APIClient.shared
     private let groupService = GroupService.shared
     private let networkMonitor = NetworkMonitor.shared
@@ -60,33 +62,40 @@ final class SyncService: SyncServiceProtocol {
     func syncOnLaunch() async {
         guard authService.isAuthenticated else { return }
         guard let container = modelContainer else { return }
-        
+
+        AppLogger.sync.info("Sync on launch started")
         let context = ModelContext(container)
         await changeQueueManager.replayAll(context: context)
         await pullFromServer(context: context)
+        AppLogger.sync.info("Sync on launch complete")
     }
-    
+
     func syncOnReconnect() async {
         guard networkMonitor.isConnected else { return }
         guard let container = modelContainer else { return }
-        
+
         isSyncing = true
         defer { isSyncing = false }
-        
+
+        AppLogger.sync.info("Sync on reconnect started")
         let context = ModelContext(container)
         await changeQueueManager.replayAll(context: context)
         await pullFromServer(context: context)
+        AppLogger.sync.info("Sync on reconnect complete")
     }
-    
+
     func fullSync() async {
         guard let container = modelContainer else { return }
 
         isSyncing = true
         defer { isSyncing = false }
 
+        AppLogger.sync.info("Full sync started")
         let context = ModelContext(container)
         await pullAllFromServer(context: context)
         updateLastSyncTime()
+        syncSuccessCount += 1
+        AppLogger.sync.info("Full sync complete")
     }
 
     func bootstrapAfterSignup() async {
@@ -95,6 +104,7 @@ final class SyncService: SyncServiceProtocol {
         isSyncing = true
         defer { isSyncing = false }
 
+        AppLogger.sync.info("Bootstrap after signup started")
         let context = ModelContext(container)
 
         // 1. Pull server-seeded categories (reconciles predefined by key)
@@ -109,6 +119,7 @@ final class SyncService: SyncServiceProtocol {
         // 4. Pull canonical state
         await pullFromServer(context: context)
         updateLastSyncTime()
+        AppLogger.sync.info("Bootstrap after signup complete")
     }
 
     private func enqueueLocalData(context: ModelContext) {
@@ -190,53 +201,57 @@ final class SyncService: SyncServiceProtocol {
             let response: APIListResponse<APICustomCategory> = try await apiClient.get("/categories")
             upsertCategories(response.data, context: context)
         } catch {
-            print("Failed to pull categories: \(error)")
+            AppLogger.sync.error("Failed to pull categories: \(error)")
+            recordSyncError()
         }
     }
-    
+
     private func pullBudgets(context: ModelContext) async {
         do {
             let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get("/budgets")
             upsertBudgets(response.data, context: context)
         } catch {
-            print("Failed to pull budgets: \(error)")
+            AppLogger.sync.error("Failed to pull budgets: \(error)")
+            recordSyncError()
         }
     }
-    
+
     private func pullRecurringExpenses(context: ModelContext) async {
         do {
             let response: APIListResponse<APIRecurringExpense> = try await apiClient.get("/recurring-expenses")
             upsertRecurringExpenses(response.data, context: context)
         } catch {
-            print("Failed to pull recurring expenses: \(error)")
+            AppLogger.sync.error("Failed to pull recurring expenses: \(error)")
+            recordSyncError()
         }
     }
-    
+
     private func pullExpenses(context: ModelContext) async {
         do {
             var allExpenses: [APIExpense] = []
             var offset = 0
             let limit = 100
-            
+
             while true {
                 let queryItems = [
                     URLQueryItem(name: "limit", value: "\(limit)"),
                     URLQueryItem(name: "offset", value: "\(offset)"),
                     URLQueryItem(name: "is_deleted", value: "false")
                 ]
-                
+
                 let response: APIPaginatedResponse<APIExpense> = try await apiClient.get("/expenses", queryItems: queryItems)
                 allExpenses.append(contentsOf: response.data)
-                
+
                 if response.data.count < limit || offset + response.data.count >= response.pagination.total {
                     break
                 }
                 offset += limit
             }
-            
+
             upsertExpenses(allExpenses, context: context)
         } catch {
-            print("Failed to pull expenses: \(error)")
+            AppLogger.sync.error("Failed to pull expenses: \(error)")
+            recordSyncError()
         }
     }
     
@@ -403,7 +418,7 @@ final class SyncService: SyncServiceProtocol {
             let groups = try await groupService.fetchGroups()
             upsertGroups(groups, context: context)
         } catch {
-            print("Failed to pull groups: \(error)")
+            AppLogger.sync.error("Failed to pull groups: \(error)")
         }
     }
 
@@ -501,12 +516,16 @@ final class SyncService: SyncServiceProtocol {
             }
             try? context.save()
         } catch {
-            print("Failed to pull expenses for group \(groupId): \(error)")
+            AppLogger.sync.error("Failed to pull expenses for group \(groupId): \(error)")
         }
     }
 
     private func updateLastSyncTime() {
         lastSyncedAt = Date()
         UserDefaults.standard.set(lastSyncedAt, forKey: lastSyncKey)
+    }
+
+    func recordSyncError() {
+        syncFailureCount += 1
     }
 }

@@ -169,7 +169,7 @@ import SwiftData
                     }
                 }
             } catch {
-                print("Error deleting expense: \(error)")
+                AppLogger.data.error("Error deleting expense: \(error)")
             }
         }
         

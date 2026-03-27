@@ -65,8 +65,9 @@ import SwiftData
                     await changeQueue.replayAll(context: modelContext)
                 }
             }
+            AppLogger.data.info("Recurring expense toggled: \(expense.id) isActive=\(expense.isActive)")
         } catch {
-            print("Error toggling expense: \(error)")
+            AppLogger.data.error("Error toggling recurring expense: \(error)")
         }
     }
     
@@ -104,8 +105,9 @@ import SwiftData
                     await changeQueue.replayAll(context: modelContext)
                 }
             }
+            AppLogger.data.info("Recurring expense deleted: \(recurringId)")
         } catch {
-            print("Error deleting expense: \(error)")
+            AppLogger.data.error("Error deleting recurring expense: \(error)")
         }
     }
 }
@@ -187,7 +189,7 @@ import SwiftData
         
         do {
             try modelContext.save()
-            
+            AppLogger.data.info("Recurring expense saved: \(recurringExpense.id)")
             let payload = try? APIClient.apiEncoder.encode(recurringExpense.toCreateRequest())
             changeQueue.enqueue(
                 entityType: "recurring",
@@ -205,6 +207,7 @@ import SwiftData
                 }
             }
         } catch {
+            AppLogger.data.error("Failed to save recurring expense: \(error)")
             errorMessage = "Failed to save: \(error.localizedDescription)"
             showError = true
             return false

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
+    @State private var isSyncingManually = false
     #if DEBUG
     @State private var showSyncDebug = false
     #endif
@@ -21,6 +22,7 @@ struct SettingsView: View {
                 financeSection
                 preferencesSection
                 if authService.isAuthenticated {
+                    syncSection
                     accountSection
                 }
                 #if DEBUG
@@ -161,6 +163,50 @@ struct SettingsView: View {
             } label: {
                 Label("Backup", systemImage: "archivebox.fill")
             }
+        }
+    }
+
+    // MARK: - Sync
+
+    private var syncSection: some View {
+        Section("Sync") {
+            SyncStatusView()
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if changeQueueManager.pendingCount > 0 {
+                HStack {
+                    Text("Pending changes")
+                    Spacer()
+                    Text("\(changeQueueManager.pendingCount)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if changeQueueManager.failedCount > 0 {
+                HStack {
+                    Text("Failed changes")
+                    Spacer()
+                    Text("\(changeQueueManager.failedCount)")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Button {
+                isSyncingManually = true
+                Task {
+                    await syncService.fullSync()
+                    isSyncingManually = false
+                }
+            } label: {
+                HStack {
+                    Label("Sync Now", systemImage: "arrow.clockwise.icloud")
+                    if isSyncingManually || syncService.isSyncing {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isSyncingManually || syncService.isSyncing || !NetworkMonitor.shared.isConnected)
         }
     }
 
