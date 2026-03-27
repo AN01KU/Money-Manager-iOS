@@ -32,8 +32,8 @@ struct ChangeQueueManagerTests {
 
     @Test
     func test_replayAll_skips_whenNotAuthenticated() async throws {
-        MockAuthService.shared.isAuthenticated = false
-        defer { MockAuthService.shared.isAuthenticated = true }
+        MockAuthService.shared.authState = .guest
+        defer { MockAuthService.shared.authState = .authenticated(APIUser(id: UUID(), email: "", username: "", created_at: Date())) }
 
         let container = try makeContainer()
         let context = ModelContext(container)

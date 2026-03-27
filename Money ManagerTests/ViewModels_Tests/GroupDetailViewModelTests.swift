@@ -23,7 +23,7 @@ struct GroupDetailViewModelTests {
     }
 
     private func makeExpense(totalAmount: String, paidBy: UUID = UUID()) -> APIGroupExpense {
-        APIGroupExpense(id: UUID(), description: "Test", amount: totalAmount, user_id: paidBy, created_at: Date())
+        APIGroupExpense(id: UUID(), description: "Test", total_amount: totalAmount, paid_by: paidBy, created_at: Date())
     }
 
     private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
