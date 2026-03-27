@@ -62,8 +62,8 @@ final class MockGroupService: GroupServiceProtocol {
         APIGroupExpense(
             id: UUID(),
             description: request.description,
-            amount: request.totalAmount,
-            user_id: request.splits.first?.userId ?? UUID(),
+            total_amount: request.totalAmount,
+            paid_by: request.splits.first?.userId ?? UUID(),
             created_at: Date()
         )
     }

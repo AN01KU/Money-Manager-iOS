@@ -224,9 +224,12 @@ struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
 struct APIGroupExpense: Codable, Identifiable, Sendable {
     let id: UUID
     let description: String
-    let amount: String
-    let user_id: UUID
+    let total_amount: String
+    let paid_by: UUID
     let created_at: Date
+
+    var amount: String { total_amount }
+    var user_id: UUID { paid_by }
 }
 
 struct APIGroupDetails: Codable, Sendable {

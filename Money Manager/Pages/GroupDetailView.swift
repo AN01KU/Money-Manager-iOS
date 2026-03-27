@@ -114,6 +114,7 @@ struct GroupDetailView: View {
         Group {
             if viewModel.expenses.isEmpty {
                 EmptyStateView(icon: "receipt", title: "No Expenses", message: "Add the first expense to this group.")
+                    .frame(maxHeight: .infinity)
             } else {
                 List(viewModel.expenses) { expense in
                     GroupExpenseRow(expense: expense, members: viewModel.members)
@@ -127,6 +128,7 @@ struct GroupDetailView: View {
         Group {
             if viewModel.balances.isEmpty {
                 EmptyStateView(icon: "scale.3d", title: "No Balances", message: "Balances will appear once expenses are added.")
+                    .frame(maxHeight: .infinity)
             } else {
                 List {
                     Section {
@@ -154,6 +156,7 @@ struct GroupDetailView: View {
         Group {
             if viewModel.members.isEmpty {
                 EmptyStateView(icon: "person.3", title: "No Members", message: "Invite people to join this group.")
+                    .frame(maxHeight: .infinity)
             } else {
                 List {
                     Section {

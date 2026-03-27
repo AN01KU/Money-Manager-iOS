@@ -33,7 +33,18 @@ final class APIClient {
 
         
         self.decoder = JSONDecoder()
-        self.decoder.dateDecodingStrategy = .iso8601
+        self.decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+            
+            if let date = ISO8601DateFormatter.withFractionalSeconds.date(from: string) {
+                return date
+            }
+            if let date = ISO8601DateFormatter.standard.date(from: string) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(string)")
+        }
         
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
@@ -151,6 +162,7 @@ final class APIClient {
             do {
                 return try decoder.decode(T.self, from: data)
             } catch {
+                Self.logDecodingError(error, type: T.self, endpoint: request.url?.path ?? "unknown", data: data)
                 throw APIError.decodingError(error)
             }
         } catch let error as APIError {
@@ -159,10 +171,49 @@ final class APIClient {
             throw APIError.networkError(error)
         }
     }
+
+    private static func logDecodingError<T>(_ error: Error, type: T.Type, endpoint: String, data: Data) {
+        let typeName = String(describing: T.self)
+        let preview = String(data: data.prefix(1024), encoding: .utf8) ?? "<binary>"
+
+        switch error {
+        case let error as DecodingError:
+            switch error {
+            case .typeMismatch(let expected, let context):
+                AppLogger.network.error("Decoding \(typeName) from \(endpoint): type mismatch — expected \(String(describing: expected)) at \(context.codingPath.map(\.stringValue).joined(separator: ".")) — \(context.debugDescription)")
+            case .valueNotFound(let expected, let context):
+                AppLogger.network.error("Decoding \(typeName) from \(endpoint): missing value — expected \(String(describing: expected)) at \(context.codingPath.map(\.stringValue).joined(separator: ".")) — \(context.debugDescription)")
+            case .keyNotFound(let key, let context):
+                AppLogger.network.error("Decoding \(typeName) from \(endpoint): missing key '\(key.stringValue)' at \(context.codingPath.map(\.stringValue).joined(separator: ".")) — \(context.debugDescription)")
+            case .dataCorrupted(let context):
+                AppLogger.network.error("Decoding \(typeName) from \(endpoint): data corrupted at \(context.codingPath.map(\.stringValue).joined(separator: ".")) — \(context.debugDescription)")
+            @unknown default:
+                AppLogger.network.error("Decoding \(typeName) from \(endpoint): \(error.localizedDescription)")
+            }
+        default:
+            AppLogger.network.error("Decoding \(typeName) from \(endpoint): \(error.localizedDescription)")
+        }
+
+        AppLogger.network.debug("Response body preview for \(endpoint): \(preview)")
+    }
 }
 
 private struct EmptyResponse: Decodable {}
 
 private struct HealthResponse: Decodable {
     let status: String
+}
+
+extension ISO8601DateFormatter {
+    static let withFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static let standard: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }
