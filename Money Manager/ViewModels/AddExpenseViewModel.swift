@@ -1,9 +1,16 @@
 import SwiftUI
 import SwiftData
 
-enum AddExpenseMode {
-    case personal(editing: Expense? = nil)
-    case shared(group: APIGroupWithDetails, members: [APIGroupMember], onAdd: (APIGroupExpense) -> Void)
+enum AddTransactionMode {
+    case personal(editing: Transaction? = nil)
+    case shared(group: APIGroupWithDetails, members: [APIGroupMember], onAdd: (APIGroupTransaction) -> Void)
+}
+
+enum TransactionType: String, CaseIterable {
+    case expense = "Expense"
+    case income  = "Income"
+
+    var apiValue: String { rawValue.lowercased() }
 }
 
 enum SplitType: String, CaseIterable {
@@ -12,11 +19,12 @@ enum SplitType: String, CaseIterable {
 }
 
 @MainActor
-@Observable class AddExpenseViewModel {
+@Observable class AddTransactionViewModel {
     var amount = ""
     var selectedCategory = ""
     var description = ""
     var notes = ""
+    var transactionType: TransactionType = .expense
     var showCategoryPicker = false
     var showRecurringSheet = false
     var showError = false
@@ -33,7 +41,7 @@ enum SplitType: String, CaseIterable {
     var selectedMembers: Set<UUID> = []
     var customAmounts: [UUID: String] = [:]
 
-    let mode: AddExpenseMode
+    let mode: AddTransactionMode
     var modelContext: ModelContext?
     var customCategories: [CustomCategory] = []
     private let groupService: GroupServiceProtocol
@@ -49,8 +57,13 @@ enum SplitType: String, CaseIterable {
 
     var navigationTitle: String {
         switch mode {
-        case .personal(let editing): return editing != nil ? "Edit Expense" : "Add Expense"
-        case .shared:                return "Add Group Expense"
+        case .personal(let editing):
+            if let editing {
+                return editing.type == "income" ? "Edit Income" : "Edit Expense"
+            }
+            return transactionType == .income ? "Add Income" : "Add Expense"
+        case .shared:
+            return "Add Group Expense"
         }
     }
 
@@ -86,7 +99,7 @@ enum SplitType: String, CaseIterable {
     // MARK: - Init
 
     init(
-        mode: AddExpenseMode = .personal(),
+        mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
         changeQueue: ChangeQueueManagerProtocol = changeQueueManager,
         auth: AuthServiceProtocol = authService
@@ -107,8 +120,9 @@ enum SplitType: String, CaseIterable {
             selectedDate = expense.date
             selectedTime = expense.time ?? Date()
             hasTime = expense.time != nil
-            description = expense.expenseDescription ?? ""
+            description = expense.transactionDescription ?? ""
             notes = expense.notes ?? ""
+            transactionType = expense.type == "income" ? .income : .expense
 
         case .shared(_, let members, _):
             paidByUserId = auth.currentUser?.id
@@ -201,28 +215,29 @@ enum SplitType: String, CaseIterable {
             existingExpense.categoryId = resolvedCategoryId
             existingExpense.date = expenseDate
             existingExpense.time = hasTime ? selectedTime : nil
-            existingExpense.expenseDescription = description.isEmpty ? nil : description
+            existingExpense.transactionDescription = description.isEmpty ? nil : description
             existingExpense.notes = notes.isEmpty ? nil : notes
             existingExpense.updatedAt = Date()
             expenseID = existingExpense.id
             action = "update"
-            endpoint = "/expenses"
-            httpMethod = "PUT"
+            endpoint = "/transactions"
+            httpMethod = "PATCH"
             payload = try? APIClient.apiEncoder.encode(existingExpense.toUpdateRequest())
         } else {
-            let expense = Expense(
+            let expense = Transaction(
+                type: transactionType.apiValue,
                 amount: amountValue,
                 category: selectedCategory,
                 date: expenseDate,
                 time: hasTime ? selectedTime : nil,
-                expenseDescription: description.isEmpty ? nil : description,
+                transactionDescription: description.isEmpty ? nil : description,
                 notes: notes.isEmpty ? nil : notes,
                 categoryId: resolvedCategoryId
             )
             modelContext.insert(expense)
             expenseID = expense.id
             action = "create"
-            endpoint = "/expenses"
+            endpoint = "/transactions"
             httpMethod = "POST"
             payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
         }
@@ -231,7 +246,7 @@ enum SplitType: String, CaseIterable {
             try modelContext.save()
             AppLogger.data.info("Expense saved: \(expenseID) action=\(action)")
             changeQueue.enqueue(
-                entityType: "expense",
+                entityType: "transaction",
                 entityID: expenseID,
                 action: action,
                 endpoint: endpoint,
@@ -259,7 +274,7 @@ enum SplitType: String, CaseIterable {
     private func saveShared(
         amountValue: Double,
         group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupExpense) -> Void,
+        onAdd: @escaping (APIGroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         guard let paidBy = paidByUserId else {
@@ -269,30 +284,32 @@ enum SplitType: String, CaseIterable {
             return
         }
 
-        let splits: [APIExpenseSplit]
+        let splits: [APIGroupTransactionSplitInput]
         if splitType == .equal {
             let share = amountValue / Double(max(selectedMembers.count, 1))
             splits = selectedMembers.map {
-                APIExpenseSplit(userId: $0, amount: share.formatted(.number.precision(.fractionLength(2)).grouping(.never)))
+                APIGroupTransactionSplitInput(user_id: $0, amount: share.formatted(.number.precision(.fractionLength(2)).grouping(.never)))
             }
         } else {
             splits = selectedMembers.compactMap { id in
                 guard let raw = customAmounts[id], let _ = Double(raw) else { return nil }
-                return APIExpenseSplit(userId: id, amount: raw)
+                return APIGroupTransactionSplitInput(user_id: id, amount: raw)
             }
         }
 
-        let request = APICreateSharedExpenseRequest(
-            groupId: group.id,
-            description: description.trimmingCharacters(in: .whitespaces),
+        let request = APICreateGroupTransactionRequest(
+            paid_by_user_id: paidBy,
+            total_amount: amountValue.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: selectedCategory,
-            totalAmount: amountValue.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            date: selectedDate,
+            description: description.trimmingCharacters(in: .whitespaces),
+            notes: nil,
             splits: splits
         )
 
         Task {
             do {
-                let expense = try await groupService.createSharedExpense(request)
+                let expense = try await groupService.createGroupTransaction(request, groupId: group.id)
                 onAdd(expense)
                 isSaving = false
                 completion()

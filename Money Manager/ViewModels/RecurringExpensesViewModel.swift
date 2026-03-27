@@ -78,7 +78,7 @@ import SwiftData
         let recurring = pausedExpenses[index]
         let recurringId = recurring.id
         
-        let descriptor = FetchDescriptor<Expense>(
+        let descriptor = FetchDescriptor<Transaction>(
             predicate: #Predicate { $0.recurringExpenseId == recurringId }
         )
         if let expenses = try? modelContext.fetch(descriptor) {

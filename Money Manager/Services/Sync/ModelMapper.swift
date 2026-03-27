@@ -5,48 +5,44 @@
 
 import Foundation
 
-extension Expense {
-    func toCreateRequest() -> APICreateExpenseRequest {
-        APICreateExpenseRequest(
+extension Transaction {
+    func toCreateRequest() -> APICreateTransactionRequest {
+        APICreateTransactionRequest(
             id: id,
+            type: type,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
             time: time,
-            description: expenseDescription,
+            description: transactionDescription,
             notes: notes,
-            recurring_expense_id: recurringExpenseId,
-            group_id: groupId,
-            group_name: groupName
+            recurring_expense_id: recurringExpenseId
         )
     }
 
-    func toUpdateRequest() -> APIUpdateExpenseRequest {
-        APIUpdateExpenseRequest(
+    func toUpdateRequest() -> APIUpdateTransactionRequest {
+        APIUpdateTransactionRequest(
+            type: type,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
             time: time,
-            description: expenseDescription,
-            notes: notes,
-            is_deleted: isDeleted,
-            recurring_expense_id: recurringExpenseId,
-            group_id: groupId,
-            group_name: groupName
+            description: transactionDescription,
+            notes: notes
         )
     }
-    
-    func applyRemote(_ api: APIExpense) {
+
+    func applyRemote(_ api: APITransaction) {
+        self.type = api.type
         self.amount = Double(api.amount) ?? self.amount
         self.category = api.category
         self.date = api.date
         self.time = api.time
-        self.expenseDescription = api.description
+        self.transactionDescription = api.description
         self.notes = api.notes
         self.isDeleted = api.is_deleted
         self.recurringExpenseId = api.recurring_expense_id
-        self.groupId = api.group_id
-        self.groupName = api.group_name
+        self.groupTransactionId = api.group_transaction_id
         self.updatedAt = api.updated_at
     }
 }

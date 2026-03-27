@@ -3,7 +3,7 @@ import SwiftData
 
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
+    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allExpenses: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     
     @State private var selectedMonth: Date = Date()
@@ -17,7 +17,7 @@ struct BudgetsView: View {
         return budgets.first { $0.year == year && $0.month == month }
     }
     
-    private var currentMonthExpenses: [Expense] {
+    private var currentMonthExpenses: [Transaction] {
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
@@ -26,11 +26,12 @@ struct BudgetsView: View {
 
         return allExpenses.filter { expense in
             !expense.isDeleted &&
+            expense.type == "expense" &&
             expense.date >= startOfMonth &&
             expense.date <= endOfMonth
         }
     }
-    
+
     private var totalSpent: Double {
         currentMonthExpenses.reduce(0) { $0 + $1.amount }
     }
@@ -128,5 +129,5 @@ struct BudgetsView: View {
 
 #Preview {
     BudgetsView()
-        .modelContainer(for: [Expense.self, MonthlyBudget.self])
+        .modelContainer(for: [Transaction.self, MonthlyBudget.self])
 }

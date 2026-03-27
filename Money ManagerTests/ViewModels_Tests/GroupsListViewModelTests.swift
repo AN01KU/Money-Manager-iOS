@@ -28,14 +28,19 @@ struct GroupsListViewModelTests {
         APIGroupBalance(user_id: userId, amount: amount)
     }
 
-    private func makeExpense(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID()) -> APIGroupExpense {
-        APIGroupExpense(id: UUID(), description: description, total_amount: totalAmount, paid_by: paidBy, created_at: Date())
+    private func makeExpense(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupExpense {
+        APIGroupExpense(
+            id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
+            total_amount: totalAmount, category: "Food", date: Date(),
+            description: description, notes: nil, is_deleted: false,
+            created_at: createdAt, updated_at: Date(), splits: []
+        )
     }
 
-    private func makeDetails(groupId: UUID, groupName: String, expenses: [APIGroupExpense] = []) -> APIGroupDetails {
+    private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
             id: groupId, name: groupName, created_by: UUID(), created_at: Date(),
-            members: [], balances: [], expenses: expenses
+            members: [], balances: []
         )
         return APIGroupDetails(group: body, is_member: true)
     }
@@ -70,11 +75,8 @@ struct GroupsListViewModelTests {
         let groupId = UUID()
         let group = makeGroup(id: groupId, name: "Weekend Trip")
         mock.stubbedGroups = [group]
-        mock.stubbedGroupDetails = makeDetails(
-            groupId: groupId,
-            groupName: "Weekend Trip",
-            expenses: [makeExpense(description: "Dinner"), makeExpense(description: "Taxi")]
-        )
+        mock.stubbedGroupDetails = makeDetails(groupId: groupId, groupName: "Weekend Trip")
+        mock.stubbedTransactions = [makeExpense(description: "Dinner"), makeExpense(description: "Taxi")]
         let vm = GroupsListViewModel(groupService: mock)
         await vm.load()
         #expect(vm.recentActivity.count == 2)
@@ -85,12 +87,10 @@ struct GroupsListViewModelTests {
     func test_load_recentActivity_sortedNewestFirst() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let older = APIGroupExpense(id: UUID(), description: "Old", total_amount: "10", paid_by: UUID(),
-                                    created_at: Date(timeIntervalSinceNow: -3600))
-        let newer = APIGroupExpense(id: UUID(), description: "New", total_amount: "20", paid_by: UUID(),
-                                    created_at: Date(timeIntervalSinceNow: -60))
+        let older = makeExpense(description: "Old", totalAmount: "10", createdAt: Date(timeIntervalSinceNow: -3600))
+        let newer = makeExpense(description: "New", totalAmount: "20", createdAt: Date(timeIntervalSinceNow: -60))
         mock.stubbedGroups = [makeGroup(id: groupId)]
-        mock.stubbedGroupDetails = makeDetails(groupId: groupId, groupName: "G", expenses: [older, newer])
+        mock.stubbedTransactions = [older, newer]
         let vm = GroupsListViewModel(groupService: mock)
         await vm.load()
         #expect(vm.recentActivity.first?.expense.description == "New")
@@ -217,14 +217,14 @@ struct GroupsListViewModelTests {
     @Test
     func test_displayName_returnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", createdAt: Date())
+        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
         #expect(vm.displayName(for: member) == "alice")
     }
 
     @Test
     func test_displayName_withNoAtSign_returnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", createdAt: Date())
+        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joined_at: Date())
         #expect(vm.displayName(for: member) == "noatsign")
     }
 

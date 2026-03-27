@@ -54,27 +54,27 @@ struct ExportData: Codable {
     
     struct ExpenseData: Codable {
         let id: String
+        let type: String
         let amount: Double
         let category: String
         let date: Date
         let time: Date?
-        let expenseDescription: String?
+        let transactionDescription: String?
         let notes: String?
         let recurringExpenseId: String?
-        let groupId: String?
-        let groupName: String?
-        
-        init(id: String, amount: Double, category: String, date: Date, time: Date?, expenseDescription: String?, notes: String?, recurringExpenseId: String?, groupId: String?, groupName: String?) {
+        let groupTransactionId: String?
+
+        init(id: String, type: String = "expense", amount: Double, category: String, date: Date, time: Date?, transactionDescription: String?, notes: String?, recurringExpenseId: String?, groupTransactionId: String?) {
             self.id = id
+            self.type = type
             self.amount = amount
             self.category = category
             self.date = date
             self.time = time
-            self.expenseDescription = expenseDescription
+            self.transactionDescription = transactionDescription
             self.notes = notes
             self.recurringExpenseId = recurringExpenseId
-            self.groupId = groupId
-            self.groupName = groupName
+            self.groupTransactionId = groupTransactionId
         }
     }
     
@@ -225,7 +225,7 @@ struct ExportData: Codable {
     }
     
     func exportData(
-        expenses: [Expense],
+        expenses: [Transaction],
         recurringExpenses: [RecurringExpense],
         budgets: [MonthlyBudget],
         categories: [CustomCategory]
@@ -276,7 +276,7 @@ struct ExportData: Codable {
     
     // MARK: - Export Methods
     
-    private func exportExpenses(format: ExportFormat, expenses: [Expense]) async throws -> URL {
+    private func exportExpenses(format: ExportFormat, expenses: [Transaction]) async throws -> URL {
         let activeExpenses = expenses.filter { !$0.isDeleted }
         
         switch format {
@@ -305,7 +305,7 @@ struct ExportData: Codable {
         }
     }
     
-    private func exportAll(format: ExportFormat, expenses: [Expense], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) async throws -> URL {
+    private func exportAll(format: ExportFormat, expenses: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) async throws -> URL {
         let activeExpenses = expenses.filter { !$0.isDeleted }
         
         switch format {
@@ -389,7 +389,7 @@ struct ExportData: Codable {
         return formatter
     }()
     
-    private func exportAllToCSV(expenses: [Expense], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToCSV(expenses: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
         var csv = ""
         
         // Expenses section
@@ -402,11 +402,11 @@ struct ExportData: Codable {
             let category = escapeCSV(expense.category)
             let date = iso8601Formatter.string(from: expense.date)
             let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
-            let desc = escapeCSV(expense.expenseDescription ?? "")
+            let desc = escapeCSV(expense.transactionDescription ?? "")
             let notes = escapeCSV(expense.notes ?? "")
             let recId = expense.recurringExpenseId?.uuidString ?? ""
-            let gid = expense.groupId?.uuidString ?? ""
-            let gname = escapeCSV(expense.groupName ?? "")
+            let gid = expense.groupTransactionId?.uuidString ?? ""
+            let gname = escapeCSV(nil ?? "")
             
             let row = [id, amount, category, date, time, desc, notes, recId, gid, gname].joined(separator: ",")
             csv += row + "\n"
@@ -468,7 +468,7 @@ struct ExportData: Codable {
         return try saveToTempFile(csv, fileName: fileName)
     }
     
-    private func exportExpensesToCSV(expenses: [Expense]) throws -> URL {
+    private func exportExpensesToCSV(expenses: [Transaction]) throws -> URL {
         var csv = "ID,Amount,Category,Date,Time,Description,Notes,Recurring Expense ID,Group ID,Group Name\n"
         
         for expense in expenses {
@@ -477,11 +477,11 @@ struct ExportData: Codable {
             let category = escapeCSV(expense.category)
             let date = iso8601Formatter.string(from: expense.date)
             let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
-            let description = escapeCSV(expense.expenseDescription ?? "")
+            let description = escapeCSV(expense.transactionDescription ?? "")
             let notes = escapeCSV(expense.notes ?? "")
             let recurringExpenseId = expense.recurringExpenseId?.uuidString ?? ""
-            let groupId = expense.groupId?.uuidString ?? ""
-            let groupName = escapeCSV(expense.groupName ?? "")
+            let groupId = expense.groupTransactionId?.uuidString ?? ""
+            let groupName = escapeCSV(nil ?? "")
             
             let row = [id, amount, category, date, time, description, notes, recurringExpenseId, groupId, groupName].joined(separator: ",")
             csv += row + "\n"
@@ -530,22 +530,22 @@ struct ExportData: Codable {
     
     // MARK: - JSON Export
     
-    private func exportExpensesToJSON(expenses: [Expense]) throws -> URL {
+    private func exportExpensesToJSON(expenses: [Transaction]) throws -> URL {
         let expenseData = expenses.map { expense in
             ExportData.ExpenseData(
                 id: expense.id.uuidString,
+                type: expense.type,
                 amount: expense.amount,
                 category: expense.category,
                 date: expense.date,
                 time: expense.time,
-                expenseDescription: expense.expenseDescription,
+                transactionDescription: expense.transactionDescription,
                 notes: expense.notes,
                 recurringExpenseId: expense.recurringExpenseId?.uuidString,
-                groupId: expense.groupId?.uuidString,
-                groupName: expense.groupName
+                groupTransactionId: expense.groupTransactionId?.uuidString
             )
         }
-        
+
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
@@ -605,22 +605,22 @@ struct ExportData: Codable {
         return try saveToJSON(exportData, fileName: "categories_\(dateString()).json")
     }
     
-    private func exportAllToJSON(expenses: [Expense], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToJSON(expenses: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
         let expenseData = expenses.map { expense in
             ExportData.ExpenseData(
                 id: expense.id.uuidString,
+                type: expense.type,
                 amount: expense.amount,
                 category: expense.category,
                 date: expense.date,
                 time: expense.time,
-                expenseDescription: expense.expenseDescription,
+                transactionDescription: expense.transactionDescription,
                 notes: expense.notes,
                 recurringExpenseId: expense.recurringExpenseId?.uuidString,
-                groupId: expense.groupId?.uuidString,
-                groupName: expense.groupName
+                groupTransactionId: expense.groupTransactionId?.uuidString
             )
         }
-        
+
         let recurringExpenseData = recurringExpenses.map { recurring in
             ExportData.RecurringExpenseData(
                 id: recurring.id.uuidString,
@@ -831,17 +831,17 @@ struct ExportData: Codable {
                     recurringExpenseId = nil
                 }
                 
-                let expense = Expense(
+                let expense = Transaction(
                     id: UUID(uuidString: expenseData.id) ?? UUID(),
+                    type: expenseData.type,
                     amount: expenseData.amount,
                     category: expenseData.category,
                     date: expenseData.date,
                     time: expenseData.time,
-                    expenseDescription: expenseData.expenseDescription,
+                    transactionDescription: expenseData.transactionDescription,
                     notes: expenseData.notes,
                     recurringExpenseId: recurringExpenseId,
-                    groupId: expenseData.groupId.flatMap { UUID(uuidString: $0) },
-                    groupName: expenseData.groupName
+                    groupTransactionId: expenseData.groupTransactionId.flatMap { UUID(uuidString: $0) }
                 )
                 context.insert(expense)
                 expensesImported += 1
@@ -951,15 +951,15 @@ struct ExportData: Codable {
         
         return ExportData.ExpenseData(
             id: dict["id"] ?? UUID().uuidString,
+            type: dict["type"] ?? "expense",
             amount: Double(dict["amount"] ?? "0") ?? 0,
             category: dict["category"] ?? "Other",
             date: date,
             time: time,
-            expenseDescription: dict["description"]?.isEmpty == false ? dict["description"] : nil,
+            transactionDescription: dict["description"]?.isEmpty == false ? dict["description"] : nil,
             notes: dict["notes"]?.isEmpty == false ? dict["notes"] : nil,
             recurringExpenseId: dict["recurring expense id"]?.isEmpty == false ? dict["recurring expense id"] : nil,
-            groupId: dict["group id"]?.isEmpty == false ? dict["group id"] : nil,
-            groupName: dict["group name"]?.isEmpty == false ? dict["group name"] : nil
+            groupTransactionId: dict["group transaction id"]?.isEmpty == false ? dict["group transaction id"] : nil
         )
     }
     

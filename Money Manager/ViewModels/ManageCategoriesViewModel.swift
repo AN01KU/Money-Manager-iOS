@@ -113,7 +113,7 @@ import SwiftData
         let categoryId = category.id
 
         // Reassign all linked Expenses to "Other"
-        let expenseDescriptor = FetchDescriptor<Expense>()
+        let expenseDescriptor = FetchDescriptor<Transaction>()
         if let expenses = try? modelContext.fetch(expenseDescriptor) {
             for expense in expenses {
                 if expense.categoryId == categoryId || expense.category == categoryName {
@@ -456,7 +456,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         if oldName != trimmedName {
             let categoryId = category.id
 
-            let expenseDescriptor = FetchDescriptor<Expense>()
+            let expenseDescriptor = FetchDescriptor<Transaction>()
             if let expenses = try? modelContext.fetch(expenseDescriptor) {
                 for expense in expenses {
                     if expense.categoryId == categoryId || expense.category == oldName {

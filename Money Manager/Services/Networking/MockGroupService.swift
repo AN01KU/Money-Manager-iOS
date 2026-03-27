@@ -40,7 +40,7 @@ final class MockGroupService: GroupServiceProtocol {
         if let details = stubbedGroupDetails { return details }
         let body = APIGroupDetailsBody(
             id: groupId, name: "Mock Group", created_by: UUID(), created_at: Date(),
-            members: stubbedMembers, balances: stubbedBalances, expenses: []
+            members: stubbedMembers, balances: stubbedBalances
         )
         return APIGroupDetails(group: body, is_member: true)
     }
@@ -58,13 +58,28 @@ final class MockGroupService: GroupServiceProtocol {
         stubbedBalances
     }
 
-    func createSharedExpense(_ request: APICreateSharedExpenseRequest) async throws -> APIGroupExpense {
-        APIGroupExpense(
+    var stubbedTransactions: [APIGroupTransaction] = []
+
+    func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
+        stubbedTransactions
+    }
+
+    func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {}
+
+    func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction {
+        APIGroupTransaction(
             id: UUID(),
+            group_id: groupId,
+            paid_by_user_id: request.paid_by_user_id,
+            total_amount: request.total_amount,
+            category: request.category,
+            date: request.date,
             description: request.description,
-            total_amount: request.totalAmount,
-            paid_by: request.splits.first?.userId ?? UUID(),
-            created_at: Date()
+            notes: request.notes,
+            is_deleted: false,
+            created_at: Date(),
+            updated_at: Date(),
+            splits: []
         )
     }
 

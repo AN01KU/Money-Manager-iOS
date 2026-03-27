@@ -338,152 +338,283 @@ struct APIIntegrationTests {
         try await APIClient.shared.delete("/recurring-expenses/\(created.id)")
     }
     
-    // MARK: - Expense Tests
-    
-    @Test("Create expense")
-    mutating func testExpenseCreate() async throws {
+    // MARK: - Transaction Tests
+
+    @Test("Create expense transaction")
+    mutating func testTransactionCreateExpense() async throws {
         try await ensureAuthenticated()
         await delay(200)
-        
-        let request = APICreateExpenseRequest(
+
+        let request = APICreateTransactionRequest(
             id: nil,
+            type: "expense",
             amount: "25.50",
             category: "Food & Dining",
             date: Date(),
             time: nil,
             description: "Test lunch",
             notes: nil,
-            recurring_expense_id: nil,
-            group_id: nil,
-            group_name: nil
+            recurring_expense_id: nil
         )
-        
-        let response: APIExpense = try await APIClient.shared.post("/expenses", body: request)
-        
+
+        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.category == request.category)
+        #expect(response.type == "expense")
+        #expect(response.group_transaction_id == nil)
     }
-    
-    @Test("Create expense with notes and time")
-    mutating func testExpenseCreateWithNotesAndTime() async throws {
+
+    @Test("Create income transaction")
+    mutating func testTransactionCreateIncome() async throws {
         try await ensureAuthenticated()
         await delay(200)
-        
-        let request = APICreateExpenseRequest(
+
+        let request = APICreateTransactionRequest(
             id: nil,
+            type: "income",
+            amount: "5000.00",
+            category: "Work & Professional",
+            date: Date(),
+            time: nil,
+            description: "Monthly salary",
+            notes: nil,
+            recurring_expense_id: nil
+        )
+
+        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+
+        #expect(compareAmount(response.amount, request.amount))
+        #expect(response.type == "income")
+    }
+
+    @Test("Create transaction with notes and time")
+    mutating func testTransactionCreateWithNotesAndTime() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let request = APICreateTransactionRequest(
+            id: nil,
+            type: "expense",
             amount: "45.00",
             category: "Shopping",
             date: Date(),
             time: ISO8601DateFormatter().date(from: "2026-03-22T14:30:00Z"),
             description: "Groceries",
             notes: "Weekly shopping",
-            recurring_expense_id: nil,
-            group_id: nil,
-            group_name: nil
+            recurring_expense_id: nil
         )
-        
-        let response: APIExpense = try await APIClient.shared.post("/expenses", body: request)
-        
+
+        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.description == request.description)
         #expect(response.notes == request.notes)
     }
-    
-    @Test("List expenses returns paginated response")
-    mutating func testExpenseListPaginated() async throws {
+
+    @Test("List transactions returns paginated response")
+    mutating func testTransactionListPaginated() async throws {
         try await ensureAuthenticated()
         await delay(200)
-        
-        let response: APIPaginatedResponse<APIExpense> = try await APIClient.shared.get("/expenses")
-        
+
+        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get("/transactions")
+
         #expect(!response.data.isEmpty)
     }
-    
-    @Test("Get expense by id")
-    mutating func testExpenseGetById() async throws {
+
+    @Test("List transactions filtered by type=expense")
+    mutating func testTransactionListFilteredByExpense() async throws {
         try await ensureAuthenticated()
         await delay(200)
-        
-        let createRequest = APICreateExpenseRequest(
+
+        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get(
+            "/transactions",
+            queryItems: [URLQueryItem(name: "type", value: "expense")]
+        )
+
+        #expect(response.data.allSatisfy { $0.type == "expense" })
+    }
+
+    @Test("List transactions filtered by type=income")
+    mutating func testTransactionListFilteredByIncome() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get(
+            "/transactions",
+            queryItems: [URLQueryItem(name: "type", value: "income")]
+        )
+
+        #expect(response.data.allSatisfy { $0.type == "income" })
+    }
+
+    @Test("Get transaction by id")
+    mutating func testTransactionGetById() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let createRequest = APICreateTransactionRequest(
             id: nil,
+            type: "expense",
             amount: "100.00",
             category: "Transport",
             date: Date(),
             time: nil,
             description: "Taxi",
             notes: nil,
-            recurring_expense_id: nil,
-            group_id: nil,
-            group_name: nil
+            recurring_expense_id: nil
         )
-        let created: APIExpense = try await APIClient.shared.post("/expenses", body: createRequest)
-        
+        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+
         await delay(200)
-        
-        let response: APIExpense = try await APIClient.shared.get("/expenses/\(created.id)")
-        
+
+        let response: APITransaction = try await APIClient.shared.get("/transactions/\(created.id)")
+
         #expect(response.id == created.id)
+        #expect(response.type == "expense")
     }
-    
-    @Test("Update expense modifies data")
-    mutating func testExpenseUpdate() async throws {
+
+    @Test("Update transaction modifies data")
+    mutating func testTransactionUpdate() async throws {
         try await ensureAuthenticated()
         await delay(200)
-        
-        let createRequest = APICreateExpenseRequest(
+
+        let createRequest = APICreateTransactionRequest(
             id: nil,
+            type: "expense",
             amount: "50.00",
             category: "Food & Dining",
             date: Date(),
             time: nil,
             description: "Before update",
             notes: nil,
-            recurring_expense_id: nil,
-            group_id: nil,
-            group_name: nil
+            recurring_expense_id: nil
         )
-        let created: APIExpense = try await APIClient.shared.post("/expenses", body: createRequest)
-        
+        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+
         await delay(200)
-        
-        let updateRequest = APIUpdateExpenseRequest(
-            amount: "55.00", category: nil, date: nil, time: nil,
-            description: "After update", notes: nil, is_deleted: nil,
-            recurring_expense_id: nil, group_id: nil, group_name: nil
+
+        let updateRequest = APIUpdateTransactionRequest(
+            type: nil,
+            amount: "55.00",
+            category: nil,
+            date: nil,
+            time: nil,
+            description: "After update",
+            notes: nil
         )
-        let updated: APIExpense = try await APIClient.shared.put("/expenses/\(created.id)", body: updateRequest)
-        
+        let updated: APITransaction = try await APIClient.shared.patch("/transactions/\(created.id)", body: updateRequest)
+
         #expect(compareAmount(updated.amount, "55"))
         #expect(updated.description == "After update")
     }
-    
-    @Test("Delete expense soft deletes")
-    mutating func testExpenseDelete() async throws {
+
+    @Test("Delete transaction soft deletes")
+    mutating func testTransactionDelete() async throws {
         try await ensureAuthenticated()
         await delay(200)
-        
-        let createRequest = APICreateExpenseRequest(
+
+        let createRequest = APICreateTransactionRequest(
             id: nil,
+            type: "expense",
             amount: "75.00",
             category: "Shopping",
             date: Date(),
             time: nil,
             description: "To be deleted",
             notes: nil,
-            recurring_expense_id: nil,
-            group_id: nil,
-            group_name: nil
+            recurring_expense_id: nil
         )
-        let created: APIExpense = try await APIClient.shared.post("/expenses", body: createRequest)
-        
+        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+
         await delay(200)
-        
-        try await APIClient.shared.delete("/expenses/\(created.id)")
-        
+
+        try await APIClient.shared.delete("/transactions/\(created.id)")
+
         await delay(200)
-        
-        let response: APIExpense = try await APIClient.shared.get("/expenses/\(created.id)")
+
+        let response: APITransaction = try await APIClient.shared.get("/transactions/\(created.id)")
         #expect(response.is_deleted == true)
+    }
+
+    // MARK: - Group Transaction Tests
+
+    @Test("Create group and add group transaction")
+    mutating func testGroupTransactionCreate() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // POST /groups returns a bare APIGroup (no members inline)
+        let groupRequest = APICreateGroupRequest(name: "Test Group \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await APIClient.shared.post("/groups", body: groupRequest)
+
+        await delay(200)
+
+        // Fetch members separately
+        let membersResponse: APIListResponse<APIGroupMember> = try await APIClient.shared.get("/groups/\(group.id)/members")
+        guard let member = membersResponse.data.first else {
+            Issue.record("Group has no members")
+            return
+        }
+
+        let txRequest = APICreateGroupTransactionRequest(
+            paid_by_user_id: member.id,
+            total_amount: "90.00",
+            category: "Food & Dining",
+            date: Date(),
+            description: "Group dinner",
+            notes: nil,
+            splits: [
+                APIGroupTransactionSplitInput(user_id: member.id, amount: "90.00")
+            ]
+        )
+
+        let response: APIGroupTransaction = try await APIClient.shared.post(
+            "/groups/\(group.id)/transactions",
+            body: txRequest
+        )
+
+        #expect(compareAmount(response.total_amount, "90.00"))
+        #expect(response.category == "Food & Dining")
+        #expect(response.paid_by_user_id == member.id)
+        #expect(!response.splits.isEmpty)
+    }
+
+    @Test("List group transactions")
+    mutating func testGroupTransactionList() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let groupRequest = APICreateGroupRequest(name: "List Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await APIClient.shared.post("/groups", body: groupRequest)
+
+        await delay(200)
+
+        let membersResponse: APIListResponse<APIGroupMember> = try await APIClient.shared.get("/groups/\(group.id)/members")
+        guard let member = membersResponse.data.first else {
+            Issue.record("Group has no members")
+            return
+        }
+
+        let txRequest = APICreateGroupTransactionRequest(
+            paid_by_user_id: member.id,
+            total_amount: "30.00",
+            category: "Transport",
+            date: Date(),
+            description: "Cab ride",
+            notes: nil,
+            splits: [
+                APIGroupTransactionSplitInput(user_id: member.id, amount: "30.00")
+            ]
+        )
+        let _: APIGroupTransaction = try await APIClient.shared.post("/groups/\(group.id)/transactions", body: txRequest)
+
+        await delay(200)
+
+        struct GroupTransactionsResponse: Codable { let data: [APIGroupTransaction] }
+        let response: GroupTransactionsResponse = try await APIClient.shared.get("/groups/\(group.id)/transactions")
+
+        #expect(!response.data.isEmpty)
     }
     
     // MARK: - Dashboard Tests

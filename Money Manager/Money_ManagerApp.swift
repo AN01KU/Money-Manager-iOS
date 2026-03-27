@@ -33,7 +33,7 @@ struct Money_ManagerApp: App {
         #endif
         
         let schema = Schema([
-            Expense.self,
+            Transaction.self,
             RecurringExpense.self,
             CustomCategory.self,
             MonthlyBudget.self,
@@ -73,9 +73,9 @@ struct Money_ManagerApp: App {
     
     #if DEBUG
     private static func injectTestData(context: ModelContext) {
-        try? context.delete(model: Expense.self)
+        try? context.delete(model: Transaction.self)
         try? context.delete(model: MonthlyBudget.self)
-        
+
         for expense in TestData.generatePersonalExpenses() {
             context.insert(expense)
         }

@@ -6,11 +6,11 @@ import SwiftData
     var selectedMonth: Date = Date()
     var showBudgetSheet = false
     
-    var allExpenses: [Expense] = []
+    var allExpenses: [Transaction] = []
     var budgets: [MonthlyBudget] = []
     var modelContext: ModelContext?
     
-    var currentMonthExpenses: [Expense] {
+    var currentMonthExpenses: [Transaction] {
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
@@ -19,6 +19,7 @@ import SwiftData
 
         return allExpenses.filter { expense in
             !expense.isDeleted &&
+            expense.type == "expense" &&
             expense.date >= startOfMonth &&
             expense.date <= endOfMonth
         }
@@ -65,7 +66,7 @@ import SwiftData
         return remainingBudget / Double(daysRemaining + 1)
     }
     
-    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], modelContext: ModelContext?) {
+    func configure(allExpenses: [Transaction], budgets: [MonthlyBudget], modelContext: ModelContext?) {
         self.allExpenses = allExpenses
         self.budgets = budgets
         self.modelContext = modelContext

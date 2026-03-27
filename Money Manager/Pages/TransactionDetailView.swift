@@ -5,13 +5,13 @@ struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    let expense: Expense
+    let expense: Transaction
     @State private var viewModel: TransactionDetailViewModel
     @State private var editTapped = false
     @State private var deleteTapped = false
     @State private var deleteSuccess = false
-    
-    init(expense: Expense) {
+
+    init(expense: Transaction) {
         self.expense = expense
         _viewModel = State(wrappedValue: TransactionDetailViewModel(expense: expense))
     }
@@ -32,7 +32,7 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            GroupExpenseContent(groupName: expense.groupName)
+                            GroupExpenseContent(groupName: nil)
                         }
                         .padding()
                         .background(Color(.systemGray6))
@@ -65,7 +65,7 @@ struct TransactionDetailView: View {
                     .padding(.top)
                     
                     VStack(alignment: .leading, spacing: 16) {
-                        if let description = expense.expenseDescription, !description.isEmpty {
+                        if let description = expense.transactionDescription, !description.isEmpty {
                             DetailRow(label: "Description", value: description)
                         }
                         
@@ -147,7 +147,7 @@ struct TransactionDetailView: View {
                 }
             }
             .sheet(isPresented: $viewModel.showEditSheet) {
-                AddExpenseView(expenseToEdit: expense)
+                AddTransactionView(expenseToEdit: expense)
             }
             .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -185,11 +185,11 @@ struct DetailRow: View {
 }
 
 #Preview {
-    TransactionDetailView(expense: Expense(
+    TransactionDetailView(expense: Transaction(
         amount: 450,
         category: "Food & Dining",
         date: Date(),
         time: Date(),
-        expenseDescription: "Lunch at cafe"
+        transactionDescription: "Lunch at cafe"
     ))
 }

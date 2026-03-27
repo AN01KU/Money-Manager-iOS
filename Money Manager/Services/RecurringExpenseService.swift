@@ -18,11 +18,11 @@ struct RecurringExpenseService {
                 guard nextDate > lastAddedDay else { continue }
             }
 
-            let expense = Expense(
+            let expense = Transaction(
                 amount: recurring.amount,
                 category: recurring.category,
                 date: nextDate,
-                expenseDescription: recurring.name,
+                transactionDescription: recurring.name,
                 notes: recurring.notes,
                 recurringExpenseId: recurring.id
             )

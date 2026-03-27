@@ -19,11 +19,16 @@ struct GroupDetailViewModelTests {
     }
 
     private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> APIGroupMember {
-        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, createdAt: Date())
+        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joined_at: Date())
     }
 
     private func makeExpense(totalAmount: String, paidBy: UUID = UUID()) -> APIGroupExpense {
-        APIGroupExpense(id: UUID(), description: "Test", total_amount: totalAmount, paid_by: paidBy, created_at: Date())
+        APIGroupExpense(
+            id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
+            total_amount: totalAmount, category: "Food", date: Date(),
+            description: "Test", notes: nil, is_deleted: false,
+            created_at: Date(), updated_at: Date(), splits: []
+        )
     }
 
     private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
@@ -33,12 +38,11 @@ struct GroupDetailViewModelTests {
     private func makeDetails(
         groupId: UUID,
         members: [APIGroupMember] = [],
-        balances: [APIGroupBalance] = [],
-        expenses: [APIGroupExpense] = []
+        balances: [APIGroupBalance] = []
     ) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
             id: groupId, name: "Test Group", created_by: UUID(), created_at: Date(),
-            members: members, balances: balances, expenses: expenses
+            members: members, balances: balances
         )
         return APIGroupDetails(group: body, is_member: true)
     }
@@ -69,9 +73,9 @@ struct GroupDetailViewModelTests {
         mock.stubbedGroupDetails = makeDetails(
             groupId: groupId,
             members: [alice],
-            balances: [makeBalance(userId: alice.id, amount: "30.00")],
-            expenses: [makeExpense(totalAmount: "60.00")]
+            balances: [makeBalance(userId: alice.id, amount: "30.00")]
         )
+        mock.stubbedTransactions = [makeExpense(totalAmount: "60.00")]
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
         await vm.loadData()
         #expect(vm.expenses.count == 1)
@@ -151,7 +155,7 @@ struct GroupDetailViewModelTests {
         let second = makeExpense(totalAmount: "50")
         vm.expenseAdded(first)
         vm.expenseAdded(second)
-        #expect(vm.expenses.first?.amount == "50")
+        #expect(vm.expenses.first?.total_amount == "50")
     }
 
     @Test

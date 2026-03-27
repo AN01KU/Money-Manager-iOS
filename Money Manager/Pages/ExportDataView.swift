@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 struct ExportDataView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var expenses: [Expense]
+    @Query private var expenses: [Transaction]
     @Query private var recurringExpenses: [RecurringExpense]
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
@@ -199,5 +199,5 @@ struct ShareSheet: UIViewControllerRepresentable {
     NavigationStack {
         ExportDataView()
     }
-    .modelContainer(for: [Expense.self, MonthlyBudget.self, CustomCategory.self], inMemory: true)
+    .modelContainer(for: [Transaction.self, MonthlyBudget.self, CustomCategory.self], inMemory: true)
 }

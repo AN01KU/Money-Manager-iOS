@@ -26,8 +26,8 @@ final class GroupService: GroupServiceProtocol {
     }
 
     func fetchMembers(groupId: UUID) async throws -> [APIGroupMember] {
-        let response: APIGroupMembersResponse = try await apiClient.get("/groups/\(groupId.uuidString)/members")
-        return response.members
+        let response: APIListResponse<APIGroupMember> = try await apiClient.get("/groups/\(groupId.uuidString)/members")
+        return response.data
     }
 
     func addMember(groupId: UUID, email: String) async throws {
@@ -39,8 +39,17 @@ final class GroupService: GroupServiceProtocol {
         try await apiClient.get("/groups/\(groupId.uuidString)/balances")
     }
 
-    func createSharedExpense(_ request: APICreateSharedExpenseRequest) async throws -> APIGroupExpense {
-        try await apiClient.post("/groups/\(request.groupId.uuidString)/expenses", body: request)
+    func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction {
+        try await apiClient.post("/groups/\(groupId.uuidString)/transactions", body: request)
+    }
+
+    func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
+        let response: APIListResponse<APIGroupTransaction> = try await apiClient.get("/groups/\(groupId.uuidString)/transactions")
+        return response.data
+    }
+
+    func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.deleteMessage("/groups/\(groupId.uuidString)/transactions/\(transactionId.uuidString)")
     }
 
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {

@@ -1,16 +1,9 @@
-//
-//  TransactionList.swift
-//  Money Manager
-//
-//  Created by Ankush Ganesh on 13/01/26.
-//
-
 import SwiftUI
 import SwiftData
 
 private struct ExpenseGroup: Identifiable {
     let id: String   // the display label, e.g. "TODAY" or "JANUARY 15"
-    let expenses: [Expense]
+    let expenses: [Transaction]
 }
 
 private let sectionDateFormatter: DateFormatter = {
@@ -20,16 +13,16 @@ private let sectionDateFormatter: DateFormatter = {
 }()
 
 struct TransactionList: View {
-    let expenses: [Expense]
-    @State private var selectedExpense: Expense?
+    let expenses: [Transaction]
+    @State private var selectedExpense: Transaction?
     @State private var swipedExpenseID: PersistentIdentifier?
     @State private var rowTapped = false
     @State private var deleteTriggered = false
-    var onDelete: ((Expense) -> Void)?
+    var onDelete: ((Transaction) -> Void)?
 
     private var groupedExpenses: [ExpenseGroup] {
         let calendar = Calendar.current
-        var grouped: [String: [Expense]] = [:]
+        var grouped: [String: [Transaction]] = [:]
 
         for expense in expenses {
             let expenseDate = calendar.startOfDay(for: expense.date)
@@ -97,11 +90,11 @@ private struct SwipeToDeleteRow<Content: View>: View {
     let onTap: () -> Void
     let onDelete: () -> Void
     @ViewBuilder let content: () -> Content
-    
+
     @State private var offset: CGFloat = 0
-    
+
     private let buttonWidth: CGFloat = 80
-    
+
     var body: some View {
         ZStack(alignment: .trailing) {
             // Delete button behind
@@ -118,7 +111,7 @@ private struct SwipeToDeleteRow<Content: View>: View {
             .background(AppColors.expense)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .opacity(offset < 0 ? 1 : 0)
-            
+
             // Content on top
             content()
                 .offset(x: offset)
@@ -162,12 +155,12 @@ private struct SwipeToDeleteRow<Content: View>: View {
             onDelete()
         }
     }
-    
+
     private func revealButton() {
         withAnimation(.easeOut(duration: 0.2)) { offset = -buttonWidth }
         isRevealed = true
     }
-    
+
     private func resetSwipe() {
         withAnimation(.easeOut(duration: 0.2)) { offset = 0 }
         isRevealed = false
@@ -176,8 +169,8 @@ private struct SwipeToDeleteRow<Content: View>: View {
 
 #Preview {
     TransactionList(expenses: [
-        Expense(amount: 450, category: "Food & Dining", date: Date(), expenseDescription: "Lunch"),
-        Expense(amount: 250, category: "Transport", date: Date(), expenseDescription: "Uber")
+        Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch"),
+        Transaction(amount: 250, category: "Transport", date: Date(), transactionDescription: "Uber")
     ]) { _ in }
     .padding()
 }

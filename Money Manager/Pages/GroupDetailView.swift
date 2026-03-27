@@ -7,6 +7,7 @@ import SwiftUI
 
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
+    @State private var selectedExpense: APIGroupTransaction?
 
     init(group: APIGroupWithDetails) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group))
@@ -16,7 +17,7 @@ struct GroupDetailView: View {
         VStack(spacing: 0) {
             GroupHeaderStats(
                 total: viewModel.groupTotal,
-                expenseCount: viewModel.expenses.count,
+                expenseCount: viewModel.transactions.count,
                 memberCount: viewModel.members.count
             )
             .padding(.horizontal)
@@ -48,7 +49,7 @@ struct GroupDetailView: View {
         .navigationTitle(viewModel.group.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $viewModel.showAddExpense) {
-            AddExpenseView(
+            AddTransactionView(
                 mode: .shared(
                     group: viewModel.group,
                     members: viewModel.members
@@ -82,6 +83,16 @@ struct GroupDetailView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .sheet(item: $selectedExpense) { expense in
+            GroupExpenseDetailSheet(
+                expense: expense,
+                members: viewModel.members,
+                currentUserId: viewModel.currentUserId,
+                onDelete: viewModel.currentUserId == expense.paid_by_user_id ? {
+                    viewModel.deleteExpense(expense)
+                } : nil
+            )
+        }
         .task {
             await viewModel.loadData()
         }
@@ -90,16 +101,16 @@ struct GroupDetailView: View {
     @ViewBuilder
     private var sectionContent: some View {
         switch viewModel.selectedSection {
-        case .expenses: expensesSection
-        case .balances: balancesSection
-        case .members:  membersSection
+        case .transactions: transactionsSection
+        case .balances:     balancesSection
+        case .members:      membersSection
         }
     }
 
     @ViewBuilder
     private var fabView: some View {
         switch viewModel.selectedSection {
-        case .expenses:
+        case .transactions:
             FloatingActionButton(icon: "plus") { viewModel.showAddExpense = true }
         case .balances:
             if viewModel.hasUnsettledBalances {
@@ -110,14 +121,19 @@ struct GroupDetailView: View {
         }
     }
 
-    private var expensesSection: some View {
+    private var transactionsSection: some View {
         Group {
-            if viewModel.expenses.isEmpty {
-                EmptyStateView(icon: "receipt", title: "No Expenses", message: "Add the first expense to this group.")
+            if viewModel.transactions.isEmpty {
+                EmptyStateView(icon: "receipt", title: "No Transactions", message: "Add the first expense to this group.")
                     .frame(maxHeight: .infinity)
             } else {
-                List(viewModel.expenses) { expense in
-                    GroupExpenseRow(expense: expense, members: viewModel.members)
+                List(viewModel.transactions) { tx in
+                    Button {
+                        selectedExpense = tx
+                    } label: {
+                        GroupExpenseRow(expense: tx, members: viewModel.members)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .listStyle(.insetGrouped)
             }

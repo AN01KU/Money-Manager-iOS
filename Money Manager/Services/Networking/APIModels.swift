@@ -5,9 +5,12 @@
 
 import Foundation
 
-struct APIExpense: Codable {
+// MARK: - Transaction
+
+struct APITransaction: Codable {
     let id: UUID
     let user_id: UUID
+    let type: String          // "expense" or "income"
     let amount: String
     let category: String
     let date: Date
@@ -18,8 +21,7 @@ struct APIExpense: Codable {
     let updated_at: Date
     let is_deleted: Bool
     let recurring_expense_id: UUID?
-    let group_id: UUID?
-    let group_name: String?
+    let group_transaction_id: UUID?
 }
 
 struct APIRecurringExpense: Codable {
@@ -105,8 +107,9 @@ struct APILoginRequest: Codable {
     let password: String
 }
 
-struct APICreateExpenseRequest: Codable {
+struct APICreateTransactionRequest: Codable {
     let id: UUID?
+    let type: String          // "expense" or "income"
     let amount: String
     let category: String
     let date: Date
@@ -114,21 +117,16 @@ struct APICreateExpenseRequest: Codable {
     let description: String?
     let notes: String?
     let recurring_expense_id: UUID?
-    let group_id: UUID?
-    let group_name: String?
 }
 
-struct APIUpdateExpenseRequest: Codable {
+struct APIUpdateTransactionRequest: Codable {
+    let type: String?
     let amount: String?
     let category: String?
     let date: Date?
     let time: Date?
     let description: String?
     let notes: String?
-    let is_deleted: Bool?
-    let recurring_expense_id: UUID?
-    let group_id: UUID?
-    let group_name: String?
 }
 
 struct APICreateRecurringExpenseRequest: Codable {
@@ -201,7 +199,7 @@ struct APIGroupMember: Codable, Identifiable, Sendable {
     let id: UUID
     let email: String
     let username: String
-    let createdAt: Date?
+    let joined_at: Date?
 }
 
 struct APIGroupBalance: Codable, Sendable {
@@ -221,15 +219,26 @@ struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
-struct APIGroupExpense: Codable, Identifiable, Sendable {
+struct APIGroupTransaction: Codable, Identifiable, Sendable {
     let id: UUID
-    let description: String
+    let group_id: UUID
+    let paid_by_user_id: UUID
     let total_amount: String
-    let paid_by: UUID
+    let category: String
+    let date: Date
+    let description: String?
+    let notes: String?
+    let is_deleted: Bool
     let created_at: Date
+    let updated_at: Date
+    let splits: [APIGroupTransactionSplit]
+}
 
-    var amount: String { total_amount }
-    var user_id: UUID { paid_by }
+struct APIGroupTransactionSplit: Codable, Sendable {
+    let id: UUID
+    let user_id: UUID
+    let amount: String
+    let transaction_id: UUID?
 }
 
 struct APIGroupDetails: Codable, Sendable {
@@ -244,11 +253,11 @@ struct APIGroupDetailsBody: Codable, Identifiable, Sendable {
     let created_at: Date
     let members: [APIGroupMember]
     let balances: [APIGroupBalance]
-    let expenses: [APIGroupExpense]
+    // Transactions are fetched separately via GET /groups/:id/transactions
 }
 
-struct APIExpenseSplit: Codable, Sendable {
-    let userId: UUID
+struct APIGroupTransactionSplitInput: Codable, Sendable {
+    let user_id: UUID
     let amount: String
 }
 
@@ -260,12 +269,14 @@ struct APIAddMemberRequest: Codable, Sendable {
     let email: String
 }
 
-struct APICreateSharedExpenseRequest: Codable, Sendable {
-    let groupId: UUID
-    let description: String
+struct APICreateGroupTransactionRequest: Codable, Sendable {
+    let paid_by_user_id: UUID
+    let total_amount: String
     let category: String
-    let totalAmount: String
-    let splits: [APIExpenseSplit]
+    let date: Date
+    let description: String?
+    let notes: String?
+    let splits: [APIGroupTransactionSplitInput]
 }
 
 struct APIGroupMembersResponse: Codable, Sendable {

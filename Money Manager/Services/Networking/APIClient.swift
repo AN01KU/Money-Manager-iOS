@@ -36,19 +36,15 @@ final class APIClient {
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
-            let string = try container.decode(String.self)
-            
-            if let date = ISO8601DateFormatter.withFractionalSeconds.date(from: string) {
-                return date
-            }
-            if let date = ISO8601DateFormatter.standard.date(from: string) {
-                return date
-            }
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(string)")
+            let ms = try container.decode(Int64.self)
+            return Date(timeIntervalSince1970: Double(ms) / 1000.0)
         }
         
         self.encoder = JSONEncoder()
-        self.encoder.dateEncodingStrategy = .iso8601
+        self.encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(Int64(date.timeIntervalSince1970 * 1000))
+        }
     }
     
     #if DEBUG
@@ -63,7 +59,10 @@ final class APIClient {
     
     static var apiEncoder: JSONEncoder {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(Int64(date.timeIntervalSince1970 * 1000))
+        }
         return encoder
     }
     
@@ -92,6 +91,18 @@ final class APIClient {
     
     func put<T: Decodable>(_ endpoint: String, rawBody: Data) async throws -> T {
         var request = try buildRequest(endpoint: endpoint, method: "PUT")
+        request.httpBody = rawBody
+        return try await perform(request)
+    }
+
+    func patch<T: Decodable, U: Encodable>(_ endpoint: String, body: U) async throws -> T {
+        var request = try buildRequest(endpoint: endpoint, method: "PATCH")
+        request.httpBody = try encoder.encode(body)
+        return try await perform(request)
+    }
+
+    func patch<T: Decodable>(_ endpoint: String, rawBody: Data) async throws -> T {
+        var request = try buildRequest(endpoint: endpoint, method: "PATCH")
         request.httpBody = rawBody
         return try await perform(request)
     }

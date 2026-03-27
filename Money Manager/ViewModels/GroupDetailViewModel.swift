@@ -6,20 +6,20 @@
 import SwiftUI
 
 enum GroupSection: String, CaseIterable {
-    case expenses = "Expenses"
-    case balances = "Balances"
-    case members  = "Members"
+    case transactions = "Transactions"
+    case balances     = "Balances"
+    case members      = "Members"
 }
 
 @MainActor
 @Observable
 final class GroupDetailViewModel {
     var group: APIGroupWithDetails
-    var expenses: [APIGroupExpense] = []
+    var transactions: [APIGroupTransaction] = []
     var members: [APIGroupMember] = []
     var balances: [APIGroupBalance] = []
     var isLoading = false
-    var selectedSection: GroupSection = .expenses
+    var selectedSection: GroupSection = .transactions
 
     // Errors
     var errorMessage: String?
@@ -37,7 +37,7 @@ final class GroupDetailViewModel {
     }
     var pendingMemberEmails: Set<String> = []
 
-    // Add expense / settle
+    // Add transaction / settle
     var showAddExpense = false
     var showSettlement = false
 
@@ -59,7 +59,7 @@ final class GroupDetailViewModel {
     }
 
     var groupTotal: Double {
-        expenses.compactMap { Double($0.amount) }.reduce(0, +)
+        transactions.compactMap { Double($0.total_amount) }.reduce(0, +)
     }
 
     var hasUnsettledBalances: Bool {
@@ -73,7 +73,7 @@ final class GroupDetailViewModel {
         errorMessage = nil
         do {
             let details = try await groupService.fetchGroupDetails(groupId: group.id)
-            expenses = details.group.expenses
+            transactions = try await groupService.fetchGroupTransactions(groupId: group.id)
             members  = details.group.members
             balances = details.group.balances
         } catch {
@@ -108,9 +108,27 @@ final class GroupDetailViewModel {
 
     // MARK: - After expense added
 
-    func expenseAdded(_ expense: APIGroupExpense) {
-        expenses.insert(expense, at: 0)
+    func expenseAdded(_ expense: APIGroupTransaction) {
+        transactions.insert(expense, at: 0)
         recalculateBalances()
+    }
+
+    // MARK: - Delete transaction
+
+    func deleteExpense(_ expense: APIGroupTransaction) {
+        transactions.removeAll { $0.id == expense.id }
+        recalculateBalances()
+
+        Task {
+            do {
+                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: expense.id)
+            } catch {
+                // Restore on failure
+                transactions.insert(expense, at: 0)
+                recalculateBalances()
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
     }
 
     // MARK: - After settlement recorded
@@ -139,14 +157,14 @@ final class GroupDetailViewModel {
         var map: [UUID: Double] = [:]
         for m in members { map[m.id] = 0 }
 
-        for expense in expenses {
-            map[expense.user_id, default: 0] += Double(expense.amount) ?? 0
+        for tx in transactions {
+            map[tx.paid_by_user_id, default: 0] += Double(tx.total_amount) ?? 0
         }
 
         // Split equally among all members for now (server is authoritative for custom splits)
         let memberCount = members.isEmpty ? 1 : members.count
-        for expense in expenses {
-            let share = (Double(expense.amount) ?? 0) / Double(memberCount)
+        for tx in transactions {
+            let share = (Double(tx.total_amount) ?? 0) / Double(memberCount)
             for m in members {
                 map[m.id, default: 0] -= share
             }
