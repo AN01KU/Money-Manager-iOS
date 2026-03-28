@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct GroupExpenseRow: View {
+struct GroupTransactionRow: View {
     let transaction: APIGroupTransaction
     let members: [APIGroupMember]
 

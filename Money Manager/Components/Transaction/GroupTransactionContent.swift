@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct GroupExpenseContent: View {
+struct GroupTransactionContent: View {
     let groupName: String?
     
     var body: some View {

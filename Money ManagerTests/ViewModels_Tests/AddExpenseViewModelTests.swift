@@ -7,7 +7,7 @@ import Testing
 struct AddExpenseViewModelTests {
 
     private func makeContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)

@@ -34,7 +34,7 @@ struct Money_ManagerApp: App {
         
         let schema = Schema([
             Transaction.self,
-            RecurringExpense.self,
+            RecurringTransaction.self,
             CustomCategory.self,
             MonthlyBudget.self,
             PendingChange.self,
@@ -42,7 +42,7 @@ struct Money_ManagerApp: App {
             AuthToken.self,
             SplitGroupModel.self,
             GroupMemberModel.self,
-            GroupExpenseModel.self,
+            GroupTransactionModel.self,
             GroupBalanceModel.self
         ])
         
@@ -53,7 +53,7 @@ struct Money_ManagerApp: App {
 
             SessionStore.shared.configure(container: container)
 
-            RecurringExpenseService.generatePendingExpenses(context: container.mainContext)
+            RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
             CategorySeeder.seedIfNeeded(context: container.mainContext)
             
             #if DEBUG

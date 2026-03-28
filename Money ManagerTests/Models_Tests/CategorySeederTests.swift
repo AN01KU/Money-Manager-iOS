@@ -62,7 +62,7 @@ struct CategorySeederTests {
     }
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([CustomCategory.self, Transaction.self, RecurringExpense.self, MonthlyBudget.self])
+        let schema = Schema([CustomCategory.self, Transaction.self, RecurringTransaction.self, MonthlyBudget.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)

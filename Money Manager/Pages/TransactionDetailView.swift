@@ -32,7 +32,7 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            GroupExpenseContent(groupName: nil)
+                            GroupTransactionContent(groupName: nil)
                         }
                         .padding()
                         .background(Color(.systemGray6))

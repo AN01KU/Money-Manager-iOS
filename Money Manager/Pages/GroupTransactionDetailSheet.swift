@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct GroupExpenseDetailSheet: View {
+struct GroupTransactionDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let transaction: APIGroupTransaction

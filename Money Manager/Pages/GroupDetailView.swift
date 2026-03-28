@@ -84,7 +84,7 @@ struct GroupDetailView: View {
             Text(viewModel.errorMessage ?? "")
         }
         .sheet(item: $selectedTransaction) { transaction in
-            GroupExpenseDetailSheet(
+            GroupTransactionDetailSheet(
                 transaction: transaction,
                 members: viewModel.members,
                 currentUserId: viewModel.currentUserId,
@@ -131,7 +131,7 @@ struct GroupDetailView: View {
                     Button {
                         selectedTransaction = transaction
                     } label: {
-                        GroupExpenseRow(transaction: transaction, members: viewModel.members)
+                        GroupTransactionRow(transaction: transaction, members: viewModel.members)
                     }
                     .buttonStyle(.plain)
                 }

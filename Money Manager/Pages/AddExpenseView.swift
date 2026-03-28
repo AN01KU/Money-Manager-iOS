@@ -74,7 +74,7 @@ struct AddTransactionView: View {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
             .sheet(isPresented: $viewModel.showRecurringSheet) {
-                AddRecurringExpenseSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
+                AddRecurringTransactionSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}

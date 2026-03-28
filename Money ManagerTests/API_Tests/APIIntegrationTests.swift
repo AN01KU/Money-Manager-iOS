@@ -193,7 +193,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let request = APICreateRecurringExpenseRequest(
+        let request = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Netflix \(UUID().uuidString.prefix(4))",
             amount: "15.99",
@@ -204,10 +204,11 @@ struct APIIntegrationTests {
             start_date: startDate,
             end_date: nil,
             is_active: true,
-            notes: nil
+            notes: nil,
+            type: nil
         )
         
-        let response: APIRecurringExpense = try await APIClient.shared.post("/recurring-expenses", body: request)
+        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: request)
         
         #expect(response.name == request.name)
         #expect(compareAmount(response.amount, request.amount))
@@ -219,7 +220,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let request = APICreateRecurringExpenseRequest(
+        let request = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Gym \(UUID().uuidString.prefix(4))",
             amount: "50.00",
@@ -230,10 +231,11 @@ struct APIIntegrationTests {
             start_date: startDate,
             end_date: nil,
             is_active: true,
-            notes: nil
+            notes: nil,
+            type: nil
         )
         
-        let response: APIRecurringExpense = try await APIClient.shared.post("/recurring-expenses", body: request)
+        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: request)
         
         #expect(response.frequency == "weekly")
         #expect(response.days_of_week == [1, 3, 5])
@@ -245,7 +247,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let response: APIListResponse<APIRecurringExpense> = try await APIClient.shared.get("/recurring-expenses")
+        let response: APIListResponse<APIRecurringTransaction> = try await APIClient.shared.get("/recurring-expenses")
 
         #expect(!response.data.isEmpty)
     }
@@ -256,7 +258,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let createRequest = APICreateRecurringExpenseRequest(
+        let createRequest = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Get Test \(UUID().uuidString.prefix(4))",
             amount: "5.00",
@@ -267,13 +269,14 @@ struct APIIntegrationTests {
             start_date: startDate,
             end_date: nil,
             is_active: true,
-            notes: nil
+            notes: nil,
+            type: nil
         )
-        let created: APIRecurringExpense = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
+        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
         
         await delay(200)
         
-        let response: APIRecurringExpense = try await APIClient.shared.get("/recurring-expenses/\(created.id)")
+        let response: APIRecurringTransaction = try await APIClient.shared.get("/recurring-expenses/\(created.id)")
         
         #expect(response.id == created.id)
     }
@@ -284,7 +287,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let createRequest = APICreateRecurringExpenseRequest(
+        let createRequest = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Update Test \(UUID().uuidString.prefix(4))",
             amount: "10.00",
@@ -295,18 +298,20 @@ struct APIIntegrationTests {
             start_date: startDate,
             end_date: nil,
             is_active: true,
-            notes: nil
+            notes: nil,
+            type: nil
         )
-        let created: APIRecurringExpense = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
+        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
         
         await delay(200)
         
-        let updateRequest = APIUpdateRecurringExpenseRequest(
+        let updateRequest = APIUpdateRecurringTransactionRequest(
             name: nil, amount: "12.00", category: nil, frequency: nil,
             day_of_month: nil, days_of_week: nil, start_date: nil, end_date: nil,
-            is_active: false, notes: nil
+            is_active: false, notes: nil,
+            type: nil
         )
-        let updated: APIRecurringExpense = try await APIClient.shared.put("/recurring-expenses/\(created.id)", body: updateRequest)
+        let updated: APIRecurringTransaction = try await APIClient.shared.put("/recurring-expenses/\(created.id)", body: updateRequest)
         
         #expect(compareAmount(updated.amount, "12"))
         #expect(updated.is_active == false)
@@ -318,7 +323,7 @@ struct APIIntegrationTests {
         await delay(200)
         
         let startDate = ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!
-        let createRequest = APICreateRecurringExpenseRequest(
+        let createRequest = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Delete Test \(UUID().uuidString.prefix(4))",
             amount: "8.00",
@@ -329,9 +334,10 @@ struct APIIntegrationTests {
             start_date: startDate,
             end_date: nil,
             is_active: true,
-            notes: nil
+            notes: nil,
+            type: nil
         )
-        let created: APIRecurringExpense = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
+        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
         
         await delay(200)
         

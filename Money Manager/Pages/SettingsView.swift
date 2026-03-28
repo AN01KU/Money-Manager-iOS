@@ -130,7 +130,7 @@ struct SettingsView: View {
             }
 
             NavigationLink {
-                RecurringExpensesView()
+                RecurringTransactionsView()
             } label: {
                 Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
             }

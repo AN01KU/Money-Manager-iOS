@@ -68,7 +68,7 @@ final class SyncService: SyncServiceProtocol {
         let context = ModelContext(container)
         try? context.delete(model: SplitGroupModel.self)
         try? context.delete(model: GroupMemberModel.self)
-        try? context.delete(model: GroupExpenseModel.self)
+        try? context.delete(model: GroupTransactionModel.self)
         try? context.delete(model: GroupBalanceModel.self)
         try? context.save()
     }
@@ -179,12 +179,12 @@ final class SyncService: SyncServiceProtocol {
             )
         }
 
-        let recurring = (try? context.fetch(FetchDescriptor<RecurringExpense>())) ?? []
-        for expense in recurring {
-            let payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
+        let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
+        for item in recurringItems {
+            let payload = try? APIClient.apiEncoder.encode(item.toCreateRequest())
             changeQueueManager.enqueue(
                 entityType: "recurring",
-                entityID: expense.id,
+                entityID: item.id,
                 action: "create",
                 endpoint: "/recurring-expenses",
                 httpMethod: "POST",
@@ -200,7 +200,7 @@ final class SyncService: SyncServiceProtocol {
         
         await pullCategories(context: context)
         await pullBudgets(context: context)
-        await pullRecurringExpenses(context: context)
+        await pullRecurring(context: context)
         await pullTransactions(context: context)
         
         updateLastSyncTime()
@@ -230,12 +230,12 @@ final class SyncService: SyncServiceProtocol {
         }
     }
 
-    private func pullRecurringExpenses(context: ModelContext) async {
+    private func pullRecurring(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIRecurringExpense> = try await apiClient.get("/recurring-expenses")
-            upsertRecurringExpenses(response.data, context: context)
+            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get("/recurring-expenses")
+            upsertRecurring(response.data, context: context)
         } catch {
-            AppLogger.sync.error("Failed to pull recurring expenses: \(error)")
+            AppLogger.sync.error("Failed to pull recurring: \(error)")
             recordSyncError()
         }
     }
@@ -271,8 +271,8 @@ final class SyncService: SyncServiceProtocol {
     
     private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
         let descriptor = FetchDescriptor<Transaction>()
-        let localExpenses = (try? context.fetch(descriptor)) ?? []
-        let localByID = Dictionary(uniqueKeysWithValues: localExpenses.map { ($0.id, $0) })
+        let localTransactions = (try? context.fetch(descriptor)) ?? []
+        let localByID = Dictionary(uniqueKeysWithValues: localTransactions.map { ($0.id, $0) })
 
         for remote in apiTransactions {
             if let local = localByID[remote.id] {
@@ -299,11 +299,11 @@ final class SyncService: SyncServiceProtocol {
         try? context.save()
     }
     
-    private func upsertRecurringExpenses(_ apiExpenses: [APIRecurringExpense], context: ModelContext) {
-        let descriptor = FetchDescriptor<RecurringExpense>()
-        let localExpenses = (try? context.fetch(descriptor)) ?? []
-        let localByID = Dictionary(uniqueKeysWithValues: localExpenses.map { ($0.id, $0) })
-        
+    private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
+        let descriptor = FetchDescriptor<RecurringTransaction>()
+        let localRecurring = (try? context.fetch(descriptor)) ?? []
+        let localByID = Dictionary(uniqueKeysWithValues: localRecurring.map { ($0.id, $0) })
+
         for remote in apiExpenses {
             if let local = localByID[remote.id] {
                 if remote.updated_at > local.updatedAt {
@@ -318,10 +318,11 @@ final class SyncService: SyncServiceProtocol {
                     local.isActive = remote.is_active
                     local.lastAddedDate = remote.last_added_date
                     local.notes = remote.notes
+                    local.type = remote.type ?? local.type
                     local.updatedAt = remote.updated_at
                 }
             } else {
-                let expense = RecurringExpense(
+                let item = RecurringTransaction(
                     id: remote.id,
                     name: remote.name,
                     amount: Double(remote.amount) ?? 0,
@@ -333,12 +334,13 @@ final class SyncService: SyncServiceProtocol {
                     endDate: remote.end_date,
                     isActive: remote.is_active,
                     lastAddedDate: remote.last_added_date,
-                    notes: remote.notes
+                    notes: remote.notes,
+                    type: remote.type ?? "expense"
                 )
-                context.insert(expense)
+                context.insert(item)
             }
         }
-        
+
         try? context.save()
     }
     
@@ -434,8 +436,8 @@ final class SyncService: SyncServiceProtocol {
         let localMembers = (try? context.fetch(FetchDescriptor<GroupMemberModel>())) ?? []
         let localMembersByID = Dictionary(uniqueKeysWithValues: localMembers.map { ($0.id, $0) })
 
-        let localExpenses = (try? context.fetch(FetchDescriptor<GroupExpenseModel>())) ?? []
-        let localExpensesByID = Dictionary(uniqueKeysWithValues: localExpenses.map { ($0.id, $0) })
+        let localGroupTransactions = (try? context.fetch(FetchDescriptor<GroupTransactionModel>())) ?? []
+        let localGroupTransactionsByID = Dictionary(uniqueKeysWithValues: localGroupTransactions.map { ($0.id, $0) })
 
         for remote in apiGroups {
             // Upsert group
@@ -489,7 +491,7 @@ final class SyncService: SyncServiceProtocol {
             guard let container = modelContainer else { return }
             let transaction = ModelContext(container)
             for remote in apiGroups {
-                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localExpensesByID: localExpensesByID, context: transaction)
+                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: transaction)
             }
         }
     }
@@ -497,7 +499,7 @@ final class SyncService: SyncServiceProtocol {
     private func pullGroupTransactions(
         groupId: UUID,
         dbGroupId: UUID,
-        localExpensesByID: [UUID: GroupExpenseModel],
+        localGroupTransactionsByID: [UUID: GroupTransactionModel],
         context: ModelContext
     ) async {
         // TODO(Phase 4): fetch via GET /groups/:id/transactions — group details no longer include transactions inline

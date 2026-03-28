@@ -47,9 +47,9 @@ extension Transaction {
     }
 }
 
-extension RecurringExpense {
-    func toCreateRequest() -> APICreateRecurringExpenseRequest {
-        APICreateRecurringExpenseRequest(
+extension RecurringTransaction {
+    func toCreateRequest() -> APICreateRecurringTransactionRequest {
+        APICreateRecurringTransactionRequest(
             id: id,
             name: name,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
@@ -60,12 +60,13 @@ extension RecurringExpense {
             start_date: startDate,
             end_date: endDate,
             is_active: isActive,
-            notes: notes
+            notes: notes,
+            type: type
         )
     }
 
-    func toUpdateRequest() -> APIUpdateRecurringExpenseRequest {
-        APIUpdateRecurringExpenseRequest(
+    func toUpdateRequest() -> APIUpdateRecurringTransactionRequest {
+        APIUpdateRecurringTransactionRequest(
             name: name,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
@@ -75,11 +76,12 @@ extension RecurringExpense {
             start_date: startDate,
             end_date: endDate,
             is_active: isActive,
-            notes: notes
+            notes: notes,
+            type: type
         )
     }
-    
-    func applyRemote(_ api: APIRecurringExpense) {
+
+    func applyRemote(_ api: APIRecurringTransaction) {
         self.name = api.name
         self.amount = Double(api.amount) ?? self.amount
         self.category = api.category
@@ -91,6 +93,7 @@ extension RecurringExpense {
         self.isActive = api.is_active
         self.lastAddedDate = api.last_added_date
         self.notes = api.notes
+        self.type = api.type ?? self.type
         self.updatedAt = api.updated_at
     }
 }

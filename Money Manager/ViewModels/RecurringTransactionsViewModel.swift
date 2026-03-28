@@ -2,23 +2,23 @@ import SwiftUI
 import SwiftData
 
 @MainActor
-@Observable class RecurringExpensesViewModel {
-    var expenses: [RecurringExpense] = []
+@Observable class RecurringTransactionsViewModel {
+    var recurring: [RecurringTransaction] = []
     var showAddSheet = false
-    var editingExpense: RecurringExpense?
-    
-    var activeExpenses: [RecurringExpense] {
-        expenses.filter { $0.isActive }
+    var editingRecurring: RecurringTransaction?
+
+    var activeRecurring: [RecurringTransaction] {
+        recurring.filter { $0.isActive }
     }
-    
-    var pausedExpenses: [RecurringExpense] {
-        expenses.filter { !$0.isActive }
+
+    var pausedRecurring: [RecurringTransaction] {
+        recurring.filter { !$0.isActive }
     }
-    
-    var allRecurringExpenses: [RecurringExpense] {
-        expenses
+
+    var allRecurring: [RecurringTransaction] {
+        recurring
     }
-    
+
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
     private let auth: AuthServiceProtocol
@@ -28,70 +28,70 @@ import SwiftData
         self.auth = auth
     }
 
-    func update(expenses: [RecurringExpense]) {
-        self.expenses = expenses
+    func update(recurring: [RecurringTransaction]) {
+        self.recurring = recurring
     }
-    
-    func deactivateExpense(at index: Int) {
-        guard index < activeExpenses.count else { return }
-        let expense = activeExpenses[index]
-        expense.isActive = false
-        expense.updatedAt = Date()
+
+    func deactivate(at index: Int) {
+        guard index < activeRecurring.count else { return }
+        let item = activeRecurring[index]
+        item.isActive = false
+        item.updatedAt = Date()
         try? modelContext?.save()
     }
-    
-    func toggleExpense(at index: Int) {
-        guard index < allRecurringExpenses.count else { return }
-        let expense = allRecurringExpenses[index]
-        expense.isActive.toggle()
-        expense.updatedAt = Date()
-        
+
+    func toggle(at index: Int) {
+        guard index < allRecurring.count else { return }
+        let item = allRecurring[index]
+        item.isActive.toggle()
+        item.updatedAt = Date()
+
         guard let modelContext = modelContext else { return }
-        
+
         do {
             try modelContext.save()
-            
-            let payload = try? APIClient.apiEncoder.encode(expense.toUpdateRequest())
+
+            let payload = try? APIClient.apiEncoder.encode(item.toUpdateRequest())
             changeQueue.enqueue(
                 entityType: "recurring",
-                entityID: expense.id,
+                entityID: item.id,
                 action: "update",
                 endpoint: "/recurring-expenses",
                 httpMethod: "PUT",
                 payload: payload,
                 context: modelContext
             )
-            
+
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
-            AppLogger.data.info("Recurring expense toggled: \(expense.id) isActive=\(expense.isActive)")
+            AppLogger.data.info("Recurring transaction toggled: \(item.id) isActive=\(item.isActive)")
         } catch {
-            AppLogger.data.error("Error toggling recurring expense: \(error)")
+            AppLogger.data.error("Error toggling recurring transaction: \(error)")
         }
     }
-    
-    func deleteExpense(at index: Int) {
-        guard index < pausedExpenses.count, let modelContext = modelContext else { return }
-        let recurring = pausedExpenses[index]
+
+    func delete(at index: Int) {
+        guard index < pausedRecurring.count, let modelContext = modelContext else { return }
+        let recurring = pausedRecurring[index]
         let recurringId = recurring.id
-        
+
         let descriptor = FetchDescriptor<Transaction>(
             predicate: #Predicate { $0.recurringExpenseId == recurringId }
         )
-        if let expenses = try? modelContext.fetch(descriptor) {
-            for expense in expenses {
-                expense.recurringExpenseId = nil
+        if let linked = try? modelContext.fetch(descriptor) {
+            for linked in linked {
+                linked.recurringExpenseId = nil
             }
         }
-        
+
         modelContext.delete(recurring)
-        
+
         do {
             try modelContext.save()
-            
+
             changeQueue.enqueue(
                 entityType: "recurring",
                 entityID: recurringId,
@@ -101,21 +101,21 @@ import SwiftData
                 payload: nil,
                 context: modelContext
             )
-            
+
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
-            AppLogger.data.info("Recurring expense deleted: \(recurringId)")
+            AppLogger.data.info("Recurring transaction deleted: \(recurringId)")
         } catch {
-            AppLogger.data.error("Error deleting recurring expense: \(error)")
+            AppLogger.data.error("Error deleting recurring transaction: \(error)")
         }
     }
 }
 
 @MainActor
-@Observable class AddRecurringExpenseViewModel {
+@Observable class AddRecurringTransactionViewModel {
     var name: String = ""
     var amount: String = ""
     var selectedCategory: String = ""
@@ -128,9 +128,9 @@ import SwiftData
     var showCategoryPicker = false
     var showError = false
     var errorMessage = ""
-    
+
     let frequencies = ["daily", "weekly", "monthly", "yearly"]
-    
+
     var modelContext: ModelContext?
     var customCategories: [CustomCategory] = []
     private let changeQueue: ChangeQueueManagerProtocol
@@ -159,25 +159,25 @@ import SwiftData
             showError = true
             return false
         }
-        
+
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
             errorMessage = "Please enter a name"
             showError = true
             return false
         }
-        
+
         guard !selectedCategory.isEmpty else {
             errorMessage = "Please select a category"
             showError = true
             return false
         }
-        
+
         guard let modelContext = modelContext else { return true }
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
 
-        let recurringExpense = RecurringExpense(
+        let recurringTransaction = RecurringTransaction(
             name: trimmedName,
             amount: amountValue,
             category: selectedCategory,
@@ -188,35 +188,35 @@ import SwiftData
             notes: notes.isEmpty ? nil : notes,
             categoryId: resolvedCategoryId
         )
-        
-        modelContext.insert(recurringExpense)
-        
+
+        modelContext.insert(recurringTransaction)
+
         do {
             try modelContext.save()
-            AppLogger.data.info("Recurring expense saved: \(recurringExpense.id)")
-            let payload = try? APIClient.apiEncoder.encode(recurringExpense.toCreateRequest())
+            AppLogger.data.info("Recurring transaction saved: \(recurringTransaction.id)")
+            let payload = try? APIClient.apiEncoder.encode(recurringTransaction.toCreateRequest())
             changeQueue.enqueue(
                 entityType: "recurring",
-                entityID: recurringExpense.id,
+                entityID: recurringTransaction.id,
                 action: "create",
                 endpoint: "/recurring-expenses",
                 httpMethod: "POST",
                 payload: payload,
                 context: modelContext
             )
-            
+
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
-            AppLogger.data.error("Failed to save recurring expense: \(error)")
+            AppLogger.data.error("Failed to save recurring transaction: \(error)")
             errorMessage = "Failed to save: \(error.localizedDescription)"
             showError = true
             return false
         }
-        
+
         return true
     }
 }

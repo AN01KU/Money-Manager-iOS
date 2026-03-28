@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct ManageCategoriesViewModelTests {
     
-    private func makeContext(models: [any PersistentModel.Type] = [Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self]) -> ModelContext {
+    private func makeContext(models: [any PersistentModel.Type] = [Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self]) -> ModelContext {
         let schema = Schema(models)
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
@@ -221,7 +221,7 @@ struct ManageCategoriesViewModelTests {
 struct AddCategoryViewModelTests {
     
     private func makeContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)
@@ -327,7 +327,7 @@ struct AddCategoryViewModelTests {
 struct EditCategoryViewModelTests {
     
     private func makeContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)

@@ -1,6 +1,6 @@
 import Foundation
 
-extension RecurringExpense {
+extension RecurringTransaction {
     var nextOccurrence: Date? {
         guard isActive else { return nil }
         

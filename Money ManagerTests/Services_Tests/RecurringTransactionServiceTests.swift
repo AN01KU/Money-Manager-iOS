@@ -4,11 +4,11 @@ import Testing
 @testable import Money_Manager
 
 @MainActor
-struct RecurringExpenseServiceTests {
+struct RecurringTransactionServiceTests {
 
     @Test
-    func testGeneratePendingExpensesSkipsInactive() {
-        let inactive = RecurringExpense(
+    func testGeneratePendingTransactionsSkipsInactive() {
+        let inactive = RecurringTransaction(
             name: "Old",
             amount: 100,
             category: "Other",
@@ -17,7 +17,7 @@ struct RecurringExpenseServiceTests {
             isActive: false
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -25,20 +25,20 @@ struct RecurringExpenseServiceTests {
         context.insert(inactive)
         try? context.save()
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.isEmpty)
+        #expect(transactions.isEmpty)
     }
 
     @Test
-    func testGeneratePendingExpensesCreatesExpenseForActive() {
+    func testGeneratePendingTransactionsCreatesTransactionForActive() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -47,7 +47,7 @@ struct RecurringExpenseServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -55,23 +55,23 @@ struct RecurringExpenseServiceTests {
         context.insert(recurring)
         try? context.save()
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.count == 1)
-        #expect(expenses.first?.transactionDescription == "Netflix")
-        #expect(expenses.first?.amount == 649)
-        #expect(expenses.first?.category == "Entertainment")
+        #expect(transactions.count == 1)
+        #expect(transactions.first?.transactionDescription == "Netflix")
+        #expect(transactions.first?.amount == 649)
+        #expect(transactions.first?.category == "Entertainment")
     }
 
     @Test
-    func testGeneratePendingExpensesUpdatesLastAddedDate() {
+    func testGeneratePendingTransactionsUpdatesLastAddedDate() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -80,7 +80,7 @@ struct RecurringExpenseServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -90,18 +90,18 @@ struct RecurringExpenseServiceTests {
 
         #expect(recurring.lastAddedDate == nil)
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         #expect(recurring.lastAddedDate != nil)
     }
 
     @Test
-    func testGeneratePendingExpensesDoesNotDuplicateOnSameDay() {
+    func testGeneratePendingTransactionsDoesNotDuplicateOnSameDay() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let nextMonth = calendar.date(byAdding: .month, value: 1, to: today)!
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -111,7 +111,7 @@ struct RecurringExpenseServiceTests {
             lastAddedDate: nextMonth
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -119,20 +119,20 @@ struct RecurringExpenseServiceTests {
         context.insert(recurring)
         try? context.save()
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.isEmpty)
+        #expect(transactions.isEmpty)
     }
 
     @Test
-    func testGeneratePendingExpensesSetsRecurringExpenseId() {
+    func testGeneratePendingTransactionsSetsRecurringExpenseId() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -141,7 +141,7 @@ struct RecurringExpenseServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -151,20 +151,20 @@ struct RecurringExpenseServiceTests {
 
         let recurringId = recurring.id
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.first?.recurringExpenseId == recurringId)
+        #expect(transactions.first?.recurringExpenseId == recurringId)
     }
 
     @Test
-    func testGeneratePendingExpensesSetsExpenseDescriptionFromName() {
+    func testGeneratePendingTransactionsSetsDescriptionFromName() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix Subscription",
             amount: 649,
             category: "Entertainment",
@@ -173,7 +173,7 @@ struct RecurringExpenseServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -181,20 +181,20 @@ struct RecurringExpenseServiceTests {
         context.insert(recurring)
         try? context.save()
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.first?.transactionDescription == "Netflix Subscription")
+        #expect(transactions.first?.transactionDescription == "Netflix Subscription")
     }
 
     @Test
-    func testGeneratePendingExpensesCopiesNotes() {
+    func testGeneratePendingTransactionsCopiesNotes() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -204,7 +204,7 @@ struct RecurringExpenseServiceTests {
             notes: "Monthly subscription"
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -212,20 +212,20 @@ struct RecurringExpenseServiceTests {
         context.insert(recurring)
         try? context.save()
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.first?.notes == "Monthly subscription")
+        #expect(transactions.first?.notes == "Monthly subscription")
     }
 
     @Test
-    func testGeneratePendingExpensesCalledTwiceDoesNotCreateDuplicates() {
+    func testGeneratePendingTransactionsCalledTwiceDoesNotCreateDuplicates() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -234,7 +234,7 @@ struct RecurringExpenseServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -242,12 +242,12 @@ struct RecurringExpenseServiceTests {
         context.insert(recurring)
         try? context.save()
 
-        RecurringExpenseService.generatePendingExpenses(context: context)
-        RecurringExpenseService.generatePendingExpenses(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
+        RecurringTransactionService.generatePendingTransactions(context: context)
 
         let descriptor = FetchDescriptor<Transaction>()
-        let expenses = (try? context.fetch(descriptor)) ?? []
+        let transactions = (try? context.fetch(descriptor)) ?? []
 
-        #expect(expenses.count == 1)
+        #expect(transactions.count == 1)
     }
 }

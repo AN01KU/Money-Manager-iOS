@@ -24,7 +24,7 @@ struct APITransaction: Codable {
     let group_transaction_id: UUID?
 }
 
-struct APIRecurringExpense: Codable {
+struct APIRecurringTransaction: Codable {
     let id: UUID
     let user_id: UUID
     let name: String
@@ -40,6 +40,7 @@ struct APIRecurringExpense: Codable {
     let notes: String?
     let created_at: Date
     let updated_at: Date
+    let type: String?
 }
 
 struct APIMonthlyBudget: Codable {
@@ -129,7 +130,7 @@ struct APIUpdateTransactionRequest: Codable {
     let notes: String?
 }
 
-struct APICreateRecurringExpenseRequest: Codable {
+struct APICreateRecurringTransactionRequest: Codable {
     let id: UUID?
     let name: String
     let amount: String
@@ -141,9 +142,10 @@ struct APICreateRecurringExpenseRequest: Codable {
     let end_date: Date?
     let is_active: Bool
     let notes: String?
+    let type: String?
 }
 
-struct APIUpdateRecurringExpenseRequest: Codable {
+struct APIUpdateRecurringTransactionRequest: Codable {
     let name: String?
     let amount: String?
     let category: String?
@@ -154,6 +156,7 @@ struct APIUpdateRecurringExpenseRequest: Codable {
     let end_date: Date?
     let is_active: Bool?
     let notes: String?
+    let type: String?
 }
 
 struct APICreateBudgetRequest: Codable {

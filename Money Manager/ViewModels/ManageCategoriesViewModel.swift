@@ -125,7 +125,7 @@ import SwiftData
         }
 
         // Reassign all linked RecurringExpenses to "Other"
-        let recurringDescriptor = FetchDescriptor<RecurringExpense>()
+        let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
         if let recurrings = try? modelContext.fetch(recurringDescriptor) {
             for recurring in recurrings {
                 if recurring.categoryId == categoryId || recurring.category == categoryName {
@@ -467,7 +467,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
                 }
             }
 
-            let recurringDescriptor = FetchDescriptor<RecurringExpense>()
+            let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
             if let recurrings = try? modelContext.fetch(recurringDescriptor) {
                 for recurring in recurrings {
                     if recurring.categoryId == categoryId || recurring.category == oldName {
