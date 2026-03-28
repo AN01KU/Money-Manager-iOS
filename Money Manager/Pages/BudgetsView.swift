@@ -65,6 +65,36 @@ struct BudgetsView: View {
         guard daysRemaining > 0 else { return 0 }
         return remainingBudget / Double(daysRemaining + 1)
     }
+
+    private var daysElapsed: Int {
+        let calendar = Calendar.current
+        let today = Date()
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)) else { return 1 }
+        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
+            return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
+        }
+        return calendar.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+    }
+
+    private var projectedMonthEnd: Double {
+        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+        let dailyRate = totalSpent / Double(daysElapsed)
+        return totalSpent + (dailyRate * Double(daysInMonth - daysElapsed))
+    }
+
+    private var spendingInsight: String? {
+        guard let budget = currentBudget, budget.limit > 0 else { return nil }
+        guard Calendar.current.isDate(Date(), equalTo: selectedMonth, toGranularity: .month) else { return nil }
+        guard daysElapsed > 1 else { return nil }
+        let overspend = projectedMonthEnd - budget.limit
+        if totalSpent >= budget.limit {
+            return "You've exceeded your budget"
+        } else if overspend > 0 {
+            return "At this rate you'll overspend by \(CurrencyFormatter.format(overspend))"
+        } else {
+            return "On track — projected \(CurrencyFormatter.format(projectedMonthEnd)) of \(CurrencyFormatter.format(budget.limit))"
+        }
+    }
     
     var body: some View {
         ScrollView {
@@ -93,7 +123,22 @@ struct BudgetsView: View {
                         percentage: budgetPercentage
                     )
                     .padding(.horizontal)
-                    
+
+                    if let insight = spendingInsight {
+                        HStack(spacing: 8) {
+                            Image(systemName: totalSpent >= budget.limit ? "exclamationmark.triangle.fill" : projectedMonthEnd > budget.limit ? "arrow.up.circle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(totalSpent >= budget.limit ? AppColors.expense : projectedMonthEnd > budget.limit ? AppColors.budgetCaution : AppColors.positive)
+                            Text(insight)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemBackground))
+                        .clipShape(.rect(cornerRadius: 12))
+                        .padding(.horizontal)
+                    }
+
                 } else {
                     NoBudgetCard(
                         selectedMonth: selectedMonth,

@@ -21,6 +21,29 @@ struct RecurringTransactionsView: View {
                 )
             } else {
                 List {
+                    if !viewModel.upcomingThisMonth.isEmpty {
+                        Section {
+                            ForEach(viewModel.upcomingThisMonth) { item in
+                                RecurringTransactionRow(recurring: item, onTap: {
+                                    rowTapped = true
+                                    viewModel.editingRecurring = item
+                                })
+                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .onChange(of: rowTapped) { _, newValue in
+                                    if newValue { rowTapped = false }
+                                }
+                            }
+                        } header: {
+                            HStack {
+                                Text("Upcoming This Month")
+                                Spacer()
+                                Text(CurrencyFormatter.format(viewModel.upcomingTotalThisMonth))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppColors.expense)
+                            }
+                        }
+                    }
+
                     if !viewModel.activeRecurring.isEmpty {
                         Section("Active") {
                             ForEach(viewModel.activeRecurring) { item in

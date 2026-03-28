@@ -19,6 +19,25 @@ import SwiftData
         recurring
     }
 
+    /// Active recurring transactions with a next occurrence falling within the current calendar month.
+    var upcomingThisMonth: [RecurringTransaction] {
+        let calendar = Calendar.current
+        let now = Date()
+        guard let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now)),
+              let end = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: start) else { return [] }
+        return activeRecurring
+            .filter { item in
+                guard let next = item.nextOccurrence else { return false }
+                return next >= start && next <= end
+            }
+            .sorted { ($0.nextOccurrence ?? .distantFuture) < ($1.nextOccurrence ?? .distantFuture) }
+    }
+
+    /// Sum of amounts for all upcoming transactions this month.
+    var upcomingTotalThisMonth: Double {
+        upcomingThisMonth.reduce(0) { $0 + $1.amount }
+    }
+
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
     private let auth: AuthServiceProtocol

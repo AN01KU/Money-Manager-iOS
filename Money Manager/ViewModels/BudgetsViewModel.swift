@@ -66,6 +66,46 @@ import SwiftData
         return remainingBudget / Double(daysRemaining + 1)
     }
 
+    /// Days elapsed so far in the selected month (1-based, capped to today if current month).
+    private var daysElapsed: Int {
+        let calendar = Calendar.current
+        let today = Date()
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)) else { return 1 }
+        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
+            return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
+        }
+        // Past month — use full month length
+        let range = calendar.range(of: .day, in: .month, for: selectedMonth)
+        return range?.count ?? 30
+    }
+
+    /// Projected total spend at end of month based on current daily rate.
+    var projectedMonthEnd: Double {
+        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+        let dailyRate = totalSpent / Double(daysElapsed)
+        let daysLeft = daysInMonth - daysElapsed
+        return totalSpent + (dailyRate * Double(daysLeft))
+    }
+
+    /// Human-readable spending insight for the current budget period.
+    var spendingInsight: String? {
+        guard let budget = currentBudget, budget.limit > 0 else { return nil }
+        // Only show for current month
+        guard Calendar.current.isDate(Date(), equalTo: selectedMonth, toGranularity: .month) else { return nil }
+        guard daysElapsed > 1 else { return nil }
+
+        let projected = projectedMonthEnd
+        let overspend = projected - budget.limit
+
+        if totalSpent >= budget.limit {
+            return "You've exceeded your budget"
+        } else if overspend > 0 {
+            return "At this rate you'll overspend by \(CurrencyFormatter.format(overspend))"
+        } else {
+            return "On track — projected \(CurrencyFormatter.format(projected)) of \(CurrencyFormatter.format(budget.limit))"
+        }
+    }
+
     func configure(allTransactions: [Transaction], budgets: [MonthlyBudget], modelContext: ModelContext?) {
         self.allTransactions = allTransactions
         self.budgets = budgets
