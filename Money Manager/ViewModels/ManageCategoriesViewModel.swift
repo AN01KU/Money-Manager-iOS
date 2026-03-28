@@ -124,7 +124,7 @@ import SwiftData
             }
         }
 
-        // Reassign all linked RecurringExpenses to "Other"
+        // Reassign all linked RecurringTransactions to "Other"
         let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
         if let recurrings = try? modelContext.fetch(recurringDescriptor) {
             for recurring in recurrings {
@@ -452,7 +452,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         category.color = selectedColor
         category.updatedAt = Date()
 
-        // Cascade rename to all linked Transactions and RecurringExpenses
+        // Cascade rename to all linked Transactions and RecurringTransactions
         if oldName != trimmedName {
             let categoryId = category.id
 

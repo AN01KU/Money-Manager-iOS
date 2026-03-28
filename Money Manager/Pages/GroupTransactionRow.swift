@@ -7,8 +7,7 @@ struct GroupTransactionRow: View {
     private var amount: Double { Double(transaction.total_amount) ?? 0 }
 
     private var paidByName: String {
-        members.first(where: { $0.id == transaction.paid_by_user_id })?
-            .email.components(separatedBy: "@").first?.capitalized ?? "Unknown"
+        members.first(where: { $0.id == transaction.paid_by_user_id })?.username ?? "Unknown"
     }
 
     var body: some View {

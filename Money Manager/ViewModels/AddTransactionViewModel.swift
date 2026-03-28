@@ -3,7 +3,7 @@ import SwiftData
 
 enum AddTransactionMode {
     case personal(editing: Transaction? = nil)
-    case shared(group: APIGroupWithDetails, members: [APIGroupMember], onAdd: (APIGroupTransaction) -> Void)
+    case shared(group: APIGroupWithDetails, members: [APIGroupMember], editing: APIGroupTransaction? = nil, onAdd: (APIGroupTransaction) -> Void)
 }
 
 enum TransactionType: String, CaseIterable {
@@ -62,8 +62,8 @@ enum SplitType: String, CaseIterable {
                 return editing.type == "income" ? "Edit Income" : "Edit Expense"
             }
             return transactionType == .income ? "Add Income" : "Add Expense"
-        case .shared:
-            return "Add Group Expense"
+        case .shared(_, _, let editing, _):
+            return editing != nil ? "Edit Group Expense" : "Add Group Expense"
         }
     }
 
@@ -124,9 +124,17 @@ enum SplitType: String, CaseIterable {
             notes = expense.notes ?? ""
             transactionType = expense.type == "income" ? .income : .expense
 
-        case .shared(_, let members, _):
-            paidByUserId = auth.currentUser?.id
-            selectedMembers = Set(members.map(\.id))
+        case .shared(_, let members, let editing, _):
+            if let tx = editing {
+                amount = (Double(tx.total_amount) ?? 0).formatted(.number.precision(.fractionLength(2)))
+                selectedCategory = tx.category
+                description = tx.description ?? ""
+                paidByUserId = tx.paid_by_user_id
+                selectedMembers = Set(tx.splits.map(\.user_id))
+            } else {
+                paidByUserId = auth.currentUser?.id
+                selectedMembers = Set(members.map(\.id))
+            }
         }
     }
 
@@ -178,7 +186,7 @@ enum SplitType: String, CaseIterable {
         switch mode {
         case .personal:
             savePersonal(amountValue: amountValue, completion: completion)
-        case .shared(let group, _, let onAdd):
+        case .shared(let group, _, _, let onAdd):
             saveShared(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
         }
     }

@@ -8,6 +8,7 @@ import SwiftUI
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
     @State private var selectedTransaction: APIGroupTransaction?
+    @State private var transactionToEdit: APIGroupTransaction?
 
     init(group: APIGroupWithDetails) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group))
@@ -90,7 +91,21 @@ struct GroupDetailView: View {
                 currentUserId: viewModel.currentUserId,
                 onDelete: viewModel.currentUserId == transaction.paid_by_user_id ? {
                     viewModel.deleteTransaction(transaction)
+                } : nil,
+                onEdit: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                    transactionToEdit = transaction
                 } : nil
+            )
+        }
+        .sheet(item: $transactionToEdit) { transaction in
+            AddTransactionView(
+                mode: .shared(
+                    group: viewModel.group,
+                    members: viewModel.members,
+                    editing: transaction
+                ) { updated in
+                    viewModel.transactionEdited(replacing: transaction, with: updated)
+                }
             )
         }
         .task {
@@ -134,6 +149,15 @@ struct GroupDetailView: View {
                         GroupTransactionRow(transaction: transaction, members: viewModel.members)
                     }
                     .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        if transaction.paid_by_user_id == viewModel.currentUserId {
+                            Button(role: .destructive) {
+                                viewModel.deleteTransaction(transaction)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
                 .listStyle(.insetGrouped)
             }

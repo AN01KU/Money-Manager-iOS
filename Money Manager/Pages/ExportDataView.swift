@@ -8,6 +8,7 @@ struct ExportDataView: View {
     @Query private var recurringTransactions: [RecurringTransaction]
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
+    @Query private var groups: [SplitGroupModel]
     
     @State private var viewModel = BackupViewModel()
     
@@ -68,7 +69,8 @@ struct ExportDataView: View {
                         transactions: transactions,
                         recurringTransactions: recurringTransactions,
                         budgets: budgets,
-                        categories: categories
+                        categories: categories,
+                        groups: groups
                     )
                 }
             } label: {

@@ -5,6 +5,7 @@ struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query private var groupTransactions: [GroupTransactionModel]
     let transaction: Transaction
     @State private var viewModel: TransactionDetailViewModel
     @State private var editTapped = false
@@ -15,7 +16,12 @@ struct TransactionDetailView: View {
         self.transaction = transaction
         _viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction))
     }
-    
+
+    private var groupName: String? {
+        guard let id = transaction.groupTransactionId else { return nil }
+        return groupTransactions.first(where: { $0.id == id })?.group?.name
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -32,7 +38,7 @@ struct TransactionDetailView: View {
                                 Spacer()
                             }
                             
-                            GroupTransactionContent(groupName: nil)
+                            GroupTransactionContent(groupName: groupName)
                         }
                         .padding()
                         .background(Color(.systemGray6))

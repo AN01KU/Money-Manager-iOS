@@ -106,11 +106,33 @@ final class GroupDetailViewModel {
         }
     }
 
-    // MARK: - After transaction added
+    // MARK: - After transaction added / edited
 
     func transactionAdded(_ transaction: APIGroupTransaction) {
         transactions.insert(transaction, at: 0)
         recalculateBalances()
+    }
+
+    func transactionEdited(replacing old: APIGroupTransaction, with updated: APIGroupTransaction) {
+        if let idx = transactions.firstIndex(where: { $0.id == old.id }) {
+            transactions[idx] = updated
+        } else {
+            transactions.insert(updated, at: 0)
+        }
+        recalculateBalances()
+
+        Task {
+            do {
+                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: old.id)
+            } catch {
+                // Restore old on failure
+                if let idx = transactions.firstIndex(where: { $0.id == updated.id }) {
+                    transactions[idx] = old
+                }
+                recalculateBalances()
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
     }
 
     // MARK: - Delete transaction

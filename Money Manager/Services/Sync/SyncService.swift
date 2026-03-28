@@ -270,13 +270,23 @@ final class SyncService: SyncServiceProtocol {
     }
     
     private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
+        let pendingDescriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == "transaction" }
+        )
+        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
+        let pendingIDs = Set(pendingChanges.map { $0.entityID })
+
         let descriptor = FetchDescriptor<Transaction>()
         let localTransactions = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localTransactions.map { ($0.id, $0) })
 
         for remote in apiTransactions {
+            guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updated_at > local.updatedAt {
+                    if pendingIDs.contains(remote.id) {
+                        AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — local pending change will be overwritten")
+                    }
                     local.applyRemote(remote)
                 }
             } else {
@@ -298,16 +308,27 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
+        syncCheckpoint(entityType: "transaction", serverCount: apiTransactions.count, localCount: localTransactions.count, context: context)
     }
-    
+
     private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
+        let pendingDescriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == "recurring" }
+        )
+        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
+        let pendingIDs = Set(pendingChanges.map { $0.entityID })
+
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let localRecurring = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localRecurring.map { ($0.id, $0) })
 
         for remote in apiExpenses {
+            guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updated_at > local.updatedAt {
+                    if pendingIDs.contains(remote.id) {
+                        AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — local pending change will be overwritten")
+                    }
                     local.name = remote.name
                     local.amount = Double(remote.amount) ?? local.amount
                     local.category = remote.category
@@ -343,16 +364,27 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
+        syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count, context: context)
     }
-    
+
     private func upsertBudgets(_ apiBudgets: [APIMonthlyBudget], context: ModelContext) {
+        let pendingDescriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == "budget" }
+        )
+        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
+        let pendingIDs = Set(pendingChanges.map { $0.entityID })
+
         let descriptor = FetchDescriptor<MonthlyBudget>()
         let localBudgets = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localBudgets.map { ($0.id, $0) })
-        
+
         for remote in apiBudgets {
+            guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updated_at > local.updatedAt {
+                    if pendingIDs.contains(remote.id) {
+                        AppLogger.sync.warning("Conflict: server wins for budget \(remote.id) — local pending change will be overwritten")
+                    }
                     local.year = remote.year
                     local.month = remote.month
                     local.limit = Double(remote.limit) ?? local.limit
@@ -368,11 +400,18 @@ final class SyncService: SyncServiceProtocol {
                 context.insert(budget)
             }
         }
-        
+
         try? context.save()
+        syncCheckpoint(entityType: "budget", serverCount: apiBudgets.count, localCount: localBudgets.count, context: context)
     }
-    
+
     private func upsertCategories(_ apiCategories: [APICustomCategory], context: ModelContext) {
+        let pendingDescriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == "category" }
+        )
+        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
+        let pendingIDs = Set(pendingChanges.map { $0.entityID })
+
         let descriptor = FetchDescriptor<CustomCategory>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
@@ -380,10 +419,14 @@ final class SyncService: SyncServiceProtocol {
             guard let key = cat.predefinedKey else { return nil }
             return (key, cat)
         })
-        
+
         for remote in apiCategories {
+            guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updated_at > local.updatedAt {
+                    if pendingIDs.contains(remote.id) {
+                        AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — local pending change will be overwritten")
+                    }
                     local.name = remote.name
                     local.icon = remote.icon
                     local.color = remote.color
@@ -416,8 +459,9 @@ final class SyncService: SyncServiceProtocol {
                 context.insert(category)
             }
         }
-        
+
         try? context.save()
+        syncCheckpoint(entityType: "category", serverCount: apiCategories.count, localCount: localCategories.count, context: context)
     }
     
     private func pullGroups(context: ModelContext) async {
@@ -505,6 +549,67 @@ final class SyncService: SyncServiceProtocol {
     ) async {
         // TODO(Phase 4): fetch via GET /groups/:id/transactions — group details no longer include transactions inline
         AppLogger.sync.debug("pullGroupExpenses: skipped pending Phase 4 group transaction sync refactor")
+    }
+
+    // MARK: - Validation
+
+    private func isValid(_ api: APITransaction) -> Bool {
+        guard Double(api.amount) != nil else {
+            AppLogger.sync.error("Validation failed: transaction \(api.id) has unparseable amount '\(api.amount)'")
+            return false
+        }
+        guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
+            AppLogger.sync.error("Validation failed: transaction \(api.id) has empty category")
+            return false
+        }
+        return true
+    }
+
+    private func isValid(_ api: APIRecurringTransaction) -> Bool {
+        guard Double(api.amount) != nil else {
+            AppLogger.sync.error("Validation failed: recurring \(api.id) has unparseable amount '\(api.amount)'")
+            return false
+        }
+        guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
+            AppLogger.sync.error("Validation failed: recurring \(api.id) has empty category")
+            return false
+        }
+        return true
+    }
+
+    private func isValid(_ api: APIMonthlyBudget) -> Bool {
+        guard Double(api.limit) != nil else {
+            AppLogger.sync.error("Validation failed: budget \(api.id) has unparseable limit '\(api.limit)'")
+            return false
+        }
+        guard api.year >= 2000 && api.year <= 2100 else {
+            AppLogger.sync.error("Validation failed: budget \(api.id) has out-of-range year \(api.year)")
+            return false
+        }
+        guard api.month >= 1 && api.month <= 12 else {
+            AppLogger.sync.error("Validation failed: budget \(api.id) has out-of-range month \(api.month)")
+            return false
+        }
+        return true
+    }
+
+    private func isValid(_ api: APICustomCategory) -> Bool {
+        guard !api.name.trimmingCharacters(in: .whitespaces).isEmpty else {
+            AppLogger.sync.error("Validation failed: category \(api.id) has empty name")
+            return false
+        }
+        return true
+    }
+
+    // MARK: - Sync Checkpoint
+
+    private func syncCheckpoint(entityType: String, serverCount: Int, localCount: Int, context: ModelContext) {
+        let delta = abs(serverCount - localCount)
+        if delta > 10 {
+            AppLogger.sync.warning("Sync checkpoint: \(entityType) divergence — server=\(serverCount) local=\(localCount) delta=\(delta)")
+        } else {
+            AppLogger.sync.debug("Sync checkpoint: \(entityType) ok — server=\(serverCount) local=\(localCount)")
+        }
     }
 
     private func updateLastSyncTime() {

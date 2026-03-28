@@ -237,7 +237,7 @@ struct AddTransactionView: View {
 
     private var paidBySection: some View {
         Section("Paid By") {
-            if case .shared(_, let members, _) = viewModel.mode {
+            if case .shared(_, let members, _, _) = viewModel.mode {
                 ForEach(members) { member in
                     let isSelected = viewModel.paidByUserId == member.id
                     Button {
@@ -294,7 +294,7 @@ struct AddTransactionView: View {
 
     private var splitMembersSection: some View {
         Section("Split Between") {
-            if case .shared(_, let members, _) = viewModel.mode {
+            if case .shared(_, let members, _, _) = viewModel.mode {
                 ForEach(members) { member in
                     let isIncluded = viewModel.selectedMembers.contains(member.id)
                     Button {
@@ -387,6 +387,6 @@ struct AddTransactionView: View {
     let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
             let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joined_at: Date())
     let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", created_by: alice.id, created_at: Date(), members: [alice, bob], balances: [])
-    AddTransactionView(mode: .shared(group: group, members: [alice, bob]) { _ in })
+    AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }))
         .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }

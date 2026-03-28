@@ -7,9 +7,11 @@ struct GroupTransactionDetailSheet: View {
     let members: [APIGroupMember]
     let currentUserId: UUID?
     let onDelete: (() -> Void)?
+    let onEdit: (() -> Void)?
 
     @State private var showDeleteAlert = false
     @State private var deleteTapped = false
+    @State private var editTapped = false
 
     private var amount: Double { Double(transaction.total_amount) ?? 0 }
 
@@ -87,21 +89,43 @@ struct GroupTransactionDetailSheet: View {
                         .clipShape(.rect(cornerRadius: 16))
                     }
 
-                    if isOwner, let onDelete {
-                        Button {
-                            deleteTapped = true
-                            showDeleteAlert = true
-                        } label: {
-                            Text("Delete Transaction")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(AppColors.expense)
-                                .foregroundStyle(.white)
-                                .clipShape(.rect(cornerRadius: 12))
+                    if isOwner {
+                        HStack(spacing: 16) {
+                            if let onEdit {
+                                Button {
+                                    editTapped = true
+                                    onEdit()
+                                    dismiss()
+                                } label: {
+                                    Text("Edit")
+                                        .fontWeight(.semibold)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(AppColors.accent)
+                                        .foregroundStyle(.white)
+                                        .clipShape(.rect(cornerRadius: 12))
+                                }
+                                .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
+                                .onChange(of: editTapped) { _, v in if v { editTapped = false } }
+                            }
+
+                            if let onDelete {
+                                Button {
+                                    deleteTapped = true
+                                    showDeleteAlert = true
+                                } label: {
+                                    Text("Delete")
+                                        .fontWeight(.semibold)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(AppColors.expense)
+                                        .foregroundStyle(.white)
+                                        .clipShape(.rect(cornerRadius: 12))
+                                }
+                                .sensoryFeedback(.warning, trigger: deleteTapped)
+                                .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
+                            }
                         }
-                        .sensoryFeedback(.warning, trigger: deleteTapped)
-                        .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
                         .padding(.horizontal)
                     }
                 }

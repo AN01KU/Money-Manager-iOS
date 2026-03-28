@@ -237,7 +237,8 @@ struct ExportData: Codable {
         transactions: [Transaction],
         recurringTransactions: [RecurringTransaction],
         budgets: [MonthlyBudget],
-        categories: [CustomCategory]
+        categories: [CustomCategory],
+        groups: [SplitGroupModel] = []
     ) async {
         isExporting = true
         defer { isExporting = false }
@@ -247,7 +248,7 @@ struct ExportData: Codable {
             
             switch selectedDataType {
             case .transactions:
-                url = try await exportTransactions(format: selectedExportFormat, transactions: transactions)
+                url = try await exportTransactions(format: selectedExportFormat, transactions: transactions, groups: groups)
             case .recurring:
                 url = try await exportRecurringTransactions(format: selectedExportFormat, recurringTransactions: recurringTransactions)
             case .budgets:
@@ -285,12 +286,12 @@ struct ExportData: Codable {
     
     // MARK: - Export Methods
     
-    private func exportTransactions(format: ExportFormat, transactions: [Transaction]) async throws -> URL {
+    private func exportTransactions(format: ExportFormat, transactions: [Transaction], groups: [SplitGroupModel]) async throws -> URL {
         let activeTransactions = transactions.filter { !$0.isDeleted }
 
         switch format {
         case .csv:
-            return try exportTransactionsToCSV(transactions: activeTransactions)
+            return try exportTransactionsToCSV(transactions: activeTransactions, groups: groups)
         case .json:
             return try exportTransactionsToJSON(transactions: activeTransactions)
         }
@@ -478,9 +479,9 @@ struct ExportData: Codable {
         return try saveToTempFile(csv, fileName: fileName)
     }
     
-    private func exportTransactionsToCSV(transactions: [Transaction]) throws -> URL {
-        var csv = "ID,Amount,Category,Date,Time,Description,Notes,Recurring Expense ID,Group ID,Group Name\n"
-        
+    private func exportTransactionsToCSV(transactions: [Transaction], groups: [SplitGroupModel]) throws -> URL {
+        var csv = "ID,Amount,Category,Date,Time,Description,Notes,Recurring Transaction ID,Group ID,Group Name\n"
+
         for transaction in transactions {
             let id = transaction.id.uuidString
             let amount = String(transaction.amount)
@@ -489,11 +490,15 @@ struct ExportData: Codable {
             let time = transaction.time.map { iso8601Formatter.string(from: $0) } ?? ""
             let description = escapeCSV(transaction.transactionDescription ?? "")
             let notes = escapeCSV(transaction.notes ?? "")
-            let recurringExpenseId = transaction.recurringExpenseId?.uuidString ?? ""
+            let recurringTransactionId = transaction.recurringExpenseId?.uuidString ?? ""
             let groupId = transaction.groupTransactionId?.uuidString ?? ""
-            let groupName = escapeCSV(nil ?? "")
-            
-            let row = [id, amount, category, date, time, description, notes, recurringExpenseId, groupId, groupName].joined(separator: ",")
+            let groupName: String = {
+                guard let gtId = transaction.groupTransactionId else { return "" }
+                let groupTransaction = groups.flatMap { $0.transactions }.first(where: { $0.id == gtId })
+                return escapeCSV(groupTransaction?.group?.name ?? "")
+            }()
+
+            let row = [id, amount, category, date, time, description, notes, recurringTransactionId, groupId, groupName].joined(separator: ",")
             csv += row + "\n"
         }
         
