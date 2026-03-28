@@ -211,7 +211,7 @@ struct EditRecurringTransactionSheet: View {
                 entityType: "recurring",
                 entityID: recurring.id,
                 action: "update",
-                endpoint: "/recurring-expenses",
+                endpoint: "/recurring-transactions",
                 httpMethod: "PUT",
                 payload: payload,
                 context: modelContext

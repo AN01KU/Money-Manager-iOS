@@ -187,8 +187,8 @@ struct APIIntegrationTests {
     
     // MARK: - Recurring Expense Tests
     
-    @Test("Create monthly recurring expense")
-    mutating func testRecurringExpenseCreateMonthly() async throws {
+    @Test("Create monthly recurring transaction")
+    mutating func testRecurringTransactionCreateMonthly() async throws {
         try await ensureAuthenticated()
         await delay(200)
         
@@ -205,17 +205,17 @@ struct APIIntegrationTests {
             end_date: nil,
             is_active: true,
             notes: nil,
-            type: nil
+            type: "expense"
         )
         
-        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: request)
+        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: request)
         
         #expect(response.name == request.name)
         #expect(compareAmount(response.amount, request.amount))
     }
     
-    @Test("Create weekly recurring expense")
-    mutating func testRecurringExpenseCreateWeekly() async throws {
+    @Test("Create weekly recurring transaction")
+    mutating func testRecurringTransactionCreateWeekly() async throws {
         try await ensureAuthenticated()
         await delay(200)
         
@@ -232,28 +232,28 @@ struct APIIntegrationTests {
             end_date: nil,
             is_active: true,
             notes: nil,
-            type: nil
+            type: "expense"
         )
         
-        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: request)
+        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: request)
         
         #expect(response.frequency == "weekly")
         #expect(response.days_of_week == [1, 3, 5])
         #expect(compareAmount(response.amount, request.amount))
     }
     
-    @Test("List recurring expenses")
-    mutating func testRecurringExpenseList() async throws {
+    @Test("List recurring transactions")
+    mutating func testRecurringTransactionList() async throws {
         try await ensureAuthenticated()
         await delay(200)
         
-        let response: APIListResponse<APIRecurringTransaction> = try await APIClient.shared.get("/recurring-expenses")
+        let response: APIListResponse<APIRecurringTransaction> = try await APIClient.shared.get("/recurring-transactions")
 
         #expect(!response.data.isEmpty)
     }
     
-    @Test("Get recurring expense by id")
-    mutating func testRecurringExpenseGetById() async throws {
+    @Test("Get recurring transaction by id")
+    mutating func testRecurringTransactionGetById() async throws {
         try await ensureAuthenticated()
         await delay(200)
         
@@ -270,19 +270,19 @@ struct APIIntegrationTests {
             end_date: nil,
             is_active: true,
             notes: nil,
-            type: nil
+            type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
+        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
         
         await delay(200)
         
-        let response: APIRecurringTransaction = try await APIClient.shared.get("/recurring-expenses/\(created.id)")
+        let response: APIRecurringTransaction = try await APIClient.shared.get("/recurring-transactions/\(created.id)")
         
         #expect(response.id == created.id)
     }
     
-    @Test("Update recurring expense")
-    mutating func testRecurringExpenseUpdate() async throws {
+    @Test("Update recurring transaction")
+    mutating func testRecurringTransactionUpdate() async throws {
         try await ensureAuthenticated()
         await delay(200)
         
@@ -299,9 +299,9 @@ struct APIIntegrationTests {
             end_date: nil,
             is_active: true,
             notes: nil,
-            type: nil
+            type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
+        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
         
         await delay(200)
         
@@ -309,16 +309,16 @@ struct APIIntegrationTests {
             name: nil, amount: "12.00", category: nil, frequency: nil,
             day_of_month: nil, days_of_week: nil, start_date: nil, end_date: nil,
             is_active: false, notes: nil,
-            type: nil
+            type: "expense"
         )
-        let updated: APIRecurringTransaction = try await APIClient.shared.put("/recurring-expenses/\(created.id)", body: updateRequest)
+        let updated: APIRecurringTransaction = try await APIClient.shared.put("/recurring-transactions/\(created.id)", body: updateRequest)
         
         #expect(compareAmount(updated.amount, "12"))
         #expect(updated.is_active == false)
     }
     
-    @Test("Delete recurring expense")
-    mutating func testRecurringExpenseDelete() async throws {
+    @Test("Delete recurring transaction")
+    mutating func testRecurringTransactionDelete() async throws {
         try await ensureAuthenticated()
         await delay(200)
         
@@ -335,13 +335,13 @@ struct APIIntegrationTests {
             end_date: nil,
             is_active: true,
             notes: nil,
-            type: nil
+            type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-expenses", body: createRequest)
+        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
         
         await delay(200)
         
-        try await APIClient.shared.delete("/recurring-expenses/\(created.id)")
+        try await APIClient.shared.delete("/recurring-transactions/\(created.id)")
     }
     
     // MARK: - Transaction Tests

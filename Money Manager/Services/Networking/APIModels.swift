@@ -142,7 +142,7 @@ struct APICreateRecurringTransactionRequest: Codable {
     let end_date: Date?
     let is_active: Bool
     let notes: String?
-    let type: String?
+    let type: String
 }
 
 struct APIUpdateRecurringTransactionRequest: Codable {

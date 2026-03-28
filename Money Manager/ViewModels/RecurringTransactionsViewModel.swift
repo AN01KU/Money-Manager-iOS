@@ -56,7 +56,7 @@ import SwiftData
                 entityType: "recurring",
                 entityID: item.id,
                 action: "update",
-                endpoint: "/recurring-expenses",
+                endpoint: "/recurring-transactions",
                 httpMethod: "PUT",
                 payload: payload,
                 context: modelContext
@@ -96,7 +96,7 @@ import SwiftData
                 entityType: "recurring",
                 entityID: recurringId,
                 action: "delete",
-                endpoint: "/recurring-expenses",
+                endpoint: "/recurring-transactions",
                 httpMethod: "DELETE",
                 payload: nil,
                 context: modelContext
@@ -199,7 +199,7 @@ import SwiftData
                 entityType: "recurring",
                 entityID: recurringTransaction.id,
                 action: "create",
-                endpoint: "/recurring-expenses",
+                endpoint: "/recurring-transactions",
                 httpMethod: "POST",
                 payload: payload,
                 context: modelContext

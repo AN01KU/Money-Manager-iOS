@@ -186,7 +186,7 @@ final class SyncService: SyncServiceProtocol {
                 entityType: "recurring",
                 entityID: item.id,
                 action: "create",
-                endpoint: "/recurring-expenses",
+                endpoint: "/recurring-transactions",
                 httpMethod: "POST",
                 payload: payload,
                 context: context
@@ -232,7 +232,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func pullRecurring(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get("/recurring-expenses")
+            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get("/recurring-transactions")
             upsertRecurring(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull recurring: \(error)")
