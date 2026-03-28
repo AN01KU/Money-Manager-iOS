@@ -108,7 +108,7 @@ struct ManageCategoriesViewModelTests {
     }
     
     @Test
-    func testConfirmDeleteReassignsExpensesAndRemovesCategory() throws {
+    func testConfirmDeleteReassignsTransactionsAndRemovesCategory() throws {
         let context = makeContext()
         
         let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")

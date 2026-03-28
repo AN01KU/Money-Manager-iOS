@@ -4,7 +4,7 @@ import Testing
 @testable import Money_Manager
 
 @MainActor
-struct AddExpenseViewModelTests {
+struct AddTransactionViewModelTests {
 
     private func makeContext() -> ModelContext {
         let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
@@ -63,7 +63,7 @@ struct AddExpenseViewModelTests {
     // MARK: - Setup from existing transaction
 
     @Test
-    func testSetupPopulatesFieldsFromExpense() {
+    func testSetupPopulatesFieldsFromTransaction() {
         let expense = Transaction(
             amount: 250.50,
             category: "Transport",
@@ -98,7 +98,7 @@ struct AddExpenseViewModelTests {
     }
 
     @Test
-    func testSetupWithNoTimeExpense() {
+    func testSetupWithNoTimeTransaction() {
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         let vm = AddTransactionViewModel(mode: .personal(editing: expense))
         vm.setup()
@@ -109,7 +109,7 @@ struct AddExpenseViewModelTests {
     }
 
     @Test
-    func testSetupDoesNothingForNewExpenseMode() {
+    func testSetupDoesNothingForNewTransactionMode() {
         let vm = AddTransactionViewModel(mode: .personal())
         vm.setup()
 
@@ -134,7 +134,7 @@ struct AddExpenseViewModelTests {
     // MARK: - Save: new expense
 
     @Test
-    func testSaveCreatesNewExpense() throws {
+    func testSaveCreatesNewTransaction() throws {
         let context = makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
@@ -214,7 +214,7 @@ struct AddExpenseViewModelTests {
     // MARK: - Save: edit existing expense
 
     @Test
-    func testSaveUpdatesExistingExpense() throws {
+    func testSaveUpdatesExistingTransaction() throws {
         let context = makeContext()
         let existing = Transaction(
             amount: 100,

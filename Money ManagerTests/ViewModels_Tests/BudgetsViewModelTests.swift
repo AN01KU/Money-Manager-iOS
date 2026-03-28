@@ -25,7 +25,7 @@ struct BudgetsViewModelTests {
     }
     
     @Test
-    func testTotalSpentIgnoresDeletedExpenses() {
+    func testTotalSpentIgnoresDeletedTransactions() {
         let viewModel = BudgetsViewModel()
         
         let activeExpense = Transaction(amount: 500, category: "Food", date: Date())
@@ -38,7 +38,7 @@ struct BudgetsViewModelTests {
     }
     
     @Test
-    func testTotalSpentReturnsZeroForNoExpenses() {
+    func testTotalSpentReturnsZeroForNoTransactions() {
         let viewModel = BudgetsViewModel()
         
         viewModel.configure(allTransactions: [], budgets: [], modelContext: nil)
@@ -180,7 +180,7 @@ struct BudgetsViewModelTests {
     }
     
     @Test
-    func testCurrentMonthExpensesFiltersByMonth() {
+    func testCurrentMonthTransactionsFiltersByMonth() {
         let viewModel = BudgetsViewModel()
         viewModel.selectedMonth = Date()
         
@@ -288,7 +288,7 @@ struct BudgetsViewModelTests {
     // MARK: - Month boundary edge cases
 
     @Test
-    func testCurrentMonthExpensesIncludesExpenseOnLastDayOfMonth() {
+    func testCurrentMonthTransactionsIncludesTransactionOnLastDayOfMonth() {
         let viewModel = BudgetsViewModel()
         let calendar = Calendar.current
         let lastDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
@@ -303,7 +303,7 @@ struct BudgetsViewModelTests {
     }
 
     @Test
-    func testCurrentMonthExpensesExcludesExpenseOnFirstDayOfNextMonth() {
+    func testCurrentMonthTransactionsExcludesTransactionOnFirstDayOfNextMonth() {
         let viewModel = BudgetsViewModel()
         let calendar = Calendar.current
         let firstDayOfFeb = calendar.date(from: DateComponents(year: 2026, month: 2, day: 1))!
@@ -318,7 +318,7 @@ struct BudgetsViewModelTests {
     }
 
     @Test
-    func testCurrentMonthExpensesIncludesExpenseOnFirstDayOfMonth() {
+    func testCurrentMonthTransactionsIncludesTransactionOnFirstDayOfMonth() {
         let viewModel = BudgetsViewModel()
         let calendar = Calendar.current
         let firstDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!

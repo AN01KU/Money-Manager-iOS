@@ -16,7 +16,7 @@ struct AddRecurringTransactionSwiftDataTests {
     }
     
     @Test
-    func testSavePersistsRecurringExpense() throws {
+    func testSavePersistsRecurringTransaction() throws {
         let container = try makeContainer()
         let context = container.mainContext
         

@@ -4,23 +4,23 @@ import Testing
 @testable import Money_Manager
 
 @MainActor
-struct ExpenseModelTests {
+struct TransactionModelTests {
 
     @Test
-    func testExpenseAmountCanBeZero() {
+    func testTransactionAmountCanBeZero() {
         let expense = Transaction(amount: 0, category: "Other", date: Date())
         #expect(expense.amount == 0)
     }
 
     @Test
-    func testExpenseAmountCanBeNegative() {
+    func testTransactionAmountCanBeNegative() {
         let expense = Transaction(amount: -50, category: "Other", date: Date(), notes: "Refund")
         #expect(expense.amount == -50)
         #expect(expense.notes == "Refund")
     }
 
     @Test
-    func testExpenseCanBeMarkedAsDeleted() {
+    func testTransactionCanBeMarkedAsDeleted() {
         let expense = Transaction(amount: 100, category: "Other", date: Date())
         #expect(expense.isDeleted == false)
         expense.isDeleted = true
@@ -28,7 +28,7 @@ struct ExpenseModelTests {
     }
 
     @Test
-    func testExpenseDefaultTypeIsExpense() {
+    func testTransactionDefaultTypeIsExpense() {
         let expense = Transaction(amount: 100, category: "Food & Dining", date: Date())
         #expect(expense.type == "expense")
     }

@@ -40,7 +40,7 @@ final class OverviewTests: XCTestCase {
     
     // MARK: - Empty State Tests
     
-    func testEmptyStateDisplaysWhenNoExpenses() throws {
+    func testEmptyStateDisplaysWhenNoTransactions() throws {
         app.tabBars.buttons["Overview"].tap()
         
         let emptyStateText = app.staticTexts["No expenses yet"]
@@ -100,7 +100,7 @@ final class OverviewTests: XCTestCase {
     
     // MARK: - Transaction List Tests
     
-    func testTransactionListDisplaysExpenses() throws {
+    func testTransactionListDisplaysTransactions() throws {
         app.tabBars.buttons["Overview"].tap()
         
         // Check if any transactions exist from test data - categories are displayed as staticTexts
@@ -146,7 +146,7 @@ final class OverviewTests: XCTestCase {
     
     // MARK: - Add Expense Sheet Tests
     
-    func testAddExpenseSheetOpens() throws {
+    func testAddTransactionSheetOpens() throws {
         app.tabBars.buttons["Overview"].tap()
         
         // Tap the plus button (identifier: "plus", label: "Add")
@@ -158,7 +158,7 @@ final class OverviewTests: XCTestCase {
         XCTAssertTrue(addExpenseNavBar.waitForExistence(timeout: 3), "Add Expense sheet should open")
     }
     
-    func testAddExpenseSheetCanBeDismissed() throws {
+    func testAddTransactionSheetCanBeDismissed() throws {
         app.tabBars.buttons["Overview"].tap()
         
         app.buttons["plus"].tap()

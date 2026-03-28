@@ -154,7 +154,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func testFilteredActivityMatchesExpenseDescription() {
+    func testFilteredActivityMatchesTransactionDescription() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
             (transaction: makeTransaction(description: "Dinner"), groupName: "Trip"),

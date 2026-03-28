@@ -251,7 +251,7 @@ final class TransactionDetailTests: XCTestCase {
     
     // MARK: - Group Expense
     
-    func testGroupExpenseIndicator() throws {
+    func testGroupTransactionIndicator() throws {
         guard openFirstTransaction() else {
             XCTSkip("No transactions available to test")
             return

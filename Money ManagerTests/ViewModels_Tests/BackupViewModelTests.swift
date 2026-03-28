@@ -64,7 +64,7 @@ struct ExportDataTypeTests {
 struct ExportDataStructTests {
     
     @Test
-    func testExpenseDataInitialization() {
+    func testTransactionDataInitialization() {
         let expenseData = ExportData.TransactionData(
             id: "test-id",
             amount: 100.50,
@@ -84,7 +84,7 @@ struct ExportDataStructTests {
     }
     
     @Test
-    func testRecurringExpenseDataInitialization() {
+    func testRecurringTransactionDataInitialization() {
         let recurringData = ExportData.RecurringTransactionData(
             id: "rec-1",
             name: "Netflix",
@@ -206,7 +206,7 @@ struct ExportDataStructTests {
     }
     
     @Test
-    func testRecurringExpenseDataCodable() throws {
+    func testRecurringTransactionDataCodable() throws {
         let recurringData = ExportData.RecurringTransactionData(
             id: "rec-1",
             name: "Netflix",
@@ -411,7 +411,7 @@ struct BackupViewModelTests {
     // MARK: - Expense CSV Row Parse Tests
     
     @Test
-    func testParseExpenseCSVRow() {
+    func testParseTransactionCSVRow() {
         let viewModel = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group id", "group name"]
         let values = ["uuid-123", "100.50", "Food", "2026-03-12T10:30:00Z", "", "Lunch", "", "", "", ""]
@@ -426,7 +426,7 @@ struct BackupViewModelTests {
     }
     
     @Test
-    func testParseExpenseCSVRowWithMissingValues() {
+    func testParseTransactionCSVRowWithMissingValues() {
         let viewModel = BackupViewModel()
         let headers = ["id", "amount", "category", "date"]
         let values = ["uuid-123", "100", "Food"]
@@ -517,7 +517,7 @@ struct BackupViewModelTests {
     }
     
     @Test
-    func testParseExpenseCSVRowWithAllFields() {
+    func testParseTransactionCSVRowWithAllFields() {
         let viewModel = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
         let values = ["uuid-1", "250.75", "Transport", "2026-03-12T10:30:00Z", "2026-03-12T14:00:00Z", "Uber ride", "To airport", "rec-uuid", "grp-uuid"]
@@ -534,7 +534,7 @@ struct BackupViewModelTests {
     }
     
     @Test
-    func testParseExpenseCSVRowWithEmptyOptionalFields() {
+    func testParseTransactionCSVRowWithEmptyOptionalFields() {
         let viewModel = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
         let values = ["uuid-1", "50", "Food", "2026-03-12T10:30:00Z", "", "", "", "", ""]
@@ -608,7 +608,7 @@ struct BackupViewModelExportTests {
     // MARK: - Export Expenses Tests
     
     @Test
-    func testExportExpensesAsCSV() async {
+    func testExportTransactionsAsCSV() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .transactions
@@ -641,7 +641,7 @@ struct BackupViewModelExportTests {
     }
     
     @Test
-    func testExportExpensesAsJSON() async {
+    func testExportTransactionsAsJSON() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .transactions
@@ -675,7 +675,7 @@ struct BackupViewModelExportTests {
     }
     
     @Test
-    func testExportExpensesFiltersDeletedExpenses() async {
+    func testExportTransactionsFiltersDeletedTransactions() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .transactions
@@ -807,7 +807,7 @@ struct BackupViewModelExportTests {
     // MARK: - Export Recurring Expenses Tests
     
     @Test
-    func testExportRecurringExpensesAsCSV() async {
+    func testExportRecurringTransactionsAsCSV() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .recurring
@@ -839,7 +839,7 @@ struct BackupViewModelExportTests {
     }
     
     @Test
-    func testExportRecurringExpensesAsJSON() async {
+    func testExportRecurringTransactionsAsJSON() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .recurring
@@ -942,7 +942,7 @@ struct BackupViewModelExportTests {
     // MARK: - Export with Optional Fields
     
     @Test
-    func testExportExpenseWithOptionalFields() async {
+    func testExportTransactionWithOptionalFields() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .transactions
@@ -1021,7 +1021,7 @@ struct BackupViewModelImportTests {
     // MARK: - JSON Import Tests
     
     @Test
-    func testImportExpensesFromJSON() async throws {
+    func testImportTransactionsFromJSON() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
@@ -1149,7 +1149,7 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportRecurringExpensesFromJSON() async throws {
+    func testImportRecurringTransactionsFromJSON() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
@@ -1301,7 +1301,7 @@ struct BackupViewModelImportTests {
     // MARK: - CSV Import Tests
     
     @Test
-    func testImportExpensesFromCSV() async throws {
+    func testImportTransactionsFromCSV() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
@@ -1501,7 +1501,7 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportExpenseWithRecurringExpenseIdMapping() async throws {
+    func testImportTransactionWithRecurringTransactionIdMapping() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
@@ -1551,7 +1551,7 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportExpenseWithGroupFields() async throws {
+    func testImportTransactionWithGroupFields() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         

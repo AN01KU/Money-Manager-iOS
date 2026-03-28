@@ -7,7 +7,7 @@
 
 import XCTest
 
-final class AddExpenseTests: XCTestCase {
+final class AddTransactionTests: XCTestCase {
     
     var app: XCUIApplication!
     
@@ -25,22 +25,22 @@ final class AddExpenseTests: XCTestCase {
     
     // MARK: - Screen Loading
     
-    func testAddExpenseScreenLoads() throws {
-        openAddExpenseScreen()
+    func testAddTransactionScreenLoads() throws {
+        openAddTransactionScreen()
         
         let navBar = app.navigationBars["Add Expense"]
         XCTAssertTrue(navBar.waitForExistence(timeout: 3), "Add Expense screen should load")
     }
     
-    func testAddExpenseHasCancelButton() throws {
-        openAddExpenseScreen()
+    func testAddTransactionHasCancelButton() throws {
+        openAddTransactionScreen()
         
         let cancelButton = app.buttons["Cancel"]
         XCTAssertTrue(cancelButton.waitForExistence(timeout: 2), "Cancel button should exist")
     }
     
-    func testAddExpenseHasSaveButton() throws {
-        openAddExpenseScreen()
+    func testAddTransactionHasSaveButton() throws {
+        openAddTransactionScreen()
         
         let saveButton = app.buttons["Save"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 2), "Save button should exist")
@@ -49,7 +49,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Form Validation
     
     func testSaveButtonDisabledInitially() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let saveButton = app.buttons["Save"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 2))
@@ -57,7 +57,7 @@ final class AddExpenseTests: XCTestCase {
     }
     
     func testSaveButtonEnabledWithValidData() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         // Enter amount
         let amountField = app.textFields["0.00"]
@@ -75,7 +75,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Amount Input
     
     func testAmountFieldAcceptsInput() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let amountField = app.textFields["0.00"]
         XCTAssertTrue(amountField.waitForExistence(timeout: 2))
@@ -88,7 +88,7 @@ final class AddExpenseTests: XCTestCase {
     }
     
     func testQuickAmountButtonsWork() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         // Tap quick amount button (₹100, ₹500, or ₹1000)
         let quick100 = app.buttons.containing(NSPredicate(format: "label CONTAINS '100'")).firstMatch
@@ -104,7 +104,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Category Selection
     
     func testCategoryPickerOpens() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let categoryButton = app.buttons["Select Category"]
         XCTAssertTrue(categoryButton.waitForExistence(timeout: 2))
@@ -116,7 +116,7 @@ final class AddExpenseTests: XCTestCase {
     }
     
     func testCategoryCanBeSelected() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         app.buttons["Select Category"].tap()
         
@@ -140,7 +140,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Date Selection
     
     func testDatePickerOpens() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let datePicker = app.datePickers.firstMatch
         XCTAssertTrue(datePicker.waitForExistence(timeout: 3), "Date picker should exist")
@@ -156,7 +156,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Description Field
     
     func testDescriptionFieldAcceptsInput() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let descriptionField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description' OR label CONTAINS 'Description'")).firstMatch
         
@@ -172,15 +172,15 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Save and Cancel Flow
     
     func testCancelDismissesSheet() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         app.buttons["Cancel"].tap()
         
         XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3), "Should return to Overview after cancel")
     }
     
-    func testCompleteExpenseCreation() throws {
-        openAddExpenseScreen()
+    func testCompleteTransactionCreation() throws {
+        openAddTransactionScreen()
         
         // Enter amount
         let amountField = app.textFields["0.00"]
@@ -222,7 +222,7 @@ final class AddExpenseTests: XCTestCase {
     
     // MARK: - Helper Methods
     
-    private func openAddExpenseScreen() {
+    private func openAddTransactionScreen() {
         app.tabBars.buttons["Overview"].tap()
         XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
         

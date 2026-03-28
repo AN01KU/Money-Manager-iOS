@@ -128,7 +128,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsSetsRecurringExpenseId() {
+    func testGeneratePendingTransactionsSetsRecurringTransactionId() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 

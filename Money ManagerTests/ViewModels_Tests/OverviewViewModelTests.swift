@@ -7,7 +7,7 @@ import Testing
 struct OverviewViewModelTests {
     
     @Test
-    func testRecalculateWithDailyFilterReturnsSingleDayExpenses() {
+    func testRecalculateWithDailyFilterReturnsSingleDayTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .daily
         viewModel.selectedDate = Date()
@@ -21,7 +21,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testRecalculateWithMonthlyFilterReturnsMonthExpenses() {
+    func testRecalculateWithMonthlyFilterReturnsMonthTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -34,7 +34,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testRecalculateFiltersOutDeletedExpenses() {
+    func testRecalculateFiltersOutDeletedTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -64,7 +64,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testRecalculateWithZeroExpenses() {
+    func testRecalculateWithZeroTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -76,7 +76,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testRecalculateGroupsExpensesByCategory() {
+    func testRecalculateGroupsTransactionsByCategory() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -176,7 +176,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testCategorySpendingEmptyWhenNoExpenses() {
+    func testCategorySpendingEmptyWhenNoTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -256,7 +256,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testClearingSearchTextShowsAllExpenses() {
+    func testClearingSearchTextShowsAllTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -300,7 +300,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testDailyFilterExcludesExpensesFromOtherDays() {
+    func testDailyFilterExcludesTransactionsFromOtherDays() {
         let viewModel = OverviewViewModel()
         let calendar = Calendar.current
         
@@ -319,7 +319,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testNavigatingToAnotherMonthShowsDifferentExpenses() {
+    func testNavigatingToAnotherMonthShowsDifferentTransactions() {
         let viewModel = OverviewViewModel()
         let calendar = Calendar.current
         
@@ -343,7 +343,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testNavigatingToEmptyMonthShowsNoExpenses() {
+    func testNavigatingToEmptyMonthShowsNoTransactions() {
         let viewModel = OverviewViewModel()
         let calendar = Calendar.current
         
@@ -380,7 +380,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testMultipleExpensesSameCategoryGets100Percent() {
+    func testMultipleTransactionsSameCategoryGets100Percent() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -619,7 +619,7 @@ struct OverviewViewModelTests {
     // MARK: - Delete Expense Flow
     
     @Test
-    func testDeleteExpenseSetsExpenseToDelete() {
+    func testDeleteTransactionSetsTransactionToDelete() {
         let viewModel = OverviewViewModel()
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         
@@ -629,7 +629,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testCancelDeleteExpenseClearsExpenseToDelete() {
+    func testCancelDeleteTransactionClearsTransactionToDelete() {
         let viewModel = OverviewViewModel()
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         
@@ -641,7 +641,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testConfirmDeleteExpenseMarksAsDeleted() {
+    func testConfirmDeleteTransactionMarksAsDeleted() {
         let viewModel = OverviewViewModel()
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         
@@ -655,7 +655,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testConfirmDeleteExpenseDoesNothingWhenNoExpenseToDelete() {
+    func testConfirmDeleteTransactionDoesNothingWhenNoTransactionToDelete() {
         let viewModel = OverviewViewModel()
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
@@ -665,7 +665,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testConfirmDeleteExpenseRecalculates() {
+    func testConfirmDeleteTransactionRecalculates() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -723,7 +723,7 @@ struct OverviewViewModelTests {
     // MARK: - Category Filter Tests
     
     @Test
-    func testFilterByCategoryShowsOnlyMatchingExpenses() {
+    func testFilterByCategoryShowsOnlyMatchingTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -756,7 +756,7 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testClearCategoryFilterShowsAllExpenses() {
+    func testClearCategoryFilterShowsAllTransactions() {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
@@ -889,7 +889,7 @@ struct OverviewViewModelTests {
     // MARK: - Month boundary edge cases
 
     @Test
-    func testMonthlyFilterIncludesExpenseOnLastDayOfMonth() {
+    func testMonthlyFilterIncludesTransactionOnLastDayOfMonth() {
         let viewModel = OverviewViewModel()
         let calendar = Calendar.current
         // Last day of January 2026
@@ -906,7 +906,7 @@ struct OverviewViewModelTests {
     }
 
     @Test
-    func testMonthlyFilterExcludesExpenseOnFirstDayOfNextMonth() {
+    func testMonthlyFilterExcludesTransactionOnFirstDayOfNextMonth() {
         let viewModel = OverviewViewModel()
         let calendar = Calendar.current
         let firstDayOfFeb = calendar.date(from: DateComponents(year: 2026, month: 2, day: 1))!
@@ -922,7 +922,7 @@ struct OverviewViewModelTests {
     }
 
     @Test
-    func testMonthlyFilterIncludesExpenseOnFirstDayOfMonth() {
+    func testMonthlyFilterIncludesTransactionOnFirstDayOfMonth() {
         let viewModel = OverviewViewModel()
         let calendar = Calendar.current
         let firstDayOfJan = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
