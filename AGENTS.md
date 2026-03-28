@@ -109,7 +109,7 @@ Tests are **mandatory** for all business logic, view models, and model behavior.
 ### Approach
 
 - Follow **BDD/TDD**: write tests first or alongside implementation.
-- Test names should read as behavior: `test_addExpense_withZeroAmount_doesNotSave()`
+- Test names should read as behavior: `testAddTransaction_withZeroAmount_doesNotSave()`
 - One assertion per logical concept per test.
 - Use `make test-one TEST=YourTestClass` to run only the tests you're working on.
 

@@ -7,7 +7,7 @@
 <h1 align="center">Money Manager</h1>
 
 <p align="center">
-  A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
+  A personal finance iOS app for tracking income and expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
 </p>
 
 <p align="center">
@@ -25,8 +25,8 @@
 
 ## Features
 
-### Expense Tracking
-- Log expenses with amounts, categories, notes, and dates
+### Transaction Tracking
+- Log income and expenses with amounts, categories, notes, and dates
 - Quick-add with preset amounts for fast entry
 - View and filter transactions by day or month
 - Detailed transaction history with search functionality
@@ -37,19 +37,19 @@
 - Dashboard with projected spending, daily averages, and remaining budget
 - Over-budget alerts to keep you on track
 
-### Recurring Expenses
-- Set up recurring expenses (daily, weekly, monthly)
+### Recurring Transactions
+- Set up recurring transactions (daily, weekly, monthly)
 - Flexible scheduling — choose specific days of the week or month
 - Skip weekends or specific dates
-- Auto-generates expenses so you never forget a bill
+- Auto-generates transactions so you never forget a bill
 
 ### Categories
 - Comes with predefined spending categories
 - Create your own categories with custom names, colors, and icons
-- Organize expenses the way that makes sense to you
+- Organize transactions the way that makes sense to you
 
 ### Server Sync
-- Syncs expenses, budgets, categories, and recurring expenses with a backend server
+- Syncs transactions, budgets, categories, and recurring transactions with a backend server
 - Offline-first — all data is stored locally and changes are queued when offline
 - Replays queued changes automatically on reconnect
 - Account-based with token authentication
@@ -79,19 +79,19 @@
 
 ## Screenshots
 
-| Overview | Breakdown | Add Expense |
+| Overview | Breakdown | Add Transaction |
 |:--------:|:----------:|:----------:|
 | <img src="Screenshots/expenses-list.png" width="200"/> | <img src="Screenshots/expenses-breakdown.png" width="200"/> | <img src="Screenshots/expense-add.png" width="200"/> |
 
-| Category | Recurring Expense |Settings | 
-|:--------:|:--------:|:--------:| 
+| Category | Recurring Transactions | Settings |
+|:--------:|:--------:|:--------:|
 | <img src="Screenshots/categories.png" width="200"/> | <img src="Screenshots/expense-recurring-list.png" width="200"/> | <img src="Screenshots/settings.png" width="200"/> |
 
 ## Architecture
 
 ```
 Money Manager/
-├── Models/           # Data models (Expense, Budget, Category, etc.)
+├── Models/           # Data models (Transaction, Budget, Category, etc.)
 ├── ViewModels/       # Business logic and state management
 ├── Pages/            # Screen-level views
 ├── Components/       # Reusable UI components
