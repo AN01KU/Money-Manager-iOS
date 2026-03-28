@@ -56,7 +56,7 @@ struct TransactionDetailView: View {
                         
                         Text(CurrencyFormatter.format(transaction.amount))
                             .font(.system(size: 36, weight: .bold))
-                            .foregroundStyle(AppColors.expense)
+                            .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
                         
                         Text(viewModel.formatDateAndTime(transaction.date, time: transaction.time))
                             .font(.subheadline)
@@ -73,6 +73,8 @@ struct TransactionDetailView: View {
                             DetailRow(label: "Notes", value: notes)
                         }
                         
+                        DetailRow(label: "Type", value: transaction.type == "income" ? "Income" : "Expense")
+
                         DetailRow(label: "Category", value: transaction.category)
                         
                         DetailRow(label: "Created", value: viewModel.formatFullDate(transaction.createdAt))

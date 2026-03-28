@@ -59,7 +59,7 @@ final class RecurringExpensesTests: XCTestCase {
                          gymText.waitForExistence(timeout: 3) ||
                          insuranceText.waitForExistence(timeout: 3)
         
-        let emptyState = app.staticTexts["No recurring expenses"]
+        let emptyState = app.staticTexts["No recurring transactions"]
         let hasEmptyState = emptyState.waitForExistence(timeout: 2)
         
         XCTAssertTrue(hasExpenses || hasEmptyState, "Should show recurring expenses or empty state")
@@ -275,7 +275,7 @@ final class RecurringExpensesTests: XCTestCase {
         // This test verifies the empty state message text when it appears
         navigateToRecurring()
         
-        let emptyMessage = app.staticTexts["No recurring expenses"]
+        let emptyMessage = app.staticTexts["No recurring transactions"]
         let emptySubMessage = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'subscriptions'")).firstMatch
         
         if emptyMessage.waitForExistence(timeout: 2) {

@@ -22,6 +22,7 @@ struct APITransaction: Codable {
     let is_deleted: Bool
     let recurring_expense_id: UUID?
     let group_transaction_id: UUID?
+    let settlement_id: UUID?
 }
 
 struct APIRecurringTransaction: Codable {

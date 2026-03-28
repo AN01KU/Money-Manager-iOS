@@ -290,7 +290,8 @@ final class SyncService: SyncServiceProtocol {
                     transactionDescription: remote.description,
                     notes: remote.notes,
                     recurringExpenseId: remote.recurring_expense_id,
-                    groupTransactionId: remote.group_transaction_id
+                    groupTransactionId: remote.group_transaction_id,
+                    settlementId: remote.settlement_id
                 )
                 context.insert(tx)
             }

@@ -25,6 +25,7 @@ final class Transaction {
     
     var recurringExpenseId: UUID?
     var groupTransactionId: UUID?
+    var settlementId: UUID?
     
     /// UUID of the linked CustomCategory. Nil for transactions created before this field was added.
     var categoryId: UUID?
@@ -40,6 +41,7 @@ final class Transaction {
         notes: String? = nil,
         recurringExpenseId: UUID? = nil,
         groupTransactionId: UUID? = nil,
+        settlementId: UUID? = nil,
         categoryId: UUID? = nil
     ) {
         self.id = id
@@ -52,6 +54,7 @@ final class Transaction {
         self.notes = notes
         self.recurringExpenseId = recurringExpenseId
         self.groupTransactionId = groupTransactionId
+        self.settlementId = settlementId
         self.createdAt = Date()
         self.updatedAt = Date()
         self.isDeleted = false

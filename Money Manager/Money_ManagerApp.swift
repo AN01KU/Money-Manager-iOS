@@ -75,6 +75,7 @@ struct Money_ManagerApp: App {
     private static func injectTestData(context: ModelContext) {
         try? context.delete(model: Transaction.self)
         try? context.delete(model: MonthlyBudget.self)
+        try? context.delete(model: RecurringTransaction.self)
 
         for transaction in TestData.generatePersonalTransactions() {
             context.insert(transaction)
@@ -82,7 +83,10 @@ struct Money_ManagerApp: App {
         for budget in TestData.generateBudgets() {
             context.insert(budget)
         }
-        
+        for recurring in TestData.generateRecurringTransactions() {
+            context.insert(recurring)
+        }
+
         try? context.save()
     }
     #endif
