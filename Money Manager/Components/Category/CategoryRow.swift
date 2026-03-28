@@ -43,6 +43,6 @@ struct CategoryRow: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(category.name), \(usageCount) expenses, \(category.isPredefined ? "Default category" : "Custom category")")
+        .accessibilityLabel("\(category.name), \(usageCount) transactions, \(category.isPredefined ? "Default category" : "Custom category")")
     }
 }

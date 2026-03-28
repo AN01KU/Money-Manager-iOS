@@ -5,27 +5,27 @@ struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    let expense: Transaction
+    let transaction: Transaction
     @State private var viewModel: TransactionDetailViewModel
     @State private var editTapped = false
     @State private var deleteTapped = false
     @State private var deleteSuccess = false
 
-    init(expense: Transaction) {
-        self.expense = expense
-        _viewModel = State(wrappedValue: TransactionDetailViewModel(expense: expense))
+    init(transaction: Transaction) {
+        self.transaction = transaction
+        _viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction))
     }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    if viewModel.isGroupExpense {
+                    if viewModel.isGroupTransaction {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "person.2.fill")
                                     .foregroundStyle(AppColors.accent)
-                                Text("Group Expense")
+                                Text("Group Transaction")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(AppColors.accent)
@@ -36,7 +36,7 @@ struct TransactionDetailView: View {
                         }
                         .padding()
                         .background(Color(.systemGray6))
-.clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     
                     VStack(spacing: 8) {
@@ -50,42 +50,42 @@ struct TransactionDetailView: View {
                                 .foregroundStyle(viewModel.categoryColor)
                         }
                         
-                        Text(expense.category)
+                        Text(transaction.category)
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        Text(CurrencyFormatter.format(expense.amount))
+                        Text(CurrencyFormatter.format(transaction.amount))
                             .font(.system(size: 36, weight: .bold))
                             .foregroundStyle(AppColors.expense)
                         
-                        Text(viewModel.formatDateAndTime(expense.date, time: expense.time))
+                        Text(viewModel.formatDateAndTime(transaction.date, time: transaction.time))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top)
                     
                     VStack(alignment: .leading, spacing: 16) {
-                        if let description = expense.transactionDescription, !description.isEmpty {
+                        if let description = transaction.transactionDescription, !description.isEmpty {
                             DetailRow(label: "Description", value: description)
                         }
                         
-                        if let notes = expense.notes, !notes.isEmpty {
+                        if let notes = transaction.notes, !notes.isEmpty {
                             DetailRow(label: "Notes", value: notes)
                         }
                         
-                        DetailRow(label: "Category", value: expense.category)
+                        DetailRow(label: "Category", value: transaction.category)
                         
-                        DetailRow(label: "Created", value: viewModel.formatFullDate(expense.createdAt))
+                        DetailRow(label: "Created", value: viewModel.formatFullDate(transaction.createdAt))
                         
-                        if expense.updatedAt != expense.createdAt {
-                            DetailRow(label: "Last Modified", value: viewModel.formatFullDate(expense.updatedAt))
+                        if transaction.updatedAt != transaction.createdAt {
+                            DetailRow(label: "Last Modified", value: viewModel.formatFullDate(transaction.updatedAt))
                         }
                         
-                        if expense.recurringExpenseId != nil {
+                        if transaction.recurringExpenseId != nil {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                     .foregroundStyle(AppColors.accent)
-                                Text("This is a recurring expense")
+                                Text("This is a recurring transaction")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
@@ -147,12 +147,12 @@ struct TransactionDetailView: View {
                 }
             }
             .sheet(isPresented: $viewModel.showEditSheet) {
-                AddTransactionView(expenseToEdit: expense)
+                AddTransactionView(transactionToEdit: transaction)
             }
-            .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
+            .alert("Delete transaction?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    viewModel.deleteExpense { deleteSuccess = true; dismiss() }
+                    viewModel.deleteTransaction { deleteSuccess = true; dismiss() }
                 }
             } message: {
                 Text("This action cannot be undone.")
@@ -185,7 +185,7 @@ struct DetailRow: View {
 }
 
 #Preview {
-    TransactionDetailView(expense: Transaction(
+    TransactionDetailView(transaction: Transaction(
         amount: 450,
         category: "Food & Dining",
         date: Date(),

@@ -3,7 +3,7 @@ import SwiftData
 
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allExpenses: [Transaction]
+    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     
     @State private var selectedMonth: Date = Date()
@@ -17,23 +17,23 @@ struct BudgetsView: View {
         return budgets.first { $0.year == year && $0.month == month }
     }
     
-    private var currentMonthExpenses: [Transaction] {
+    private var currentMonthTransactions: [Transaction] {
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
             let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
         else { return [] }
 
-        return allExpenses.filter { expense in
-            !expense.isDeleted &&
-            expense.type == "expense" &&
-            expense.date >= startOfMonth &&
-            expense.date <= endOfMonth
+        return allTransactions.filter { transaction in
+            !transaction.isDeleted &&
+            transaction.type == "expense" &&
+            transaction.date >= startOfMonth &&
+            transaction.date <= endOfMonth
         }
     }
 
     private var totalSpent: Double {
-        currentMonthExpenses.reduce(0) { $0 + $1.amount }
+        currentMonthTransactions.reduce(0) { $0 + $1.amount }
     }
     
     private var remainingBudget: Double {
@@ -104,10 +104,10 @@ struct BudgetsView: View {
                     .padding(.horizontal)
                 }
                 
-                if !currentMonthExpenses.isEmpty {
+                if !currentMonthTransactions.isEmpty {
                     SpendingSummaryCard(
                         totalSpent: totalSpent,
-                        transactionCount: currentMonthExpenses.count
+                        transactionCount: currentMonthTransactions.count
                     )
                     .padding(.horizontal)
                 }

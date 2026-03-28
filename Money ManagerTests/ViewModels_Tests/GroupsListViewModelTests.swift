@@ -28,10 +28,10 @@ struct GroupsListViewModelTests {
         APIGroupBalance(user_id: userId, amount: amount)
     }
 
-    private func makeExpense(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupExpense {
-        APIGroupExpense(
+    private func makeTransaction(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
+        APIGroupTransaction(
             id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
-            total_amount: totalAmount, category: "Food", date: Date(),
+            total_amount: totalAmount, category: "Food", date: createdAt,
             description: description, notes: nil, is_deleted: false,
             created_at: createdAt, updated_at: Date(), splits: []
         )
@@ -48,7 +48,7 @@ struct GroupsListViewModelTests {
     // MARK: - Initial state
 
     @Test
-    func test_initialState_isEmpty() {
+    func testInitialStateIsEmpty() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         #expect(vm.groups.isEmpty)
         #expect(vm.isLoading == false)
@@ -60,7 +60,7 @@ struct GroupsListViewModelTests {
     // MARK: - load()
 
     @Test
-    func test_load_populatesGroups() async {
+    func testLoadPopulatesGroups() async {
         let mock = MockGroupService.fresh()
         mock.stubbedGroups = [makeGroup(name: "Trip"), makeGroup(name: "Office")]
         let vm = GroupsListViewModel(groupService: mock)
@@ -70,13 +70,13 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_load_populatesRecentActivity_fromGroupDetails() async {
+    func testLoadPopulatesRecentActivityFromGroupDetails() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
         let group = makeGroup(id: groupId, name: "Weekend Trip")
         mock.stubbedGroups = [group]
         mock.stubbedGroupDetails = makeDetails(groupId: groupId, groupName: "Weekend Trip")
-        mock.stubbedTransactions = [makeExpense(description: "Dinner"), makeExpense(description: "Taxi")]
+        mock.stubbedTransactions = [makeTransaction(description: "Dinner"), makeTransaction(description: "Taxi")]
         let vm = GroupsListViewModel(groupService: mock)
         await vm.load()
         #expect(vm.recentActivity.count == 2)
@@ -84,23 +84,22 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_load_recentActivity_sortedNewestFirst() async {
+    func testLoadRecentActivitySortedNewestFirst() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let older = makeExpense(description: "Old", totalAmount: "10", createdAt: Date(timeIntervalSinceNow: -3600))
-        let newer = makeExpense(description: "New", totalAmount: "20", createdAt: Date(timeIntervalSinceNow: -60))
+        let older = makeTransaction(description: "Old", totalAmount: "10", createdAt: Date(timeIntervalSinceNow: -3600))
+        let newer = makeTransaction(description: "New", totalAmount: "20", createdAt: Date(timeIntervalSinceNow: -60))
         mock.stubbedGroups = [makeGroup(id: groupId)]
         mock.stubbedTransactions = [older, newer]
         let vm = GroupsListViewModel(groupService: mock)
         await vm.load()
-        #expect(vm.recentActivity.first?.expense.description == "New")
+        #expect(vm.recentActivity.first?.transaction.description == "New")
     }
 
     @Test
-    func test_load_recentActivity_emptyWhenNoExpenses() async {
+    func testLoadRecentActivityEmptyWhenNoTransactions() async {
         let mock = MockGroupService.fresh()
         mock.stubbedGroups = [makeGroup()]
-        // stubbedGroupDetails is nil → mock returns empty expenses by default
         let vm = GroupsListViewModel(groupService: mock)
         await vm.load()
         #expect(vm.recentActivity.isEmpty)
@@ -109,7 +108,7 @@ struct GroupsListViewModelTests {
     // MARK: - filteredGroups
 
     @Test
-    func test_filteredGroups_withEmptySearch_returnsAll() {
+    func testFilteredGroupsWithEmptySearchReturnsAll() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.groups = [makeGroup(name: "Trip"), makeGroup(name: "Flatmates")]
         vm.searchText = ""
@@ -117,7 +116,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_filteredGroups_withSearch_filtersByName() {
+    func testFilteredGroupsWithSearchFiltersByName() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.groups = [makeGroup(name: "Weekend Trip"), makeGroup(name: "Flatmates")]
         vm.searchText = "trip"
@@ -126,7 +125,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_filteredGroups_withSearch_caseInsensitive() {
+    func testFilteredGroupsWithSearchCaseInsensitive() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.groups = [makeGroup(name: "FLAT"), makeGroup(name: "Office")]
         vm.searchText = "flat"
@@ -134,7 +133,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_filteredGroups_withNoMatch_returnsEmpty() {
+    func testFilteredGroupsWithNoMatchReturnsEmpty() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.groups = [makeGroup(name: "Trip"), makeGroup(name: "Office")]
         vm.searchText = "xyz"
@@ -144,34 +143,34 @@ struct GroupsListViewModelTests {
     // MARK: - filteredActivity
 
     @Test
-    func test_filteredActivity_withEmptySearch_returnsAll() {
+    func testFilteredActivityWithEmptySearchReturnsAll() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            (expense: makeExpense(description: "Dinner"), groupName: "Trip"),
-            (expense: makeExpense(description: "Taxi"),   groupName: "Work")
+            (transaction: makeTransaction(description: "Dinner"), groupName: "Trip"),
+            (transaction: makeTransaction(description: "Taxi"),   groupName: "Work")
         ]
         vm.searchText = ""
         #expect(vm.filteredActivity.count == 2)
     }
 
     @Test
-    func test_filteredActivity_matchesExpenseDescription() {
+    func testFilteredActivityMatchesExpenseDescription() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            (expense: makeExpense(description: "Dinner"), groupName: "Trip"),
-            (expense: makeExpense(description: "Hotel"),  groupName: "Trip")
+            (transaction: makeTransaction(description: "Dinner"), groupName: "Trip"),
+            (transaction: makeTransaction(description: "Hotel"),  groupName: "Trip")
         ]
         vm.searchText = "dinner"
         #expect(vm.filteredActivity.count == 1)
-        #expect(vm.filteredActivity.first?.expense.description == "Dinner")
+        #expect(vm.filteredActivity.first?.transaction.description == "Dinner")
     }
 
     @Test
-    func test_filteredActivity_matchesGroupName() {
+    func testFilteredActivityMatchesGroupName() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            (expense: makeExpense(description: "Dinner"), groupName: "Weekend Trip"),
-            (expense: makeExpense(description: "Lunch"),  groupName: "Office")
+            (transaction: makeTransaction(description: "Dinner"), groupName: "Weekend Trip"),
+            (transaction: makeTransaction(description: "Lunch"),  groupName: "Office")
         ]
         vm.searchText = "weekend"
         #expect(vm.filteredActivity.count == 1)
@@ -181,7 +180,7 @@ struct GroupsListViewModelTests {
     // MARK: - netBalance
 
     @Test
-    func test_netBalance_withNoCurrentUser_returnsZero() {
+    func testNetBalanceWithNoCurrentUserReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let uid = UUID()
         vm.groups = [makeGroup(balances: [makeBalance(userId: uid, amount: "50.00")])]
@@ -189,7 +188,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_netBalance_withNoGroups_returnsZero() {
+    func testNetBalanceWithNoGroupsReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.groups = []
         #expect(vm.netBalance == 0)
@@ -198,7 +197,7 @@ struct GroupsListViewModelTests {
     // MARK: - userBalance(for:)
 
     @Test
-    func test_userBalance_withNoCurrentUser_returnsZero() {
+    func testUserBalanceWithNoCurrentUserReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let uid = UUID()
         let group = makeGroup(balances: [makeBalance(userId: uid, amount: "75.00")])
@@ -206,7 +205,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_userBalance_withNoBalanceEntry_returnsZero() {
+    func testUserBalanceWithNoBalanceEntryReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let group = makeGroup(balances: [])
         #expect(vm.userBalance(for: group) == 0)
@@ -215,14 +214,14 @@ struct GroupsListViewModelTests {
     // MARK: - displayName(for:)
 
     @Test
-    func test_displayName_returnsUsername() {
+    func testDisplayNameReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
         #expect(vm.displayName(for: member) == "alice")
     }
 
     @Test
-    func test_displayName_withNoAtSign_returnsUsername() {
+    func testDisplayNameWithNoAtSignReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joined_at: Date())
         #expect(vm.displayName(for: member) == "noatsign")
@@ -231,7 +230,7 @@ struct GroupsListViewModelTests {
     // MARK: - createGroup
 
     @Test
-    func test_createGroup_insertsAtTopOfList() async throws {
+    func testCreateGroupInsertsAtTopOfList() async throws {
         let mock = MockGroupService.fresh()
         let vm = GroupsListViewModel(groupService: mock)
         vm.groups = [makeGroup(name: "Existing")]
@@ -241,7 +240,7 @@ struct GroupsListViewModelTests {
     }
 
     @Test
-    func test_createGroup_callsServiceWithName() async throws {
+    func testCreateGroupCallsServiceWithName() async throws {
         let mock = MockGroupService.fresh()
         let vm = GroupsListViewModel(groupService: mock)
         _ = try await vm.createGroup(name: "Trip")

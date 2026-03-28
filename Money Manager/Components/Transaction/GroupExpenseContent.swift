@@ -11,7 +11,7 @@ struct GroupExpenseContent: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                 
-                Text("Group expense")
+                Text("Group transaction")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

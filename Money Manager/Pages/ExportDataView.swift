@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 struct ExportDataView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var expenses: [Transaction]
+    @Query private var transactions: [Transaction]
     @Query private var recurringExpenses: [RecurringExpense]
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
@@ -65,7 +65,7 @@ struct ExportDataView: View {
             Button {
                 Task {
                     await viewModel.exportData(
-                        expenses: expenses,
+                        transactions: transactions,
                         recurringExpenses: recurringExpenses,
                         budgets: budgets,
                         categories: categories
@@ -81,7 +81,7 @@ struct ExportDataView: View {
                     Text("Export \(viewModel.selectedDataType.rawValue)")
                 }
             }
-            .disabled(expenses.isEmpty && recurringExpenses.isEmpty && budgets.isEmpty && categories.isEmpty)
+            .disabled(transactions.isEmpty && recurringExpenses.isEmpty && budgets.isEmpty && categories.isEmpty)
         } header: {
             Text("Export")
         } footer: {
@@ -119,9 +119,9 @@ struct ExportDataView: View {
     private var dataSummarySection: some View {
         Section("Data Summary") {
             HStack {
-                Label("Expenses", systemImage: "creditcard.fill")
+                Label("Transactions", systemImage: "creditcard.fill")
                 Spacer()
-                Text("\(expenses.count)")
+                Text("\(transactions.count)")
                     .foregroundStyle(.secondary)
             }
             

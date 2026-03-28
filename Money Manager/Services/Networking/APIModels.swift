@@ -306,20 +306,16 @@ struct APISettlement: Codable, Identifiable, Sendable {
 // MARK: - Dashboard
 
 struct APIMonthlyDashboardResponse: Codable {
-    let totalExpenses: String?
-    let total_expenses: String?
-    let expenseCount: Int?
-    let expense_count: Int?
+    let totalTransactions: String?
+    let transactionCount: Int?
     let categoryBreakdown: [APICategoryBreakdown]?
     let category_breakdown: [APICategoryBreakdown]?
     let budgetStatus: APIBudgetStatus?
     let budget_status: APIBudgetStatus?
 
     enum CodingKeys: String, CodingKey {
-        case totalExpenses = "totalExpenses"
-        case total_expenses = "total_expenses"
-        case expenseCount = "expenseCount"
-        case expense_count = "expense_count"
+        case totalTransactions = "total_expenses"
+        case transactionCount = "expenseCount"
         case categoryBreakdown = "categoryBreakdown"
         case category_breakdown = "category_breakdown"
         case budgetStatus = "budgetStatus"

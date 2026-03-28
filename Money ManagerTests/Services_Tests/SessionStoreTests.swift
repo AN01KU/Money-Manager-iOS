@@ -17,14 +17,14 @@ struct SessionStoreTests {
     // MARK: - isLoggedIn
 
     @Test
-    func test_isLoggedIn_returnsFalse_whenNoTokenSaved() throws {
+    func testIsLoggedInReturnsFalseWhenNoTokenSaved() throws {
         let store = try makeStore()
 
         #expect(store.isLoggedIn == false)
     }
 
     @Test
-    func test_isLoggedIn_returnsTrue_afterSavingToken() throws {
+    func testIsLoggedInReturnsTrueAfterSavingToken() throws {
         let store = try makeStore()
         store.saveToken("my-jwt-token")
 
@@ -34,14 +34,14 @@ struct SessionStoreTests {
     // MARK: - saveToken / getToken
 
     @Test
-    func test_getToken_returnsNil_whenNoTokenSaved() throws {
+    func testGetTokenReturnsNilWhenNoTokenSaved() throws {
         let store = try makeStore()
 
         #expect(store.getToken() == nil)
     }
 
     @Test
-    func test_getToken_returnsToken_afterSave() throws {
+    func testGetTokenReturnsTokenAfterSave() throws {
         let store = try makeStore()
         store.saveToken("abc123")
 
@@ -49,17 +49,16 @@ struct SessionStoreTests {
     }
 
     @Test
-    func test_saveToken_replacesExistingToken() throws {
+    func testSaveTokenReplacesExistingToken() throws {
         let store = try makeStore()
         store.saveToken("first-token")
         store.saveToken("second-token")
 
-        // Only one token should exist and it should be the latest
         #expect(store.getToken() == "second-token")
     }
 
     @Test
-    func test_saveToken_multipleTimes_noDuplicatesExist() throws {
+    func testSaveTokenMultipleTimesNoDuplicatesExist() throws {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AuthToken.self, configurations: config)
         let store = SessionStore()
@@ -78,7 +77,7 @@ struct SessionStoreTests {
     // MARK: - clearSession
 
     @Test
-    func test_clearSession_removesToken() throws {
+    func testClearSessionRemovesToken() throws {
         let store = try makeStore()
         store.saveToken("token-to-delete")
         store.clearSession()
@@ -88,10 +87,9 @@ struct SessionStoreTests {
     }
 
     @Test
-    func test_clearSession_whenNoToken_doesNotCrash() throws {
+    func testClearSessionWhenNoTokenDoesNotCrash() throws {
         let store = try makeStore()
 
-        // Should not throw or crash on empty state
         store.clearSession()
 
         #expect(store.isLoggedIn == false)
@@ -100,18 +98,16 @@ struct SessionStoreTests {
     // MARK: - Unconfigured store (no container set)
 
     @Test
-    func test_getToken_returnsNil_whenNotConfigured() {
+    func testGetTokenReturnsNilWhenNotConfigured() {
         let store = SessionStore()
-        // No configure() called
 
         #expect(store.getToken() == nil)
         #expect(store.isLoggedIn == false)
     }
 
     @Test
-    func test_saveToken_doesNotCrash_whenNotConfigured() {
+    func testSaveTokenDoesNotCrashWhenNotConfigured() {
         let store = SessionStore()
-        // No configure() called — should silently do nothing
 
         store.saveToken("some-token")
 

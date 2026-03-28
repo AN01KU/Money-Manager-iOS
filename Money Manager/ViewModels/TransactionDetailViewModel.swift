@@ -6,34 +6,34 @@ import SwiftData
     var showEditSheet = false
     var showDeleteAlert = false
 
-    let expense: Transaction
+    let transaction: Transaction
     var modelContext: ModelContext?
     var customCategories: [CustomCategory] = []
 
     var categoryIcon: String {
-        CategoryResolver.resolve(expense.category, customCategories: customCategories).icon
+        CategoryResolver.resolve(transaction.category, customCategories: customCategories).icon
     }
 
     var categoryColor: Color {
-        CategoryResolver.resolve(expense.category, customCategories: customCategories).color
+        CategoryResolver.resolve(transaction.category, customCategories: customCategories).color
     }
 
-    var isGroupExpense: Bool {
-        expense.groupTransactionId != nil
+    var isGroupTransaction: Bool {
+        transaction.groupTransactionId != nil
     }
 
     private let changeQueue: ChangeQueueManagerProtocol
     private let auth: AuthServiceProtocol
 
-    init(expense: Transaction, changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.expense = expense
+    init(transaction: Transaction, changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
+        self.transaction = transaction
         self.changeQueue = changeQueue
         self.auth = auth
     }
 
-    func deleteExpense(completion: @escaping () -> Void) {
-        expense.isDeleted = true
-        expense.updatedAt = Date()
+    func deleteTransaction(completion: @escaping () -> Void) {
+        transaction.isDeleted = true
+        transaction.updatedAt = Date()
 
         guard let modelContext = modelContext else {
             completion()
@@ -45,7 +45,7 @@ import SwiftData
 
             changeQueue.enqueue(
                 entityType: "transaction",
-                entityID: expense.id,
+                entityID: transaction.id,
                 action: "delete",
                 endpoint: "/transactions",
                 httpMethod: "DELETE",
@@ -59,7 +59,7 @@ import SwiftData
                 }
             }
 
-            AppLogger.data.info("Transaction deleted: \(self.expense.id)")
+            AppLogger.data.info("Transaction deleted: \(self.transaction.id)")
             completion()
         } catch {
             AppLogger.data.error("Error deleting transaction: \(error)")

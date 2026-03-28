@@ -76,8 +76,8 @@ struct Money_ManagerApp: App {
         try? context.delete(model: Transaction.self)
         try? context.delete(model: MonthlyBudget.self)
 
-        for expense in TestData.generatePersonalExpenses() {
-            context.insert(expense)
+        for transaction in TestData.generatePersonalTransactions() {
+            context.insert(transaction)
         }
         for budget in TestData.generateBudgets() {
             context.insert(budget)

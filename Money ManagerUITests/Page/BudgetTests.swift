@@ -144,8 +144,8 @@ final class BudgetTests: XCTestCase {
     func testSpendingSummaryCardExists() throws {
         navigateToBudgets()
         
-        // Spending summary shows when there are expenses
-        let summaryTitle = app.staticTexts.containing(NSPredicate(format: 
+        // Spending summary shows when there are transactions
+        let summaryTitle = app.staticTexts.containing(NSPredicate(format:
             "label CONTAINS 'Spending Summary' OR label CONTAINS 'Summary' OR label CONTAINS 'transactions'")).firstMatch
         
         if summaryTitle.waitForExistence(timeout: 3) {
@@ -158,7 +158,7 @@ final class BudgetTests: XCTestCase {
         
         // Look for transaction count
         let transactionCount = app.staticTexts.containing(NSPredicate(format: 
-            "label CONTAINS 'transaction' OR label CONTAINS 'expense'")).firstMatch
+            "label CONTAINS 'transaction' OR label CONTAINS 'transaction'")).firstMatch
         
         if transactionCount.waitForExistence(timeout: 3) {
             XCTAssertTrue(transactionCount.exists, "Should display transaction count")

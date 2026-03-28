@@ -2,7 +2,7 @@
 
 /// Centralised loggers for each subsystem category.
 /// Usage:
-///   AppLogger.sync.error("Failed to pull expenses: \(error)")
+///   AppLogger.sync.error("Failed to pull transaction: \(error)")
 ///   AppLogger.data.warning("Category not found, falling back to Other")
 ///   AppLogger.auth.info("User logged in: \(username)")
 ///

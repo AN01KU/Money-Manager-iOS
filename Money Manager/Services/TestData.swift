@@ -4,7 +4,7 @@ import SwiftData
 #if DEBUG
 struct TestData {
 
-    static func generatePersonalExpenses() -> [Transaction] {
+    static func generatePersonalTransactions() -> [Transaction] {
         var expenses: [Transaction] = []
         let today = Date()
         let calendar = Calendar.current

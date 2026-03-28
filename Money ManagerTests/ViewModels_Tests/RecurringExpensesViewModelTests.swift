@@ -72,7 +72,7 @@ struct RecurringExpensesViewModelTests {
     }
 
     @Test
-    func test_toggleExpense_inactiveExpense_becomesActive() {
+    func testToggleExpenseInactiveExpenseBecomesActive() {
         let viewModel = RecurringExpensesViewModel()
 
         let inactive = RecurringExpense(name: "Old Gym", amount: 500, category: "Health", frequency: "monthly", isActive: false)
@@ -148,7 +148,7 @@ struct RecurringExpensesViewModelTests {
     func testDeleteExpenseRemovesFromDatabase() {
         let paused = RecurringExpense(name: "ToDelete", amount: 100, category: "Other", frequency: "monthly", isActive: false)
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -317,7 +317,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.frequency = "monthly"
         viewModel.dayOfMonth = 1
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -344,7 +344,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.frequency = "monthly"
         viewModel.dayOfMonth = 15
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -366,7 +366,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.selectedCategory = "Food"
         viewModel.frequency = "weekly"
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -389,7 +389,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.hasEndDate = true
         viewModel.endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -411,7 +411,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = false
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -433,7 +433,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.selectedCategory = "Food"
         viewModel.notes = "Test notes"
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
@@ -455,7 +455,7 @@ struct AddRecurringExpenseViewModelTests {
         viewModel.selectedCategory = "Food"
         viewModel.notes = ""
 
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)

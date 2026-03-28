@@ -38,7 +38,7 @@ final class GroupDetailViewModel {
     var pendingMemberEmails: Set<String> = []
 
     // Add transaction / settle
-    var showAddExpense = false
+    var showAddTransaction = false
     var showSettlement = false
 
     let groupService: GroupServiceProtocol
@@ -106,25 +106,25 @@ final class GroupDetailViewModel {
         }
     }
 
-    // MARK: - After expense added
+    // MARK: - After transaction added
 
-    func expenseAdded(_ expense: APIGroupTransaction) {
-        transactions.insert(expense, at: 0)
+    func transactionAdded(_ transaction: APIGroupTransaction) {
+        transactions.insert(transaction, at: 0)
         recalculateBalances()
     }
 
     // MARK: - Delete transaction
 
-    func deleteExpense(_ expense: APIGroupTransaction) {
-        transactions.removeAll { $0.id == expense.id }
+    func deleteTransaction(_ transaction: APIGroupTransaction) {
+        transactions.removeAll { $0.id == transaction.id }
         recalculateBalances()
 
         Task {
             do {
-                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: expense.id)
+                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: transaction.id)
             } catch {
                 // Restore on failure
-                transactions.insert(expense, at: 0)
+                transactions.insert(transaction, at: 0)
                 recalculateBalances()
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             }

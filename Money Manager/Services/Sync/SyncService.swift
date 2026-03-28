@@ -137,12 +137,12 @@ final class SyncService: SyncServiceProtocol {
     }
 
     private func enqueueLocalData(context: ModelContext) {
-        let expenses = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
-        for expense in expenses where !expense.isDeleted {
-            let payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        for transaction in transactions where !transaction.isDeleted {
+            let payload = try? APIClient.apiEncoder.encode(transaction.toCreateRequest())
             changeQueueManager.enqueue(
                 entityType: "transaction",
-                entityID: expense.id,
+                entityID: transaction.id,
                 action: "create",
                 endpoint: "/transactions",
                 httpMethod: "POST",
@@ -201,7 +201,7 @@ final class SyncService: SyncServiceProtocol {
         await pullCategories(context: context)
         await pullBudgets(context: context)
         await pullRecurringExpenses(context: context)
-        await pullExpenses(context: context)
+        await pullTransactions(context: context)
         
         updateLastSyncTime()
     }
@@ -240,9 +240,9 @@ final class SyncService: SyncServiceProtocol {
         }
     }
 
-    private func pullExpenses(context: ModelContext) async {
+    private func pullTransactions(context: ModelContext) async {
         do {
-            var allExpenses: [APITransaction] = []
+            var allTransactions: [APITransaction] = []
             var offset = 0
             let limit = 100
 
@@ -254,7 +254,7 @@ final class SyncService: SyncServiceProtocol {
                 ]
 
                 let response: APIPaginatedResponse<APITransaction> = try await apiClient.get("/transactions", queryItems: queryItems)
-                allExpenses.append(contentsOf: response.data)
+                allTransactions.append(contentsOf: response.data)
 
                 if response.data.count < limit || offset + response.data.count >= response.pagination.total {
                     break
@@ -262,19 +262,19 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
-            upsertExpenses(allExpenses, context: context)
+            upsertTransactions(allTransactions, context: context)
         } catch {
-            AppLogger.sync.error("Failed to pull expenses: \(error)")
+            AppLogger.sync.error("Failed to pull transactions: \(error)")
             recordSyncError()
         }
     }
     
-    private func upsertExpenses(_ apiExpenses: [APITransaction], context: ModelContext) {
+    private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
         let descriptor = FetchDescriptor<Transaction>()
         let localExpenses = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localExpenses.map { ($0.id, $0) })
 
-        for remote in apiExpenses {
+        for remote in apiTransactions {
             if let local = localByID[remote.id] {
                 if remote.updated_at > local.updatedAt {
                     local.applyRemote(remote)
@@ -484,23 +484,23 @@ final class SyncService: SyncServiceProtocol {
 
         try? context.save()
 
-        // Sync group expenses separately (not included in list response)
+        // Sync group transactions separately (not included in list response)
         Task {
             guard let container = modelContainer else { return }
-            let expenseContext = ModelContext(container)
+            let transaction = ModelContext(container)
             for remote in apiGroups {
-                await pullGroupExpenses(groupId: remote.id, dbGroupId: remote.id, localExpensesByID: localExpensesByID, context: expenseContext)
+                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localExpensesByID: localExpensesByID, context: transaction)
             }
         }
     }
 
-    private func pullGroupExpenses(
+    private func pullGroupTransactions(
         groupId: UUID,
         dbGroupId: UUID,
         localExpensesByID: [UUID: GroupExpenseModel],
         context: ModelContext
     ) async {
-        // TODO(Phase 4): fetch via GET /groups/:id/transactions — group details no longer include expenses inline
+        // TODO(Phase 4): fetch via GET /groups/:id/transactions — group details no longer include transactions inline
         AppLogger.sync.debug("pullGroupExpenses: skipped pending Phase 4 group transaction sync refactor")
     }
 

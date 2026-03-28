@@ -632,7 +632,7 @@ struct APIIntegrationTests {
             URLQueryItem(name: "year", value: "\(year)")
         ])
         
-        #expect(response.totalExpenses != nil || response.total_expenses != nil)
+        #expect(response.totalTransactions != nil)
     }
     
     // MARK: - Cleanup

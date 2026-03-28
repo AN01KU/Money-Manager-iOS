@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
 
-private struct ExpenseGroup: Identifiable {
+private struct TransactionGroup: Identifiable {
     let id: String   // the display label, e.g. "TODAY" or "JANUARY 15"
-    let expenses: [Transaction]
+    let transactions: [Transaction]
 }
 
 private let sectionDateFormatter: DateFormatter = {
@@ -13,28 +13,28 @@ private let sectionDateFormatter: DateFormatter = {
 }()
 
 struct TransactionList: View {
-    let expenses: [Transaction]
-    @State private var selectedExpense: Transaction?
-    @State private var swipedExpenseID: PersistentIdentifier?
+    let transactions: [Transaction]
+    @State private var selectedTransaction: Transaction?
+    @State private var swipedTransactionID: PersistentIdentifier?
     @State private var rowTapped = false
     @State private var deleteTriggered = false
     var onDelete: ((Transaction) -> Void)?
 
-    private var groupedExpenses: [ExpenseGroup] {
+    private var groupedTransactions: [TransactionGroup] {
         let calendar = Calendar.current
         var grouped: [String: [Transaction]] = [:]
 
-        for expense in expenses {
-            let expenseDate = calendar.startOfDay(for: expense.date)
-            let key = calendar.isDateInToday(expenseDate)
+        for transaction in transactions {
+            let transactionDate = calendar.startOfDay(for: transaction.date)
+            let key = calendar.isDateInToday(transactionDate)
                 ? "TODAY"
-                : sectionDateFormatter.string(from: expenseDate).uppercased()
+                : sectionDateFormatter.string(from: transactionDate).uppercased()
 
-            grouped[key, default: []].append(expense)
+            grouped[key, default: []].append(transaction)
         }
 
         return grouped
-            .map { ExpenseGroup(id: $0.key, expenses: $0.value) }
+            .map { TransactionGroup(id: $0.key, transactions: $0.value) }
             .sorted { first, second in
                 if first.id == "TODAY" { return true }
                 if second.id == "TODAY" { return false }
@@ -44,7 +44,7 @@ struct TransactionList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(groupedExpenses) { section in
+            ForEach(groupedTransactions) { section in
                 VStack(alignment: .leading, spacing: 12) {
                     Text(section.id)
                         .font(.subheadline)
@@ -52,24 +52,24 @@ struct TransactionList: View {
                         .foregroundStyle(.secondary)
                         .padding(.leading, 4)
 
-                    ForEach(section.expenses) { expense in
+                    ForEach(section.transactions) { transaction in
                         SwipeToDeleteRow(
                             isRevealed: Binding(
-                                get: { swipedExpenseID == expense.persistentModelID },
+                                get: { swipedTransactionID == transaction.persistentModelID },
                                 set: { revealed in
-                                    swipedExpenseID = revealed ? expense.persistentModelID : nil
+                                    swipedTransactionID = revealed ? transaction.persistentModelID : nil
                                 }
                             ),
                             onTap: {
                                 rowTapped = true
-                                selectedExpense = expense
+                                selectedTransaction = transaction
                             },
                             onDelete: {
                                 deleteTriggered = true
-                                onDelete?(expense)
+                                onDelete?(transaction)
                             }
                         ) {
-                            TransactionRow(expense: expense)
+                            TransactionRow(transaction: transaction)
                         }
                     }
                 }
@@ -77,8 +77,8 @@ struct TransactionList: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
         .onChange(of: rowTapped) { _, newValue in if newValue { rowTapped = false } }
-        .sheet(item: $selectedExpense) { expense in
-            TransactionDetailView(expense: expense)
+        .sheet(item: $selectedTransaction) { transaction in
+            TransactionDetailView(transaction: transaction)
         }
     }
 }
@@ -168,7 +168,7 @@ private struct SwipeToDeleteRow<Content: View>: View {
 }
 
 #Preview {
-    TransactionList(expenses: [
+    TransactionList(transactions: [
         Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch"),
         Transaction(amount: 250, category: "Transport", date: Date(), transactionDescription: "Uber")
     ]) { _ in }

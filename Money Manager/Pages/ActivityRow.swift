@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct ActivityRow: View {
-    let expense: APIGroupTransaction
+    let transaction: APIGroupTransaction
     let groupName: String
 
     var body: some View {
@@ -21,7 +21,7 @@ struct ActivityRow: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(expense.description ?? "Expense")
+                Text(transaction.description ?? "Transaction")
                     .font(.body)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
@@ -33,11 +33,11 @@ struct ActivityRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(CurrencyFormatter.format(Double(expense.total_amount) ?? 0, showDecimals: true))
+                Text(CurrencyFormatter.format(Double(transaction.total_amount) ?? 0, showDecimals: true))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppColors.expense)
-                Text(expense.date, style: .date)
+                Text(transaction.date, style: .date)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

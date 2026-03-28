@@ -17,7 +17,7 @@ struct GroupsLockedView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Sign in to create groups, split expenses, and settle up with friends.\n\nAny group expenses already on your account will continue to appear in Overview.")
+                Text("Sign in to create groups, split transactions, and settle up with friends.\n\nAny group transactions already on your account will continue to appear in Overview.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

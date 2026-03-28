@@ -22,8 +22,8 @@ struct GroupDetailViewModelTests {
         APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joined_at: Date())
     }
 
-    private func makeExpense(totalAmount: String, paidBy: UUID = UUID()) -> APIGroupExpense {
-        APIGroupExpense(
+    private func makeTransaction(totalAmount: String, paidBy: UUID = UUID()) -> APIGroupTransaction {
+        APIGroupTransaction(
             id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
             total_amount: totalAmount, category: "Food", date: Date(),
             description: "Test", notes: nil, is_deleted: false,
@@ -50,7 +50,7 @@ struct GroupDetailViewModelTests {
     // MARK: - Initial state
 
     @Test
-    func test_init_seedsMembersAndBalancesFromGroup() {
+    func testInitSeedsMembersAndBalancesFromGroup() {
         let alice = makeMember(email: "alice@example.com")
         let group = APIGroupWithDetails(
             id: UUID(), name: "Trip", created_by: alice.id, created_at: Date(),
@@ -60,13 +60,13 @@ struct GroupDetailViewModelTests {
         let vm = GroupDetailViewModel(group: group)
         #expect(vm.members.count == 1)
         #expect(vm.balances.count == 1)
-        #expect(vm.expenses.isEmpty)
+        #expect(vm.transactions.isEmpty)
     }
 
     // MARK: - loadData()
 
     @Test
-    func test_loadData_populatesExpensesMembersBalances() async {
+    func testLoadDataPopulatesTransactionsMembersBalances() async {
         let groupId = UUID()
         let mock = MockGroupService.fresh()
         let alice = makeMember(email: "alice@example.com")
@@ -75,24 +75,23 @@ struct GroupDetailViewModelTests {
             members: [alice],
             balances: [makeBalance(userId: alice.id, amount: "30.00")]
         )
-        mock.stubbedTransactions = [makeExpense(totalAmount: "60.00")]
+        mock.stubbedTransactions = [makeTransaction(totalAmount: "60.00")]
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
         await vm.loadData()
-        #expect(vm.expenses.count == 1)
+        #expect(vm.transactions.count == 1)
         #expect(vm.members.count == 1)
         #expect(vm.balances.count == 1)
         #expect(vm.isLoading == false)
     }
 
     @Test
-    func test_loadData_keepsInitialMembers_whenDetailsReturnEmpty() async {
+    func testLoadDataKeepsInitialMembersWhenDetailsReturnEmpty() async {
         let mock = MockGroupService.fresh()
         let alice = makeMember(email: "alice@example.com")
         let group = APIGroupWithDetails(
             id: UUID(), name: "Trip", created_by: alice.id, created_at: Date(),
             members: [alice], balances: []
         )
-        // stubbedGroupDetails is nil → mock returns empty members by default, overwriting init seed
         let vm = GroupDetailViewModel(group: group, groupService: mock)
         await vm.loadData()
         #expect(vm.isLoading == false)
@@ -101,95 +100,95 @@ struct GroupDetailViewModelTests {
     // MARK: - groupTotal
 
     @Test
-    func test_groupTotal_sumsAllExpenses() {
+    func testGroupTotalSumsAllTransactions() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.expenses = [
-            makeExpense(totalAmount: "100.00"),
-            makeExpense(totalAmount: "50.50")
+        vm.transactions = [
+            makeTransaction(totalAmount: "100.00"),
+            makeTransaction(totalAmount: "50.50")
         ]
         #expect(vm.groupTotal == 150.5)
     }
 
     @Test
-    func test_groupTotal_withNoExpenses_isZero() {
+    func testGroupTotalWithNoTransactionsIsZero() {
         let vm = GroupDetailViewModel(group: makeGroup())
         #expect(vm.groupTotal == 0)
     }
 
     @Test
-    func test_groupTotal_ignoresInvalidAmounts() {
+    func testGroupTotalIgnoresInvalidAmounts() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.expenses = [makeExpense(totalAmount: "not-a-number")]
+        vm.transactions = [makeTransaction(totalAmount: "not-a-number")]
         #expect(vm.groupTotal == 0)
     }
 
     // MARK: - hasUnsettledBalances
 
     @Test
-    func test_hasUnsettledBalances_whenAllZero_returnsFalse() {
+    func testHasUnsettledBalancesWhenAllZeroReturnsFalse() {
         let vm = GroupDetailViewModel(group: makeGroup())
         vm.balances = [makeBalance(userId: UUID(), amount: "0.00")]
         #expect(vm.hasUnsettledBalances == false)
     }
 
     @Test
-    func test_hasUnsettledBalances_whenSomeNonZero_returnsTrue() {
+    func testHasUnsettledBalancesWhenSomeNonZeroReturnsTrue() {
         let vm = GroupDetailViewModel(group: makeGroup())
         vm.balances = [makeBalance(userId: UUID(), amount: "25.00")]
         #expect(vm.hasUnsettledBalances == true)
     }
 
     @Test
-    func test_hasUnsettledBalances_whenNegativeBalance_returnsTrue() {
+    func testHasUnsettledBalancesWhenNegativeBalanceReturnsTrue() {
         let vm = GroupDetailViewModel(group: makeGroup())
         vm.balances = [makeBalance(userId: UUID(), amount: "-30.00")]
         #expect(vm.hasUnsettledBalances == true)
     }
 
-    // MARK: - expenseAdded
+    // MARK: - expenseAdded (transactionAdded)
 
     @Test
-    func test_expenseAdded_insertsAtTop() {
+    func testTransactionAddedInsertsAtTop() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        let first  = makeExpense(totalAmount: "100")
-        let second = makeExpense(totalAmount: "50")
-        vm.expenseAdded(first)
-        vm.expenseAdded(second)
-        #expect(vm.expenses.first?.total_amount == "50")
+        let first  = makeTransaction(totalAmount: "100")
+        let second = makeTransaction(totalAmount: "50")
+        vm.transactionAdded(first)
+        vm.transactionAdded(second)
+        #expect(vm.transactions.first?.total_amount == "50")
     }
 
     @Test
-    func test_expenseAdded_updatesGroupTotal() {
+    func testTransactionAddedUpdatesGroupTotal() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.expenseAdded(makeExpense(totalAmount: "200"))
+        vm.transactionAdded(makeTransaction(totalAmount: "200"))
         #expect(vm.groupTotal == 200)
     }
 
     // MARK: - addMember optimistic state
 
     @Test
-    func test_addMember_addsToPendingEmails_immediately() {
+    func testAddMemberAddsToPendingEmailsImmediately() {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.addMember(email: "bob@example.com")
         #expect(vm.pendingMemberEmails.contains("bob@example.com"))
     }
 
     @Test
-    func test_addMember_trimsAndLowercasesEmail() {
+    func testAddMemberTrimsAndLowercasesEmail() {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.addMember(email: "  BOB@EXAMPLE.COM  ")
         #expect(vm.pendingMemberEmails.contains("bob@example.com"))
     }
 
     @Test
-    func test_addMember_doesNothing_whenEmailIsBlank() {
+    func testAddMemberDoesNothingWhenEmailIsBlank() {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.addMember(email: "   ")
         #expect(vm.pendingMemberEmails.isEmpty)
     }
 
     @Test
-    func test_addMember_doesNothing_whenAlreadyAMember() {
+    func testAddMemberDoesNothingWhenAlreadyAMember() {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         let alice = makeMember(email: "alice@example.com")
         vm.members = [alice]
@@ -198,7 +197,7 @@ struct GroupDetailViewModelTests {
     }
 
     @Test
-    func test_addMember_dismissesSheet_immediately() {
+    func testAddMemberDismissesSheetImmediately() {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.showAddMember = true
         vm.addMember(email: "bob@example.com")
@@ -208,7 +207,7 @@ struct GroupDetailViewModelTests {
     // MARK: - Invite flow (async, via mock)
 
     @Test
-    func test_addMember_success_clearsPendingAndRefreshesMembers() async {
+    func testAddMemberSuccessClearsPendingAndRefreshesMembers() async {
         let mock = MockGroupService.fresh()
         let bob = makeMember(email: "bob@example.com")
         mock.stubbedMembers = [bob]
@@ -216,10 +215,8 @@ struct GroupDetailViewModelTests {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
         vm.addMember(email: "bob@example.com")
 
-        // Immediately pending
         #expect(vm.pendingMemberEmails.contains("bob@example.com"))
 
-        // Wait for the async Task to complete
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(vm.pendingMemberEmails.isEmpty)
@@ -229,7 +226,7 @@ struct GroupDetailViewModelTests {
     }
 
     @Test
-    func test_addMember_failure_clearsPendingAndSetsError() async {
+    func testAddMemberFailureClearsPendingAndSetsError() async {
         struct InviteError: Error, LocalizedError {
             var errorDescription: String? { "user not found with this email" }
         }
@@ -248,7 +245,7 @@ struct GroupDetailViewModelTests {
     }
 
     @Test
-    func test_addMember_callsServiceWithCorrectGroupId() async {
+    func testAddMemberCallsServiceWithCorrectGroupId() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
@@ -262,7 +259,7 @@ struct GroupDetailViewModelTests {
     // MARK: - isPending
 
     @Test
-    func test_isPending_returnsTrueForPendingMember() {
+    func testIsPendingReturnsTrueForPendingMember() {
         let vm = GroupDetailViewModel(group: makeGroup())
         let bob = makeMember(email: "bob@example.com")
         vm.pendingMemberEmails.insert("bob@example.com")
@@ -270,7 +267,7 @@ struct GroupDetailViewModelTests {
     }
 
     @Test
-    func test_isPending_returnsFalseForConfirmedMember() {
+    func testIsPendingReturnsFalseForConfirmedMember() {
         let vm = GroupDetailViewModel(group: makeGroup())
         let alice = makeMember(email: "alice@example.com")
         #expect(vm.isPending(alice) == false)
@@ -279,39 +276,38 @@ struct GroupDetailViewModelTests {
     // MARK: - settlementRecorded
 
     @Test
-    func test_settlementRecorded_recalculatesBalances() {
+    func testSettlementRecordedRecalculatesBalances() {
         let alice = makeMember(email: "alice@example.com")
         let bob   = makeMember(email: "bob@example.com")
         let vm = GroupDetailViewModel(group: makeGroup())
         vm.members = [alice, bob]
-        vm.expenses = [makeExpense(totalAmount: "100.00", paidBy: alice.id)]
+        vm.transactions = [makeTransaction(totalAmount: "100.00", paidBy: alice.id)]
         let settlement = APISettlement(
             id: UUID(), groupId: vm.group.id,
             fromUser: bob.id, toUser: alice.id,
             amount: "50.00", createdAt: Date()
         )
         vm.settlementRecorded(settlement)
-        // After recording settlement with 2 members, balances should have 2 entries
         #expect(vm.balances.count == 2)
     }
 
     // MARK: - displayName
 
     @Test
-    func test_displayName_returnsUsername() {
+    func testDisplayNameReturnsUsername() {
         let vm = GroupDetailViewModel(group: makeGroup())
         let member = makeMember(email: "charlie@example.com")
         #expect(vm.displayName(for: member) == member.username)
     }
 
     @Test
-    func test_displayName_forId_returnsUnknownWhenNotFound() {
+    func testDisplayNameForIdReturnsUnknownWhenNotFound() {
         let vm = GroupDetailViewModel(group: makeGroup())
         #expect(vm.displayName(forId: UUID()) == "Unknown")
     }
 
     @Test
-    func test_displayName_forId_resolvesKnownMember() {
+    func testDisplayNameForIdResolvesKnownMember() {
         let vm = GroupDetailViewModel(group: makeGroup())
         let alice = makeMember(email: "alice@example.com")
         vm.members = [alice]

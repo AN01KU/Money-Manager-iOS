@@ -7,7 +7,7 @@ import SwiftUI
 
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
-    @State private var selectedExpense: APIGroupTransaction?
+    @State private var selectedTransaction: APIGroupTransaction?
 
     init(group: APIGroupWithDetails) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group))
@@ -17,7 +17,7 @@ struct GroupDetailView: View {
         VStack(spacing: 0) {
             GroupHeaderStats(
                 total: viewModel.groupTotal,
-                expenseCount: viewModel.transactions.count,
+                transactionCount: viewModel.transactions.count,
                 memberCount: viewModel.members.count
             )
             .padding(.horizontal)
@@ -48,13 +48,13 @@ struct GroupDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(viewModel.group.name)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $viewModel.showAddExpense) {
+        .sheet(isPresented: $viewModel.showAddTransaction) {
             AddTransactionView(
                 mode: .shared(
                     group: viewModel.group,
                     members: viewModel.members
                 ) { newExpense in
-                    viewModel.expenseAdded(newExpense)
+                    viewModel.transactionAdded(newExpense)
                 }
             )
         }
@@ -83,13 +83,13 @@ struct GroupDetailView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
-        .sheet(item: $selectedExpense) { expense in
+        .sheet(item: $selectedTransaction) { transaction in
             GroupExpenseDetailSheet(
-                expense: expense,
+                transaction: transaction,
                 members: viewModel.members,
                 currentUserId: viewModel.currentUserId,
-                onDelete: viewModel.currentUserId == expense.paid_by_user_id ? {
-                    viewModel.deleteExpense(expense)
+                onDelete: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                    viewModel.deleteTransaction(transaction)
                 } : nil
             )
         }
@@ -111,7 +111,7 @@ struct GroupDetailView: View {
     private var fabView: some View {
         switch viewModel.selectedSection {
         case .transactions:
-            FloatingActionButton(icon: "plus") { viewModel.showAddExpense = true }
+            FloatingActionButton(icon: "plus") { viewModel.showAddTransaction = true }
         case .balances:
             if viewModel.hasUnsettledBalances {
                 FloatingActionButton(icon: "arrow.left.arrow.right") { viewModel.showSettlement = true }
@@ -124,14 +124,14 @@ struct GroupDetailView: View {
     private var transactionsSection: some View {
         Group {
             if viewModel.transactions.isEmpty {
-                EmptyStateView(icon: "receipt", title: "No Transactions", message: "Add the first expense to this group.")
+                EmptyStateView(icon: "receipt", title: "No Transactions", message: "Add the first transaction to this group.")
                     .frame(maxHeight: .infinity)
             } else {
-                List(viewModel.transactions) { tx in
+                List(viewModel.transactions) { transaction in
                     Button {
-                        selectedExpense = tx
+                        selectedTransaction = transaction
                     } label: {
-                        GroupExpenseRow(expense: tx, members: viewModel.members)
+                        GroupExpenseRow(transaction: transaction, members: viewModel.members)
                     }
                     .buttonStyle(.plain)
                 }
@@ -143,7 +143,7 @@ struct GroupDetailView: View {
     private var balancesSection: some View {
         Group {
             if viewModel.balances.isEmpty {
-                EmptyStateView(icon: "scale.3d", title: "No Balances", message: "Balances will appear once expenses are added.")
+                EmptyStateView(icon: "scale.3d", title: "No Balances", message: "Balances will appear once transactions are added.")
                     .frame(maxHeight: .infinity)
             } else {
                 List {

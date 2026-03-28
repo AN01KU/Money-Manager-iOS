@@ -49,13 +49,13 @@ final class GroupsListViewModel {
         }
     }
 
-    var recentActivity: [(expense: APIGroupTransaction, groupName: String)] = []
+    var recentActivity: [(transaction: APIGroupTransaction, groupName: String)] = []
 
-    var filteredActivity: [(expense: APIGroupTransaction, groupName: String)] {
+    var filteredActivity: [(transaction: APIGroupTransaction, groupName: String)] {
         guard !searchText.isEmpty else { return recentActivity }
         return recentActivity.filter {
             $0.groupName.localizedStandardContains(searchText) ||
-            ($0.expense.description?.localizedStandardContains(searchText) ?? false)
+            ($0.transaction.description?.localizedStandardContains(searchText) ?? false)
         }
     }
 
@@ -74,21 +74,21 @@ final class GroupsListViewModel {
     }
 
     private func loadActivity() async {
-        var activity: [(expense: APIGroupTransaction, groupName: String)] = []
+        var activity: [(transaction: APIGroupTransaction, groupName: String)] = []
         await withTaskGroup(of: (String, [APIGroupTransaction]).self) { taskGroup in
             for group in groups {
                 taskGroup.addTask {
-                    let expenses = (try? await self.groupService.fetchGroupTransactions(groupId: group.id)) ?? []
-                    return (group.name, expenses)
+                    let transactions = (try? await self.groupService.fetchGroupTransactions(groupId: group.id)) ?? []
+                    return (group.name, transactions)
                 }
             }
-            for await (groupName, expenses) in taskGroup {
-                for expense in expenses {
-                    activity.append((expense: expense, groupName: groupName))
+            for await (groupName, transactions) in taskGroup {
+                for transaction in transactions {
+                    activity.append((transaction: transaction, groupName: groupName))
                 }
             }
         }
-        recentActivity = activity.sorted { $0.expense.date > $1.expense.date }
+        recentActivity = activity.sorted { $0.transaction.date > $1.transaction.date }
     }
 
     func createGroup(name: String) async throws -> APIGroupWithDetails {

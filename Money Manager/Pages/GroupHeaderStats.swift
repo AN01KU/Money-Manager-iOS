@@ -7,14 +7,14 @@ import SwiftUI
 
 struct GroupHeaderStats: View {
     let total: Double
-    let expenseCount: Int
+    let transactionCount: Int
     let memberCount: Int
 
     var body: some View {
         HStack(spacing: 0) {
             statCell(value: CurrencyFormatter.format(total, showDecimals: true), label: "Total")
             Divider().frame(height: 32)
-            statCell(value: "\(expenseCount)", label: "Expenses")
+            statCell(value: "\(transactionCount)", label: "Transactions")
             Divider().frame(height: 32)
             statCell(value: "\(memberCount)", label: "Members")
         }

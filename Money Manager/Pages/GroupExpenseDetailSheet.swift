@@ -3,7 +3,7 @@ import SwiftUI
 struct GroupExpenseDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let expense: APIGroupTransaction
+    let transaction: APIGroupTransaction
     let members: [APIGroupMember]
     let currentUserId: UUID?
     let onDelete: (() -> Void)?
@@ -11,14 +11,14 @@ struct GroupExpenseDetailSheet: View {
     @State private var showDeleteAlert = false
     @State private var deleteTapped = false
 
-    private var amount: Double { Double(expense.total_amount) ?? 0 }
+    private var amount: Double { Double(transaction.total_amount) ?? 0 }
 
     private var paidByName: String {
-        members.first(where: { $0.id == expense.paid_by_user_id })?.username ?? "Unknown"
+        members.first(where: { $0.id == transaction.paid_by_user_id })?.username ?? "Unknown"
     }
 
     private var isOwner: Bool {
-        expense.paid_by_user_id == currentUserId
+        transaction.paid_by_user_id == currentUserId
     }
 
     var body: some View {
@@ -36,7 +36,7 @@ struct GroupExpenseDetailSheet: View {
                                 .foregroundStyle(AppColors.accent)
                         }
 
-                        Text(expense.description ?? expense.category)
+                        Text(transaction.description ?? transaction.category)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .multilineTextAlignment(.center)
@@ -45,7 +45,7 @@ struct GroupExpenseDetailSheet: View {
                             .font(.system(size: 36, weight: .bold))
                             .foregroundStyle(AppColors.expense)
 
-                        Text(expense.date, style: .date)
+                        Text(transaction.date, style: .date)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -53,10 +53,10 @@ struct GroupExpenseDetailSheet: View {
 
                     // Details card
                     VStack(alignment: .leading, spacing: 16) {
-                        DetailRow(label: "Category", value: expense.category)
+                        DetailRow(label: "Category", value: transaction.category)
                         DetailRow(label: "Paid By", value: paidByName)
-                        DetailRow(label: "Split Among", value: "\(expense.splits.count) member\(expense.splits.count == 1 ? "" : "s")")
-                        DetailRow(label: "Date", value: expense.date.formatted(date: .long, time: .omitted))
+                        DetailRow(label: "Split Among", value: "\(transaction.splits.count) member\(transaction.splits.count == 1 ? "" : "s")")
+                        DetailRow(label: "Date", value: transaction.date.formatted(date: .long, time: .omitted))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
@@ -64,14 +64,14 @@ struct GroupExpenseDetailSheet: View {
                     .clipShape(.rect(cornerRadius: 16))
 
                     // Splits breakdown
-                    if !expense.splits.isEmpty {
+                    if !transaction.splits.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Split Breakdown")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
 
-                            ForEach(expense.splits, id: \.user_id) { split in
+                            ForEach(transaction.splits, id: \.user_id) { split in
                                 let name = members.first(where: { $0.id == split.user_id })?.username ?? "Unknown"
                                 HStack {
                                     Text(name)
@@ -92,7 +92,7 @@ struct GroupExpenseDetailSheet: View {
                             deleteTapped = true
                             showDeleteAlert = true
                         } label: {
-                            Text("Delete Expense")
+                            Text("Delete Transaction")
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -114,14 +114,14 @@ struct GroupExpenseDetailSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .alert("Delete Expense?", isPresented: $showDeleteAlert) {
+            .alert("Delete Transaction?", isPresented: $showDeleteAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
                     onDelete?()
                     dismiss()
                 }
             } message: {
-                Text("This will remove the expense from the group. This cannot be undone.")
+                Text("This will remove the transaction from the group. This cannot be undone.")
             }
         }
     }

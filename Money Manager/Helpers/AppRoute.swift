@@ -5,9 +5,9 @@ extension Notification.Name {
 }
 
 /// Supported deep link routes.
-/// URL scheme: `moneymanager://expense/<uuid>` and `moneymanager://group/<uuid>`
+/// URL scheme: `moneymanager://transaction/<uuid>` and `moneymanager://group/<uuid>`
 enum AppRoute: Hashable {
-    case expense(UUID)
+    case transaction(UUID)
     case group(UUID)
 
     init?(url: URL) {
@@ -17,7 +17,7 @@ enum AppRoute: Hashable {
         guard let idString = pathComponents.first, let id = UUID(uuidString: idString) else { return nil }
 
         switch host {
-        case "expense": self = .expense(id)
+        case "transaction": self = .transaction(id)
         case "group":   self = .group(id)
         default:        return nil
         }

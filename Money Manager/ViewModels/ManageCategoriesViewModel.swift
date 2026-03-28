@@ -112,14 +112,14 @@ import SwiftData
         let categoryName = category.name
         let categoryId = category.id
 
-        // Reassign all linked Expenses to "Other"
-        let expenseDescriptor = FetchDescriptor<Transaction>()
-        if let expenses = try? modelContext.fetch(expenseDescriptor) {
-            for expense in expenses {
-                if expense.categoryId == categoryId || expense.category == categoryName {
-                    expense.category = "Other"
-                    expense.categoryId = nil
-                    expense.updatedAt = Date()
+        // Reassign all linked Transactions to "Other"
+        let transactionDescriptor = FetchDescriptor<Transaction>()
+        if let transactions = try? modelContext.fetch(transactionDescriptor) {
+            for transaction in transactions {
+                if transaction.categoryId == categoryId || transaction.category == categoryName {
+                    transaction.category = "Other"
+                    transaction.categoryId = nil
+                    transaction.updatedAt = Date()
                 }
             }
         }
@@ -452,17 +452,17 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         category.color = selectedColor
         category.updatedAt = Date()
 
-        // Cascade rename to all linked Expenses and RecurringExpenses
+        // Cascade rename to all linked Transactions and RecurringExpenses
         if oldName != trimmedName {
             let categoryId = category.id
 
-            let expenseDescriptor = FetchDescriptor<Transaction>()
-            if let expenses = try? modelContext.fetch(expenseDescriptor) {
-                for expense in expenses {
-                    if expense.categoryId == categoryId || expense.category == oldName {
-                        expense.category = trimmedName
-                        if expense.categoryId == nil { expense.categoryId = categoryId }
-                        expense.updatedAt = Date()
+            let transactionDescriptor = FetchDescriptor<Transaction>()
+            if let transactions = try? modelContext.fetch(transactionDescriptor) {
+                for transaction in transactions {
+                    if transaction.categoryId == categoryId || transaction.category == oldName {
+                        transaction.category = trimmedName
+                        if transaction.categoryId == nil { transaction.categoryId = categoryId }
+                        transaction.updatedAt = Date()
                     }
                 }
             }

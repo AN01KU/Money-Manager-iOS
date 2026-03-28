@@ -8,22 +8,34 @@ struct ExpenseModelTests {
 
     @Test
     func testExpenseAmountCanBeZero() {
-        let expense = Expense(amount: 0, category: "Other", date: Date())
+        let expense = Transaction(amount: 0, category: "Other", date: Date())
         #expect(expense.amount == 0)
     }
 
     @Test
     func testExpenseAmountCanBeNegative() {
-        let expense = Expense(amount: -50, category: "Other", date: Date(), notes: "Refund")
+        let expense = Transaction(amount: -50, category: "Other", date: Date(), notes: "Refund")
         #expect(expense.amount == -50)
         #expect(expense.notes == "Refund")
     }
 
     @Test
     func testExpenseCanBeMarkedAsDeleted() {
-        let expense = Expense(amount: 100, category: "Other", date: Date())
+        let expense = Transaction(amount: 100, category: "Other", date: Date())
         #expect(expense.isDeleted == false)
         expense.isDeleted = true
         #expect(expense.isDeleted == true)
+    }
+
+    @Test
+    func testExpenseDefaultTypeIsExpense() {
+        let expense = Transaction(amount: 100, category: "Food & Dining", date: Date())
+        #expect(expense.type == "expense")
+    }
+
+    @Test
+    func testIncomeType() {
+        let income = Transaction(type: "income", amount: 5000, category: "Work & Professional", date: Date())
+        #expect(income.type == "income")
     }
 }

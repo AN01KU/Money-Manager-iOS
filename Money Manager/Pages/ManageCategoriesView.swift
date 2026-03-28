@@ -4,7 +4,7 @@ import SwiftData
 struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }) private var allExpenses: [Transaction]
+    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }) private var allTransactions: [Transaction]
 
     @State private var viewModel = ManageCategoriesViewModel()
     @State private var rowTapped = false
@@ -29,9 +29,9 @@ struct ManageCategoriesView: View {
         customCategories.filter { $0.isHidden }
     }
 
-    /// Count of non-deleted expenses per category name.
+    /// Count of non-deleted transactions per category name.
     private var usageCounts: [String: Int] {
-        Dictionary(grouping: allExpenses, by: \.category).mapValues(\.count)
+        Dictionary(grouping: allTransactions, by: \.category).mapValues(\.count)
     }
     
     var body: some View {
@@ -204,7 +204,7 @@ struct ManageCategoriesView: View {
                 viewModel.confirmDelete()
             }
         } message: {
-            Text("This will permanently remove \"\(viewModel.categoryToDelete?.name ?? "")\". Existing expenses using this category will keep their category name.")
+            Text("This will permanently remove \"\(viewModel.categoryToDelete?.name ?? "")\". Existing transactions using this category will keep their category name.")
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.deleteConfirmedTrigger)
         .sensoryFeedback(.success, trigger: viewModel.resetTrigger)

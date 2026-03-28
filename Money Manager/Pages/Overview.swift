@@ -3,7 +3,7 @@ import SwiftData
 
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allExpenses: [Transaction]
+    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
@@ -17,29 +17,29 @@ struct Overview: View {
         NavigationStack(path: $navigationPath) {
             OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit)
                 .navigationDestination(for: AppRoute.self) { route in
-                    if case .expense(let id) = route,
-                       let expense = allExpenses.first(where: { $0.id == id }) {
-                        TransactionDetailView(expense: expense)
+                    if case .transaction(let id) = route,
+                       let transaction = allTransactions.first(where: { $0.id == id }) {
+                        TransactionDetailView(transaction: transaction)
                     }
                 }
         }
         .onChange(of: pendingRoute?.wrappedValue) { _, route in
-            guard let route, case .expense = route else { return }
+            guard let route, case .transaction = route else { return }
             navigationPath = [route]
             pendingRoute?.wrappedValue = nil
         }
         .task {
             viewModel.modelContext = modelContext
-            viewModel.update(allExpenses: allExpenses, budgets: budgets, customCategories: customCategories)
+            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
         }
-        .onChange(of: allExpenses) { _, newValue in
-            viewModel.update(allExpenses: newValue, budgets: budgets, customCategories: customCategories)
+        .onChange(of: allTransactions) { _, newValue in
+            viewModel.update(allTransactions: newValue, budgets: budgets, customCategories: customCategories)
         }
         .onChange(of: budgets) { _, newValue in
-            viewModel.update(allExpenses: allExpenses, budgets: newValue, customCategories: customCategories)
+            viewModel.update(allTransactions: allTransactions, budgets: newValue, customCategories: customCategories)
         }
         .onChange(of: customCategories) { _, newValue in
-            viewModel.update(allExpenses: allExpenses, budgets: budgets, customCategories: newValue)
+            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: newValue)
         }
     }
 }
@@ -57,27 +57,27 @@ private struct OverviewBody: View {
                 OverviewScrollContent(viewModel: viewModel)
             }
             FloatingActionButton(icon: "plus") {
-                viewModel.showAddExpense = true
+                viewModel.showAddTransaction = true
             }
             .padding(.trailing, 24)
             .padding(.bottom, 24)
         }
         .navigationTitle("Overview")
         .toolbar { overviewToolbar }
-        .searchable(text: $viewModel.searchText, prompt: "Search expenses")
-        .sheet(isPresented: $viewModel.showAddExpense) { AddTransactionView() }
+        .searchable(text: $viewModel.searchText, prompt: "Search transactions")
+        .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
         .sheet(isPresented: $viewModel.showBudgetSheet) {
             BudgetSheet(selectedMonth: viewModel.selectedDate)
         }
-        .alert("Delete Expense?", isPresented: Binding(
-            get: { viewModel.expenseToDelete != nil },
-            set: { if !$0 { viewModel.cancelDeleteExpense() } }
+        .alert("Delete Transaction?", isPresented: Binding(
+            get: { viewModel.transactionToDelete != nil },
+            set: { if !$0 { viewModel.cancelDeleteTransaction() } }
         )) {
-            Button("Cancel", role: .cancel) { viewModel.cancelDeleteExpense() }
-            Button("Delete", role: .destructive) { viewModel.confirmDeleteExpense() }
+            Button("Cancel", role: .cancel) { viewModel.cancelDeleteTransaction() }
+            Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }
         } message: {
-            if let expense = viewModel.expenseToDelete {
-                Text("Are you sure you want to delete \"\(expense.transactionDescription ?? expense.category)\"? This action cannot be undone.")
+            if let transaction = viewModel.transactionToDelete {
+                Text("Are you sure you want to delete \"\(transaction.transactionDescription ?? transaction.category)\"? This action cannot be undone.")
             }
         }
         .task(id: viewModel.selectedDate) {
@@ -228,13 +228,13 @@ private struct OverviewScrollContent: View {
                 } else {
                     EmptyStateView(
                         icon: "chart.bar.doc.horizontal",
-                        title: "No expenses yet",
-                        message: "Tap + to add your first expense"
+                        title: "No transactions yet",
+                        message: "Tap + to add your first transaction"
                     )
                     .padding(.horizontal)
                 }
             } else {
-                if viewModel.filteredExpenses.isEmpty {
+                if viewModel.filteredTransactions.isEmpty {
                     EmptyStateView(
                         icon: "chart.bar.doc.horizontal",
                         title: viewModel.transactionTypeFilter == .income ? "No income yet" : "No transactions yet",
@@ -242,8 +242,8 @@ private struct OverviewScrollContent: View {
                     )
                     .padding(.horizontal)
                 } else {
-                    TransactionList(expenses: viewModel.filteredExpenses) { expense in
-                        viewModel.deleteExpense(expense)
+                    TransactionList(transactions: viewModel.filteredTransactions) { transaction in
+                        viewModel.deleteTransaction(transaction)
                     }
                     .padding(.horizontal)
                 }
@@ -257,7 +257,7 @@ private struct OverviewScrollContent: View {
 
 @MainActor
 private func previewContainer(
-    expenses: [Transaction] = [],
+    transactions: [Transaction] = [],
     budgets: [MonthlyBudget] = []
 ) -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -266,19 +266,19 @@ private func previewContainer(
         configurations: config
     )
     let context = container.mainContext
-    for expense in expenses { context.insert(expense) }
+    for transaction in transactions { context.insert(transaction) }
     for budget in budgets { context.insert(budget) }
     try? context.save()
     return container
 }
 
-#Preview("With Expenses & Budget") {
+#Preview("With Transactions & Budget") {
     let calendar = Calendar.current
     let today = Date()
     let year = calendar.component(.year, from: today)
     let month = calendar.component(.month, from: today)
 
-    let expenses = [
+    let transactions = [
         Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
         Transaction(amount: 120, category: "Food & Dining", date: today, transactionDescription: "Morning coffee"),
         Transaction(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Fuel"),
@@ -289,7 +289,7 @@ private func previewContainer(
     let budget = MonthlyBudget(year: year, month: month, limit: 50000)
 
     Overview()
-        .modelContainer(previewContainer(expenses: expenses, budgets: [budget]))
+        .modelContainer(previewContainer(transactions: transactions, budgets: [budget]))
 }
 
 #Preview("Empty State") {
@@ -303,7 +303,7 @@ private func previewContainer(
     let year = calendar.component(.year, from: today)
     let month = calendar.component(.month, from: today)
 
-    let expenses = [
+    let transactions = [
         Transaction(amount: 15000, category: "Travel", date: today, transactionDescription: "Flight tickets"),
         Transaction(amount: 8000, category: "Shopping", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Electronics"),
         Transaction(amount: 5000, category: "Food & Dining", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "Party dinner"),
@@ -312,16 +312,16 @@ private func previewContainer(
     let budget = MonthlyBudget(year: year, month: month, limit: 10000)
 
     Overview()
-        .modelContainer(previewContainer(expenses: expenses, budgets: [budget]))
+        .modelContainer(previewContainer(transactions: transactions, budgets: [budget]))
 }
 
 #Preview("No Budget Set") {
     let today = Date()
-    let expenses = [
+    let transactions = [
         Transaction(amount: 350, category: "Food & Dining", date: today, transactionDescription: "Dinner"),
         Transaction(amount: 80, category: "Transport", date: today, transactionDescription: "Auto ride"),
     ]
 
     Overview()
-        .modelContainer(previewContainer(expenses: expenses))
+        .modelContainer(previewContainer(transactions: transactions))
 }

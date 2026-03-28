@@ -10,7 +10,7 @@ struct AddRecurringExpenseSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self, RecurringExpense.self,
+            for: Transaction.self, MonthlyBudget.self, CustomCategory.self, RecurringExpense.self,
             configurations: config
         )
     }
@@ -103,7 +103,7 @@ struct AddCategorySwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
+            for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }
@@ -192,7 +192,7 @@ struct ManageCategoriesSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
+            for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }

@@ -8,15 +8,15 @@ private let timeFormatter: DateFormatter = {
 }()
 
 struct TransactionRow: View {
-    let expense: Transaction
+    let transaction: Transaction
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
-    init(expense: Transaction) {
-        self.expense = expense
+    init(transaction: Transaction) {
+        self.transaction = transaction
     }
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(expense.category, customCategories: customCategories)
+        CategoryResolver.resolve(transaction.category, customCategories: customCategories)
     }
 
     private var resolvedIcon: String { resolved.icon }
@@ -36,20 +36,20 @@ struct TransactionRow: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(expense.category)
+                Text(transaction.category)
                     .font(.body)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
-                Text(expense.transactionDescription ?? "No description")
+                Text(transaction.transactionDescription ?? "No description")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                if expense.groupTransactionId != nil {
+                if transaction.groupTransactionId != nil {
                     HStack(spacing: 4) {
                         Image(systemName: "person.2.fill")
                             .font(.caption2)
-                        Text("Group expense")
+                        Text("Group transaction")
                             .font(.caption2)
                             .fontWeight(.medium)
                     }
@@ -60,12 +60,12 @@ struct TransactionRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(CurrencyFormatter.format(expense.amount))
+                Text(CurrencyFormatter.format(transaction.amount))
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundStyle(expense.type == "income" ? AppColors.positive : .red)
+                    .foregroundStyle(transaction.type == "income" ? AppColors.positive : .red)
 
-                if let time = expense.time {
+                if let time = transaction.time {
                     Text(formatTime(time))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -77,7 +77,7 @@ struct TransactionRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(expense.category), \(expense.transactionDescription ?? "No description"), \(CurrencyFormatter.format(expense.amount))")
+        .accessibilityLabel("\(transaction.category), \(transaction.transactionDescription ?? "No description"), \(CurrencyFormatter.format(transaction.amount))")
     }
 
     private func formatTime(_ date: Date) -> String {
@@ -87,7 +87,7 @@ struct TransactionRow: View {
 
 #Preview {
     TransactionRow(
-        expense: Transaction(
+        transaction: Transaction(
             amount: 450,
             category: "Food & Dining",
             date: Date(),

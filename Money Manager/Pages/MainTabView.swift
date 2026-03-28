@@ -40,7 +40,7 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .appRouteReceived)) { notification in
             guard let route = notification.object as? AppRoute else { return }
             switch route {
-            case .expense:
+            case .transaction:
                 selectedTab = .overview
             case .group:
                 selectedTab = .groups

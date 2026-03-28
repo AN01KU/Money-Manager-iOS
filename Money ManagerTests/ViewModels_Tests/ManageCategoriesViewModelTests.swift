@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct ManageCategoriesViewModelTests {
     
-    private func makeContext(models: [any PersistentModel.Type] = [Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self]) -> ModelContext {
+    private func makeContext(models: [any PersistentModel.Type] = [Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self]) -> ModelContext {
         let schema = Schema(models)
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
@@ -112,8 +112,8 @@ struct ManageCategoriesViewModelTests {
         let context = makeContext()
         
         let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let foodExpense = Expense(amount: 100, category: "Food", date: Date())
-        let otherExpense = Expense(amount: 200, category: "Transport", date: Date())
+        let foodExpense = Transaction(amount: 100, category: "Food", date: Date())
+        let otherExpense = Transaction(amount: 200, category: "Transport", date: Date())
         
         context.insert(category)
         context.insert(foodExpense)
@@ -221,7 +221,7 @@ struct ManageCategoriesViewModelTests {
 struct AddCategoryViewModelTests {
     
     private func makeContext() -> ModelContext {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)
@@ -327,7 +327,7 @@ struct AddCategoryViewModelTests {
 struct EditCategoryViewModelTests {
     
     private func makeContext() -> ModelContext {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)

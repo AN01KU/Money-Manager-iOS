@@ -25,7 +25,7 @@ enum ExportFormat: String, CaseIterable, Identifiable {
 }
 
 enum ExportDataType: String, CaseIterable, Identifiable {
-    case expenses = "Expenses"
+    case transactions = "Transactions"
     case recurringExpenses = "Recurring Expenses"
     case budgets = "Budgets"
     case categories = "Categories"
@@ -35,7 +35,7 @@ enum ExportDataType: String, CaseIterable, Identifiable {
     
     var icon: String {
         switch self {
-        case .expenses: return "creditcard.fill"
+        case .transactions: return "creditcard.fill"
         case .recurringExpenses: return "arrow.clockwise.circle.fill"
         case .budgets: return "chart.bar.fill"
         case .categories: return "folder.fill"
@@ -47,12 +47,12 @@ enum ExportDataType: String, CaseIterable, Identifiable {
 struct ExportData: Codable {
     let exportDate: Date
     let appVersion: String
-    var expenses: [ExpenseData]?
+    var transactions: [TransactionData]?
     var recurringExpenses: [RecurringExpenseData]?
     var budgets: [MonthlyBudgetData]?
     var categories: [CustomCategoryData]?
     
-    struct ExpenseData: Codable {
+    struct TransactionData: Codable {
         let id: String
         let type: String
         let amount: Double
@@ -64,7 +64,7 @@ struct ExportData: Codable {
         let recurringExpenseId: String?
         let groupTransactionId: String?
 
-        init(id: String, type: String = "expense", amount: Double, category: String, date: Date, time: Date?, transactionDescription: String?, notes: String?, recurringExpenseId: String?, groupTransactionId: String?) {
+        init(id: String, type: String = "transaction", amount: Double, category: String, date: Date, time: Date?, transactionDescription: String?, notes: String?, recurringExpenseId: String?, groupTransactionId: String?) {
             self.id = id
             self.type = type
             self.amount = amount
@@ -209,7 +209,7 @@ struct ExportData: Codable {
             switch selectedDataType {
             case .all:
                 return "JSON backup includes all your data. Use this for complete backup and restore."
-            case .expenses, .recurringExpenses, .budgets, .categories:
+            case .transactions, .recurringExpenses, .budgets, .categories:
                 return "JSON preserves all data details and is suitable for backup or transfer."
             }
         }
@@ -220,12 +220,12 @@ struct ExportData: Codable {
         case .json:
             return "Import data from a previously exported JSON backup file."
         case .csv:
-            return "Import expenses, budgets, or categories from CSV files."
+            return "Import transactions, budgets, or categories from CSV files."
         }
     }
     
     func exportData(
-        expenses: [Transaction],
+        transactions: [Transaction],
         recurringExpenses: [RecurringExpense],
         budgets: [MonthlyBudget],
         categories: [CustomCategory]
@@ -237,8 +237,8 @@ struct ExportData: Codable {
             let url: URL
             
             switch selectedDataType {
-            case .expenses:
-                url = try await exportExpenses(format: selectedExportFormat, expenses: expenses)
+            case .transactions:
+                url = try await exportTransactions(format: selectedExportFormat, transactions: transactions)
             case .recurringExpenses:
                 url = try await exportRecurringExpenses(format: selectedExportFormat, recurringExpenses: recurringExpenses)
             case .budgets:
@@ -246,7 +246,7 @@ struct ExportData: Codable {
             case .categories:
                 url = try await exportCategories(format: selectedExportFormat, categories: categories)
             case .all:
-                url = try await exportAll(format: selectedExportFormat, expenses: expenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
+                url = try await exportAll(format: selectedExportFormat, transactions: transactions, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
             }
             
             exportedFileURL = url
@@ -276,14 +276,14 @@ struct ExportData: Codable {
     
     // MARK: - Export Methods
     
-    private func exportExpenses(format: ExportFormat, expenses: [Transaction]) async throws -> URL {
-        let activeExpenses = expenses.filter { !$0.isDeleted }
+    private func exportTransactions(format: ExportFormat, transactions: [Transaction]) async throws -> URL {
+        let activeExpenses = transactions.filter { !$0.isDeleted }
         
         switch format {
         case .csv:
-            return try exportExpensesToCSV(expenses: activeExpenses)
+            return try exportTransactionsToCSV(transactions: activeExpenses)
         case .json:
-            return try exportExpensesToJSON(expenses: activeExpenses)
+            return try exportTransactionsToJSON(transactions: activeExpenses)
         }
     }
     
@@ -305,14 +305,14 @@ struct ExportData: Codable {
         }
     }
     
-    private func exportAll(format: ExportFormat, expenses: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) async throws -> URL {
-        let activeExpenses = expenses.filter { !$0.isDeleted }
+    private func exportAll(format: ExportFormat, transactions: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) async throws -> URL {
+        let activeExpenses = transactions.filter { !$0.isDeleted }
         
         switch format {
         case .csv:
-            return try exportAllToCSV(expenses: activeExpenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
+            return try exportAllToCSV(transactions: activeExpenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
         case .json:
-            return try exportAllToJSON(expenses: activeExpenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
+            return try exportAllToJSON(transactions: activeExpenses, recurringExpenses: recurringExpenses, budgets: budgets, categories: categories)
         }
     }
     
@@ -348,7 +348,7 @@ struct ExportData: Codable {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: nil,
+            transactions: nil,
             recurringExpenses: recurringData,
             budgets: nil,
             categories: nil
@@ -389,23 +389,23 @@ struct ExportData: Codable {
         return formatter
     }()
     
-    private func exportAllToCSV(expenses: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToCSV(transactions: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
         var csv = ""
         
-        // Expenses section
-        csv += "# EXPENSES\n"
+        // Transactions section
+        csv += "# TRANSACTIONS\n"
         csv += "ID,Amount,Category,Date,Time,Description,Notes,Recurring Expense ID,Group ID,Group Name\n"
         
-        for expense in expenses {
-            let id = expense.id.uuidString
-            let amount = String(expense.amount)
-            let category = escapeCSV(expense.category)
-            let date = iso8601Formatter.string(from: expense.date)
-            let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
-            let desc = escapeCSV(expense.transactionDescription ?? "")
-            let notes = escapeCSV(expense.notes ?? "")
-            let recId = expense.recurringExpenseId?.uuidString ?? ""
-            let gid = expense.groupTransactionId?.uuidString ?? ""
+        for transaction in transactions {
+            let id = transaction.id.uuidString
+            let amount = String(transaction.amount)
+            let category = escapeCSV(transaction.category)
+            let date = iso8601Formatter.string(from: transaction.date)
+            let time = transaction.time.map { iso8601Formatter.string(from: $0) } ?? ""
+            let desc = escapeCSV(transaction.transactionDescription ?? "")
+            let notes = escapeCSV(transaction.notes ?? "")
+            let recId = transaction.recurringExpenseId?.uuidString ?? ""
+            let gid = transaction.groupTransactionId?.uuidString ?? ""
             let gname = escapeCSV(nil ?? "")
             
             let row = [id, amount, category, date, time, desc, notes, recId, gid, gname].joined(separator: ",")
@@ -468,26 +468,26 @@ struct ExportData: Codable {
         return try saveToTempFile(csv, fileName: fileName)
     }
     
-    private func exportExpensesToCSV(expenses: [Transaction]) throws -> URL {
+    private func exportTransactionsToCSV(transactions: [Transaction]) throws -> URL {
         var csv = "ID,Amount,Category,Date,Time,Description,Notes,Recurring Expense ID,Group ID,Group Name\n"
         
-        for expense in expenses {
-            let id = expense.id.uuidString
-            let amount = String(expense.amount)
-            let category = escapeCSV(expense.category)
-            let date = iso8601Formatter.string(from: expense.date)
-            let time = expense.time.map { iso8601Formatter.string(from: $0) } ?? ""
-            let description = escapeCSV(expense.transactionDescription ?? "")
-            let notes = escapeCSV(expense.notes ?? "")
-            let recurringExpenseId = expense.recurringExpenseId?.uuidString ?? ""
-            let groupId = expense.groupTransactionId?.uuidString ?? ""
+        for transaction in transactions {
+            let id = transaction.id.uuidString
+            let amount = String(transaction.amount)
+            let category = escapeCSV(transaction.category)
+            let date = iso8601Formatter.string(from: transaction.date)
+            let time = transaction.time.map { iso8601Formatter.string(from: $0) } ?? ""
+            let description = escapeCSV(transaction.transactionDescription ?? "")
+            let notes = escapeCSV(transaction.notes ?? "")
+            let recurringExpenseId = transaction.recurringExpenseId?.uuidString ?? ""
+            let groupId = transaction.groupTransactionId?.uuidString ?? ""
             let groupName = escapeCSV(nil ?? "")
             
             let row = [id, amount, category, date, time, description, notes, recurringExpenseId, groupId, groupName].joined(separator: ",")
             csv += row + "\n"
         }
         
-        let fileName = "expenses_\(dateString()).csv"
+        let fileName = "transaction_\(dateString()).csv"
         return try saveToTempFile(csv, fileName: fileName)
     }
     
@@ -530,32 +530,32 @@ struct ExportData: Codable {
     
     // MARK: - JSON Export
     
-    private func exportExpensesToJSON(expenses: [Transaction]) throws -> URL {
-        let expenseData = expenses.map { expense in
-            ExportData.ExpenseData(
-                id: expense.id.uuidString,
-                type: expense.type,
-                amount: expense.amount,
-                category: expense.category,
-                date: expense.date,
-                time: expense.time,
-                transactionDescription: expense.transactionDescription,
-                notes: expense.notes,
-                recurringExpenseId: expense.recurringExpenseId?.uuidString,
-                groupTransactionId: expense.groupTransactionId?.uuidString
+    private func exportTransactionsToJSON(transactions: [Transaction]) throws -> URL {
+        let transactionData = transactions.map { transaction in
+            ExportData.TransactionData(
+                id: transaction.id.uuidString,
+                type: transaction.type,
+                amount: transaction.amount,
+                category: transaction.category,
+                date: transaction.date,
+                time: transaction.time,
+                transactionDescription: transaction.transactionDescription,
+                notes: transaction.notes,
+                recurringExpenseId: transaction.recurringExpenseId?.uuidString,
+                groupTransactionId: transaction.groupTransactionId?.uuidString
             )
         }
 
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: expenseData,
+            transactions: transactionData,
             recurringExpenses: nil,
             budgets: nil,
             categories: nil
         )
         
-        return try saveToJSON(exportData, fileName: "expenses_\(dateString()).json")
+        return try saveToJSON(exportData, fileName: "transactionDatas_\(dateString()).json")
     }
     
     private func exportBudgetsToJSON(budgets: [MonthlyBudget]) throws -> URL {
@@ -571,7 +571,7 @@ struct ExportData: Codable {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: nil,
+            transactions: nil,
             recurringExpenses: nil,
             budgets: budgetData,
             categories: nil
@@ -596,7 +596,7 @@ struct ExportData: Codable {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: nil,
+            transactions: nil,
             recurringExpenses: nil,
             budgets: nil,
             categories: categoryData
@@ -605,19 +605,19 @@ struct ExportData: Codable {
         return try saveToJSON(exportData, fileName: "categories_\(dateString()).json")
     }
     
-    private func exportAllToJSON(expenses: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
-        let expenseData = expenses.map { expense in
-            ExportData.ExpenseData(
-                id: expense.id.uuidString,
-                type: expense.type,
-                amount: expense.amount,
-                category: expense.category,
-                date: expense.date,
-                time: expense.time,
-                transactionDescription: expense.transactionDescription,
-                notes: expense.notes,
-                recurringExpenseId: expense.recurringExpenseId?.uuidString,
-                groupTransactionId: expense.groupTransactionId?.uuidString
+    private func exportAllToJSON(transactions: [Transaction], recurringExpenses: [RecurringExpense], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+        let transactionsData = transactions.map { transaction in
+            ExportData.TransactionData(
+                id: transaction.id.uuidString,
+                type: transaction.type,
+                amount: transaction.amount,
+                category: transaction.category,
+                date: transaction.date,
+                time: transaction.time,
+                transactionDescription: transaction.transactionDescription,
+                notes: transaction.notes,
+                recurringExpenseId: transaction.recurringExpenseId?.uuidString,
+                groupTransactionId: transaction.groupTransactionId?.uuidString
             )
         }
 
@@ -664,7 +664,7 @@ struct ExportData: Codable {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: expenseData,
+            transactions: transactionsData,
             recurringExpenses: recurringExpenseData,
             budgets: budgetData,
             categories: categoryData
@@ -688,7 +688,7 @@ struct ExportData: Codable {
         let content = try String(contentsOf: url, encoding: .utf8)
         
         // Check if it's the new section-based format
-        if content.contains("# EXPENSES") || content.contains("# BUDGETS") || content.contains("# CATEGORIES") {
+        if content.contains("# TRANSACTIONS") || content.contains("# BUDGETS") || content.contains("# CATEGORIES") {
             try await importSectionBasedCSV(content: content, context: context)
             return
         }
@@ -701,7 +701,7 @@ struct ExportData: Codable {
         let headerLine = lines[0]
         let headers = parseCSVLine(headerLine)
         
-        var expenses: [ExportData.ExpenseData] = []
+        var transactions: [ExportData.TransactionData] = []
         var budgets: [ExportData.MonthlyBudgetData] = []
         var categories: [ExportData.CustomCategoryData] = []
         
@@ -711,8 +711,8 @@ struct ExportData: Codable {
         if firstHeader == "id" && lowercaseHeaders.contains("amount") && lowercaseHeaders.contains("category") {
             for i in 1..<lines.count {
                 let values = parseCSVLine(lines[i])
-                if let expense = parseExpenseCSVRow(values, headers: lowercaseHeaders) {
-                    expenses.append(expense)
+                if let transaction = parseExpenseCSVRow(values, headers: lowercaseHeaders) {
+                    transactions.append(transaction)
                 }
             }
         } else if firstHeader == "id" && lowercaseHeaders.contains("limit") && lowercaseHeaders.contains("year") {
@@ -734,7 +734,7 @@ struct ExportData: Codable {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: expenses.isEmpty ? nil : expenses,
+            transactions: transactions.isEmpty ? nil : transactions,
             budgets: budgets.isEmpty ? nil : budgets,
             categories: categories.isEmpty ? nil : categories
         )
@@ -743,7 +743,7 @@ struct ExportData: Codable {
     }
     
     private func importSectionBasedCSV(content: String, context: ModelContext) async throws {
-        var expenses: [ExportData.ExpenseData] = []
+        var transactions: [ExportData.TransactionData] = []
         var budgets: [ExportData.MonthlyBudgetData] = []
         var categories: [ExportData.CustomCategoryData] = []
         
@@ -756,11 +756,11 @@ struct ExportData: Codable {
             let sectionHeader = lines[0]
             let headers = parseCSVLine(lines[1]).map { $0.lowercased() }
             
-            if sectionHeader.contains("EXPENSES") {
+            if sectionHeader.contains("TRANSACTIONS") {
                 for i in 2..<lines.count {
                     let values = parseCSVLine(lines[i])
-                    if let expense = parseExpenseCSVRow(values, headers: headers) {
-                        expenses.append(expense)
+                    if let transaction = parseExpenseCSVRow(values, headers: headers) {
+                        transactions.append(transaction)
                     }
                 }
             } else if sectionHeader.contains("BUDGETS") {
@@ -783,7 +783,7 @@ struct ExportData: Codable {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            expenses: expenses.isEmpty ? nil : expenses,
+            transactions: transactions.isEmpty ? nil : transactions,
             budgets: budgets.isEmpty ? nil : budgets,
             categories: categories.isEmpty ? nil : categories
         )
@@ -792,7 +792,7 @@ struct ExportData: Codable {
     }
     
     private func processImportedData(_ exportData: ExportData, context: ModelContext) async throws {
-        var expensesImported = 0
+        var transactionsImported = 0
         var recurringExpensesImported = 0
         var budgetsImported = 0
         var categoriesImported = 0
@@ -821,30 +821,30 @@ struct ExportData: Codable {
             }
         }
         
-        if let expenses = exportData.expenses {
-            for expenseData in expenses {
+        if let transactions = exportData.transactions {
+            for transactionData in transactions {
                 let recurringExpenseId: UUID?
-                if let recIdString = expenseData.recurringExpenseId,
+                if let recIdString = transactionData.recurringExpenseId,
                    let recId = recurringExpenseIdMap[recIdString] {
                     recurringExpenseId = recId
                 } else {
                     recurringExpenseId = nil
                 }
                 
-                let expense = Transaction(
-                    id: UUID(uuidString: expenseData.id) ?? UUID(),
-                    type: expenseData.type,
-                    amount: expenseData.amount,
-                    category: expenseData.category,
-                    date: expenseData.date,
-                    time: expenseData.time,
-                    transactionDescription: expenseData.transactionDescription,
-                    notes: expenseData.notes,
+                let transaction = Transaction(
+                    id: UUID(uuidString: transactionData.id) ?? UUID(),
+                    type: transactionData.type,
+                    amount: transactionData.amount,
+                    category: transactionData.category,
+                    date: transactionData.date,
+                    time: transactionData.time,
+                    transactionDescription: transactionData.transactionDescription,
+                    notes: transactionData.notes,
                     recurringExpenseId: recurringExpenseId,
-                    groupTransactionId: expenseData.groupTransactionId.flatMap { UUID(uuidString: $0) }
+                    groupTransactionId: transactionData.groupTransactionId.flatMap { UUID(uuidString: $0) }
                 )
-                context.insert(expense)
-                expensesImported += 1
+                context.insert(transaction)
+                transactionsImported += 1
             }
         }
         
@@ -901,7 +901,7 @@ struct ExportData: Codable {
         
         var message = ""
         if recurringExpensesImported > 0 { message += "\(recurringExpensesImported) recurring expenses" }
-        if expensesImported > 0 { message += message.isEmpty ? "\(expensesImported) expenses" : ", \(expensesImported) expenses" }
+        if transactionsImported > 0 { message += message.isEmpty ? "\(transactionsImported) transactions" : ", \(transactionsImported) transactions" }
         if budgetsImported > 0 { message += message.isEmpty ? "\(budgetsImported) budgets" : ", \(budgetsImported) budgets" }
         if categoriesImported > 0 { message += message.isEmpty ? "\(categoriesImported) categories" : ", \(categoriesImported) categories" }
         
@@ -935,7 +935,7 @@ struct ExportData: Codable {
         return result
     }
     
-    func parseExpenseCSVRow(_ values: [String], headers: [String]) -> ExportData.ExpenseData? {
+    func parseExpenseCSVRow(_ values: [String], headers: [String]) -> ExportData.TransactionData? {
         guard values.count == headers.count else { return nil }
         
         let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
@@ -949,9 +949,9 @@ struct ExportData: Codable {
         let date = isoFormatter.date(from: dateStr) ?? dateFormatter.date(from: dateStr) ?? Date()
         let time = timeStr.isEmpty ? nil : (isoFormatter.date(from: timeStr) ?? dateFormatter.date(from: timeStr))
         
-        return ExportData.ExpenseData(
+        return ExportData.TransactionData(
             id: dict["id"] ?? UUID().uuidString,
-            type: dict["type"] ?? "expense",
+            type: dict["type"] ?? "transaction",
             amount: Double(dict["amount"] ?? "0") ?? 0,
             category: dict["category"] ?? "Other",
             date: date,

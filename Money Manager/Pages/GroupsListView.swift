@@ -69,7 +69,7 @@ struct GroupsListView: View {
             EmptyStateView(
                 icon: "person.3.fill",
                 title: "No Groups Yet",
-                message: "Create a group to start splitting expenses with others.",
+                message: "Create a group to start splitting transactions with others.",
                 actionTitle: "Create Group"
             ) {
                 showCreateGroup = true
@@ -147,7 +147,7 @@ struct GroupsListView: View {
                         .foregroundStyle(AppColors.accent)
                     Text("No Recent Activity")
                         .font(.headline)
-                    Text("Recent group expenses will appear here")
+                    Text("Recent group transactions will appear here")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -155,10 +155,10 @@ struct GroupsListView: View {
                 .padding(.vertical, 32)
             } else {
                 LazyVStack(spacing: 0) {
-                    ForEach(viewModel.filteredActivity, id: \.expense.id) { item in
-                        ActivityRow(expense: item.expense, groupName: item.groupName)
+                    ForEach(viewModel.filteredActivity, id: \.transaction.id) { item in
+                        ActivityRow(transaction: item.transaction, groupName: item.groupName)
 
-                        if item.expense.id != viewModel.filteredActivity.last?.expense.id {
+                        if item.transaction.id != viewModel.filteredActivity.last?.transaction.id {
                             Divider()
                                 .padding(.leading, 72)
                         }

@@ -12,23 +12,23 @@ enum TransactionTypeFilter: String, CaseIterable {
     var selectedView: ViewType = .daily
     var selectedDate: Date = Date() { didSet { recalculate() } }
     var filterMode: FilterMode = .monthly { didSet { recalculate() } }
-    var showAddExpense = false
+    var showAddTransaction = false
     var showBudgetSheet = false
     var searchText = "" { didSet { recalculate() } }
     var selectedCategoryFilter: String? { didSet { recalculate() } }
     var transactionTypeFilter: TransactionTypeFilter = .all { didSet { recalculate() } }
 
-    var filteredExpenses: [Transaction] = []
+    var filteredTransactions: [Transaction] = []
     var currentBudget: MonthlyBudget?
     var dailyBudgetLimit: Double = 0
     var totalSpent: Double = 0
     var totalIncome: Double = 0
     var categorySpending: [CategorySpending] = []
-    var expenseToDelete: Transaction?
+    var transactionToDelete: Transaction?
 
     var netBalance: Double { totalIncome - totalSpent }
 
-    private var allExpenses: [Transaction] = []
+    private var allTransactions: [Transaction] = []
     private var budgets: [MonthlyBudget] = []
     private var customCategories: [CustomCategory] = []
     var modelContext: ModelContext?
@@ -40,8 +40,8 @@ enum TransactionTypeFilter: String, CaseIterable {
         self.auth = auth
     }
 
-    func update(allExpenses: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
-        self.allExpenses = allExpenses
+    func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
+        self.allTransactions = allTransactions
         self.budgets = budgets
         self.customCategories = customCategories
         recalculate()
@@ -54,38 +54,38 @@ enum TransactionTypeFilter: String, CaseIterable {
         if filterMode == .daily {
             let startOfDay = calendar.startOfDay(for: selectedDate)
             guard let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) else {
-                filteredExpenses = []
+                filteredTransactions = []
                 return
             }
 
-            dateFiltered = allExpenses.filter { expense in
-                !expense.isDeleted &&
-                expense.date >= startOfDay &&
-                expense.date <= endOfDay
+            dateFiltered = allTransactions.filter { transaction in
+                !transaction.isDeleted &&
+                transaction.date >= startOfDay &&
+                transaction.date <= endOfDay
             }
         } else {
             guard
                 let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
                 let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
             else {
-                filteredExpenses = []
+                filteredTransactions = []
                 return
             }
 
-            dateFiltered = allExpenses.filter { expense in
-                !expense.isDeleted &&
-                expense.date >= startOfMonth &&
-                expense.date <= endOfMonth
+            dateFiltered = allTransactions.filter { transaction in
+                !transaction.isDeleted &&
+                transaction.date >= startOfMonth &&
+                transaction.date <= endOfMonth
             }
         }
 
         var result = dateFiltered
 
         if !searchText.isEmpty {
-            result = result.filter { expense in
-                expense.category.localizedStandardContains(searchText) ||
-                (expense.transactionDescription?.localizedStandardContains(searchText) ?? false) ||
-                (expense.notes?.localizedStandardContains(searchText) ?? false)
+            result = result.filter { transaction in
+                transaction.category.localizedStandardContains(searchText) ||
+                (transaction.transactionDescription?.localizedStandardContains(searchText) ?? false) ||
+                (transaction.notes?.localizedStandardContains(searchText) ?? false)
             }
         }
 
@@ -103,7 +103,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         case .income:   result = result.filter { $0.type == "income" }
         }
 
-        filteredExpenses = result
+        filteredTransactions = result
 
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
@@ -121,8 +121,8 @@ enum TransactionTypeFilter: String, CaseIterable {
         let total = totalSpent
 
         if total > 0 {
-            categorySpending = grouped.map { categoryName, expenses in
-                let amount = expenses.reduce(0) { $0 + $1.amount }
+            categorySpending = grouped.map { categoryName, transactions in
+                let amount = transactions.reduce(0) { $0 + $1.amount }
                 let percentage = Int((amount / total) * 100)
                 let (icon, color) = resolveCategory(categoryName)
                 return CategorySpending(
@@ -158,16 +158,16 @@ enum TransactionTypeFilter: String, CaseIterable {
         selectedView = .categories
     }
 
-    func deleteExpense(_ expense: Transaction) {
-        expenseToDelete = expense
+    func deleteTransaction(_ transaction: Transaction) {
+        transactionToDelete = transaction
     }
 
-    func confirmDeleteExpense() {
-        guard let expense = expenseToDelete else { return }
+    func confirmDeleteTransaction() {
+        guard let transaction = transactionToDelete else { return }
 
-        expense.isDeleted = true
-        expense.updatedAt = Date()
-        expenseToDelete = nil
+        transaction.isDeleted = true
+        transaction.updatedAt = Date()
+        transactionToDelete = nil
 
         if let modelContext = modelContext {
             do {
@@ -175,7 +175,7 @@ enum TransactionTypeFilter: String, CaseIterable {
 
                 changeQueue.enqueue(
                     entityType: "transaction",
-                    entityID: expense.id,
+                    entityID: transaction.id,
                     action: "delete",
                     endpoint: "/transactions",
                     httpMethod: "DELETE",
@@ -196,8 +196,8 @@ enum TransactionTypeFilter: String, CaseIterable {
         recalculate()
     }
 
-    func cancelDeleteExpense() {
-        expenseToDelete = nil
+    func cancelDeleteTransaction() {
+        transactionToDelete = nil
     }
 
     func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {

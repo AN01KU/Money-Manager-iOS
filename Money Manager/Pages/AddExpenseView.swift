@@ -19,8 +19,8 @@ struct AddTransactionView: View {
         _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode))
     }
 
-    init(expenseToEdit: Transaction) {
-        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: .personal(editing: expenseToEdit)))
+    init(transactionToEdit: Transaction) {
+        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: .personal(editing: transactionToEdit)))
     }
 
     var body: some View {
@@ -347,7 +347,7 @@ struct AddTransactionView: View {
                 Spacer()
                 Text(CurrencyFormatter.format(viewModel.customSplitTotal, showDecimals: true))
                     .fontWeight(.semibold)
-                    .foregroundStyle(viewModel.splitMatchesTotal ? AppColors.positive : AppColors.expense)
+                    .foregroundStyle(viewModel.splitMatchesTotal ? AppColors.income : AppColors.expense)
             }
             if !viewModel.splitMatchesTotal {
                 let diff = (Double(viewModel.amount) ?? 0) - viewModel.customSplitTotal
@@ -371,18 +371,18 @@ struct AddTransactionView: View {
 
 // MARK: - Previews
 
-#Preview("New Expense") {
+#Preview("New Transaction") {
     AddTransactionView()
         .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }
 
-#Preview("Edit Expense") {
-    let expense = Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch at cafe", notes: "With colleagues")
-    AddTransactionView(expenseToEdit: expense)
+#Preview("Edit Transaction") {
+    let transaction = Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch at cafe", notes: "With colleagues")
+    AddTransactionView(transactionToEdit: transaction)
         .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }
 
-#Preview("Group Expense") {
+#Preview("Group Transaction") {
     let groupId = UUID()
     let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
             let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joined_at: Date())
