@@ -350,7 +350,7 @@ struct AddRecurringTransactionViewModelTests {
         let context = ModelContext(container)
 
         viewModel.modelContext = context
-        viewModel.save()
+        _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let items = (try? context.fetch(descriptor)) ?? []
@@ -372,7 +372,7 @@ struct AddRecurringTransactionViewModelTests {
         let context = ModelContext(container)
 
         viewModel.modelContext = context
-        viewModel.save()
+        _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let items = (try? context.fetch(descriptor)) ?? []
@@ -395,7 +395,7 @@ struct AddRecurringTransactionViewModelTests {
         let context = ModelContext(container)
 
         viewModel.modelContext = context
-        viewModel.save()
+        _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let items = (try? context.fetch(descriptor)) ?? []
@@ -417,7 +417,7 @@ struct AddRecurringTransactionViewModelTests {
         let context = ModelContext(container)
 
         viewModel.modelContext = context
-        viewModel.save()
+        _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let items = (try? context.fetch(descriptor)) ?? []
@@ -439,7 +439,7 @@ struct AddRecurringTransactionViewModelTests {
         let context = ModelContext(container)
 
         viewModel.modelContext = context
-        viewModel.save()
+        _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let items = (try? context.fetch(descriptor)) ?? []
@@ -461,7 +461,7 @@ struct AddRecurringTransactionViewModelTests {
         let context = ModelContext(container)
 
         viewModel.modelContext = context
-        viewModel.save()
+        _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let items = (try? context.fetch(descriptor)) ?? []

@@ -562,8 +562,6 @@ struct OverviewViewModelTests {
         
         viewModel.update(allTransactions: [], budgets: [existingBudget], customCategories: [])
         
-        let initialCount = viewModel.currentBudget != nil ? 1 : 0
-        
         let schema = Schema([Transaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)

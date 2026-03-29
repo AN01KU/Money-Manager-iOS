@@ -373,9 +373,10 @@ struct BackupViewModelTests {
     func testParseDateISO8601() {
         let viewModel = BackupViewModel()
         let result = viewModel.parseDate("2026-03-12T10:30:00Z")
-        #expect(result.date != nil)
+        let calendar = Calendar.current
+        #expect(calendar.component(.year, from: result.date) == 2026)
     }
-    
+
     @Test
     func testParseDateWithTime() {
         let viewModel = BackupViewModel()
@@ -405,7 +406,8 @@ struct BackupViewModelTests {
     func testParseDateEmptyString() {
         let viewModel = BackupViewModel()
         let result = viewModel.parseDate("")
-        #expect(result.date != nil)
+        // Empty string falls back to today's date; just verify it's a plausible date
+        #expect(result.date.timeIntervalSince1970 > 0)
     }
     
     // MARK: - Expense CSV Row Parse Tests

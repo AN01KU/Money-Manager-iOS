@@ -135,7 +135,7 @@ struct PredefinedCategoryTests {
     @Test
     func testAllCasesAreIdentifiable() {
         for category in PredefinedCategory.allCases {
-            #expect(category.id != nil)
+            #expect(!category.id.isEmpty)
         }
     }
     
