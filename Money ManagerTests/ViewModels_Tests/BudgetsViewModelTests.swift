@@ -148,12 +148,12 @@ struct BudgetsViewModelTests {
     func testDailyAverageCalculatesCorrectly() {
         let (year, month) = currentYearMonth()
         let viewModel = BudgetsViewModel()
-        
+
         let expense = Transaction(amount: 200, category: "Food", date: Date())
         let budget = MonthlyBudget(year: year, month: month, limit: 1000)
-        
+
         viewModel.configure(allTransactions: [expense], budgets: [budget], modelContext: nil)
-        
+
         #expect(viewModel.dailyAverage > 0)
     }
     
@@ -198,12 +198,12 @@ struct BudgetsViewModelTests {
     }
     
     // MARK: - Days Remaining Tests
-    
+
     @Test
     func testDaysRemainingCalculatesForCurrentMonth() {
         let viewModel = BudgetsViewModel()
         viewModel.selectedMonth = Date()
-        
+
         #expect(viewModel.daysRemaining > 0)
     }
     

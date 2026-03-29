@@ -55,7 +55,8 @@ import SwiftData
         else { return 0 }
 
         if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
-            let daysLeft = calendar.dateComponents([.day], from: today, to: endOfMonth).day ?? 0
+            let startOfToday = calendar.startOfDay(for: today)
+            let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: endOfMonth).day ?? 0
             return max(0, daysLeft)
         }
         return 0

@@ -29,7 +29,7 @@ final class APIClient {
         #if DEBUG
         self.baseURL = "http://localhost:8080"
         #else
-        self.baseURL = "https://api.moneymanager.com"
+        self.baseURL = "https://moneymanager.ankushganesh.cloud"
         #endif
 
         

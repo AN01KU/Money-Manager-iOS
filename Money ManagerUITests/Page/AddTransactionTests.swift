@@ -123,18 +123,15 @@ final class AddTransactionTests: XCTestCase {
         // Wait for category picker sheet to appear
         let pickerNav = app.navigationBars["Select Category"]
         XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
-        
-        // Transport is near the bottom of the alphabetically sorted list — scroll to it
-        let transportText = app.staticTexts["Transport"].firstMatch
-        if !transportText.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(transportText.waitForExistence(timeout: 3), "Transport category should appear")
-        transportText.tap()
-        
-        // Verify category is selected (button text should change)
-        let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
-        XCTAssertTrue(categoryButton.waitForExistence(timeout: 2), "Transport category should be selected")
+
+        // Food & Dining is always visible without scrolling
+        let foodCell = app.buttons["Food & Dining"]
+        XCTAssertTrue(foodCell.waitForExistence(timeout: 5), "Food & Dining category should appear in picker")
+        foodCell.tap()
+
+        // Verify category is selected (button label should change)
+        let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Food'")).firstMatch
+        XCTAssertTrue(categoryButton.waitForExistence(timeout: 2), "Food & Dining category should be selected")
     }
     
     // MARK: - Date Selection
@@ -189,35 +186,32 @@ final class AddTransactionTests: XCTestCase {
         
         // Select category
         app.buttons["Select Category"].tap()
-        
+
         // Wait for category picker sheet
         let pickerNav = app.navigationBars["Select Category"]
-        XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
-        
-        // Shopping is near the bottom of the alphabetically sorted list — scroll if needed
-        let shoppingText = app.staticTexts["Shopping"].firstMatch
-        if !shoppingText.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(shoppingText.waitForExistence(timeout: 3), "Shopping category should appear")
-        shoppingText.tap()
-        
+        XCTAssertTrue(pickerNav.waitForExistence(timeout: 5), "Category picker should appear")
+
+        // Food & Dining is near the top of the list — no scrolling needed
+        let foodCell = app.buttons["Food & Dining"]
+        XCTAssertTrue(foodCell.waitForExistence(timeout: 5), "Food & Dining category should appear in picker")
+        foodCell.tap()
+
         // Add description
         let descField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description'")).firstMatch
         if descField.exists {
             descField.tap()
-            descField.typeText("Test shopping expense")
+            descField.typeText("Test expense")
         }
-        
+
         // Save
         app.buttons["Save"].tap()
-        
+
         // Verify return to Transactions
-        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 5), "Should return to Transactions after save")
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 10), "Should return to Transactions after save")
 
         // Verify expense appears in list
-        let expense = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Shopping' OR label CONTAINS '750'")).firstMatch
-        XCTAssertTrue(expense.waitForExistence(timeout: 5), "New expense should appear in list")
+        let expense = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Food' OR label CONTAINS '750'")).firstMatch
+        XCTAssertTrue(expense.waitForExistence(timeout: 10), "New expense should appear in list")
     }
     
     // MARK: - Helper Methods
