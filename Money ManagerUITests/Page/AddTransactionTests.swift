@@ -173,10 +173,10 @@ final class AddTransactionTests: XCTestCase {
     
     func testCancelDismissesSheet() throws {
         openAddTransactionScreen()
-        
+
         app.buttons["Cancel"].tap()
-        
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3), "Should return to Overview after cancel")
+
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 3), "Should return to Transactions after cancel")
     }
     
     func testCompleteTransactionCreation() throws {
@@ -212,9 +212,9 @@ final class AddTransactionTests: XCTestCase {
         // Save
         app.buttons["Save"].tap()
         
-        // Verify return to Overview
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 5), "Should return to Overview after save")
-        
+        // Verify return to Transactions
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 5), "Should return to Transactions after save")
+
         // Verify expense appears in list
         let expense = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Shopping' OR label CONTAINS '750'")).firstMatch
         XCTAssertTrue(expense.waitForExistence(timeout: 5), "New expense should appear in list")
@@ -223,14 +223,14 @@ final class AddTransactionTests: XCTestCase {
     // MARK: - Helper Methods
     
     private func openAddTransactionScreen() {
-        app.tabBars.buttons["Overview"].tap()
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
-        
-        // Tap the plus button
+        app.tabBars.buttons["Transactions"].tap()
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 3))
+
+        // Tap the FAB (plus button) on the Transactions tab
         let fabButton = app.buttons["plus"]
         XCTAssertTrue(fabButton.waitForExistence(timeout: 3), "FAB should exist")
         fabButton.tap()
-        
+
         XCTAssertTrue(app.navigationBars["Add Expense"].waitForExistence(timeout: 3), "Add Expense screen should appear")
     }
 }

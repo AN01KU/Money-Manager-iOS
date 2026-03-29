@@ -93,7 +93,11 @@ struct GroupsListViewModelTests {
         mock.stubbedTransactions = [older, newer]
         let vm = GroupsListViewModel(groupService: mock)
         await vm.load()
-        #expect(vm.recentActivity.first?.transaction.description == "New")
+        if case .transaction(let tx, _) = vm.recentActivity.first {
+            #expect(tx.description == "New")
+        } else {
+            Issue.record("Expected .transaction as first activity item")
+        }
     }
 
     @Test
@@ -146,8 +150,8 @@ struct GroupsListViewModelTests {
     func testFilteredActivityWithEmptySearchReturnsAll() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            (transaction: makeTransaction(description: "Dinner"), groupName: "Trip"),
-            (transaction: makeTransaction(description: "Taxi"),   groupName: "Work")
+            .transaction(makeTransaction(description: "Dinner"), groupName: "Trip"),
+            .transaction(makeTransaction(description: "Taxi"),   groupName: "Work")
         ]
         vm.searchText = ""
         #expect(vm.filteredActivity.count == 2)
@@ -157,20 +161,24 @@ struct GroupsListViewModelTests {
     func testFilteredActivityMatchesTransactionDescription() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            (transaction: makeTransaction(description: "Dinner"), groupName: "Trip"),
-            (transaction: makeTransaction(description: "Hotel"),  groupName: "Trip")
+            .transaction(makeTransaction(description: "Dinner"), groupName: "Trip"),
+            .transaction(makeTransaction(description: "Hotel"),  groupName: "Trip")
         ]
         vm.searchText = "dinner"
         #expect(vm.filteredActivity.count == 1)
-        #expect(vm.filteredActivity.first?.transaction.description == "Dinner")
+        if case .transaction(let tx, _) = vm.filteredActivity.first {
+            #expect(tx.description == "Dinner")
+        } else {
+            Issue.record("Expected .transaction as first filtered activity item")
+        }
     }
 
     @Test
     func testFilteredActivityMatchesGroupName() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            (transaction: makeTransaction(description: "Dinner"), groupName: "Weekend Trip"),
-            (transaction: makeTransaction(description: "Lunch"),  groupName: "Office")
+            .transaction(makeTransaction(description: "Dinner"), groupName: "Weekend Trip"),
+            .transaction(makeTransaction(description: "Lunch"),  groupName: "Office")
         ]
         vm.searchText = "weekend"
         #expect(vm.filteredActivity.count == 1)
