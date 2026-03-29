@@ -141,34 +141,68 @@ struct GroupsListView: View {
     private var activitiesContent: some View {
         Group {
             if viewModel.filteredActivity.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "clock.badge.checkmark")
-                        .font(.system(size: 40))
-                        .foregroundStyle(AppColors.accent)
-                    Text("No Recent Activity")
-                        .font(.headline)
-                    Text("Recent group transactions will appear here")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
+                EmptyStateView(
+                    icon: "clock.badge.checkmark",
+                    title: "No Recent Activity",
+                    message: "Group transactions and settlements will appear here."
+                )
+                .padding(.top, 32)
             } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(viewModel.filteredActivity, id: \.transaction.id) { item in
-                        ActivityRow(transaction: item.transaction, groupName: item.groupName)
+                VStack(alignment: .leading, spacing: 20) {
+                    ForEach(groupedActivity) { section in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(section.label)
+                                .font(AppTypography.sectionHeader)
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+                                .padding(.horizontal)
 
-                        if item.transaction.id != viewModel.filteredActivity.last?.transaction.id {
-                            Divider()
-                                .padding(.leading, 72)
+                            VStack(spacing: 0) {
+                                ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
+                                    ActivityRow(item: item, currentUserId: viewModel.currentUserId)
+
+                                    if index < section.items.count - 1 {
+                                        Divider().padding(.leading, 64)
+                                    }
+                                }
+                            }
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(.rect(cornerRadius: 12))
+                            .padding(.horizontal)
                         }
                     }
                 }
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(.rect(cornerRadius: 12))
-                .padding(.horizontal)
             }
         }
+    }
+
+    private struct ActivitySection: Identifiable {
+        let id: String
+        let label: String
+        let items: [ActivityItem]
+    }
+
+    private var groupedActivity: [ActivitySection] {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM dd"
+        var grouped: [String: [ActivityItem]] = [:]
+
+        for item in viewModel.filteredActivity {
+            let day = calendar.startOfDay(for: item.date)
+            let key = calendar.isDateInToday(day)
+                ? "TODAY"
+                : formatter.string(from: day).uppercased()
+            grouped[key, default: []].append(item)
+        }
+
+        return grouped
+            .map { ActivitySection(id: $0.key, label: $0.key, items: $0.value) }
+            .sorted { a, b in
+                if a.id == "TODAY" { return true }
+                if b.id == "TODAY" { return false }
+                return a.id > b.id
+            }
     }
 }
 

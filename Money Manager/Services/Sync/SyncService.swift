@@ -197,12 +197,12 @@ final class SyncService: SyncServiceProtocol {
     private func pullFromServer(context: ModelContext) async {
         isSyncing = true
         defer { isSyncing = false }
-        
+
         await pullCategories(context: context)
         await pullBudgets(context: context)
         await pullRecurring(context: context)
         await pullTransactions(context: context)
-        
+
         updateLastSyncTime()
     }
     
@@ -283,6 +283,9 @@ final class SyncService: SyncServiceProtocol {
         for remote in apiTransactions {
             guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
+                if local.groupName == nil, let name = remote.group_name {
+                    local.groupName = name
+                }
                 if remote.updated_at > local.updatedAt {
                     if pendingIDs.contains(remote.id) {
                         AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — local pending change will be overwritten")
@@ -303,6 +306,7 @@ final class SyncService: SyncServiceProtocol {
                     groupTransactionId: remote.group_transaction_id,
                     settlementId: remote.settlement_id
                 )
+                tx.groupName = remote.group_name
                 context.insert(tx)
             }
         }
@@ -534,9 +538,9 @@ final class SyncService: SyncServiceProtocol {
         // Sync group transactions separately (not included in list response)
         Task {
             guard let container = modelContainer else { return }
-            let transaction = ModelContext(container)
+            let txContext = ModelContext(container)
             for remote in apiGroups {
-                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: transaction)
+                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: txContext)
             }
         }
     }
@@ -547,8 +551,39 @@ final class SyncService: SyncServiceProtocol {
         localGroupTransactionsByID: [UUID: GroupTransactionModel],
         context: ModelContext
     ) async {
-        // TODO(Phase 4): fetch via GET /groups/:id/transactions — group details no longer include transactions inline
-        AppLogger.sync.debug("pullGroupExpenses: skipped pending Phase 4 group transaction sync refactor")
+        do {
+            let remote = try await groupService.fetchGroupTransactions(groupId: groupId)
+            AppLogger.sync.debug("[GroupDebug] pullGroupTransactions: group=\(groupId) fetched \(remote.count) transactions")
+
+            let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
+            guard let dbGroup = localGroups.first(where: { $0.id == dbGroupId }) else {
+                AppLogger.sync.warning("[GroupDebug] pullGroupTransactions: SplitGroupModel not found for id=\(dbGroupId)")
+                return
+            }
+
+            for gt in remote where !gt.is_deleted {
+                if let existing = localGroupTransactionsByID[gt.id] {
+                    existing.transactionDescription = gt.description ?? ""
+                    existing.totalAmount = Double(gt.total_amount) ?? existing.totalAmount
+                    AppLogger.sync.debug("[GroupDebug] Updated GroupTransactionModel id=\(gt.id) description='\(gt.description ?? "nil")'")
+                } else {
+                    let newGT = GroupTransactionModel(
+                        id: gt.id,
+                        description: gt.description ?? "",
+                        totalAmount: Double(gt.total_amount) ?? 0,
+                        paidBy: gt.paid_by_user_id,
+                        createdAt: gt.created_at
+                    )
+                    newGT.group = dbGroup
+                    context.insert(newGT)
+                    AppLogger.sync.debug("[GroupDebug] Inserted GroupTransactionModel id=\(gt.id) group='\(dbGroup.name)'")
+                }
+            }
+
+            try? context.save()
+        } catch {
+            AppLogger.sync.error("[GroupDebug] pullGroupTransactions failed for group=\(groupId): \(error)")
+        }
     }
 
     // MARK: - Validation

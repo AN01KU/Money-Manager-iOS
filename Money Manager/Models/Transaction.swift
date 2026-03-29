@@ -25,6 +25,7 @@ final class Transaction {
     
     var recurringExpenseId: UUID?
     var groupTransactionId: UUID?
+    var groupName: String?
     var settlementId: UUID?
     
     /// UUID of the linked CustomCategory. Nil for transactions created before this field was added.

@@ -2,28 +2,41 @@ import SwiftUI
 
 struct GroupTransactionContent: View {
     let groupName: String?
-    
+    let groupId: UUID?
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(groupName ?? "Unknown Group")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                
-                Text("Group transaction")
-                    .font(.caption2)
+        Button {
+            guard authService.isAuthenticated else { return }
+            if let groupId {
+                dismiss()
+                let route = AppRoute.group(groupId)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    NotificationCenter.default.post(name: .appRouteReceived, object: route)
+                }
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(groupName ?? "Unknown Group")
+                        .font(AppTypography.infoValue)
+                        .foregroundStyle(.primary)
+
+                    Text(authService.isAuthenticated ? "Tap to view group" : "Sign in to view group")
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: authService.isAuthenticated ? "chevron.right" : "lock.fill")
+                    .font(AppTypography.cardLabel)
                     .foregroundStyle(.secondary)
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .padding()
+            .background(AppColors.accentLight)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding()
-        .background(AppColors.accentLight)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
     }
 }

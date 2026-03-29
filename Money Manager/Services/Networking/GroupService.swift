@@ -53,6 +53,6 @@ final class GroupService: GroupServiceProtocol {
     }
 
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
-        try await apiClient.post("/groups/\(request.groupId.uuidString)/settlements", body: request)
+        try await apiClient.post("/settlements", body: request)
     }
 }

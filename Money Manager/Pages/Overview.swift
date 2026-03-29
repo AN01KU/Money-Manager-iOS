@@ -44,7 +44,7 @@ struct Overview: View {
     }
 }
 
-// MARK: - Body (reduces type-checker complexity in Overview)
+// MARK: - Body
 
 private struct OverviewBody: View {
     @Bindable var viewModel: OverviewViewModel
@@ -52,33 +52,13 @@ private struct OverviewBody: View {
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            ScrollView {
-                OverviewScrollContent(viewModel: viewModel)
-            }
-            FloatingActionButton(icon: "plus") {
-                viewModel.showAddTransaction = true
-            }
-            .padding(.trailing, 24)
-            .padding(.bottom, 24)
+        ScrollView {
+            OverviewScrollContent(viewModel: viewModel)
         }
         .navigationTitle("Overview")
         .toolbar { overviewToolbar }
-        .searchable(text: $viewModel.searchText, prompt: "Search transactions")
-        .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
         .sheet(isPresented: $viewModel.showBudgetSheet) {
             BudgetSheet(selectedMonth: viewModel.selectedDate)
-        }
-        .alert("Delete Transaction?", isPresented: Binding(
-            get: { viewModel.transactionToDelete != nil },
-            set: { if !$0 { viewModel.cancelDeleteTransaction() } }
-        )) {
-            Button("Cancel", role: .cancel) { viewModel.cancelDeleteTransaction() }
-            Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }
-        } message: {
-            if let transaction = viewModel.transactionToDelete {
-                Text("Are you sure you want to delete \"\(transaction.transactionDescription ?? transaction.category)\"? This action cannot be undone.")
-            }
         }
         .task(id: viewModel.selectedDate) {
             viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
@@ -102,154 +82,293 @@ private struct OverviewScrollContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            DateFilterSelector(selectedDate: $viewModel.selectedDate, filterMode: $viewModel.filterMode)
+            OverviewHeaderCard(viewModel: viewModel)
                 .padding(.horizontal)
+                .padding(.top, 8)
 
-            if viewModel.filterMode == .daily, viewModel.dailyBudgetLimit > 0 {
-                BudgetOverviewCard(
-                    budget: MonthlyBudget(
-                        year: Calendar.current.component(.year, from: viewModel.selectedDate),
-                        month: Calendar.current.component(.month, from: viewModel.selectedDate),
-                        limit: viewModel.dailyBudgetLimit
-                    ),
-                    spent: viewModel.totalSpent,
-                    isDaily: true
-                )
-                .padding(.horizontal)
-            } else if let budget = viewModel.currentBudget {
-                BudgetOverviewCard(
-                    budget: budget,
-                    spent: viewModel.totalSpent
-                )
+            if !viewModel.categorySpending.isEmpty {
+                CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
+                    NotificationCenter.default.post(
+                        name: .transactionsCategoryFilter,
+                        object: categoryName
+                    )
+                }
                 .padding(.horizontal)
             } else {
-                NoBudgetCard(selectedMonth: viewModel.selectedDate) {
-                    viewModel.showBudgetSheet = true
-                }
+                EmptyStateView(
+                    icon: "chart.pie",
+                    title: "No expenses yet",
+                    message: "Tap + to add your first transaction"
+                )
                 .padding(.horizontal)
-            }
-
-            // Net balance strip — shown when there's any income
-            if viewModel.totalIncome > 0 {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Income")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(CurrencyFormatter.format(viewModel.totalIncome))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(AppColors.positive)
-                    }
-                    Spacer()
-                    VStack(alignment: .center, spacing: 2) {
-                        Text("Net")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(CurrencyFormatter.format(abs(viewModel.netBalance)))
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(viewModel.netBalance >= 0 ? AppColors.positive : AppColors.expense)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Expenses")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(CurrencyFormatter.format(viewModel.totalSpent))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(AppColors.expense)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
-            }
-
-            ViewTypeSelector(selectedView: $viewModel.selectedView)
-                .padding(.horizontal)
-
-            // Type filter chips
-            HStack(spacing: 8) {
-                ForEach(TransactionTypeFilter.allCases, id: \.self) { filter in
-                    Button {
-                        withAnimation { viewModel.transactionTypeFilter = filter }
-                    } label: {
-                        Text(filter.rawValue)
-                            .font(.subheadline)
-                            .fontWeight(viewModel.transactionTypeFilter == filter ? .semibold : .regular)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(viewModel.transactionTypeFilter == filter ? AppColors.accent : Color(.systemGray5))
-                            .foregroundStyle(viewModel.transactionTypeFilter == filter ? .white : .primary)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal)
-
-            if let categoryFilter = viewModel.selectedCategoryFilter {
-                HStack(spacing: 8) {
-                    Label(categoryFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-
-                    Button {
-                        withAnimation {
-                            viewModel.clearCategoryFilter()
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(AppColors.accentLight)
-                .clipShape(Capsule())
-                .padding(.horizontal)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
-            if viewModel.selectedView == .categories {
-                if !viewModel.categorySpending.isEmpty {
-                    CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
-                        withAnimation {
-                            viewModel.filterByCategory(categoryName)
-                        }
-                    }
-                    .padding(.horizontal)
-                } else {
-                    EmptyStateView(
-                        icon: "chart.bar.doc.horizontal",
-                        title: "No transactions yet",
-                        message: "Tap + to add your first transaction"
-                    )
-                    .padding(.horizontal)
-                }
-            } else {
-                if viewModel.filteredTransactions.isEmpty {
-                    EmptyStateView(
-                        icon: "chart.bar.doc.horizontal",
-                        title: viewModel.transactionTypeFilter == .income ? "No income yet" : "No transactions yet",
-                        message: "Tap + to add your first \(viewModel.transactionTypeFilter == .income ? "income" : "expense")"
-                    )
-                    .padding(.horizontal)
-                } else {
-                    TransactionList(transactions: viewModel.filteredTransactions) { transaction in
-                        viewModel.deleteTransaction(transaction)
-                    }
-                    .padding(.horizontal)
-                }
             }
         }
-        .padding(.vertical)
+        .padding(.bottom, 100)
+    }
+}
+
+// MARK: - Header Card
+
+private struct OverviewHeaderCard: View {
+    @Bindable var viewModel: OverviewViewModel
+    @State private var showDatePicker = false
+    @State private var navTapped = false
+
+    private var budgetPercentage: Int {
+        guard let budget = viewModel.currentBudget, budget.limit > 0 else { return 0 }
+        return min(100, Int((viewModel.totalSpent / budget.limit) * 100))
+    }
+
+    private var budgetColor: Color {
+        if budgetPercentage >= 100 { return AppColors.budgetDanger }
+        if budgetPercentage >= 80 { return AppColors.budgetCaution }
+        return AppColors.budgetSafe
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Period selector row
+            HStack {
+                HStack(spacing: 4) {
+                    Button {
+                        let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
+                        if let prev = Calendar.current.date(byAdding: step, value: -1, to: viewModel.selectedDate) {
+                            viewModel.selectedDate = prev
+                            navTapped = true
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(AppTypography.cardMeta)
+                            .foregroundStyle(AppColors.accent)
+                            .padding(6)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        Text(formattedPeriod)
+                            .font(AppTypography.cardValue)
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
+                        if let next = Calendar.current.date(byAdding: step, value: 1, to: viewModel.selectedDate) {
+                            viewModel.selectedDate = next
+                            navTapped = true
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(AppTypography.cardMeta)
+                            .foregroundStyle(AppColors.accent)
+                            .padding(6)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .sensoryFeedback(.impact(weight: .light), trigger: navTapped)
+                .onChange(of: navTapped) { _, v in if v { navTapped = false } }
+
+                Spacer()
+
+                // Daily / Monthly toggle pill
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.filterMode = viewModel.filterMode == .daily ? .monthly : .daily
+                    }
+                } label: {
+                    Text(viewModel.filterMode == .daily ? "Daily" : "Monthly")
+                        .font(AppTypography.chip)
+                        .foregroundStyle(AppColors.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(AppColors.accentLight)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+                .padding(.horizontal, 16)
+
+            // Income / Net / Expenses row
+            HStack(spacing: 0) {
+                SummaryStatView(
+                    label: "Income",
+                    amount: viewModel.totalIncome,
+                    color: AppColors.positive,
+                    alignment: .leading
+                )
+
+                Divider()
+                    .frame(height: 40)
+
+                SummaryStatView(
+                    label: "Net",
+                    amount: viewModel.netBalance,
+                    color: viewModel.netBalance >= 0 ? AppColors.positive : AppColors.expense,
+                    alignment: .center,
+                    showSign: true
+                )
+
+                Divider()
+                    .frame(height: 40)
+
+                SummaryStatView(
+                    label: "Expenses",
+                    amount: viewModel.totalSpent,
+                    color: AppColors.expense,
+                    alignment: .trailing
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            // Budget bar — only when a budget exists
+            if let budget = viewModel.currentBudget {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                BudgetInlineRow(
+                    spent: viewModel.totalSpent,
+                    limit: budget.limit,
+                    percentage: budgetPercentage,
+                    color: budgetColor,
+                    onTap: { viewModel.showBudgetSheet = true }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            } else {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                Button {
+                    viewModel.showBudgetSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle")
+                            .font(AppTypography.infoLabel)
+                        Text("Set a budget")
+                            .font(AppTypography.infoLabel)
+                    }
+                    .foregroundStyle(AppColors.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 1)
+        }
+        .sheet(isPresented: $showDatePicker) {
+            NavigationStack {
+                DatePicker(
+                    "Select \(viewModel.filterMode == .daily ? "Date" : "Month")",
+                    selection: $viewModel.selectedDate,
+                    displayedComponents: viewModel.filterMode == .daily ? [.date] : [.date]
+                )
+                .datePickerStyle(.graphical)
+                .padding()
+                .navigationTitle("Select \(viewModel.filterMode == .daily ? "Date" : "Month")")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { showDatePicker = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    private var formattedPeriod: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = viewModel.filterMode == .daily ? "MMM d, yyyy" : "MMMM yyyy"
+        return formatter.string(from: viewModel.selectedDate)
+    }
+}
+
+private struct SummaryStatView: View {
+    let label: String
+    let amount: Double
+    let color: Color
+    let alignment: HorizontalAlignment
+    var showSign: Bool = false
+
+    var body: some View {
+        VStack(alignment: alignment, spacing: 3) {
+            Text(label)
+                .font(AppTypography.cardLabel)
+                .foregroundStyle(.secondary)
+            Text(formattedAmount)
+                .font(AppTypography.cardValue)
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
+    }
+
+    private var formattedAmount: String {
+        let formatted = CurrencyFormatter.format(abs(amount))
+        if showSign {
+            return amount >= 0 ? "+\(formatted)" : "-\(formatted)"
+        }
+        return formatted
+    }
+}
+
+private struct BudgetInlineRow: View {
+    let spent: Double
+    let limit: Double
+    let percentage: Int
+    let color: Color
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 6) {
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(AppTypography.cardMeta)
+                            .foregroundStyle(color)
+                        Text("Budget")
+                            .font(AppTypography.cardLabel)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("\(CurrencyFormatter.format(spent)) / \(CurrencyFormatter.format(limit))")
+                        .font(AppTypography.cardLabel)
+                        .foregroundStyle(.secondary)
+                    Text("· \(percentage)%")
+                        .font(AppTypography.cardValue)
+                        .foregroundStyle(color)
+                }
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 5)
+                        Capsule()
+                            .fill(color)
+                            .frame(width: geo.size.width * min(1.0, Double(percentage) / 100.0), height: 5)
+                    }
+                }
+                .frame(height: 5)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -281,6 +400,7 @@ private func previewContainer(
     let transactions = [
         Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
         Transaction(amount: 120, category: "Food & Dining", date: today, transactionDescription: "Morning coffee"),
+        Transaction(type: "income", amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
         Transaction(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Fuel"),
         Transaction(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "New shirt"),
         Transaction(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, transactionDescription: "Phone bill"),

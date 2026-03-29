@@ -6,43 +6,142 @@
 import SwiftUI
 
 struct ActivityRow: View {
+    let item: ActivityItem
+    let currentUserId: UUID?
+
+    var body: some View {
+        switch item {
+        case .transaction(let tx, let groupName):
+            TransactionActivityRow(transaction: tx, groupName: groupName)
+        case .settlement(let settlement, let groupName, let memberMap):
+            SettlementActivityRow(
+                settlement: settlement,
+                groupName: groupName,
+                memberMap: memberMap,
+                currentUserId: currentUserId
+            )
+        }
+    }
+}
+
+// MARK: - Transaction row
+
+private struct TransactionActivityRow: View {
     let transaction: APIGroupTransaction
     let groupName: String
 
+    private var amount: Double { Double(transaction.total_amount) ?? 0 }
+
+    private var resolved: (icon: String, color: Color) {
+        CategoryResolver.resolve(transaction.category, customCategories: [])
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(AppColors.accentSubtle)
-                    .frame(width: 48, height: 48)
-                Image(systemName: "dollarsign.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(AppColors.accent)
+                Circle()
+                    .fill(resolved.color.opacity(0.15))
+                    .frame(width: 40, height: 40)
+                Image(systemName: resolved.icon)
+                    .font(AppTypography.rowPrimary)
+                    .foregroundStyle(resolved.color)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(transaction.description ?? "Transaction")
-                    .font(.body)
-                    .fontWeight(.medium)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(transaction.description ?? transaction.category)
+                    .font(AppTypography.rowPrimary)
                     .foregroundStyle(.primary)
-                Text(groupName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(groupName)
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                    Text(transaction.date, style: .date)
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Text(CurrencyFormatter.format(amount, showDecimals: true))
+                .font(AppTypography.amount)
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+}
+
+// MARK: - Settlement row
+
+private struct SettlementActivityRow: View {
+    let settlement: APISettlement
+    let groupName: String
+    let memberMap: [UUID: String]
+    let currentUserId: UUID?
+
+    private var isCurrentUserPayer: Bool { settlement.from_user == currentUserId }
+    private var amount: Double { Double(settlement.amount) ?? 0 }
+
+    private var fromName: String {
+        if settlement.from_user == currentUserId { return "You" }
+        return memberMap[settlement.from_user] ?? "Unknown"
+    }
+
+    private var toName: String {
+        if settlement.to_user == currentUserId { return "you" }
+        return memberMap[settlement.to_user] ?? "Unknown"
+    }
+
+    private var accentColor: Color {
+        isCurrentUserPayer ? AppColors.expense : AppColors.positive
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accentColor.opacity(0.15))
+                    .frame(width: 40, height: 40)
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(AppTypography.rowPrimary)
+                    .foregroundStyle(accentColor)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(fromName) paid \(toName)")
+                    .font(AppTypography.rowPrimary)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(groupName)
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                    Text(settlement.created_at, style: .date)
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(CurrencyFormatter.format(Double(transaction.total_amount) ?? 0, showDecimals: true))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.expense)
-                Text(transaction.date, style: .date)
+                Text(CurrencyFormatter.format(amount, showDecimals: true))
+                    .font(AppTypography.amount)
+                    .foregroundStyle(accentColor)
+                Text(isCurrentUserPayer ? "paid" : "received")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 }

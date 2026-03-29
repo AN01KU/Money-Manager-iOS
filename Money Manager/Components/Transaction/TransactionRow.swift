@@ -10,7 +10,6 @@ private let timeFormatter: DateFormatter = {
 struct TransactionRow: View {
     let transaction: Transaction
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-
     init(transaction: Transaction) {
         self.transaction = transaction
     }
@@ -23,65 +22,101 @@ struct TransactionRow: View {
     private var resolvedColor: Color { resolved.color }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(resolvedColor.opacity(0.2))
-                    .frame(width: 48, height: 48)
+                    .fill(resolvedColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
 
                 Image(systemName: resolvedIcon)
-                    .font(.title3)
+                    .font(AppTypography.rowPrimary)
                     .foregroundStyle(resolvedColor)
             }
             .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(transaction.category)
-                    .font(.body)
-                    .fontWeight(.semibold)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(transaction.transactionDescription ?? transaction.category)
+                    .font(AppTypography.rowPrimary)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
 
-                Text(transaction.transactionDescription ?? "No description")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if transaction.groupTransactionId != nil {
-                    HStack(spacing: 4) {
-                        Image(systemName: "person.2.fill")
-                            .font(.caption2)
-                        Text("Group transaction")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                    }
-                    .foregroundStyle(AppColors.accent)
+                if transaction.settlementId != nil, let groupName = transaction.groupName {
+                    SettlementBadge(groupName: groupName)
+                } else if let groupID = transaction.groupTransactionId {
+                    GroupBadge(
+                        groupName: transaction.groupName ?? "Group",
+                        groupID: groupID
+                    )
                 }
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(CurrencyFormatter.format(transaction.amount))
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(transaction.type == "income" ? AppColors.positive : .red)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text((transaction.type == "income" ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
+                    .font(AppTypography.amount)
+                    .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
 
                 if let time = transaction.time {
                     Text(formatTime(time))
-                        .font(.subheadline)
+                        .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(transaction.category), \(transaction.transactionDescription ?? "No description"), \(CurrencyFormatter.format(transaction.amount))")
+        .accessibilityLabel("\(transaction.transactionDescription ?? transaction.category), \(transaction.category), \(CurrencyFormatter.format(transaction.amount))")
     }
 
     private func formatTime(_ date: Date) -> String {
         timeFormatter.string(from: date)
+    }
+}
+
+// MARK: - Settlement Badge
+
+private struct SettlementBadge: View {
+    let groupName: String
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "arrow.left.arrow.right")
+                .font(AppTypography.rowMeta)
+            Text(groupName)
+                .font(AppTypography.rowMeta)
+        }
+        .foregroundStyle(AppColors.warning)
+    }
+}
+
+// MARK: - Group Badge
+
+private struct GroupBadge: View {
+    let groupName: String
+    let groupID: UUID
+
+    var body: some View {
+        Button {
+            guard authService.isAuthenticated else { return }
+            NotificationCenter.default.post(
+                name: .appRouteReceived,
+                object: AppRoute.group(groupID)
+            )
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "person.2.fill")
+                    .font(AppTypography.rowMeta)
+                Text(groupName)
+                    .font(AppTypography.rowMeta)
+                Image(systemName: authService.isAuthenticated ? "chevron.right" : "lock.fill")
+                    .font(AppTypography.badgeIcon)
+            }
+            .foregroundStyle(authService.isAuthenticated ? AppColors.accent : .secondary)
+        }
+        .buttonStyle(.plain)
     }
 }
 

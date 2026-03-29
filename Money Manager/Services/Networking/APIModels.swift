@@ -22,6 +22,8 @@ struct APITransaction: Codable {
     let is_deleted: Bool
     let recurring_expense_id: UUID?
     let group_transaction_id: UUID?
+    let group_id: UUID?
+    let group_name: String?
     let settlement_id: UUID?
 }
 
@@ -257,7 +259,7 @@ struct APIGroupDetailsBody: Codable, Identifiable, Sendable {
     let created_at: Date
     let members: [APIGroupMember]
     let balances: [APIGroupBalance]
-    // Transactions are fetched separately via GET /groups/:id/transactions
+    let settlements: [APISettlement]?
 }
 
 struct APIGroupTransactionSplitInput: Codable, Sendable {
@@ -292,19 +294,29 @@ struct APIGroupsListResponse: Codable, Sendable {
 }
 
 struct APICreateSettlementRequest: Codable, Sendable {
-    let groupId: UUID
-    let fromUser: UUID
-    let toUser: UUID
+    let group_id: UUID
+    let from_user: UUID
+    let to_user: UUID
     let amount: String
+    let notes: String?
+
+    init(group_id: UUID, from_user: UUID, to_user: UUID, amount: String, notes: String? = nil) {
+        self.group_id = group_id
+        self.from_user = from_user
+        self.to_user = to_user
+        self.amount = amount
+        self.notes = notes
+    }
 }
 
 struct APISettlement: Codable, Identifiable, Sendable {
     let id: UUID
-    let groupId: UUID
-    let fromUser: UUID
-    let toUser: UUID
+    let group_id: UUID?
+    let from_user: UUID
+    let to_user: UUID
     let amount: String
-    let createdAt: Date
+    let notes: String?
+    let created_at: Date
 }
 
 // MARK: - Dashboard

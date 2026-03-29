@@ -40,7 +40,7 @@ final class MockGroupService: GroupServiceProtocol {
         if let details = stubbedGroupDetails { return details }
         let body = APIGroupDetailsBody(
             id: groupId, name: "Mock Group", created_by: UUID(), created_at: Date(),
-            members: stubbedMembers, balances: stubbedBalances
+            members: stubbedMembers, balances: stubbedBalances, settlements: []
         )
         return APIGroupDetails(group: body, is_member: true)
     }
@@ -86,11 +86,12 @@ final class MockGroupService: GroupServiceProtocol {
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         APISettlement(
             id: UUID(),
-            groupId: request.groupId,
-            fromUser: request.fromUser,
-            toUser: request.toUser,
+            group_id: request.group_id,
+            from_user: request.from_user,
+            to_user: request.to_user,
             amount: request.amount,
-            createdAt: Date()
+            notes: request.notes,
+            created_at: Date()
         )
     }
 }

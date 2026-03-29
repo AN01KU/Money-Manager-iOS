@@ -39,8 +39,8 @@ struct GroupRow: View {
                     Text(CurrencyFormatter.format(abs(userBalance), showDecimals: true))
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundStyle(userBalance < 0 ? AppColors.positive : AppColors.expense)
-                    Text(userBalance < 0 ? "owed" : "owe")
+                        .foregroundStyle(userBalance > 0 ? AppColors.positive : AppColors.expense)
+                    Text(userBalance > 0 ? "owed" : "owe")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

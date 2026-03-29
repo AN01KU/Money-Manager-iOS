@@ -43,35 +43,43 @@ struct TransactionList: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             ForEach(groupedTransactions) { section in
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(section.id)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(AppTypography.sectionHeader)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 4)
 
-                    ForEach(section.transactions) { transaction in
-                        SwipeToDeleteRow(
-                            isRevealed: Binding(
-                                get: { swipedTransactionID == transaction.persistentModelID },
-                                set: { revealed in
-                                    swipedTransactionID = revealed ? transaction.persistentModelID : nil
+                    VStack(spacing: 0) {
+                        ForEach(section.transactions) { transaction in
+                            SwipeToDeleteRow(
+                                isRevealed: Binding(
+                                    get: { swipedTransactionID == transaction.persistentModelID },
+                                    set: { revealed in
+                                        swipedTransactionID = revealed ? transaction.persistentModelID : nil
+                                    }
+                                ),
+                                onTap: {
+                                    rowTapped = true
+                                    selectedTransaction = transaction
+                                },
+                                onDelete: {
+                                    deleteTriggered = true
+                                    onDelete?(transaction)
                                 }
-                            ),
-                            onTap: {
-                                rowTapped = true
-                                selectedTransaction = transaction
-                            },
-                            onDelete: {
-                                deleteTriggered = true
-                                onDelete?(transaction)
+                            ) {
+                                TransactionRow(transaction: transaction)
                             }
-                        ) {
-                            TransactionRow(transaction: transaction)
+
+                            if transaction.persistentModelID != section.transactions.last?.persistentModelID {
+                                Divider()
+                                    .padding(.leading, 58)
+                            }
                         }
                     }
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
             }
         }
@@ -103,13 +111,13 @@ private struct SwipeToDeleteRow<Content: View>: View {
                 resetSwipe()
             } label: {
                 Image(systemName: "trash.fill")
-                    .font(.title3)
+                    .font(AppTypography.destructiveIcon)
                     .foregroundStyle(.white)
                     .frame(width: buttonWidth)
                     .frame(maxHeight: .infinity)
             }
             .background(AppColors.expense)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
             .opacity(offset < 0 ? 1 : 0)
 
             // Content on top
@@ -145,7 +153,6 @@ private struct SwipeToDeleteRow<Content: View>: View {
                     }
                 }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
         .onChange(of: isRevealed) { _, newValue in
             if !newValue && offset != 0 {
                 withAnimation(.easeOut(duration: 0.2)) { offset = 0 }

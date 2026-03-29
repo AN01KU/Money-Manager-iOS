@@ -40,7 +40,7 @@ struct GroupsListViewModelTests {
     private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
             id: groupId, name: groupName, created_by: UUID(), created_at: Date(),
-            members: [], balances: []
+            members: [], balances: [], settlements: []
         )
         return APIGroupDetails(group: body, is_member: true)
     }

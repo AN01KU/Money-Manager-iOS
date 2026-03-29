@@ -42,7 +42,7 @@ struct GroupDetailViewModelTests {
     ) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
             id: groupId, name: "Test Group", created_by: UUID(), created_at: Date(),
-            members: members, balances: balances
+            members: members, balances: balances, settlements: []
         )
         return APIGroupDetails(group: body, is_member: true)
     }
@@ -276,19 +276,19 @@ struct GroupDetailViewModelTests {
     // MARK: - settlementRecorded
 
     @Test
-    func testSettlementRecordedRecalculatesBalances() {
+    func testSettlementRecordedInsertsSettlement() {
         let alice = makeMember(email: "alice@example.com")
         let bob   = makeMember(email: "bob@example.com")
-        let vm = GroupDetailViewModel(group: makeGroup())
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.members = [alice, bob]
-        vm.transactions = [makeTransaction(totalAmount: "100.00", paidBy: alice.id)]
         let settlement = APISettlement(
-            id: UUID(), groupId: vm.group.id,
-            fromUser: bob.id, toUser: alice.id,
-            amount: "50.00", createdAt: Date()
+            id: UUID(), group_id: vm.group.id,
+            from_user: bob.id, to_user: alice.id,
+            amount: "50.00", notes: nil, created_at: Date()
         )
         vm.settlementRecorded(settlement)
-        #expect(vm.balances.count == 2)
+        #expect(vm.settlements.count == 1)
+        #expect(vm.settlements.first?.id == settlement.id)
     }
 
     // MARK: - displayName

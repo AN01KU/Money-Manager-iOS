@@ -66,7 +66,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         } else {
             guard
                 let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
-                let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+                let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
             else {
                 filteredTransactions = []
                 return
@@ -75,7 +75,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             dateFiltered = allTransactions.filter { transaction in
                 !transaction.isDeleted &&
                 transaction.date >= startOfMonth &&
-                transaction.date <= endOfMonth
+                transaction.date < firstDayNextMonth
             }
         }
 
@@ -116,14 +116,23 @@ enum TransactionTypeFilter: String, CaseIterable {
             dailyBudgetLimit = 0
         }
 
-        let expensesOnly = result.filter { $0.type == "expense" }
-        let grouped = Dictionary(grouping: expensesOnly, by: { $0.category })
-        let total = totalSpent
+        // For the category chart: use income when that filter is active, otherwise expenses
+        let categoryBase: [Transaction]
+        let categoryTotal: Double
+        if transactionTypeFilter == .income {
+            categoryBase = result  // already income-only at this point
+            categoryTotal = totalIncome
+        } else {
+            categoryBase = result.filter { $0.type == "expense" }
+            categoryTotal = totalSpent
+        }
 
-        if total > 0 {
+        let grouped = Dictionary(grouping: categoryBase, by: { $0.category })
+
+        if categoryTotal > 0 {
             categorySpending = grouped.map { categoryName, transactions in
                 let amount = transactions.reduce(0) { $0 + $1.amount }
-                let percentage = Int((amount / total) * 100)
+                let percentage = Int((amount / categoryTotal) * 100)
                 let (icon, color) = resolveCategory(categoryName)
                 return CategorySpending(
                     categoryName: categoryName,

@@ -21,14 +21,14 @@ struct BudgetsView: View {
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
         else { return [] }
 
         return allTransactions.filter { transaction in
             !transaction.isDeleted &&
             transaction.type == "expense" &&
             transaction.date >= startOfMonth &&
-            transaction.date <= endOfMonth
+            transaction.date < firstDayNextMonth
         }
     }
 

@@ -11,6 +11,13 @@ enum GroupSection: String, CaseIterable {
     case members      = "Members"
 }
 
+struct PairwiseDebt: Identifiable {
+    let id = UUID()
+    let fromUserId: UUID
+    let toUserId: UUID
+    let amount: Double
+}
+
 @MainActor
 @Observable
 final class GroupDetailViewModel {
@@ -18,6 +25,7 @@ final class GroupDetailViewModel {
     var transactions: [APIGroupTransaction] = []
     var members: [APIGroupMember] = []
     var balances: [APIGroupBalance] = []
+    var settlements: [APISettlement] = []
     var isLoading = false
     var selectedSection: GroupSection = .transactions
 
@@ -66,6 +74,44 @@ final class GroupDetailViewModel {
         balances.contains { (Double($0.amount) ?? 0) != 0 }
     }
 
+    /// Pairwise debts derived from backend net balances.
+    /// Backend: positive = is owed (paid more), negative = owes (paid less).
+    /// Pairs each debtor with a creditor to produce "X owes Y — amount" rows.
+    var pairwiseDebts: [PairwiseDebt] {
+        var debtors: [(userId: UUID, amount: Double)] = []
+        var creditors: [(userId: UUID, amount: Double)] = []
+
+        for b in balances {
+            let amt = Double(b.amount) ?? 0
+            if amt < 0 {
+                debtors.append((b.user_id, abs(amt)))
+            } else if amt > 0 {
+                creditors.append((b.user_id, amt))
+            }
+        }
+
+        debtors.sort { $0.amount > $1.amount }
+        creditors.sort { $0.amount > $1.amount }
+
+        var result: [PairwiseDebt] = []
+        var di = 0, ci = 0
+        while di < debtors.count && ci < creditors.count {
+            let amount = min(debtors[di].amount, creditors[ci].amount)
+            if amount > 0.01 {
+                result.append(PairwiseDebt(
+                    fromUserId: debtors[di].userId,
+                    toUserId: creditors[ci].userId,
+                    amount: amount
+                ))
+            }
+            debtors[di].amount -= amount
+            creditors[ci].amount -= amount
+            if debtors[di].amount < 0.01 { di += 1 }
+            if creditors[ci].amount < 0.01 { ci += 1 }
+        }
+        return result
+    }
+
     // MARK: - Load
 
     func loadData() async {
@@ -74,8 +120,9 @@ final class GroupDetailViewModel {
         do {
             let details = try await groupService.fetchGroupDetails(groupId: group.id)
             transactions = try await groupService.fetchGroupTransactions(groupId: group.id)
-            members  = details.group.members
-            balances = details.group.balances
+            members     = details.group.members
+            balances    = details.group.balances
+            settlements = details.group.settlements ?? []
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
@@ -156,7 +203,8 @@ final class GroupDetailViewModel {
     // MARK: - After settlement recorded
 
     func settlementRecorded(_ settlement: APISettlement) {
-        recalculateBalances()
+        settlements.insert(settlement, at: 0)
+        Task { await loadData() }
     }
 
     // MARK: - Helpers
