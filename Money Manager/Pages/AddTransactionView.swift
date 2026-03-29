@@ -1,12 +1,12 @@
 import SwiftUI
 import SwiftData
 
-struct AddExpenseView: View {
+struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
-    @State private var viewModel: AddExpenseViewModel
+    @State private var viewModel: AddTransactionViewModel
     @State private var amount100Tapped = false
     @State private var amount500Tapped = false
     @State private var amount1000Tapped = false
@@ -15,12 +15,12 @@ struct AddExpenseView: View {
     @State private var saveSuccess = false
     @State private var errorTriggered = false
 
-    init(mode: AddExpenseMode = .personal()) {
-        _viewModel = State(wrappedValue: AddExpenseViewModel(mode: mode))
+    init(mode: AddTransactionMode = .personal()) {
+        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode))
     }
 
-    init(expenseToEdit: Expense) {
-        _viewModel = State(wrappedValue: AddExpenseViewModel(mode: .personal(editing: expenseToEdit)))
+    init(transactionToEdit: Transaction) {
+        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: .personal(editing: transactionToEdit)))
     }
 
     var body: some View {
@@ -37,14 +37,17 @@ struct AddExpenseView: View {
                         splitSummarySection
                     }
                 } else {
+                    transactionTypeSection
                     dateTimeSection
                     detailsSection
-                    Section {
-                        Button {
-                            viewModel.showRecurringSheet = true
-                        } label: {
-                            Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
-                                .foregroundStyle(AppColors.accent)
+                    if viewModel.transactionType == .expense {
+                        Section {
+                            Button {
+                                viewModel.showRecurringSheet = true
+                            } label: {
+                                Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
+                                    .foregroundStyle(AppColors.accent)
+                            }
                         }
                     }
                 }
@@ -71,7 +74,7 @@ struct AddExpenseView: View {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
             .sheet(isPresented: $viewModel.showRecurringSheet) {
-                AddRecurringExpenseSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
+                AddRecurringTransactionSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -157,6 +160,19 @@ struct AddExpenseView: View {
         }
     }
 
+    // MARK: - Personal: Transaction Type
+
+    private var transactionTypeSection: some View {
+        Section {
+            Picker("Type", selection: $viewModel.transactionType) {
+                ForEach(TransactionType.allCases, id: \.self) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
     // MARK: - Personal: Date + Time
 
     private var dateTimeSection: some View {
@@ -221,8 +237,9 @@ struct AddExpenseView: View {
 
     private var paidBySection: some View {
         Section("Paid By") {
-            if case .shared(_, let members, _) = viewModel.mode {
+            if case .shared(_, let members, _, _) = viewModel.mode {
                 ForEach(members) { member in
+                    let isSelected = viewModel.paidByUserId == member.id
                     Button {
                         viewModel.paidByUserId = member.id
                     } label: {
@@ -235,10 +252,14 @@ struct AddExpenseView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Image(systemName: viewModel.paidByUserId == member.id ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(viewModel.paidByUserId == member.id ? AppColors.accent : .secondary)
+                            if isSelected {
+                                Image(systemName: "checkmark")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                            }
                         }
                     }
+                    .listRowBackground(isSelected ? Color(.systemGray5) : Color(.systemBackground))
                 }
             }
         }
@@ -262,7 +283,7 @@ struct AddExpenseView: View {
                     Spacer()
                     Text(viewModel.equalShareText)
                         .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.accent)
+                        .foregroundStyle(.primary)
                 }
                 .font(.subheadline)
             }
@@ -273,39 +294,45 @@ struct AddExpenseView: View {
 
     private var splitMembersSection: some View {
         Section("Split Between") {
-            if case .shared(_, let members, _) = viewModel.mode {
+            if case .shared(_, let members, _, _) = viewModel.mode {
                 ForEach(members) { member in
-                    HStack {
-                        Button {
-                            viewModel.toggleMember(member.id)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: viewModel.selectedMembers.contains(member.id) ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(viewModel.selectedMembers.contains(member.id) ? AppColors.accent : .secondary)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(viewModel.displayName(for: member))
-                                        .foregroundStyle(.primary)
-                                    Text(member.email)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                    let isIncluded = viewModel.selectedMembers.contains(member.id)
+                    Button {
+                        viewModel.toggleMember(member.id)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(viewModel.displayName(for: member))
+                                    .foregroundStyle(.primary)
+                                Text(member.email)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            if viewModel.splitType == .custom && isIncluded {
+                                TextField("0.00", text: viewModel.customAmountBinding(for: member.id))
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.primary)
+                            } else if viewModel.splitType == .equal && isIncluded {
+                                Text(viewModel.equalShareText)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            if isIncluded {
+                                Image(systemName: "checkmark")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .padding(.leading, 4)
                             }
                         }
-
-                        Spacer()
-
-                        if viewModel.splitType == .custom && viewModel.selectedMembers.contains(member.id) {
-                            TextField("0.00", text: viewModel.customAmountBinding(for: member.id))
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 80)
-                                .fontWeight(.medium)
-                        } else if viewModel.splitType == .equal && viewModel.selectedMembers.contains(member.id) {
-                            Text(viewModel.equalShareText)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
                     }
+                    .listRowBackground(isIncluded ? Color(.systemGray5) : Color(.systemBackground))
                 }
             }
         }
@@ -320,7 +347,7 @@ struct AddExpenseView: View {
                 Spacer()
                 Text(CurrencyFormatter.format(viewModel.customSplitTotal, showDecimals: true))
                     .fontWeight(.semibold)
-                    .foregroundStyle(viewModel.splitMatchesTotal ? AppColors.positive : AppColors.expense)
+                    .foregroundStyle(viewModel.splitMatchesTotal ? AppColors.income : AppColors.expense)
             }
             if !viewModel.splitMatchesTotal {
                 let diff = (Double(viewModel.amount) ?? 0) - viewModel.customSplitTotal
@@ -344,22 +371,22 @@ struct AddExpenseView: View {
 
 // MARK: - Previews
 
-#Preview("New Expense") {
-    AddExpenseView()
-        .modelContainer(for: [Expense.self, CustomCategory.self], inMemory: true)
+#Preview("New Transaction") {
+    AddTransactionView()
+        .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }
 
-#Preview("Edit Expense") {
-    let expense = Expense(amount: 450, category: "Food & Dining", date: Date(), expenseDescription: "Lunch at cafe", notes: "With colleagues")
-    AddExpenseView(expenseToEdit: expense)
-        .modelContainer(for: [Expense.self, CustomCategory.self], inMemory: true)
+#Preview("Edit Transaction") {
+    let transaction = Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch at cafe", notes: "With colleagues")
+    AddTransactionView(transactionToEdit: transaction)
+        .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }
 
-#Preview("Group Expense") {
+#Preview("Group Transaction") {
     let groupId = UUID()
-    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", createdAt: Date())
-    let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   createdAt: Date())
+    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
+            let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joined_at: Date())
     let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", created_by: alice.id, created_at: Date(), members: [alice, bob], balances: [])
-    AddExpenseView(mode: .shared(group: group, members: [alice, bob]) { _ in })
-        .modelContainer(for: [Expense.self, CustomCategory.self], inMemory: true)
+    AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }))
+        .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }

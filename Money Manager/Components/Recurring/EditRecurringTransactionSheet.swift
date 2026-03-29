@@ -1,12 +1,12 @@
 import SwiftUI
 import SwiftData
 
-struct EditRecurringExpenseSheet: View {
+struct EditRecurringTransactionSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
-    @Bindable var expense: RecurringExpense
+    @Bindable var recurring: RecurringTransaction
 
     @State private var name: String = ""
     @State private var amount: String = ""
@@ -156,21 +156,21 @@ struct EditRecurringExpenseSheet: View {
                 Text(errorMessage)
             }
             .onAppear {
-                loadExpenseData()
+                loadData()
             }
         }
     }
 
-    private func loadExpenseData() {
-        name = expense.name
-        amount = expense.amount.formatted(.number.precision(.fractionLength(2)))
-        selectedCategory = expense.category
-        frequency = expense.frequency
-        startDate = expense.startDate
-        hasEndDate = expense.endDate != nil
-        endDate = expense.endDate ?? Date()
-        dayOfMonth = expense.dayOfMonth ?? 1
-        notes = expense.notes ?? ""
+    private func loadData() {
+        name = recurring.name
+        amount = recurring.amount.formatted(.number.precision(.fractionLength(2)))
+        selectedCategory = recurring.category
+        frequency = recurring.frequency
+        startDate = recurring.startDate
+        hasEndDate = recurring.endDate != nil
+        endDate = recurring.endDate ?? Date()
+        dayOfMonth = recurring.dayOfMonth ?? 1
+        notes = recurring.notes ?? ""
     }
 
     private func save() {
@@ -192,37 +192,37 @@ struct EditRecurringExpenseSheet: View {
             return
         }
 
-        expense.name = name.trimmingCharacters(in: .whitespaces)
-        expense.amount = amountValue
-        expense.category = selectedCategory
-        expense.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
-        expense.frequency = frequency
-        expense.startDate = startDate
-        expense.dayOfMonth = frequency == "monthly" ? dayOfMonth : nil
-        expense.endDate = hasEndDate ? endDate : nil
-        expense.notes = notes.isEmpty ? nil : notes
-        expense.updatedAt = Date()
+        recurring.name = name.trimmingCharacters(in: .whitespaces)
+        recurring.amount = amountValue
+        recurring.category = selectedCategory
+        recurring.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+        recurring.frequency = frequency
+        recurring.startDate = startDate
+        recurring.dayOfMonth = frequency == "monthly" ? dayOfMonth : nil
+        recurring.endDate = hasEndDate ? endDate : nil
+        recurring.notes = notes.isEmpty ? nil : notes
+        recurring.updatedAt = Date()
 
         do {
             try modelContext.save()
-            
-            let payload = try? APIClient.apiEncoder.encode(expense.toUpdateRequest())
+
+            let payload = try? APIClient.apiEncoder.encode(recurring.toUpdateRequest())
             changeQueueManager.enqueue(
                 entityType: "recurring",
-                entityID: expense.id,
+                entityID: recurring.id,
                 action: "update",
-                endpoint: "/recurring-expenses",
+                endpoint: "/recurring-transactions",
                 httpMethod: "PUT",
                 payload: payload,
                 context: modelContext
             )
-            
+
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
                 }
             }
-            
+
             saveSuccess = true
             dismiss()
         } catch {

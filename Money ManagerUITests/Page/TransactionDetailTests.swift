@@ -27,47 +27,31 @@ final class TransactionDetailTests: XCTestCase {
     
     @discardableResult
     private func openFirstTransaction() -> Bool {
-        // Navigate to Overview
-        app.tabBars.buttons["Overview"].tap()
-        guard app.navigationBars["Overview"].waitForExistence(timeout: 3) else {
+        // Navigate to Transactions tab
+        app.tabBars.buttons["Transactions"].tap()
+        guard app.navigationBars["Transactions"].waitForExistence(timeout: 3) else {
             return false
         }
-        
-        // Make sure we're on Daily view
-        let dailyButton = app.buttons["Daily"]
-        if dailyButton.waitForExistence(timeout: 2) {
-            dailyButton.tap()
-            sleep(1)
-        }
-        
-        // Wait for content
+
+        // Wait for content to load
         sleep(2)
-        
-        // Try tapping on first transaction - look for any tappable element with category name
+
+        // Try tapping on first transaction row by category name
         let categories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities"]
         for category in categories {
             let categoryElement = app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", category)).firstMatch
             if categoryElement.waitForExistence(timeout: 2) {
-                // Try tapping the parent button or nearby
                 categoryElement.tap()
                 sleep(2)
-                
-                // Check if sheet opened - look for amount text
+
+                // Check if detail sheet opened — look for amount text
                 let amountText = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '₹'")).firstMatch
                 if amountText.waitForExistence(timeout: 3) {
                     return true
                 }
             }
         }
-        
-        // Fallback - try tapping any button in the list
-        let firstButton = app.buttons.firstMatch
-        if firstButton.waitForExistence(timeout: 3) {
-            firstButton.tap()
-            sleep(2)
-            return true
-        }
-        
+
         return false
     }
     
@@ -251,7 +235,7 @@ final class TransactionDetailTests: XCTestCase {
     
     // MARK: - Group Expense
     
-    func testGroupExpenseIndicator() throws {
+    func testGroupTransactionIndicator() throws {
         guard openFirstTransaction() else {
             XCTSkip("No transactions available to test")
             return
@@ -285,9 +269,9 @@ final class TransactionDetailTests: XCTestCase {
         }
         
         sleep(1)
-        
-        // Should be back on Overview
-        let overviewNav = app.navigationBars["Overview"]
-        XCTAssertTrue(overviewNav.waitForExistence(timeout: 3), "Should return to Overview")
+
+        // Should be back on Transactions (detail is a sheet, dismissed back to Transactions tab)
+        let transactionsNav = app.navigationBars["Transactions"]
+        XCTAssertTrue(transactionsNav.waitForExistence(timeout: 3), "Should return to Transactions")
     }
 }

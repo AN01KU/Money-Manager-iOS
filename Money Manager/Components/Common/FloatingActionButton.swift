@@ -31,7 +31,7 @@ struct FloatingActionButton: View {
         .onChange(of: tapped) { _, newValue in
             if newValue { tapped = false }
         }
-        .accessibilityLabel("Add new expense")
+        .accessibilityLabel("Add new transaction")
     }
 }
 

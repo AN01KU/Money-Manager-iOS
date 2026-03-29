@@ -4,10 +4,11 @@ import UniformTypeIdentifiers
 
 struct ExportDataView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var expenses: [Expense]
-    @Query private var recurringExpenses: [RecurringExpense]
+    @Query private var transactions: [Transaction]
+    @Query private var recurringTransactions: [RecurringTransaction]
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
+    @Query private var groups: [SplitGroupModel]
     
     @State private var viewModel = BackupViewModel()
     
@@ -65,10 +66,11 @@ struct ExportDataView: View {
             Button {
                 Task {
                     await viewModel.exportData(
-                        expenses: expenses,
-                        recurringExpenses: recurringExpenses,
+                        transactions: transactions,
+                        recurringTransactions: recurringTransactions,
                         budgets: budgets,
-                        categories: categories
+                        categories: categories,
+                        groups: groups
                     )
                 }
             } label: {
@@ -81,7 +83,7 @@ struct ExportDataView: View {
                     Text("Export \(viewModel.selectedDataType.rawValue)")
                 }
             }
-            .disabled(expenses.isEmpty && recurringExpenses.isEmpty && budgets.isEmpty && categories.isEmpty)
+            .disabled(transactions.isEmpty && recurringTransactions.isEmpty && budgets.isEmpty && categories.isEmpty)
         } header: {
             Text("Export")
         } footer: {
@@ -119,9 +121,9 @@ struct ExportDataView: View {
     private var dataSummarySection: some View {
         Section("Data Summary") {
             HStack {
-                Label("Expenses", systemImage: "creditcard.fill")
+                Label("Transactions", systemImage: "creditcard.fill")
                 Spacer()
-                Text("\(expenses.count)")
+                Text("\(transactions.count)")
                     .foregroundStyle(.secondary)
             }
             
@@ -179,7 +181,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
                 try FileManager.default.copyItem(at: url, to: tempURL)
                 onPick(tempURL)
             } catch {
-                print("Error copying file: \(error)")
+                AppLogger.export.error("Error copying file for import: \(error)")
             }
         }
     }
@@ -199,5 +201,5 @@ struct ShareSheet: UIViewControllerRepresentable {
     NavigationStack {
         ExportDataView()
     }
-    .modelContainer(for: [Expense.self, MonthlyBudget.self, CustomCategory.self], inMemory: true)
+    .modelContainer(for: [Transaction.self, MonthlyBudget.self, CustomCategory.self], inMemory: true)
 }

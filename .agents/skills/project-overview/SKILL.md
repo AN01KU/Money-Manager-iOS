@@ -22,9 +22,9 @@ This skill provides comprehensive insights into the **money-manager-ios** projec
 ## Project Summary
 
 **Money Manager** is a personal finance iOS app for:
-- Tracking expenses with categories, descriptions, and timestamps
+- Tracking income and expenses with categories, descriptions, and timestamps
 - Managing monthly budgets with real-time progress
-- Setting up recurring expenses (daily, weekly, monthly)
+- Setting up recurring transactions (daily, weekly, monthly)
 - Creating custom categories with colors and icons
 - Multi-currency support with CSV/JSON export
 
@@ -49,33 +49,32 @@ Money Manager/
 ├── ContentView.swift         # Root view (onboarding flow)
 │
 ├── Models/                   # SwiftData models
-│   ├── Expense.swift        # Core expense model
-│   ├── RecurringExpense.swift # Recurring expense model
+│   ├── Transaction.swift    # Core transaction model
+│   ├── RecurringTransaction.swift # Recurring transaction model
 │   ├── MonthlyBudget.swift  # Monthly budget model
 │   ├── CustomCategory.swift # User-created categories
 │   ├── PredefinedCategory.swift # Built-in category enum
 │   ├── CategorySpending.swift # Computed spending by category
 │   ├── Budget.swift         # Budget abstraction
-│   ├── Transaction.swift    # Simple transaction wrapper
 │   └── RecurringDateHelper.swift # Date calculation utilities
 │
 ├── ViewModels/               # @Observable classes (MVVM)
 │   ├── OverviewViewModel.swift        # Dashboard state
-│   ├── AddExpenseViewModel.swift       # Add/edit expense
+│   ├── AddTransactionViewModel.swift   # Add/edit transaction
 │   ├── BudgetsViewModel.swift          # Budget management
-│   ├── RecurringExpensesViewModel.swift # Recurring expenses
+│   ├── RecurringTransactionsViewModel.swift # Recurring transactions
 │   ├── ManageCategoriesViewModel.swift # Category CRUD
-│   ├── TransactionDetailViewModel.swift # Expense details
+│   ├── TransactionDetailViewModel.swift # Transaction details
 │   └── BackupViewModel.swift           # Export/backup logic
 │
 ├── Pages/                    # Screen-level views
 │   ├── MainTabView.swift             # Tab navigation
 │   ├── Overview.swift               # Dashboard/home
-│   ├── AddExpenseView.swift         # Add/edit expense form
+│   ├── AddTransactionView.swift     # Add/edit transaction form
 │   ├── BudgetsView.swift            # Budget management
-│   ├── RecurringExpensesView.swift  # Recurring expenses list
+│   ├── RecurringTransactionsView.swift # Recurring transactions list
 │   ├── ManageCategoriesView.swift   # Category management
-│   ├── TransactionDetailView.swift  # Expense details
+│   ├── TransactionDetailView.swift  # Transaction details
 │   ├── SettingsView.swift           # App settings
 │   ├── ExportDataView.swift         # Data export
 │   ├── CurrencyPickerView.swift      # Currency selection
@@ -85,8 +84,8 @@ Money Manager/
 │   ├── Budget/              # Budget-related components
 │   ├── Category/            # Category components
 │   ├── Common/              # Shared components
-│   ├── Expense/             # Expense input components
-│   ├── Recurring/          # Recurring expense components
+│   ├── Transaction/         # Transaction input components
+│   ├── Recurring/          # Recurring transaction components
 │   ├── Transaction/        # Transaction display
 │   └── Onboarding/         # Onboarding components
 │
@@ -108,18 +107,18 @@ Money Manager/
 
 ### Core Models (SwiftData @Model)
 
-**Expense** (`Models/Expense.swift`)
-- Primary data model for all expenses
-- Fields: id, amount, category, date, time, description, notes, createdAt, updatedAt, isDeleted
+**Transaction** (`Models/Transaction.swift`)
+- Primary data model for all transactions (income and expenses)
+- Fields: id, type, amount, category, date, time, description, notes, createdAt, updatedAt, isDeleted
+- `type` is "expense" or "income"
 - Supports soft delete via `isDeleted` flag
-- Supports grouping (groupId, groupName)
-- Links to recurring expenses (recurringExpenseId)
+- Supports grouping (groupTransactionId) and settlement linking (settlementId)
+- Links to recurring transactions (recurringTransactionId)
 
-**RecurringExpense** (`Models/RecurringExpense.swift`)
-- Defines recurring expense patterns
+**RecurringTransaction** (`Models/RecurringTransaction.swift`)
+- Defines recurring transaction patterns
 - Supports daily, weekly, monthly, yearly frequencies
 - Configurable day-of-week, day-of-month
-- Skip weekends option
 
 **MonthlyBudget** (`Models/MonthlyBudget.swift`)
 - Stores budget limit per month
@@ -151,12 +150,12 @@ All ViewModels use the modern `@Observable` macro (iOS 17+):
 
 | ViewModel | Purpose |
 |-----------|---------|
-| `OverviewViewModel` | Dashboard filtering, budget calculation, expense grouping |
-| `AddExpenseViewModel` | Form state, validation, save logic for add/edit expense |
+| `OverviewViewModel` | Dashboard filtering, budget calculation, transaction grouping |
+| `AddTransactionViewModel` | Form state, validation, save logic for add/edit transaction |
 | `BudgetsViewModel` | Budget CRUD, spending calculations |
-| `RecurringExpensesViewModel` | Recurring expense management, auto-generation |
+| `RecurringTransactionsViewModel` | Recurring transaction management, auto-generation |
 | `ManageCategoriesViewModel` | Custom category CRUD operations |
-| `TransactionDetailViewModel` | Single expense view/edit state |
+| `TransactionDetailViewModel` | Single transaction view/edit state |
 | `BackupViewModel` | CSV/JSON export logic |
 
 ---
@@ -177,11 +176,11 @@ All ViewModels use the modern `@Observable` macro (iOS 17+):
 
 | Task | File(s) |
 |------|---------|
-| Add expense | `Pages/AddExpenseView.swift`, `ViewModels/AddExpenseViewModel.swift` |
-| View expenses | `Pages/Overview.swift`, `Components/Transaction/TransactionList.swift` |
+| Add transaction | `Pages/AddTransactionView.swift`, `ViewModels/AddTransactionViewModel.swift` |
+| View transactions | `Pages/Overview.swift`, `Components/Transaction/TransactionList.swift` |
 | Manage budgets | `Pages/BudgetsView.swift`, `ViewModels/BudgetsViewModel.swift` |
 | Categories | `Pages/ManageCategoriesView.swift`, `Models/CustomCategory.swift` |
-| Recurring expenses | `Pages/RecurringExpensesView.swift`, `Models/RecurringExpense.swift` |
+| Recurring transactions | `Pages/RecurringTransactionsView.swift`, `Models/RecurringTransaction.swift` |
 | Export data | `Pages/ExportDataView.swift`, `ViewModels/BackupViewModel.swift` |
 | App settings | `Pages/SettingsView.swift` |
 | Color theme | `Helpers/AppColors.swift` |
@@ -251,8 +250,8 @@ make build
 **IMPORTANT - Test Suite Selection:**
 - When fixing/updating/adding test suites, ONLY run that specific test suite to save time and resources:
 ```bash
-make test-one TEST=ExpenseTests
-make test-one TEST=AddExpenseViewModelTests
+make test-one TEST=TransactionTests
+make test-one TEST=AddTransactionViewModelTests
 ```
 
 - Run all unit tests (includes all test suites):

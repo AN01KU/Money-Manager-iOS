@@ -5,154 +5,53 @@ struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    let expense: Expense
+    let transaction: Transaction
     @State private var viewModel: TransactionDetailViewModel
     @State private var editTapped = false
     @State private var deleteTapped = false
     @State private var deleteSuccess = false
-    
-    init(expense: Expense) {
-        self.expense = expense
-        _viewModel = State(wrappedValue: TransactionDetailViewModel(expense: expense))
+
+    init(transaction: Transaction) {
+        self.transaction = transaction
+        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction))
     }
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    if viewModel.isGroupExpense {
-                        VStack(spacing: 8) {
-                            HStack {
-                                Image(systemName: "person.2.fill")
-                                    .foregroundStyle(AppColors.accent)
-                                Text("Group Expense")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(AppColors.accent)
-                                Spacer()
-                            }
-                            
-                            GroupExpenseContent(groupName: expense.groupName)
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-.clipShape(RoundedRectangle(cornerRadius: 16))
+                VStack(spacing: 20) {
+                    // Hero
+                    heroSection
+
+                    // Group banner (single, no duplication)
+                    if viewModel.isGroupTransaction {
+                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupTransactionId)
+                            .padding(.horizontal)
                     }
-                    
-                    VStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(viewModel.categoryColor.opacity(0.2))
-                                .frame(width: 80, height: 80)
-                            
-                            Image(systemName: viewModel.categoryIcon)
-                                .font(.system(size: 40))
-                                .foregroundStyle(viewModel.categoryColor)
-                        }
-                        
-                        Text(expense.category)
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text(CurrencyFormatter.format(expense.amount))
-                            .font(.system(size: 36, weight: .bold))
-                            .foregroundStyle(AppColors.expense)
-                        
-                        Text(viewModel.formatDateAndTime(expense.date, time: expense.time))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top)
-                    
-                    VStack(alignment: .leading, spacing: 16) {
-                        if let description = expense.expenseDescription, !description.isEmpty {
-                            DetailRow(label: "Description", value: description)
-                        }
-                        
-                        if let notes = expense.notes, !notes.isEmpty {
-                            DetailRow(label: "Notes", value: notes)
-                        }
-                        
-                        DetailRow(label: "Category", value: expense.category)
-                        
-                        DetailRow(label: "Created", value: viewModel.formatFullDate(expense.createdAt))
-                        
-                        if expense.updatedAt != expense.createdAt {
-                            DetailRow(label: "Last Modified", value: viewModel.formatFullDate(expense.updatedAt))
-                        }
-                        
-                        if expense.recurringExpenseId != nil {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                    .foregroundStyle(AppColors.accent)
-                                Text("This is a recurring expense")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding()
-                            .background(AppColors.accentLight)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    
-                    HStack(spacing: 16) {
-                        Button(action: {
-                            editTapped = true
-                            viewModel.showEditSheet = true
-                        }) {
-                            Text("Edit")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(AppColors.accent)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
-                        .onChange(of: editTapped) { _, newValue in
-                            if newValue { editTapped = false }
-                        }
-                        
-                        Button(action: {
-                            deleteTapped = true
-                            viewModel.showDeleteAlert = true
-                        }) {
-                            Text("Delete")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(AppColors.expense)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .sensoryFeedback(.warning, trigger: deleteTapped)
-                        .onChange(of: deleteTapped) { _, newValue in
-                            if newValue { deleteTapped = false }
-                        }
-                    }
-                    .padding(.horizontal)
+
+                    // Details card
+                    detailsCard
+
+                    // Actions
+                    actionButtons
                 }
-                .padding()
+                .padding(.vertical)
             }
-            .navigationTitle("Transaction Details")
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
             .sheet(isPresented: $viewModel.showEditSheet) {
-                AddExpenseView(expenseToEdit: expense)
+                AddTransactionView(transactionToEdit: transaction)
             }
-            .alert("Delete Expense?", isPresented: $viewModel.showDeleteAlert) {
+            .alert("Delete transaction?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    viewModel.deleteExpense { deleteSuccess = true; dismiss() }
+                    viewModel.deleteTransaction { deleteSuccess = true; dismiss() }
                 }
             } message: {
                 Text("This action cannot be undone.")
@@ -166,12 +65,160 @@ struct TransactionDetailView: View {
             }
         }
     }
+
+    // MARK: - Hero
+
+    private var heroSection: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(viewModel.categoryColor.opacity(0.15))
+                    .frame(width: 72, height: 72)
+                Image(systemName: viewModel.categoryIcon)
+                    .font(.system(size: 32))
+                    .foregroundStyle(viewModel.categoryColor)
+            }
+
+            Text(transaction.category)
+                .font(AppTypography.heroCategory)
+                .foregroundStyle(.secondary)
+
+            Text((transaction.type == "income" ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
+                .font(AppTypography.amountHero)
+                .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
+
+            Text(viewModel.formatDateAndTime(transaction.date, time: transaction.time))
+                .font(AppTypography.heroDate)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    // MARK: - Details Card
+
+    private var detailsCard: some View {
+        VStack(spacing: 0) {
+            if let description = transaction.transactionDescription, !description.isEmpty {
+                InfoRow(label: "Description", value: description)
+                Divider().padding(.leading, 16)
+            }
+
+            if let notes = transaction.notes, !notes.isEmpty {
+                InfoRow(label: "Notes", value: notes)
+                Divider().padding(.leading, 16)
+            }
+
+            InfoRow(
+                label: "Type",
+                value: transaction.type == "income" ? "Income" : "Expense",
+                valueColor: transaction.type == "income" ? AppColors.positive : AppColors.expense
+            )
+            Divider().padding(.leading, 16)
+
+            InfoRow(label: "Category", value: transaction.category)
+            Divider().padding(.leading, 16)
+
+            InfoRow(label: "Date", value: viewModel.formatFullDate(transaction.date))
+
+            if transaction.updatedAt > transaction.createdAt {
+                Divider().padding(.leading, 16)
+                InfoRow(label: "Last Modified", value: viewModel.formatFullDate(transaction.updatedAt))
+            }
+
+            if transaction.recurringExpenseId != nil {
+                Divider().padding(.leading, 16)
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(AppTypography.infoLabel)
+                        .foregroundStyle(AppColors.accent)
+                    Text("Recurring transaction")
+                        .font(AppTypography.infoLabel)
+                        .foregroundStyle(AppColors.accent)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 1)
+        }
+        .padding(.horizontal)
+    }
+
+    // MARK: - Action Buttons
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button {
+                editTapped = true
+                viewModel.showEditSheet = true
+            } label: {
+                Label("Edit", systemImage: "pencil")
+                    .font(AppTypography.button)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppColors.accent)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
+            .onChange(of: editTapped) { _, v in if v { editTapped = false } }
+
+            Button {
+                deleteTapped = true
+                viewModel.showDeleteAlert = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+                    .font(AppTypography.button)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppColors.expense.opacity(0.1))
+                    .foregroundStyle(AppColors.expense)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .sensoryFeedback(.warning, trigger: deleteTapped)
+            .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
+        }
+        .padding(.horizontal)
+    }
 }
+
+// MARK: - Info Row
+
+struct InfoRow: View {
+    let label: String
+    let value: String
+    var valueColor: Color = .primary
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(label)
+                .font(AppTypography.infoLabel)
+                .foregroundStyle(.secondary)
+                .frame(width: 110, alignment: .leading)
+
+            Text(value)
+                .font(AppTypography.infoValue)
+                .foregroundStyle(valueColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Legacy DetailRow (kept for other callers)
 
 struct DetailRow: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
@@ -185,11 +232,12 @@ struct DetailRow: View {
 }
 
 #Preview {
-    TransactionDetailView(expense: Expense(
+    TransactionDetailView(transaction: Transaction(
         amount: 450,
         category: "Food & Dining",
         date: Date(),
         time: Date(),
-        expenseDescription: "Lunch at cafe"
+        transactionDescription: "Lunch at cafe",
+        notes: "With the team"
     ))
 }

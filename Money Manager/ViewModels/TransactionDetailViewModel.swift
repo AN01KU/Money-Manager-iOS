@@ -5,72 +5,75 @@ import SwiftData
 @Observable class TransactionDetailViewModel {
     var showEditSheet = false
     var showDeleteAlert = false
-    
-    let expense: Expense
+
+    let transaction: Transaction
     var modelContext: ModelContext?
     var customCategories: [CustomCategory] = []
-    
+
     var categoryIcon: String {
-        CategoryResolver.resolve(expense.category, customCategories: customCategories).icon
+        CategoryResolver.resolve(transaction.category, customCategories: customCategories).icon
     }
 
     var categoryColor: Color {
-        CategoryResolver.resolve(expense.category, customCategories: customCategories).color
+        CategoryResolver.resolve(transaction.category, customCategories: customCategories).color
     }
-    
-    var isGroupExpense: Bool {
-        expense.groupId != nil && expense.groupName != nil
-    }
-    
-    private let changeQueue: ChangeQueueManagerProtocol
 
-    init(expense: Expense, changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
-        self.expense = expense
-        self.changeQueue = changeQueue
+    var isGroupTransaction: Bool {
+        transaction.groupTransactionId != nil
     }
-    
-    func deleteExpense(completion: @escaping () -> Void) {
-        expense.isDeleted = true
-        expense.updatedAt = Date()
-        
+
+    private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
+
+    init(transaction: Transaction, changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
+        self.transaction = transaction
+        self.changeQueue = changeQueue
+        self.auth = auth
+    }
+
+    func deleteTransaction(completion: @escaping () -> Void) {
+        transaction.isDeleted = true
+        transaction.updatedAt = Date()
+
         guard let modelContext = modelContext else {
             completion()
             return
         }
-        
+
         do {
             try modelContext.save()
-            
+
             changeQueue.enqueue(
-                entityType: "expense",
-                entityID: expense.id,
+                entityType: "transaction",
+                entityID: transaction.id,
                 action: "delete",
-                endpoint: "/expenses",
+                endpoint: "/transactions",
                 httpMethod: "DELETE",
                 payload: nil,
                 context: modelContext
             )
-            
+
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
-            
+
+            AppLogger.data.info("Transaction deleted: \(self.transaction.id)")
             completion()
         } catch {
-            print("Error deleting expense: \(error)")
+            AppLogger.data.error("Error deleting transaction: \(error)")
         }
     }
-    
+
     func formatAmount(_ amount: Double) -> String {
         amount.formatted(.number.precision(.fractionLength(0...2)))
     }
-    
+
     func formatDateAndTime(_ date: Date, time: Date?) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
-        
+
         if let time = time {
             let calendar = Calendar.current
             let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
@@ -84,7 +87,7 @@ import SwiftData
             return dateFormatter.string(from: date)
         }
     }
-    
+
     func formatFullDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium

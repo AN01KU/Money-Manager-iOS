@@ -9,9 +9,8 @@ import Foundation
 final class AuthService: AuthServiceProtocol {
     static let shared = AuthService()
 
-    var isAuthenticated: Bool = false
+    var authState: AuthState = .unknown
     var hasCheckedAuth: Bool = false
-    var currentUser: APIUser?
     var isLoading: Bool = false
     var errorMessage: String?
 
@@ -28,7 +27,8 @@ final class AuthService: AuthServiceProtocol {
         ) { [weak self] _ in
             guard let self, self.isAuthenticated else { return }
             Task { @MainActor in
-                self.logout()
+                self.authState = .expired
+                self.session.clearSession()
             }
         }
     }
@@ -42,16 +42,27 @@ final class AuthService: AuthServiceProtocol {
     @MainActor
     func checkAuthState() async {
         guard session.isLoggedIn else {
+            authState = .guest
             hasCheckedAuth = true
             return
         }
         do {
             let user: APIUser = try await apiClient.get("/me")
-            currentUser = user
-            isAuthenticated = true
+            authState = .authenticated(user)
+        } catch let error as APIError where error == .unauthorized {
+            authState = .expired
+            session.clearSession()
         } catch {
-            // Token is invalid or server unreachable — keep authenticated if token exists
-            isAuthenticated = session.isLoggedIn
+            // Server unreachable — keep authenticated state if token exists
+            // We don't have the user object, so stay unknown until next successful check
+            if session.isLoggedIn, case .authenticated = authState {
+                // already authenticated from a previous session, keep it
+            } else if session.isLoggedIn {
+                // token exists but no user yet — treat as guest until server responds
+                authState = .guest
+            } else {
+                authState = .guest
+            }
         }
         hasCheckedAuth = true
     }
@@ -65,8 +76,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
             session.saveToken(response.token)
-            currentUser = response.user
-            isAuthenticated = true
+            authState = .authenticated(response.user)
             isLoading = false
         } catch {
             isLoading = false
@@ -84,8 +94,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APISignupRequest(email: email, username: username, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
-            currentUser = response.user
-            isAuthenticated = true
+            authState = .authenticated(response.user)
             isLoading = false
         } catch {
             isLoading = false
@@ -98,8 +107,7 @@ final class AuthService: AuthServiceProtocol {
     func logout() {
         session.clearSession()
         UserDefaults.standard.removeObject(forKey: "last_sync_at")
-        syncService.clearGroupData()
-        currentUser = nil
-        isAuthenticated = false
+        NotificationCenter.default.post(name: .userDidLogout, object: nil)
+        authState = .guest
     }
 }

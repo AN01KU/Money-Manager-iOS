@@ -3,7 +3,7 @@ import SwiftData
 
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
+    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     
     @State private var selectedMonth: Date = Date()
@@ -17,22 +17,23 @@ struct BudgetsView: View {
         return budgets.first { $0.year == year && $0.month == month }
     }
     
-    private var currentMonthExpenses: [Expense] {
+    private var currentMonthTransactions: [Transaction] {
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
         else { return [] }
 
-        return allExpenses.filter { expense in
-            !expense.isDeleted &&
-            expense.date >= startOfMonth &&
-            expense.date <= endOfMonth
+        return allTransactions.filter { transaction in
+            !transaction.isDeleted &&
+            transaction.type == "expense" &&
+            transaction.date >= startOfMonth &&
+            transaction.date < firstDayNextMonth
         }
     }
-    
+
     private var totalSpent: Double {
-        currentMonthExpenses.reduce(0) { $0 + $1.amount }
+        currentMonthTransactions.reduce(0) { $0 + $1.amount }
     }
     
     private var remainingBudget: Double {
@@ -64,6 +65,36 @@ struct BudgetsView: View {
         guard daysRemaining > 0 else { return 0 }
         return remainingBudget / Double(daysRemaining + 1)
     }
+
+    private var daysElapsed: Int {
+        let calendar = Calendar.current
+        let today = Date()
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)) else { return 1 }
+        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
+            return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
+        }
+        return calendar.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+    }
+
+    private var projectedMonthEnd: Double {
+        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+        let dailyRate = totalSpent / Double(daysElapsed)
+        return totalSpent + (dailyRate * Double(daysInMonth - daysElapsed))
+    }
+
+    private var spendingInsight: String? {
+        guard let budget = currentBudget, budget.limit > 0 else { return nil }
+        guard Calendar.current.isDate(Date(), equalTo: selectedMonth, toGranularity: .month) else { return nil }
+        guard daysElapsed > 1 else { return nil }
+        let overspend = projectedMonthEnd - budget.limit
+        if totalSpent >= budget.limit {
+            return "You've exceeded your budget"
+        } else if overspend > 0 {
+            return "At this rate you'll overspend by \(CurrencyFormatter.format(overspend))"
+        } else {
+            return "On track — projected \(CurrencyFormatter.format(projectedMonthEnd)) of \(CurrencyFormatter.format(budget.limit))"
+        }
+    }
     
     var body: some View {
         ScrollView {
@@ -92,7 +123,22 @@ struct BudgetsView: View {
                         percentage: budgetPercentage
                     )
                     .padding(.horizontal)
-                    
+
+                    if let insight = spendingInsight {
+                        HStack(spacing: 8) {
+                            Image(systemName: totalSpent >= budget.limit ? "exclamationmark.triangle.fill" : projectedMonthEnd > budget.limit ? "arrow.up.circle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(totalSpent >= budget.limit ? AppColors.expense : projectedMonthEnd > budget.limit ? AppColors.budgetCaution : AppColors.positive)
+                            Text(insight)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemBackground))
+                        .clipShape(.rect(cornerRadius: 12))
+                        .padding(.horizontal)
+                    }
+
                 } else {
                     NoBudgetCard(
                         selectedMonth: selectedMonth,
@@ -103,10 +149,10 @@ struct BudgetsView: View {
                     .padding(.horizontal)
                 }
                 
-                if !currentMonthExpenses.isEmpty {
+                if !currentMonthTransactions.isEmpty {
                     SpendingSummaryCard(
                         totalSpent: totalSpent,
-                        transactionCount: currentMonthExpenses.count
+                        transactionCount: currentMonthTransactions.count
                     )
                     .padding(.horizontal)
                 }
@@ -128,5 +174,5 @@ struct BudgetsView: View {
 
 #Preview {
     BudgetsView()
-        .modelContainer(for: [Expense.self, MonthlyBudget.self])
+        .modelContainer(for: [Transaction.self, MonthlyBudget.self])
 }

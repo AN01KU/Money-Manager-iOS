@@ -6,20 +6,28 @@
 import SwiftUI
 
 enum GroupSection: String, CaseIterable {
-    case expenses = "Expenses"
-    case balances = "Balances"
-    case members  = "Members"
+    case transactions = "Transactions"
+    case balances     = "Balances"
+    case members      = "Members"
+}
+
+struct PairwiseDebt: Identifiable {
+    let id = UUID()
+    let fromUserId: UUID
+    let toUserId: UUID
+    let amount: Double
 }
 
 @MainActor
 @Observable
 final class GroupDetailViewModel {
     var group: APIGroupWithDetails
-    var expenses: [APIGroupExpense] = []
+    var transactions: [APIGroupTransaction] = []
     var members: [APIGroupMember] = []
     var balances: [APIGroupBalance] = []
+    var settlements: [APISettlement] = []
     var isLoading = false
-    var selectedSection: GroupSection = .expenses
+    var selectedSection: GroupSection = .transactions
 
     // Errors
     var errorMessage: String?
@@ -37,8 +45,8 @@ final class GroupDetailViewModel {
     }
     var pendingMemberEmails: Set<String> = []
 
-    // Add expense / settle
-    var showAddExpense = false
+    // Add transaction / settle
+    var showAddTransaction = false
     var showSettlement = false
 
     let groupService: GroupServiceProtocol
@@ -59,11 +67,49 @@ final class GroupDetailViewModel {
     }
 
     var groupTotal: Double {
-        expenses.compactMap { Double($0.amount) }.reduce(0, +)
+        transactions.compactMap { Double($0.total_amount) }.reduce(0, +)
     }
 
     var hasUnsettledBalances: Bool {
         balances.contains { (Double($0.amount) ?? 0) != 0 }
+    }
+
+    /// Pairwise debts derived from backend net balances.
+    /// Backend: positive = is owed (paid more), negative = owes (paid less).
+    /// Pairs each debtor with a creditor to produce "X owes Y — amount" rows.
+    var pairwiseDebts: [PairwiseDebt] {
+        var debtors: [(userId: UUID, amount: Double)] = []
+        var creditors: [(userId: UUID, amount: Double)] = []
+
+        for b in balances {
+            let amt = Double(b.amount) ?? 0
+            if amt < 0 {
+                debtors.append((b.user_id, abs(amt)))
+            } else if amt > 0 {
+                creditors.append((b.user_id, amt))
+            }
+        }
+
+        debtors.sort { $0.amount > $1.amount }
+        creditors.sort { $0.amount > $1.amount }
+
+        var result: [PairwiseDebt] = []
+        var di = 0, ci = 0
+        while di < debtors.count && ci < creditors.count {
+            let amount = min(debtors[di].amount, creditors[ci].amount)
+            if amount > 0.01 {
+                result.append(PairwiseDebt(
+                    fromUserId: debtors[di].userId,
+                    toUserId: creditors[ci].userId,
+                    amount: amount
+                ))
+            }
+            debtors[di].amount -= amount
+            creditors[ci].amount -= amount
+            if debtors[di].amount < 0.01 { di += 1 }
+            if creditors[ci].amount < 0.01 { ci += 1 }
+        }
+        return result
     }
 
     // MARK: - Load
@@ -73,9 +119,10 @@ final class GroupDetailViewModel {
         errorMessage = nil
         do {
             let details = try await groupService.fetchGroupDetails(groupId: group.id)
-            expenses = details.group.expenses
-            members  = details.group.members
-            balances = details.group.balances
+            transactions = try await groupService.fetchGroupTransactions(groupId: group.id)
+            members     = details.group.members
+            balances    = details.group.balances
+            settlements = details.group.settlements ?? []
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
@@ -106,17 +153,58 @@ final class GroupDetailViewModel {
         }
     }
 
-    // MARK: - After expense added
+    // MARK: - After transaction added / edited
 
-    func expenseAdded(_ expense: APIGroupExpense) {
-        expenses.insert(expense, at: 0)
+    func transactionAdded(_ transaction: APIGroupTransaction) {
+        transactions.insert(transaction, at: 0)
         recalculateBalances()
+    }
+
+    func transactionEdited(replacing old: APIGroupTransaction, with updated: APIGroupTransaction) {
+        if let idx = transactions.firstIndex(where: { $0.id == old.id }) {
+            transactions[idx] = updated
+        } else {
+            transactions.insert(updated, at: 0)
+        }
+        recalculateBalances()
+
+        Task {
+            do {
+                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: old.id)
+            } catch {
+                // Restore old on failure
+                if let idx = transactions.firstIndex(where: { $0.id == updated.id }) {
+                    transactions[idx] = old
+                }
+                recalculateBalances()
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Delete transaction
+
+    func deleteTransaction(_ transaction: APIGroupTransaction) {
+        transactions.removeAll { $0.id == transaction.id }
+        recalculateBalances()
+
+        Task {
+            do {
+                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: transaction.id)
+            } catch {
+                // Restore on failure
+                transactions.insert(transaction, at: 0)
+                recalculateBalances()
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
     }
 
     // MARK: - After settlement recorded
 
     func settlementRecorded(_ settlement: APISettlement) {
-        recalculateBalances()
+        settlements.insert(settlement, at: 0)
+        Task { await loadData() }
     }
 
     // MARK: - Helpers
@@ -139,14 +227,14 @@ final class GroupDetailViewModel {
         var map: [UUID: Double] = [:]
         for m in members { map[m.id] = 0 }
 
-        for expense in expenses {
-            map[expense.user_id, default: 0] += Double(expense.amount) ?? 0
+        for tx in transactions {
+            map[tx.paid_by_user_id, default: 0] += Double(tx.total_amount) ?? 0
         }
 
         // Split equally among all members for now (server is authoritative for custom splits)
         let memberCount = members.isEmpty ? 1 : members.count
-        for expense in expenses {
-            let share = (Double(expense.amount) ?? 0) / Double(memberCount)
+        for tx in transactions {
+            let share = (Double(tx.total_amount) ?? 0) / Double(memberCount)
             for m in members {
                 map[m.id, default: 0] -= share
             }

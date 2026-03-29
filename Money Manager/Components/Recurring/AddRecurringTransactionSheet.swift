@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct AddRecurringExpenseSheet: View {
+struct AddRecurringTransactionSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
@@ -14,7 +14,7 @@ struct AddRecurringExpenseSheet: View {
         self.prefillCategory = prefillCategory
     }
 
-    @State private var viewModel = AddRecurringExpenseViewModel()
+    @State private var viewModel = AddRecurringTransactionViewModel()
     @State private var amount100Tapped = false
     @State private var amount500Tapped = false
     @State private var amount1000Tapped = false

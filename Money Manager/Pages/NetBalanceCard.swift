@@ -9,7 +9,7 @@ struct NetBalanceCard: View {
     let netBalance: Double
     let groupCount: Int
 
-    private var isOwed: Bool { netBalance < 0 }
+    private var isOwed: Bool { netBalance > 0 }
     private var isSettled: Bool { netBalance == 0 }
 
     var body: some View {

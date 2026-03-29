@@ -8,7 +8,7 @@ struct RecurringDateHelperTests {
     
     @Test
     func testNextOccurrenceReturnsNilWhenInactive() {
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -23,7 +23,7 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForDailyFrequency() {
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Daily Coffee",
             amount: 50,
             category: "Food",
@@ -40,7 +40,7 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForWeeklyFrequency() {
         let pastDate = Calendar.current.date(byAdding: .weekOfYear, value: -2, to: Date())!
 
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Weekly Gym",
             amount: 500,
             category: "Health",
@@ -57,7 +57,7 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForMonthlyFrequency() {
         let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Rent",
             amount: 15000,
             category: "Housing",
@@ -74,7 +74,7 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForMonthlyWithoutDayOfMonth() {
         let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Subscription",
             amount: 100,
             category: "Entertainment",
@@ -90,7 +90,7 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForYearlyFrequency() {
         let lastYear = Calendar.current.date(byAdding: .year, value: -1, to: Date())!
 
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Insurance",
             amount: 12000,
             category: "Insurance",
@@ -108,7 +108,7 @@ struct RecurringDateHelperTests {
         let startDate = Calendar.current.date(byAdding: .month, value: -3, to: Date())!
         let endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Active Subscription",
             amount: 100,
             category: "Entertainment",
@@ -123,7 +123,7 @@ struct RecurringDateHelperTests {
     
     @Test
     func testNextOccurrenceReturnsNilForUnknownFrequency() {
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Unknown",
             amount: 100,
             category: "Other",
@@ -138,7 +138,7 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceWithWeeklySpecificDays() {
         let pastDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Weekly Yoga",
             amount: 200,
             category: "Health",
@@ -155,7 +155,7 @@ struct RecurringDateHelperTests {
     func testLastOccurrenceReturnsStartDateWhenNoLastAddedDate() {
         let startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -171,7 +171,7 @@ struct RecurringDateHelperTests {
         let startDate = Calendar.current.date(byAdding: .month, value: -2, to: Date())!
         let lastAdded = Calendar.current.date(byAdding: .day, value: -5, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",

@@ -10,9 +10,11 @@ import SwiftData
     
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
     }
 
     // Legacy computed properties kept for test compatibility
@@ -51,13 +53,14 @@ import SwiftData
                 context: modelContext
             )
             
+            AppLogger.data.info("Category hidden: \(category.name)")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
-            print("Error hiding category: \(error)")
+            AppLogger.data.error("Error hiding category: \(error)")
         }
     }
     
@@ -87,13 +90,14 @@ import SwiftData
                 context: modelContext
             )
             
+            AppLogger.data.info("Category restored: \(category.name)")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
-            print("Error restoring category: \(error)")
+            AppLogger.data.error("Error restoring category: \(error)")
         }
     }
     
@@ -108,20 +112,20 @@ import SwiftData
         let categoryName = category.name
         let categoryId = category.id
 
-        // Reassign all linked Expenses to "Other"
-        let expenseDescriptor = FetchDescriptor<Expense>()
-        if let expenses = try? modelContext.fetch(expenseDescriptor) {
-            for expense in expenses {
-                if expense.categoryId == categoryId || expense.category == categoryName {
-                    expense.category = "Other"
-                    expense.categoryId = nil
-                    expense.updatedAt = Date()
+        // Reassign all linked Transactions to "Other"
+        let transactionDescriptor = FetchDescriptor<Transaction>()
+        if let transactions = try? modelContext.fetch(transactionDescriptor) {
+            for transaction in transactions {
+                if transaction.categoryId == categoryId || transaction.category == categoryName {
+                    transaction.category = "Other"
+                    transaction.categoryId = nil
+                    transaction.updatedAt = Date()
                 }
             }
         }
 
-        // Reassign all linked RecurringExpenses to "Other"
-        let recurringDescriptor = FetchDescriptor<RecurringExpense>()
+        // Reassign all linked RecurringTransactions to "Other"
+        let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
         if let recurrings = try? modelContext.fetch(recurringDescriptor) {
             for recurring in recurrings {
                 if recurring.categoryId == categoryId || recurring.category == categoryName {
@@ -149,13 +153,14 @@ import SwiftData
                 context: modelContext
             )
             
+            AppLogger.data.info("Category deleted: \(categoryName)")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
-            print("Error deleting category: \(error)")
+            AppLogger.data.error("Error deleting category: \(error)")
         }
         
         deleteConfirmedTrigger += 1
@@ -192,7 +197,7 @@ import SwiftData
                         context: context
                     )
                 } catch {
-                    print("Error queuing category update: \(error)")
+                    AppLogger.data.error("Error queuing category update: \(error)")
                 }
             }
         }
@@ -200,13 +205,14 @@ import SwiftData
         do {
             try context.save()
             
+            AppLogger.data.info("Default categories restored")
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: context)
+                    await changeQueue.replayAll(context: context, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
-            print("Error restoring defaults: \(error)")
+            AppLogger.data.error("Error restoring default categories: \(error)")
         }
         
         resetTrigger += 1
@@ -307,6 +313,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
 
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -314,16 +321,32 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.changeQueue = changeQueue
+        self.auth = auth
         super.init(icon: "tag.circle.fill", color: "#4ECDC4")
     }
     
     func save() async -> Bool {
         guard let modelContext = modelContext else { return false }
-        
+
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
+
+        guard !trimmedName.isEmpty else {
+            errorMessage = "Category name cannot be empty"
+            showError = true
+            return false
+        }
+
+        let isDuplicate = allCategories.contains {
+            $0.name.lowercased() == trimmedName.lowercased() && !$0.isHidden
+        }
+        guard !isDuplicate else {
+            errorMessage = "\"\(trimmedName)\" already exists"
+            showError = true
+            return false
+        }
+
         guard checkColorConflict() else { return false }
         
         isSaving = true
@@ -352,7 +375,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {
@@ -377,6 +400,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     let category: CustomCategory
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
+    private let auth: AuthServiceProtocol
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -386,23 +410,35 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(category: CustomCategory, allCategories: [CustomCategory] = [], changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(category: CustomCategory, allCategories: [CustomCategory] = [], changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
         self.category = category
         self.name = category.name
         self.changeQueue = changeQueue
+        self.auth = auth
         super.init(icon: category.icon, color: category.color)
         self.allCategories = allCategories
     }
     
     func save() -> Bool {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
+
         guard !trimmedName.isEmpty else {
             errorMessage = "Category name cannot be empty"
             showError = true
             return false
         }
-        
+
+        let isDuplicate = allCategories.contains {
+            $0.id != category.id &&
+            $0.name.lowercased() == trimmedName.lowercased() &&
+            !$0.isHidden
+        }
+        guard !isDuplicate else {
+            errorMessage = "\"\(trimmedName)\" already exists"
+            showError = true
+            return false
+        }
+
         guard checkColorConflict() else { return false }
         
         guard let modelContext = modelContext else { return false }
@@ -416,22 +452,22 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         category.color = selectedColor
         category.updatedAt = Date()
 
-        // Cascade rename to all linked Expenses and RecurringExpenses
+        // Cascade rename to all linked Transactions and RecurringTransactions
         if oldName != trimmedName {
             let categoryId = category.id
 
-            let expenseDescriptor = FetchDescriptor<Expense>()
-            if let expenses = try? modelContext.fetch(expenseDescriptor) {
-                for expense in expenses {
-                    if expense.categoryId == categoryId || expense.category == oldName {
-                        expense.category = trimmedName
-                        if expense.categoryId == nil { expense.categoryId = categoryId }
-                        expense.updatedAt = Date()
+            let transactionDescriptor = FetchDescriptor<Transaction>()
+            if let transactions = try? modelContext.fetch(transactionDescriptor) {
+                for transaction in transactions {
+                    if transaction.categoryId == categoryId || transaction.category == oldName {
+                        transaction.category = trimmedName
+                        if transaction.categoryId == nil { transaction.categoryId = categoryId }
+                        transaction.updatedAt = Date()
                     }
                 }
             }
 
-            let recurringDescriptor = FetchDescriptor<RecurringExpense>()
+            let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
             if let recurrings = try? modelContext.fetch(recurringDescriptor) {
                 for recurring in recurrings {
                     if recurring.categoryId == categoryId || recurring.category == oldName {
@@ -459,7 +495,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueue.replayAll(context: modelContext)
+                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
                 }
             }
         } catch {

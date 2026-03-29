@@ -15,35 +15,33 @@ struct GroupMemberRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(isPending ? AppColors.warning.opacity(0.12) : AppColors.accentSubtle)
-                    .frame(width: 40, height: 40)
+                    .fill(isPending ? AppColors.warning.opacity(0.15) : AppColors.accentSubtle)
+                    .frame(width: 36, height: 36)
                 if isPending {
                     Image(systemName: "clock")
-                        .font(.subheadline)
+                        .font(AppTypography.rowPrimary)
                         .foregroundStyle(AppColors.warning)
                 } else {
                     Text(String(member.email.prefix(1)).uppercased())
-                        .font(.headline)
+                        .font(AppTypography.rowPrimary)
                         .foregroundStyle(AppColors.accent)
                 }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayName)
-                    .font(.body)
-                    .fontWeight(.medium)
+                    .font(AppTypography.rowPrimary)
                     .foregroundStyle(isPending ? .secondary : .primary)
                 Text(member.email)
-                    .font(.caption)
+                    .font(AppTypography.rowMeta)
                     .foregroundStyle(.secondary)
             }
             Spacer()
             if isPending {
                 Text("Invited")
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                    .font(AppTypography.rowMeta)
                     .foregroundStyle(AppColors.warning)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -51,8 +49,7 @@ struct GroupMemberRow: View {
                     .clipShape(.rect(cornerRadius: 6))
             } else if isAdmin {
                 Text("Admin")
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                    .font(AppTypography.rowMeta)
                     .foregroundStyle(AppColors.accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -60,6 +57,7 @@ struct GroupMemberRow: View {
                     .clipShape(.rect(cornerRadius: 6))
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 }

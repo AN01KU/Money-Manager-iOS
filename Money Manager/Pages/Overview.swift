@@ -3,155 +3,372 @@ import SwiftData
 
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
+    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    
+
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
-    
+
     @State private var viewModel = OverviewViewModel()
-    
+    @State private var navigationPath: [AppRoute] = []
+    var pendingRoute: Binding<AppRoute?>?
+
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        DateFilterSelector(selectedDate: $viewModel.selectedDate, filterMode: $viewModel.filterMode)
-                            .padding(.horizontal)
-                        
-                        if viewModel.filterMode == .daily, viewModel.dailyBudgetLimit > 0 {
-                            BudgetOverviewCard(
-                                budget: MonthlyBudget(
-                                    year: Calendar.current.component(.year, from: viewModel.selectedDate),
-                                    month: Calendar.current.component(.month, from: viewModel.selectedDate),
-                                    limit: viewModel.dailyBudgetLimit
-                                ),
-                                spent: viewModel.totalSpent,
-                                isDaily: true
-                            )
-                            .padding(.horizontal)
-                        } else if let budget = viewModel.currentBudget {
-                            BudgetOverviewCard(
-                                budget: budget,
-                                spent: viewModel.totalSpent
-                            )
-                            .padding(.horizontal)
-                        } else {
-                            NoBudgetCard(selectedMonth: viewModel.selectedDate) {
-                                viewModel.showBudgetSheet = true
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                        ViewTypeSelector(selectedView: $viewModel.selectedView)
-                            .padding(.horizontal)
-                        
-                        if let categoryFilter = viewModel.selectedCategoryFilter {
-                            HStack(spacing: 8) {
-                                Label(categoryFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                
-                                Button {
-                                    withAnimation {
-                                        viewModel.clearCategoryFilter()
-                                    }
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.body)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(AppColors.accentLight)
-                            .clipShape(Capsule())
-                            .padding(.horizontal)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                        
-                        if viewModel.selectedView == .categories {
-                            if !viewModel.categorySpending.isEmpty {
-                                CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
-                                    withAnimation {
-                                        viewModel.filterByCategory(categoryName)
-                                    }
-                                }
-                                    .padding(.horizontal)
-                            } else {
-                                EmptyStateView(
-                                    icon: "chart.bar.doc.horizontal",
-                                    title: "No expenses yet",
-                                    message: "Tap + to add your first expense"
-                                )
-                                    .padding(.horizontal)
-                            }
-                        } else {
-                            if viewModel.filteredExpenses.isEmpty {
-                                EmptyStateView(
-                                    icon: "chart.bar.doc.horizontal",
-                                    title: "No expenses yet",
-                                    message: "Tap + to add your first expense"
-                                )
-                                    .padding(.horizontal)
-                            } else {
-                                TransactionList(expenses: viewModel.filteredExpenses) { expense in
-                                    viewModel.deleteExpense(expense)
-                                }
-                                    .padding(.horizontal)
-                            }
-                        }
+        NavigationStack(path: $navigationPath) {
+            OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit)
+                .navigationDestination(for: AppRoute.self) { route in
+                    if case .transaction(let id) = route,
+                       let transaction = allTransactions.first(where: { $0.id == id }) {
+                        TransactionDetailView(transaction: transaction)
                     }
-                    .padding(.vertical)
                 }
-                
-                FloatingActionButton(icon: "plus") {
-                    viewModel.showAddExpense = true
-                }
-                .padding(.trailing, 24)
-                .padding(.bottom, 24)
-            }
-            .navigationTitle("Overview")
-            .searchable(text: $viewModel.searchText, prompt: "Search expenses")
-            .sheet(isPresented: $viewModel.showAddExpense) {
-                AddExpenseView()
-            }
-            .sheet(isPresented: $viewModel.showBudgetSheet) {
-                BudgetSheet(selectedMonth: viewModel.selectedDate)
-            }
-            .alert("Delete Expense?", isPresented: Binding(
-                get: { viewModel.expenseToDelete != nil },
-                set: { if !$0 { viewModel.cancelDeleteExpense() } }
-            )) {
-                Button("Cancel", role: .cancel) {
-                    viewModel.cancelDeleteExpense()
-                }
-                Button("Delete", role: .destructive) {
-                    viewModel.confirmDeleteExpense()
-                }
-            } message: {
-                if let expense = viewModel.expenseToDelete {
-                    Text("Are you sure you want to delete \"\(expense.expenseDescription ?? expense.category)\"? This action cannot be undone.")
-                }
-            }
-            .task(id: viewModel.selectedDate) {
-                viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
-            }
-            .task {
-                viewModel.modelContext = modelContext
-                viewModel.update(allExpenses: allExpenses, budgets: budgets, customCategories: customCategories)
-            }
-            .onChange(of: allExpenses) { _, newValue in
-                viewModel.update(allExpenses: newValue, budgets: budgets, customCategories: customCategories)
-            }
-            .onChange(of: budgets) { _, newValue in
-                viewModel.update(allExpenses: allExpenses, budgets: newValue, customCategories: customCategories)
-            }
-            .onChange(of: customCategories) { _, newValue in
-                viewModel.update(allExpenses: allExpenses, budgets: budgets, customCategories: newValue)
+        }
+        .onChange(of: pendingRoute?.wrappedValue) { _, route in
+            guard let route, case .transaction = route else { return }
+            navigationPath = [route]
+            pendingRoute?.wrappedValue = nil
+        }
+        .task {
+            viewModel.modelContext = modelContext
+            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
+        }
+        .onChange(of: allTransactions) { _, newValue in
+            viewModel.update(allTransactions: newValue, budgets: budgets, customCategories: customCategories)
+        }
+        .onChange(of: budgets) { _, newValue in
+            viewModel.update(allTransactions: allTransactions, budgets: newValue, customCategories: customCategories)
+        }
+        .onChange(of: customCategories) { _, newValue in
+            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: newValue)
+        }
+    }
+}
+
+// MARK: - Body
+
+private struct OverviewBody: View {
+    @Bindable var viewModel: OverviewViewModel
+    let defaultBudgetLimit: Double
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        ScrollView {
+            OverviewScrollContent(viewModel: viewModel)
+        }
+        .navigationTitle("Overview")
+        .toolbar { overviewToolbar }
+        .sheet(isPresented: $viewModel.showBudgetSheet) {
+            BudgetSheet(selectedMonth: viewModel.selectedDate)
+        }
+        .task(id: viewModel.selectedDate) {
+            viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var overviewToolbar: some ToolbarContent {
+        if authService.isAuthenticated {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                SyncStatusView()
             }
         }
+    }
+}
+
+// MARK: - Scroll Content
+
+private struct OverviewScrollContent: View {
+    @Bindable var viewModel: OverviewViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            OverviewHeaderCard(viewModel: viewModel)
+                .padding(.horizontal)
+                .padding(.top, 8)
+
+            if !viewModel.categorySpending.isEmpty {
+                CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
+                    NotificationCenter.default.post(
+                        name: .transactionsCategoryFilter,
+                        object: categoryName
+                    )
+                }
+                .padding(.horizontal)
+            } else {
+                EmptyStateView(
+                    icon: "chart.pie",
+                    title: "No expenses yet",
+                    message: "Tap + to add your first transaction"
+                )
+                .padding(.horizontal)
+            }
+        }
+        .padding(.bottom, 100)
+    }
+}
+
+// MARK: - Header Card
+
+private struct OverviewHeaderCard: View {
+    @Bindable var viewModel: OverviewViewModel
+    @State private var showDatePicker = false
+    @State private var navTapped = false
+
+    private var budgetPercentage: Int {
+        guard let budget = viewModel.currentBudget, budget.limit > 0 else { return 0 }
+        return min(100, Int((viewModel.totalSpent / budget.limit) * 100))
+    }
+
+    private var budgetColor: Color {
+        if budgetPercentage >= 100 { return AppColors.budgetDanger }
+        if budgetPercentage >= 80 { return AppColors.budgetCaution }
+        return AppColors.budgetSafe
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Period selector row
+            HStack {
+                HStack(spacing: 4) {
+                    Button {
+                        let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
+                        if let prev = Calendar.current.date(byAdding: step, value: -1, to: viewModel.selectedDate) {
+                            viewModel.selectedDate = prev
+                            navTapped = true
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(AppTypography.cardMeta)
+                            .foregroundStyle(AppColors.accent)
+                            .padding(6)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        Text(formattedPeriod)
+                            .font(AppTypography.cardValue)
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
+                        if let next = Calendar.current.date(byAdding: step, value: 1, to: viewModel.selectedDate) {
+                            viewModel.selectedDate = next
+                            navTapped = true
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(AppTypography.cardMeta)
+                            .foregroundStyle(AppColors.accent)
+                            .padding(6)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .sensoryFeedback(.impact(weight: .light), trigger: navTapped)
+                .onChange(of: navTapped) { _, v in if v { navTapped = false } }
+
+                Spacer()
+
+                // Daily / Monthly toggle pill
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.filterMode = viewModel.filterMode == .daily ? .monthly : .daily
+                    }
+                } label: {
+                    Text(viewModel.filterMode == .daily ? "Daily" : "Monthly")
+                        .font(AppTypography.chip)
+                        .foregroundStyle(AppColors.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(AppColors.accentLight)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+                .padding(.horizontal, 16)
+
+            // Income / Net / Expenses row
+            HStack(spacing: 0) {
+                SummaryStatView(
+                    label: "Income",
+                    amount: viewModel.totalIncome,
+                    color: AppColors.positive,
+                    alignment: .leading
+                )
+
+                Divider()
+                    .frame(height: 40)
+
+                SummaryStatView(
+                    label: "Net",
+                    amount: viewModel.netBalance,
+                    color: viewModel.netBalance >= 0 ? AppColors.positive : AppColors.expense,
+                    alignment: .center,
+                    showSign: true
+                )
+
+                Divider()
+                    .frame(height: 40)
+
+                SummaryStatView(
+                    label: "Expenses",
+                    amount: viewModel.totalSpent,
+                    color: AppColors.expense,
+                    alignment: .trailing
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            // Budget bar — only when a budget exists
+            if let budget = viewModel.currentBudget {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                BudgetInlineRow(
+                    spent: viewModel.totalSpent,
+                    limit: budget.limit,
+                    percentage: budgetPercentage,
+                    color: budgetColor,
+                    onTap: { viewModel.showBudgetSheet = true }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            } else {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                Button {
+                    viewModel.showBudgetSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle")
+                            .font(AppTypography.infoLabel)
+                        Text("Set a budget")
+                            .font(AppTypography.infoLabel)
+                    }
+                    .foregroundStyle(AppColors.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 1)
+        }
+        .sheet(isPresented: $showDatePicker) {
+            NavigationStack {
+                DatePicker(
+                    "Select \(viewModel.filterMode == .daily ? "Date" : "Month")",
+                    selection: $viewModel.selectedDate,
+                    displayedComponents: viewModel.filterMode == .daily ? [.date] : [.date]
+                )
+                .datePickerStyle(.graphical)
+                .padding()
+                .navigationTitle("Select \(viewModel.filterMode == .daily ? "Date" : "Month")")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { showDatePicker = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    private var formattedPeriod: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = viewModel.filterMode == .daily ? "MMM d, yyyy" : "MMMM yyyy"
+        return formatter.string(from: viewModel.selectedDate)
+    }
+}
+
+private struct SummaryStatView: View {
+    let label: String
+    let amount: Double
+    let color: Color
+    let alignment: HorizontalAlignment
+    var showSign: Bool = false
+
+    var body: some View {
+        VStack(alignment: alignment, spacing: 3) {
+            Text(label)
+                .font(AppTypography.cardLabel)
+                .foregroundStyle(.secondary)
+            Text(formattedAmount)
+                .font(AppTypography.cardValue)
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
+    }
+
+    private var formattedAmount: String {
+        let formatted = CurrencyFormatter.format(abs(amount))
+        if showSign {
+            return amount >= 0 ? "+\(formatted)" : "-\(formatted)"
+        }
+        return formatted
+    }
+}
+
+private struct BudgetInlineRow: View {
+    let spent: Double
+    let limit: Double
+    let percentage: Int
+    let color: Color
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 6) {
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(AppTypography.cardMeta)
+                            .foregroundStyle(color)
+                        Text("Budget")
+                            .font(AppTypography.cardLabel)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("\(CurrencyFormatter.format(spent)) / \(CurrencyFormatter.format(limit))")
+                        .font(AppTypography.cardLabel)
+                        .foregroundStyle(.secondary)
+                    Text("· \(percentage)%")
+                        .font(AppTypography.cardValue)
+                        .foregroundStyle(color)
+                }
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 5)
+                        Capsule()
+                            .fill(color)
+                            .frame(width: geo.size.width * min(1.0, Double(percentage) / 100.0), height: 5)
+                    }
+                }
+                .frame(height: 5)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -159,39 +376,40 @@ struct Overview: View {
 
 @MainActor
 private func previewContainer(
-    expenses: [Expense] = [],
+    transactions: [Transaction] = [],
     budgets: [MonthlyBudget] = []
 ) -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Expense.self, MonthlyBudget.self, CustomCategory.self,
+        for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
         configurations: config
     )
     let context = container.mainContext
-    for expense in expenses { context.insert(expense) }
+    for transaction in transactions { context.insert(transaction) }
     for budget in budgets { context.insert(budget) }
     try? context.save()
     return container
 }
 
-#Preview("With Expenses & Budget") {
+#Preview("With Transactions & Budget") {
     let calendar = Calendar.current
     let today = Date()
     let year = calendar.component(.year, from: today)
     let month = calendar.component(.month, from: today)
 
-    let expenses = [
-        Expense(amount: 450, category: "Food & Dining", date: today, expenseDescription: "Lunch at cafe"),
-        Expense(amount: 120, category: "Food & Dining", date: today, expenseDescription: "Morning coffee"),
-        Expense(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, expenseDescription: "Fuel"),
-        Expense(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, expenseDescription: "New shirt"),
-        Expense(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, expenseDescription: "Phone bill"),
-        Expense(amount: 649, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, expenseDescription: "Netflix"),
+    let transactions = [
+        Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
+        Transaction(amount: 120, category: "Food & Dining", date: today, transactionDescription: "Morning coffee"),
+        Transaction(type: "income", amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
+        Transaction(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Fuel"),
+        Transaction(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "New shirt"),
+        Transaction(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, transactionDescription: "Phone bill"),
+        Transaction(amount: 649, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, transactionDescription: "Netflix"),
     ]
     let budget = MonthlyBudget(year: year, month: month, limit: 50000)
 
     Overview()
-        .modelContainer(previewContainer(expenses: expenses, budgets: [budget]))
+        .modelContainer(previewContainer(transactions: transactions, budgets: [budget]))
 }
 
 #Preview("Empty State") {
@@ -205,25 +423,25 @@ private func previewContainer(
     let year = calendar.component(.year, from: today)
     let month = calendar.component(.month, from: today)
 
-    let expenses = [
-        Expense(amount: 15000, category: "Travel", date: today, expenseDescription: "Flight tickets"),
-        Expense(amount: 8000, category: "Shopping", date: calendar.date(byAdding: .day, value: -1, to: today)!, expenseDescription: "Electronics"),
-        Expense(amount: 5000, category: "Food & Dining", date: calendar.date(byAdding: .day, value: -2, to: today)!, expenseDescription: "Party dinner"),
-        Expense(amount: 3000, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, expenseDescription: "Concert tickets"),
+    let transactions = [
+        Transaction(amount: 15000, category: "Travel", date: today, transactionDescription: "Flight tickets"),
+        Transaction(amount: 8000, category: "Shopping", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Electronics"),
+        Transaction(amount: 5000, category: "Food & Dining", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "Party dinner"),
+        Transaction(amount: 3000, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, transactionDescription: "Concert tickets"),
     ]
     let budget = MonthlyBudget(year: year, month: month, limit: 10000)
 
     Overview()
-        .modelContainer(previewContainer(expenses: expenses, budgets: [budget]))
+        .modelContainer(previewContainer(transactions: transactions, budgets: [budget]))
 }
 
 #Preview("No Budget Set") {
     let today = Date()
-    let expenses = [
-        Expense(amount: 350, category: "Food & Dining", date: today, expenseDescription: "Dinner"),
-        Expense(amount: 80, category: "Transport", date: today, expenseDescription: "Auto ride"),
+    let transactions = [
+        Transaction(amount: 350, category: "Food & Dining", date: today, transactionDescription: "Dinner"),
+        Transaction(amount: 80, category: "Transport", date: today, transactionDescription: "Auto ride"),
     ]
 
     Overview()
-        .modelContainer(previewContainer(expenses: expenses))
+        .modelContainer(previewContainer(transactions: transactions))
 }

@@ -10,6 +10,32 @@ enum GroupsTab {
     case activities
 }
 
+enum ActivityItem: Identifiable {
+    case transaction(APIGroupTransaction, groupName: String)
+    case settlement(APISettlement, groupName: String, memberMap: [UUID: String])
+
+    var id: UUID {
+        switch self {
+        case .transaction(let tx, _): return tx.id
+        case .settlement(let s, _, _): return s.id
+        }
+    }
+
+    var date: Date {
+        switch self {
+        case .transaction(let tx, _): return tx.date
+        case .settlement(let s, _, _): return s.created_at
+        }
+    }
+
+    var groupName: String {
+        switch self {
+        case .transaction(_, let name): return name
+        case .settlement(_, let name, _): return name
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class GroupsListViewModel {
@@ -49,13 +75,16 @@ final class GroupsListViewModel {
         }
     }
 
-    var recentActivity: [(expense: APIGroupExpense, groupName: String)] = []
+    var recentActivity: [ActivityItem] = []
 
-    var filteredActivity: [(expense: APIGroupExpense, groupName: String)] {
+    var filteredActivity: [ActivityItem] {
         guard !searchText.isEmpty else { return recentActivity }
-        return recentActivity.filter {
-            $0.groupName.localizedStandardContains(searchText) ||
-            $0.expense.description.localizedStandardContains(searchText)
+        return recentActivity.filter { item in
+            if item.groupName.localizedStandardContains(searchText) { return true }
+            if case .transaction(let tx, _) = item {
+                return tx.description?.localizedStandardContains(searchText) ?? false
+            }
+            return false
         }
     }
 
@@ -74,21 +103,30 @@ final class GroupsListViewModel {
     }
 
     private func loadActivity() async {
-        var activity: [(expense: APIGroupExpense, groupName: String)] = []
-        await withTaskGroup(of: (String, [APIGroupExpense]).self) { taskGroup in
+        guard let userId = currentUserId else { return }
+        var items: [ActivityItem] = []
+
+        await withTaskGroup(of: (String, [APIGroupTransaction], [APISettlement], [APIGroupMember]).self) { taskGroup in
             for group in groups {
                 taskGroup.addTask {
-                    let expenses = (try? await self.groupService.fetchGroupDetails(groupId: group.id))?.group.expenses ?? []
-                    return (group.name, expenses)
+                    let transactions = (try? await self.groupService.fetchGroupTransactions(groupId: group.id)) ?? []
+                    let details = try? await self.groupService.fetchGroupDetails(groupId: group.id)
+                    let settlements = details?.group.settlements ?? []
+                    let members = details?.group.members ?? group.members
+                    return (group.name, transactions, settlements, members)
                 }
             }
-            for await (groupName, expenses) in taskGroup {
-                for expense in expenses {
-                    activity.append((expense: expense, groupName: groupName))
+            for await (groupName, transactions, settlements, members) in taskGroup {
+                let memberMap = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0.username) })
+                for tx in transactions {
+                    items.append(.transaction(tx, groupName: groupName))
+                }
+                for settlement in settlements where settlement.from_user == userId || settlement.to_user == userId {
+                    items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
                 }
             }
         }
-        recentActivity = activity.sorted { $0.expense.created_at > $1.expense.created_at }
+        recentActivity = items.sorted { $0.date > $1.date }
     }
 
     func createGroup(name: String) async throws -> APIGroupWithDetails {

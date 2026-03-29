@@ -169,7 +169,7 @@ struct BudgetSheet: View {
             
             if NetworkMonitor.shared.isConnected {
                 Task {
-                    await changeQueueManager.replayAll(context: modelContext)
+                    await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
                 }
             }
         } catch {

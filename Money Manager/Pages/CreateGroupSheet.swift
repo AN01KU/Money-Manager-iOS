@@ -28,7 +28,7 @@ struct CreateGroupSheet: View {
                     }
                     .padding(.vertical, 8)
                 } footer: {
-                    Text("Create a group to start tracking shared expenses with friends.")
+                    Text("Create a group to start tracking shared transactions with friends.")
                 }
             }
             .navigationTitle("New Group")

@@ -7,7 +7,7 @@
 
 import XCTest
 
-final class AddExpenseTests: XCTestCase {
+final class AddTransactionTests: XCTestCase {
     
     var app: XCUIApplication!
     
@@ -25,22 +25,22 @@ final class AddExpenseTests: XCTestCase {
     
     // MARK: - Screen Loading
     
-    func testAddExpenseScreenLoads() throws {
-        openAddExpenseScreen()
+    func testAddTransactionScreenLoads() throws {
+        openAddTransactionScreen()
         
         let navBar = app.navigationBars["Add Expense"]
         XCTAssertTrue(navBar.waitForExistence(timeout: 3), "Add Expense screen should load")
     }
     
-    func testAddExpenseHasCancelButton() throws {
-        openAddExpenseScreen()
+    func testAddTransactionHasCancelButton() throws {
+        openAddTransactionScreen()
         
         let cancelButton = app.buttons["Cancel"]
         XCTAssertTrue(cancelButton.waitForExistence(timeout: 2), "Cancel button should exist")
     }
     
-    func testAddExpenseHasSaveButton() throws {
-        openAddExpenseScreen()
+    func testAddTransactionHasSaveButton() throws {
+        openAddTransactionScreen()
         
         let saveButton = app.buttons["Save"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 2), "Save button should exist")
@@ -49,7 +49,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Form Validation
     
     func testSaveButtonDisabledInitially() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let saveButton = app.buttons["Save"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 2))
@@ -57,7 +57,7 @@ final class AddExpenseTests: XCTestCase {
     }
     
     func testSaveButtonEnabledWithValidData() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         // Enter amount
         let amountField = app.textFields["0.00"]
@@ -75,7 +75,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Amount Input
     
     func testAmountFieldAcceptsInput() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let amountField = app.textFields["0.00"]
         XCTAssertTrue(amountField.waitForExistence(timeout: 2))
@@ -88,7 +88,7 @@ final class AddExpenseTests: XCTestCase {
     }
     
     func testQuickAmountButtonsWork() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         // Tap quick amount button (₹100, ₹500, or ₹1000)
         let quick100 = app.buttons.containing(NSPredicate(format: "label CONTAINS '100'")).firstMatch
@@ -104,7 +104,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Category Selection
     
     func testCategoryPickerOpens() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let categoryButton = app.buttons["Select Category"]
         XCTAssertTrue(categoryButton.waitForExistence(timeout: 2))
@@ -116,31 +116,28 @@ final class AddExpenseTests: XCTestCase {
     }
     
     func testCategoryCanBeSelected() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         app.buttons["Select Category"].tap()
         
         // Wait for category picker sheet to appear
         let pickerNav = app.navigationBars["Select Category"]
         XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
-        
-        // Transport is near the bottom of the alphabetically sorted list — scroll to it
-        let transportText = app.staticTexts["Transport"].firstMatch
-        if !transportText.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(transportText.waitForExistence(timeout: 3), "Transport category should appear")
-        transportText.tap()
-        
-        // Verify category is selected (button text should change)
-        let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Transport'")).firstMatch
-        XCTAssertTrue(categoryButton.waitForExistence(timeout: 2), "Transport category should be selected")
+
+        // Food & Dining is always visible without scrolling
+        let foodCell = app.buttons["Food & Dining"]
+        XCTAssertTrue(foodCell.waitForExistence(timeout: 5), "Food & Dining category should appear in picker")
+        foodCell.tap()
+
+        // Verify category is selected (button label should change)
+        let categoryButton = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Food'")).firstMatch
+        XCTAssertTrue(categoryButton.waitForExistence(timeout: 2), "Food & Dining category should be selected")
     }
     
     // MARK: - Date Selection
     
     func testDatePickerOpens() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let datePicker = app.datePickers.firstMatch
         XCTAssertTrue(datePicker.waitForExistence(timeout: 3), "Date picker should exist")
@@ -156,7 +153,7 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Description Field
     
     func testDescriptionFieldAcceptsInput() throws {
-        openAddExpenseScreen()
+        openAddTransactionScreen()
         
         let descriptionField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description' OR label CONTAINS 'Description'")).firstMatch
         
@@ -172,15 +169,15 @@ final class AddExpenseTests: XCTestCase {
     // MARK: - Save and Cancel Flow
     
     func testCancelDismissesSheet() throws {
-        openAddExpenseScreen()
-        
+        openAddTransactionScreen()
+
         app.buttons["Cancel"].tap()
-        
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3), "Should return to Overview after cancel")
+
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 3), "Should return to Transactions after cancel")
     }
     
-    func testCompleteExpenseCreation() throws {
-        openAddExpenseScreen()
+    func testCompleteTransactionCreation() throws {
+        openAddTransactionScreen()
         
         // Enter amount
         let amountField = app.textFields["0.00"]
@@ -189,48 +186,45 @@ final class AddExpenseTests: XCTestCase {
         
         // Select category
         app.buttons["Select Category"].tap()
-        
+
         // Wait for category picker sheet
         let pickerNav = app.navigationBars["Select Category"]
-        XCTAssertTrue(pickerNav.waitForExistence(timeout: 3), "Category picker should appear")
-        
-        // Shopping is near the bottom of the alphabetically sorted list — scroll if needed
-        let shoppingText = app.staticTexts["Shopping"].firstMatch
-        if !shoppingText.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(shoppingText.waitForExistence(timeout: 3), "Shopping category should appear")
-        shoppingText.tap()
-        
+        XCTAssertTrue(pickerNav.waitForExistence(timeout: 5), "Category picker should appear")
+
+        // Food & Dining is near the top of the list — no scrolling needed
+        let foodCell = app.buttons["Food & Dining"]
+        XCTAssertTrue(foodCell.waitForExistence(timeout: 5), "Food & Dining category should appear in picker")
+        foodCell.tap()
+
         // Add description
         let descField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'Description'")).firstMatch
         if descField.exists {
             descField.tap()
-            descField.typeText("Test shopping expense")
+            descField.typeText("Test expense")
         }
-        
+
         // Save
         app.buttons["Save"].tap()
-        
-        // Verify return to Overview
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 5), "Should return to Overview after save")
-        
+
+        // Verify return to Transactions
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 10), "Should return to Transactions after save")
+
         // Verify expense appears in list
-        let expense = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Shopping' OR label CONTAINS '750'")).firstMatch
-        XCTAssertTrue(expense.waitForExistence(timeout: 5), "New expense should appear in list")
+        let expense = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Food' OR label CONTAINS '750'")).firstMatch
+        XCTAssertTrue(expense.waitForExistence(timeout: 10), "New expense should appear in list")
     }
     
     // MARK: - Helper Methods
     
-    private func openAddExpenseScreen() {
-        app.tabBars.buttons["Overview"].tap()
-        XCTAssertTrue(app.navigationBars["Overview"].waitForExistence(timeout: 3))
-        
-        // Tap the plus button
+    private func openAddTransactionScreen() {
+        app.tabBars.buttons["Transactions"].tap()
+        XCTAssertTrue(app.navigationBars["Transactions"].waitForExistence(timeout: 3))
+
+        // Tap the FAB (plus button) on the Transactions tab
         let fabButton = app.buttons["plus"]
         XCTAssertTrue(fabButton.waitForExistence(timeout: 3), "FAB should exist")
         fabButton.tap()
-        
+
         XCTAssertTrue(app.navigationBars["Add Expense"].waitForExistence(timeout: 3), "Add Expense screen should appear")
     }
 }

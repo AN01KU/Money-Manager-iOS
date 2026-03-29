@@ -20,6 +20,6 @@ protocol ChangeQueueManagerProtocol: AnyObject {
         payload: Data?,
         context: ModelContext
     )
-    func replayAll(context: ModelContext) async
+    func replayAll(context: ModelContext, isAuthenticated: Bool) async
     func clearAll(context: ModelContext)
 }

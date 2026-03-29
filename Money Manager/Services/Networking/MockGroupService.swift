@@ -40,7 +40,7 @@ final class MockGroupService: GroupServiceProtocol {
         if let details = stubbedGroupDetails { return details }
         let body = APIGroupDetailsBody(
             id: groupId, name: "Mock Group", created_by: UUID(), created_at: Date(),
-            members: stubbedMembers, balances: stubbedBalances, expenses: []
+            members: stubbedMembers, balances: stubbedBalances, settlements: []
         )
         return APIGroupDetails(group: body, is_member: true)
     }
@@ -58,24 +58,40 @@ final class MockGroupService: GroupServiceProtocol {
         stubbedBalances
     }
 
-    func createSharedExpense(_ request: APICreateSharedExpenseRequest) async throws -> APIGroupExpense {
-        APIGroupExpense(
+    var stubbedTransactions: [APIGroupTransaction] = []
+
+    func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
+        stubbedTransactions
+    }
+
+    func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {}
+
+    func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction {
+        APIGroupTransaction(
             id: UUID(),
+            group_id: groupId,
+            paid_by_user_id: request.paid_by_user_id,
+            total_amount: request.total_amount,
+            category: request.category,
+            date: request.date,
             description: request.description,
-            amount: request.totalAmount,
-            user_id: request.splits.first?.userId ?? UUID(),
-            created_at: Date()
+            notes: request.notes,
+            is_deleted: false,
+            created_at: Date(),
+            updated_at: Date(),
+            splits: []
         )
     }
 
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         APISettlement(
             id: UUID(),
-            groupId: request.groupId,
-            fromUser: request.fromUser,
-            toUser: request.toUser,
+            group_id: request.group_id,
+            from_user: request.from_user,
+            to_user: request.to_user,
             amount: request.amount,
-            createdAt: Date()
+            notes: request.notes,
+            created_at: Date()
         )
     }
 }

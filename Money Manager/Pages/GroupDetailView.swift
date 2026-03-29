@@ -7,6 +7,8 @@ import SwiftUI
 
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
+    @State private var selectedTransaction: APIGroupTransaction?
+    @State private var transactionToEdit: APIGroupTransaction?
 
     init(group: APIGroupWithDetails) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group))
@@ -14,14 +16,6 @@ struct GroupDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            GroupHeaderStats(
-                total: viewModel.groupTotal,
-                expenseCount: viewModel.expenses.count,
-                memberCount: viewModel.members.count
-            )
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-
             Picker("Section", selection: $viewModel.selectedSection) {
                 ForEach(GroupSection.allCases, id: \.self) { section in
                     Text(section.rawValue).tag(section)
@@ -47,13 +41,13 @@ struct GroupDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(viewModel.group.name)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $viewModel.showAddExpense) {
-            AddExpenseView(
+        .sheet(isPresented: $viewModel.showAddTransaction) {
+            AddTransactionView(
                 mode: .shared(
                     group: viewModel.group,
                     members: viewModel.members
                 ) { newExpense in
-                    viewModel.expenseAdded(newExpense)
+                    viewModel.transactionAdded(newExpense)
                 }
             )
         }
@@ -82,6 +76,30 @@ struct GroupDetailView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .sheet(item: $selectedTransaction) { transaction in
+            GroupTransactionDetailSheet(
+                transaction: transaction,
+                members: viewModel.members,
+                currentUserId: viewModel.currentUserId,
+                onDelete: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                    viewModel.deleteTransaction(transaction)
+                } : nil,
+                onEdit: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                    transactionToEdit = transaction
+                } : nil
+            )
+        }
+        .sheet(item: $transactionToEdit) { transaction in
+            AddTransactionView(
+                mode: .shared(
+                    group: viewModel.group,
+                    members: viewModel.members,
+                    editing: transaction
+                ) { updated in
+                    viewModel.transactionEdited(replacing: transaction, with: updated)
+                }
+            )
+        }
         .task {
             await viewModel.loadData()
         }
@@ -90,17 +108,17 @@ struct GroupDetailView: View {
     @ViewBuilder
     private var sectionContent: some View {
         switch viewModel.selectedSection {
-        case .expenses: expensesSection
-        case .balances: balancesSection
-        case .members:  membersSection
+        case .transactions: transactionsSection
+        case .balances:     balancesSection
+        case .members:      membersSection
         }
     }
 
     @ViewBuilder
     private var fabView: some View {
         switch viewModel.selectedSection {
-        case .expenses:
-            FloatingActionButton(icon: "plus") { viewModel.showAddExpense = true }
+        case .transactions:
+            FloatingActionButton(icon: "plus") { viewModel.showAddTransaction = true }
         case .balances:
             if viewModel.hasUnsettledBalances {
                 FloatingActionButton(icon: "arrow.left.arrow.right") { viewModel.showSettlement = true }
@@ -110,42 +128,151 @@ struct GroupDetailView: View {
         }
     }
 
-    private var expensesSection: some View {
+    private var transactionsSection: some View {
         Group {
-            if viewModel.expenses.isEmpty {
-                EmptyStateView(icon: "receipt", title: "No Expenses", message: "Add the first expense to this group.")
+            if viewModel.transactions.isEmpty {
+                EmptyStateView(icon: "receipt", title: "No Transactions", message: "Add the first transaction to this group.")
+                    .frame(maxHeight: .infinity)
             } else {
-                List(viewModel.expenses) { expense in
-                    GroupExpenseRow(expense: expense, members: viewModel.members)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        ForEach(groupedTransactions) { section in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(section.label)
+                                    .font(AppTypography.sectionHeader)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 4)
+
+                                VStack(spacing: 0) {
+                                    ForEach(Array(section.transactions.enumerated()), id: \.element.id) { index, transaction in
+                                        Button {
+                                            selectedTransaction = transaction
+                                        } label: {
+                                            GroupTransactionRow(transaction: transaction, members: viewModel.members, currentUserId: viewModel.currentUserId)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            if transaction.paid_by_user_id == viewModel.currentUserId {
+                                                Button(role: .destructive) {
+                                                    viewModel.deleteTransaction(transaction)
+                                                } label: {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                            }
+                                        }
+
+                                        if index < section.transactions.count - 1 {
+                                            Divider().padding(.leading, 58)
+                                        }
+                                    }
+                                }
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                    .padding(.bottom, 80)
                 }
-                .listStyle(.insetGrouped)
             }
         }
+    }
+
+    private struct GroupTransactionSection: Identifiable {
+        let id: String
+        let label: String
+        let transactions: [APIGroupTransaction]
+    }
+
+    private var groupedTransactions: [GroupTransactionSection] {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM dd"
+        var grouped: [String: [APIGroupTransaction]] = [:]
+
+        for tx in viewModel.transactions {
+            let day = calendar.startOfDay(for: tx.date)
+            let key = calendar.isDateInToday(day)
+                ? "TODAY"
+                : formatter.string(from: day).uppercased()
+            grouped[key, default: []].append(tx)
+        }
+
+        return grouped
+            .map { GroupTransactionSection(id: $0.key, label: $0.key, transactions: $0.value) }
+            .sorted { a, b in
+                if a.id == "TODAY" { return true }
+                if b.id == "TODAY" { return false }
+                return a.id > b.id
+            }
     }
 
     private var balancesSection: some View {
         Group {
             if viewModel.balances.isEmpty {
-                EmptyStateView(icon: "scale.3d", title: "No Balances", message: "Balances will appear once expenses are added.")
+                EmptyStateView(icon: "scale.3d", title: "No Balances", message: "Balances will appear once transactions are added.")
+                    .frame(maxHeight: .infinity)
             } else {
-                List {
-                    Section {
-                        ForEach(viewModel.balances, id: \.user_id) { balance in
-                            GroupBalanceRow(balance: balance, members: viewModel.members)
+                let debts = viewModel.pairwiseDebts
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Outstanding balances
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("OUTSTANDING")
+                                .font(AppTypography.sectionHeader)
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+
+                            VStack(spacing: 0) {
+                                if debts.isEmpty {
+                                    GroupBalanceSettledRow()
+                                } else {
+                                    ForEach(Array(debts.enumerated()), id: \.element.id) { index, debt in
+                                        GroupBalanceRow(
+                                            debt: debt,
+                                            members: viewModel.members,
+                                            currentUserId: viewModel.currentUserId
+                                        )
+                                        if index < debts.count - 1 {
+                                            Divider().padding(.leading, 58)
+                                        }
+                                    }
+                                }
+                            }
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
-                    }
-                    if viewModel.hasUnsettledBalances {
-                        Section {
-                            Button {
-                                viewModel.showSettlement = true
-                            } label: {
-                                Label("Record a Settlement", systemImage: "arrow.left.arrow.right")
-                                    .foregroundStyle(AppColors.accent)
+
+                        // Settlement history
+                        if !viewModel.settlements.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("SETTLEMENT HISTORY")
+                                    .font(AppTypography.sectionHeader)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 4)
+
+                                VStack(spacing: 0) {
+                                    ForEach(Array(viewModel.settlements.enumerated()), id: \.element.id) { index, settlement in
+                                        SettlementHistoryRow(
+                                            settlement: settlement,
+                                            members: viewModel.members,
+                                            currentUserId: viewModel.currentUserId
+                                        )
+                                        if index < viewModel.settlements.count - 1 {
+                                            Divider().padding(.leading, 58)
+                                        }
+                                    }
+                                }
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
                             }
                         }
                     }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                    .padding(.bottom, 80)
                 }
-                .listStyle(.insetGrouped)
             }
         }
     }
@@ -154,19 +281,27 @@ struct GroupDetailView: View {
         Group {
             if viewModel.members.isEmpty {
                 EmptyStateView(icon: "person.3", title: "No Members", message: "Invite people to join this group.")
+                    .frame(maxHeight: .infinity)
             } else {
-                List {
-                    Section {
-                        ForEach(viewModel.members) { member in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(viewModel.members.enumerated()), id: \.element.id) { index, member in
                             GroupMemberRow(
                                 member: member,
                                 isAdmin: member.id == viewModel.group.created_by,
                                 isPending: viewModel.isPending(member)
                             )
+                            if index < viewModel.members.count - 1 {
+                                Divider().padding(.leading, 58)
+                            }
                         }
                     }
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                    .padding(.bottom, 80)
                 }
-                .listStyle(.insetGrouped)
             }
         }
     }

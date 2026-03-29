@@ -5,9 +5,12 @@
 
 import Foundation
 
-struct APIExpense: Codable {
+// MARK: - Transaction
+
+struct APITransaction: Codable {
     let id: UUID
     let user_id: UUID
+    let type: String          // "expense" or "income"
     let amount: String
     let category: String
     let date: Date
@@ -18,11 +21,13 @@ struct APIExpense: Codable {
     let updated_at: Date
     let is_deleted: Bool
     let recurring_expense_id: UUID?
+    let group_transaction_id: UUID?
     let group_id: UUID?
     let group_name: String?
+    let settlement_id: UUID?
 }
 
-struct APIRecurringExpense: Codable {
+struct APIRecurringTransaction: Codable {
     let id: UUID
     let user_id: UUID
     let name: String
@@ -38,6 +43,7 @@ struct APIRecurringExpense: Codable {
     let notes: String?
     let created_at: Date
     let updated_at: Date
+    let type: String?
 }
 
 struct APIMonthlyBudget: Codable {
@@ -105,8 +111,9 @@ struct APILoginRequest: Codable {
     let password: String
 }
 
-struct APICreateExpenseRequest: Codable {
+struct APICreateTransactionRequest: Codable {
     let id: UUID?
+    let type: String          // "expense" or "income"
     let amount: String
     let category: String
     let date: Date
@@ -114,24 +121,19 @@ struct APICreateExpenseRequest: Codable {
     let description: String?
     let notes: String?
     let recurring_expense_id: UUID?
-    let group_id: UUID?
-    let group_name: String?
 }
 
-struct APIUpdateExpenseRequest: Codable {
+struct APIUpdateTransactionRequest: Codable {
+    let type: String?
     let amount: String?
     let category: String?
     let date: Date?
     let time: Date?
     let description: String?
     let notes: String?
-    let is_deleted: Bool?
-    let recurring_expense_id: UUID?
-    let group_id: UUID?
-    let group_name: String?
 }
 
-struct APICreateRecurringExpenseRequest: Codable {
+struct APICreateRecurringTransactionRequest: Codable {
     let id: UUID?
     let name: String
     let amount: String
@@ -143,9 +145,10 @@ struct APICreateRecurringExpenseRequest: Codable {
     let end_date: Date?
     let is_active: Bool
     let notes: String?
+    let type: String
 }
 
-struct APIUpdateRecurringExpenseRequest: Codable {
+struct APIUpdateRecurringTransactionRequest: Codable {
     let name: String?
     let amount: String?
     let category: String?
@@ -156,6 +159,7 @@ struct APIUpdateRecurringExpenseRequest: Codable {
     let end_date: Date?
     let is_active: Bool?
     let notes: String?
+    let type: String?
 }
 
 struct APICreateBudgetRequest: Codable {
@@ -201,7 +205,7 @@ struct APIGroupMember: Codable, Identifiable, Sendable {
     let id: UUID
     let email: String
     let username: String
-    let createdAt: Date?
+    let joined_at: Date?
 }
 
 struct APIGroupBalance: Codable, Sendable {
@@ -221,12 +225,26 @@ struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
-struct APIGroupExpense: Codable, Identifiable, Sendable {
+struct APIGroupTransaction: Codable, Identifiable, Sendable {
     let id: UUID
-    let description: String
-    let amount: String
-    let user_id: UUID
+    let group_id: UUID
+    let paid_by_user_id: UUID
+    let total_amount: String
+    let category: String
+    let date: Date
+    let description: String?
+    let notes: String?
+    let is_deleted: Bool
     let created_at: Date
+    let updated_at: Date
+    let splits: [APIGroupTransactionSplit]
+}
+
+struct APIGroupTransactionSplit: Codable, Sendable {
+    let id: UUID
+    let user_id: UUID
+    let amount: String
+    let transaction_id: UUID?
 }
 
 struct APIGroupDetails: Codable, Sendable {
@@ -241,11 +259,11 @@ struct APIGroupDetailsBody: Codable, Identifiable, Sendable {
     let created_at: Date
     let members: [APIGroupMember]
     let balances: [APIGroupBalance]
-    let expenses: [APIGroupExpense]
+    let settlements: [APISettlement]?
 }
 
-struct APIExpenseSplit: Codable, Sendable {
-    let userId: UUID
+struct APIGroupTransactionSplitInput: Codable, Sendable {
+    let user_id: UUID
     let amount: String
 }
 
@@ -257,12 +275,14 @@ struct APIAddMemberRequest: Codable, Sendable {
     let email: String
 }
 
-struct APICreateSharedExpenseRequest: Codable, Sendable {
-    let groupId: UUID
-    let description: String
+struct APICreateGroupTransactionRequest: Codable, Sendable {
+    let paid_by_user_id: UUID
+    let total_amount: String
     let category: String
-    let totalAmount: String
-    let splits: [APIExpenseSplit]
+    let date: Date
+    let description: String?
+    let notes: String?
+    let splits: [APIGroupTransactionSplitInput]
 }
 
 struct APIGroupMembersResponse: Codable, Sendable {
@@ -274,38 +294,44 @@ struct APIGroupsListResponse: Codable, Sendable {
 }
 
 struct APICreateSettlementRequest: Codable, Sendable {
-    let groupId: UUID
-    let fromUser: UUID
-    let toUser: UUID
+    let group_id: UUID
+    let from_user: UUID
+    let to_user: UUID
     let amount: String
+    let notes: String?
+
+    init(group_id: UUID, from_user: UUID, to_user: UUID, amount: String, notes: String? = nil) {
+        self.group_id = group_id
+        self.from_user = from_user
+        self.to_user = to_user
+        self.amount = amount
+        self.notes = notes
+    }
 }
 
 struct APISettlement: Codable, Identifiable, Sendable {
     let id: UUID
-    let groupId: UUID
-    let fromUser: UUID
-    let toUser: UUID
+    let group_id: UUID?
+    let from_user: UUID
+    let to_user: UUID
     let amount: String
-    let createdAt: Date
+    let notes: String?
+    let created_at: Date
 }
 
 // MARK: - Dashboard
 
 struct APIMonthlyDashboardResponse: Codable {
-    let totalExpenses: String?
-    let total_expenses: String?
-    let expenseCount: Int?
-    let expense_count: Int?
+    let totalTransactions: String?
+    let transactionCount: Int?
     let categoryBreakdown: [APICategoryBreakdown]?
     let category_breakdown: [APICategoryBreakdown]?
     let budgetStatus: APIBudgetStatus?
     let budget_status: APIBudgetStatus?
 
     enum CodingKeys: String, CodingKey {
-        case totalExpenses = "totalExpenses"
-        case total_expenses = "total_expenses"
-        case expenseCount = "expenseCount"
-        case expense_count = "expense_count"
+        case totalTransactions = "total_expenses"
+        case transactionCount = "expenseCount"
         case categoryBreakdown = "categoryBreakdown"
         case category_breakdown = "category_breakdown"
         case budgetStatus = "budgetStatus"

@@ -2,25 +2,29 @@ import SwiftUI
 
 enum TabItem: String, CaseIterable {
     case overview
+    case transactions
     case groups
     case settings
 }
 
 struct MainTabView: View {
-    @State private var selectedTab: TabItem = .overview
+    @AppStorage("selectedTab") private var selectedTab: TabItem = .overview
     @State private var tabChanged = false
+    @State private var pendingRoute: AppRoute?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Overview", systemImage: "house.fill", value: .overview) {
-                Overview()
+                Overview(pendingRoute: $pendingRoute)
             }
 
-            Tab("Groups", systemImage: "person.2.fill", value: .groups) {
-                if authService.isAuthenticated {
-                    GroupsListView()
-                } else {
-                    GroupsLockedView()
+            Tab("Transactions", systemImage: "list.bullet", value: .transactions) {
+                TransactionsView()
+            }
+
+            if authService.isAuthenticated {
+                Tab("Groups", systemImage: "person.2.fill", value: .groups) {
+                    GroupsListView(pendingRoute: $pendingRoute)
                 }
             }
 
@@ -35,6 +39,20 @@ struct MainTabView: View {
         }
         .onChange(of: tabChanged) { _, newValue in
             if newValue { tabChanged = false }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .appRouteReceived)) { notification in
+            guard let route = notification.object as? AppRoute else { return }
+            switch route {
+            case .transaction:
+                selectedTab = .transactions
+            case .group:
+                guard authService.isAuthenticated else { return }
+                selectedTab = .groups
+            }
+            pendingRoute = route
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .transactionsCategoryFilter)) { _ in
+            selectedTab = .transactions
         }
     }
 }

@@ -31,9 +31,9 @@ struct ChangeQueueManagerTests {
     // MARK: - Auth guard
 
     @Test
-    func test_replayAll_skips_whenNotAuthenticated() async throws {
-        MockAuthService.shared.isAuthenticated = false
-        defer { MockAuthService.shared.isAuthenticated = true }
+    func testReplayAllSkipsWhenNotAuthenticated() async throws {
+        MockAuthService.shared.authState = .guest
+        defer { MockAuthService.shared.authState = .authenticated(APIUser(id: UUID(), email: "", username: "", created_at: Date())) }
 
         let container = try makeContainer()
         let context = ModelContext(container)
@@ -42,9 +42,8 @@ struct ChangeQueueManagerTests {
         let manager = makeManager()
         manager.configure(container: container)
 
-        await manager.replayAll(context: context)
+        await manager.replayAll(context: context, isAuthenticated: false)
 
-        // Auth guard fired — nothing was touched, change still in queue with retryCount == 0
         let remaining = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(remaining.count == 1)
         #expect(remaining.first?.retryCount == 0)
@@ -53,7 +52,7 @@ struct ChangeQueueManagerTests {
     // MARK: - Enqueue + deduplication
 
     @Test
-    func test_enqueue_createThenUpdate_mergesPayload() throws {
+    func testEnqueueCreateThenUpdateMergesPayload() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let manager = makeManager()
@@ -80,7 +79,6 @@ struct ChangeQueueManagerTests {
         )
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
-        // create + update should collapse into one create with updated payload
         #expect(all.count == 1)
         #expect(all.first?.action == "create")
         let payloadString = all.first?.payload.flatMap { String(data: $0, encoding: .utf8) }
@@ -88,7 +86,7 @@ struct ChangeQueueManagerTests {
     }
 
     @Test
-    func test_enqueue_createThenDelete_cancelsOut() throws {
+    func testEnqueueCreateThenDeleteCancelsOut() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let manager = makeManager()
@@ -115,12 +113,11 @@ struct ChangeQueueManagerTests {
         )
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
-        // Created and then immediately deleted — nothing needs to be synced
         #expect(all.count == 0)
     }
 
     @Test
-    func test_enqueue_updateThenDelete_becomesDelete() throws {
+    func testEnqueueUpdateThenDeleteBecomesDelete() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let manager = makeManager()
@@ -153,7 +150,7 @@ struct ChangeQueueManagerTests {
     }
 
     @Test
-    func test_enqueue_differentEntities_areKeptSeparate() throws {
+    func testEnqueueDifferentEntitiesAreKeptSeparate() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let manager = makeManager()
@@ -171,7 +168,7 @@ struct ChangeQueueManagerTests {
     // MARK: - clearAll
 
     @Test
-    func test_clearAll_removesAllPendingChanges() throws {
+    func testClearAllRemovesAllPendingChanges() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let manager = makeManager()
@@ -191,7 +188,7 @@ struct ChangeQueueManagerTests {
     // MARK: - pendingCount
 
     @Test
-    func test_pendingCount_reflectsQueueSize() throws {
+    func testPendingCountReflectsQueueSize() throws {
         let container = try makeContainer()
         let manager = makeManager()
         manager.configure(container: container)

@@ -6,14 +6,14 @@ import Testing
 struct AuthTokenTests {
 
     @Test
-    func test_authToken_init_storesToken() {
+    func testAuthTokenInitStoresToken() {
         let token = AuthToken(token: "test-token-123")
 
         #expect(token.token == "test-token-123")
     }
 
     @Test
-    func test_authToken_init_setsCreatedAtToNow() {
+    func testAuthTokenInitSetsCreatedAtToNow() {
         let before = Date()
         let token = AuthToken(token: "any")
         let after = Date()
@@ -23,7 +23,7 @@ struct AuthTokenTests {
     }
 
     @Test
-    func test_authToken_storesJWTString() {
+    func testAuthTokenStoresJWTString() {
         let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature"
         let token = AuthToken(token: jwt)
 
@@ -31,8 +31,7 @@ struct AuthTokenTests {
     }
 
     @Test
-    func test_authToken_emptyStringIsStoredAsIs() {
-        // Edge case: empty token string should be stored exactly as passed
+    func testAuthTokenEmptyStringIsStoredAsIs() {
         let token = AuthToken(token: "")
 
         #expect(token.token == "")

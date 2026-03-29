@@ -1,32 +1,55 @@
 import SwiftUI
 import SwiftData
 
-struct RecurringExpensesView: View {
+struct RecurringTransactionsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \RecurringExpense.name)
-    private var recurringExpenses: [RecurringExpense]
-    
-    @State private var viewModel = RecurringExpensesViewModel()
+    @Query(sort: \RecurringTransaction.name)
+    private var recurringTransactions: [RecurringTransaction]
+
+    @State private var viewModel = RecurringTransactionsViewModel()
     @State private var rowTapped = false
     @State private var deleteTriggered = false
     @State private var addTriggered = false
-    
+
     var body: some View {
         Group {
-            if viewModel.allRecurringExpenses.isEmpty {
+            if viewModel.allRecurring.isEmpty {
                 EmptyStateView(
                     icon: "arrow.clockwise.circle.fill",
-                    title: "No recurring expenses",
+                    title: "No recurring transactions",
                     message: "Add subscriptions and regular bills to track them automatically"
                 )
             } else {
                 List {
-                    if !viewModel.activeExpenses.isEmpty {
-                        Section("Active") {
-                            ForEach(viewModel.activeExpenses) { expense in
-                                RecurringExpenseRow(expense: expense, onTap: {
+                    if !viewModel.upcomingThisMonth.isEmpty {
+                        Section {
+                            ForEach(viewModel.upcomingThisMonth) { item in
+                                RecurringTransactionRow(recurring: item, onTap: {
                                     rowTapped = true
-                                    viewModel.editingExpense = expense
+                                    viewModel.editingRecurring = item
+                                })
+                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .onChange(of: rowTapped) { _, newValue in
+                                    if newValue { rowTapped = false }
+                                }
+                            }
+                        } header: {
+                            HStack {
+                                Text("Upcoming This Month")
+                                Spacer()
+                                Text(CurrencyFormatter.format(viewModel.upcomingTotalThisMonth))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppColors.expense)
+                            }
+                        }
+                    }
+
+                    if !viewModel.activeRecurring.isEmpty {
+                        Section("Active") {
+                            ForEach(viewModel.activeRecurring) { item in
+                                RecurringTransactionRow(recurring: item, onTap: {
+                                    rowTapped = true
+                                    viewModel.editingRecurring = item
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                                 .onChange(of: rowTapped) { _, newValue in
@@ -36,7 +59,7 @@ struct RecurringExpensesView: View {
                             .onDelete { indexSet in
                                 deleteTriggered = true
                                 for index in indexSet {
-                                    viewModel.deactivateExpense(at: index)
+                                    viewModel.deactivate(at: index)
                                 }
                             }
                             .sensoryFeedback(.warning, trigger: deleteTriggered)
@@ -45,13 +68,13 @@ struct RecurringExpensesView: View {
                             }
                         }
                     }
-                    
-                    if !viewModel.pausedExpenses.isEmpty {
+
+                    if !viewModel.pausedRecurring.isEmpty {
                         Section("Paused") {
-                            ForEach(viewModel.pausedExpenses) { expense in
-                                RecurringExpenseRow(expense: expense, onTap: {
+                            ForEach(viewModel.pausedRecurring) { item in
+                                RecurringTransactionRow(recurring: item, onTap: {
                                     rowTapped = true
-                                    viewModel.editingExpense = expense
+                                    viewModel.editingRecurring = item
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                                 .onChange(of: rowTapped) { _, newValue in
@@ -60,8 +83,8 @@ struct RecurringExpensesView: View {
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         deleteTriggered = true
-                                        if let index = viewModel.pausedExpenses.firstIndex(where: { $0.id == expense.id }) {
-                                            viewModel.deleteExpense(at: index)
+                                        if let index = viewModel.pausedRecurring.firstIndex(where: { $0.id == item.id }) {
+                                            viewModel.delete(at: index)
                                         }
                                     } label: {
                                         Label("Delete", systemImage: "trash")
@@ -88,28 +111,28 @@ struct RecurringExpensesView: View {
                 .onChange(of: addTriggered) { _, newValue in
                     if newValue { addTriggered = false }
                 }
-                .accessibilityLabel("Add recurring expense")
+                .accessibilityLabel("Add recurring transaction")
             }
         }
         .sheet(isPresented: $viewModel.showAddSheet) {
-            AddRecurringExpenseSheet()
+            AddRecurringTransactionSheet()
         }
-        .sheet(item: $viewModel.editingExpense) { expense in
-            EditRecurringExpenseSheet(expense: expense)
+        .sheet(item: $viewModel.editingRecurring) { item in
+            EditRecurringTransactionSheet(recurring: item)
         }
         .task {
             viewModel.modelContext = modelContext
-            viewModel.update(expenses: recurringExpenses)
+            viewModel.update(recurring: recurringTransactions)
         }
-        .onChange(of: recurringExpenses) { _, newValue in
-            viewModel.update(expenses: newValue)
+        .onChange(of: recurringTransactions) { _, newValue in
+            viewModel.update(recurring: newValue)
         }
     }
 }
 
 #Preview {
     NavigationStack {
-        RecurringExpensesView()
-            .modelContainer(for: RecurringExpense.self)
+        RecurringTransactionsView()
+            .modelContainer(for: RecurringTransaction.self)
     }
 }

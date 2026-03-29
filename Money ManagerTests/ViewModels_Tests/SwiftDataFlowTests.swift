@@ -5,22 +5,22 @@ import Testing
 
 @Suite(.serialized)
 @MainActor
-struct AddRecurringExpenseSwiftDataTests {
+struct AddRecurringTransactionSwiftDataTests {
     
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self, RecurringExpense.self,
+            for: Transaction.self, MonthlyBudget.self, CustomCategory.self, RecurringTransaction.self,
             configurations: config
         )
     }
     
     @Test
-    func testSavePersistsRecurringExpense() throws {
+    func testSavePersistsRecurringTransaction() throws {
         let container = try makeContainer()
         let context = container.mainContext
         
-        let viewModel = AddRecurringExpenseViewModel()
+        let viewModel = AddRecurringTransactionViewModel()
         viewModel.modelContext = context
         viewModel.name = "Netflix"
         viewModel.amount = "649"
@@ -33,7 +33,7 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<RecurringTransaction>()
         let saved = try context.fetch(descriptor)
         
         #expect(saved.count == 1)
@@ -51,7 +51,7 @@ struct AddRecurringExpenseSwiftDataTests {
         let container = try makeContainer()
         let context = container.mainContext
         
-        let viewModel = AddRecurringExpenseViewModel()
+        let viewModel = AddRecurringTransactionViewModel()
         viewModel.modelContext = context
         viewModel.name = "Gym"
         viewModel.amount = "500"
@@ -63,7 +63,7 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<RecurringTransaction>()
         let saved = try context.fetch(descriptor)
         
         #expect(saved.first?.endDate == nil)
@@ -76,7 +76,7 @@ struct AddRecurringExpenseSwiftDataTests {
         
         let endDate = Date()
         
-        let viewModel = AddRecurringExpenseViewModel()
+        let viewModel = AddRecurringTransactionViewModel()
         viewModel.modelContext = context
         viewModel.name = "Trial Sub"
         viewModel.amount = "99"
@@ -89,7 +89,7 @@ struct AddRecurringExpenseSwiftDataTests {
         
         #expect(result == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<RecurringTransaction>()
         let saved = try context.fetch(descriptor)
         
         #expect(saved.first?.endDate != nil)
@@ -103,7 +103,7 @@ struct AddCategorySwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
+            for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }
@@ -192,7 +192,7 @@ struct ManageCategoriesSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Expense.self, MonthlyBudget.self, CustomCategory.self,
+            for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
             configurations: config
         )
     }

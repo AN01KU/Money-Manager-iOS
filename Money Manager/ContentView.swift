@@ -2,12 +2,30 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @State private var showSessionExpiredAlert = false
+    @State private var showLoginSheet = false
 
     var body: some View {
-        if hasCompletedOnboarding {
-            MainTabView()
-        } else {
-            OnboardingView()
+        Group {
+            if hasCompletedOnboarding {
+                MainTabView()
+            } else {
+                OnboardingView()
+            }
+        }
+        .alert("Session Expired", isPresented: $showSessionExpiredAlert) {
+            Button("Log In Again") { showLoginSheet = true }
+            Button("Dismiss", role: .cancel) {}
+        } message: {
+            Text("Your session has expired. Please log in again to continue syncing.")
+        }
+        .sheet(isPresented: $showLoginSheet) {
+            LoginView(isDismissable: true)
+        }
+        .onChange(of: authService.authState) { _, newState in
+            if case .expired = newState {
+                showSessionExpiredAlert = true
+            }
         }
     }
 }

@@ -33,8 +33,8 @@ struct Money_ManagerApp: App {
         #endif
         
         let schema = Schema([
-            Expense.self,
-            RecurringExpense.self,
+            Transaction.self,
+            RecurringTransaction.self,
             CustomCategory.self,
             MonthlyBudget.self,
             PendingChange.self,
@@ -42,7 +42,7 @@ struct Money_ManagerApp: App {
             AuthToken.self,
             SplitGroupModel.self,
             GroupMemberModel.self,
-            GroupExpenseModel.self,
+            GroupTransactionModel.self,
             GroupBalanceModel.self
         ])
         
@@ -53,7 +53,7 @@ struct Money_ManagerApp: App {
 
             SessionStore.shared.configure(container: container)
 
-            RecurringExpenseService.generatePendingExpenses(context: container.mainContext)
+            RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
             CategorySeeder.seedIfNeeded(context: container.mainContext)
             
             #if DEBUG
@@ -68,21 +68,25 @@ struct Money_ManagerApp: App {
         
         NetworkMonitor.shared.startMonitoring()
         
-        syncService.configure(container: container)
+        syncService.configure(container: container, authService: authService)
     }
     
     #if DEBUG
     private static func injectTestData(context: ModelContext) {
-        try? context.delete(model: Expense.self)
+        try? context.delete(model: Transaction.self)
         try? context.delete(model: MonthlyBudget.self)
-        
-        for expense in TestData.generatePersonalExpenses() {
-            context.insert(expense)
+        try? context.delete(model: RecurringTransaction.self)
+
+        for transaction in TestData.generatePersonalTransactions() {
+            context.insert(transaction)
         }
         for budget in TestData.generateBudgets() {
             context.insert(budget)
         }
-        
+        for recurring in TestData.generateRecurringTransactions() {
+            context.insert(recurring)
+        }
+
         try? context.save()
     }
     #endif
@@ -100,6 +104,10 @@ struct Money_ManagerApp: App {
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     handleScenePhaseChange(newPhase)
+                }
+                .onOpenURL { url in
+                    guard let route = AppRoute(url: url) else { return }
+                    NotificationCenter.default.post(name: .appRouteReceived, object: route)
                 }
         }
         .modelContainer(container)

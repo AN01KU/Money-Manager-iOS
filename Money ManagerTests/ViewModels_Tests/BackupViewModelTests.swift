@@ -45,8 +45,8 @@ struct ExportDataTypeTests {
     @Test
     func testAllCasesIconsAndIds() {
         let expectedIcons: [ExportDataType: String] = [
-            .expenses: "creditcard.fill",
-            .recurringExpenses: "arrow.clockwise.circle.fill",
+            .transactions: "creditcard.fill",
+            .recurring: "arrow.clockwise.circle.fill",
             .budgets: "chart.bar.fill",
             .categories: "folder.fill",
             .all: "archivebox.fill"
@@ -64,29 +64,28 @@ struct ExportDataTypeTests {
 struct ExportDataStructTests {
     
     @Test
-    func testExpenseDataInitialization() {
-        let expenseData = ExportData.ExpenseData(
+    func testTransactionDataInitialization() {
+        let expenseData = ExportData.TransactionData(
             id: "test-id",
             amount: 100.50,
             category: "Food",
             date: Date(),
             time: nil,
-            expenseDescription: "Lunch",
+            transactionDescription: "Lunch",
             notes: nil,
             recurringExpenseId: nil,
-            groupId: nil,
-            groupName: nil
+            groupTransactionId: nil
         )
         
         #expect(expenseData.id == "test-id")
         #expect(expenseData.amount == 100.50)
         #expect(expenseData.category == "Food")
-        #expect(expenseData.expenseDescription == "Lunch")
+        #expect(expenseData.transactionDescription == "Lunch")
     }
     
     @Test
-    func testRecurringExpenseDataInitialization() {
-        let recurringData = ExportData.RecurringExpenseData(
+    func testRecurringTransactionDataInitialization() {
+        let recurringData = ExportData.RecurringTransactionData(
             id: "rec-1",
             name: "Netflix",
             amount: 649,
@@ -143,17 +142,16 @@ struct ExportDataStructTests {
     
     @Test
     func testExportDataWithAllFields() {
-        let expenseData = ExportData.ExpenseData(
+        let expenseData = ExportData.TransactionData(
             id: "exp-1",
             amount: 100,
             category: "Food",
             date: Date(),
             time: nil,
-            expenseDescription: "Test",
+            transactionDescription: "Test",
             notes: nil,
             recurringExpenseId: nil,
-            groupId: nil,
-            groupName: nil
+            groupTransactionId: nil
         )
         
         let budgetData = ExportData.MonthlyBudgetData(
@@ -166,37 +164,36 @@ struct ExportDataStructTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: [expenseData],
-            recurringExpenses: nil,
+            transactions: [expenseData],
+            recurringTransactions: nil,
             budgets: [budgetData],
             categories: nil
         )
         
-        #expect(exportData.expenses?.count == 1)
+        #expect(exportData.transactions?.count == 1)
         #expect(exportData.budgets?.count == 1)
         #expect(exportData.appVersion == "1.0")
     }
     
     @Test
     func testExportDataCodable() throws {
-        let expenseData = ExportData.ExpenseData(
+        let expenseData = ExportData.TransactionData(
             id: "exp-1",
             amount: 100,
             category: "Food",
             date: Date(),
             time: nil,
-            expenseDescription: "Test",
+            transactionDescription: "Test",
             notes: nil,
             recurringExpenseId: nil,
-            groupId: nil,
-            groupName: nil
+            groupTransactionId: nil
         )
         
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: [expenseData],
-            recurringExpenses: nil,
+            transactions: [expenseData],
+            recurringTransactions: nil,
             budgets: nil,
             categories: nil
         )
@@ -209,8 +206,8 @@ struct ExportDataStructTests {
     }
     
     @Test
-    func testRecurringExpenseDataCodable() throws {
-        let recurringData = ExportData.RecurringExpenseData(
+    func testRecurringTransactionDataCodable() throws {
+        let recurringData = ExportData.RecurringTransactionData(
             id: "rec-1",
             name: "Netflix",
             amount: 649,
@@ -284,7 +281,7 @@ struct BackupViewModelTests {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
         
-        for dataType in [ExportDataType.expenses, .recurringExpenses, .budgets, .categories] {
+        for dataType in [ExportDataType.transactions, .recurring, .budgets, .categories] {
             viewModel.selectedDataType = dataType
             #expect(viewModel.exportDescription.contains("JSON"))
             #expect(viewModel.exportDescription.contains("backup") || viewModel.exportDescription.contains("suitable"))
@@ -376,9 +373,10 @@ struct BackupViewModelTests {
     func testParseDateISO8601() {
         let viewModel = BackupViewModel()
         let result = viewModel.parseDate("2026-03-12T10:30:00Z")
-        #expect(result.date != nil)
+        let calendar = Calendar.current
+        #expect(calendar.component(.year, from: result.date) == 2026)
     }
-    
+
     @Test
     func testParseDateWithTime() {
         let viewModel = BackupViewModel()
@@ -408,33 +406,34 @@ struct BackupViewModelTests {
     func testParseDateEmptyString() {
         let viewModel = BackupViewModel()
         let result = viewModel.parseDate("")
-        #expect(result.date != nil)
+        // Empty string falls back to today's date; just verify it's a plausible date
+        #expect(result.date.timeIntervalSince1970 > 0)
     }
     
     // MARK: - Expense CSV Row Parse Tests
     
     @Test
-    func testParseExpenseCSVRow() {
+    func testParseTransactionCSVRow() {
         let viewModel = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group id", "group name"]
         let values = ["uuid-123", "100.50", "Food", "2026-03-12T10:30:00Z", "", "Lunch", "", "", "", ""]
         
-        let result = viewModel.parseExpenseCSVRow(values, headers: headers)
+        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
         
         #expect(result != nil)
         #expect(result?.id == "uuid-123")
         #expect(result?.amount == 100.50)
         #expect(result?.category == "Food")
-        #expect(result?.expenseDescription == "Lunch")
+        #expect(result?.transactionDescription == "Lunch")
     }
     
     @Test
-    func testParseExpenseCSVRowWithMissingValues() {
+    func testParseTransactionCSVRowWithMissingValues() {
         let viewModel = BackupViewModel()
         let headers = ["id", "amount", "category", "date"]
         let values = ["uuid-123", "100", "Food"]
         
-        let result = viewModel.parseExpenseCSVRow(values, headers: headers)
+        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
         #expect(result == nil)
     }
     
@@ -520,37 +519,35 @@ struct BackupViewModelTests {
     }
     
     @Test
-    func testParseExpenseCSVRowWithAllFields() {
+    func testParseTransactionCSVRowWithAllFields() {
         let viewModel = BackupViewModel()
-        let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group id", "group name"]
-        let values = ["uuid-1", "250.75", "Transport", "2026-03-12T10:30:00Z", "2026-03-12T14:00:00Z", "Uber ride", "To airport", "rec-uuid", "grp-uuid", "Trip"]
-        
-        let result = viewModel.parseExpenseCSVRow(values, headers: headers)
-        
+        let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
+        let values = ["uuid-1", "250.75", "Transport", "2026-03-12T10:30:00Z", "2026-03-12T14:00:00Z", "Uber ride", "To airport", "rec-uuid", "grp-uuid"]
+
+        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
+
         #expect(result != nil)
         #expect(result?.amount == 250.75)
         #expect(result?.category == "Transport")
-        #expect(result?.expenseDescription == "Uber ride")
+        #expect(result?.transactionDescription == "Uber ride")
         #expect(result?.notes == "To airport")
         #expect(result?.recurringExpenseId == "rec-uuid")
-        #expect(result?.groupId == "grp-uuid")
-        #expect(result?.groupName == "Trip")
+        #expect(result?.groupTransactionId == "grp-uuid")
     }
     
     @Test
-    func testParseExpenseCSVRowWithEmptyOptionalFields() {
+    func testParseTransactionCSVRowWithEmptyOptionalFields() {
         let viewModel = BackupViewModel()
-        let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group id", "group name"]
-        let values = ["uuid-1", "50", "Food", "2026-03-12T10:30:00Z", "", "", "", "", "", ""]
-        
-        let result = viewModel.parseExpenseCSVRow(values, headers: headers)
-        
+        let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
+        let values = ["uuid-1", "50", "Food", "2026-03-12T10:30:00Z", "", "", "", "", ""]
+
+        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
+
         #expect(result != nil)
-        #expect(result?.expenseDescription == nil)
+        #expect(result?.transactionDescription == nil)
         #expect(result?.notes == nil)
         #expect(result?.recurringExpenseId == nil)
-        #expect(result?.groupId == nil)
-        #expect(result?.groupName == nil)
+        #expect(result?.groupTransactionId == nil)
     }
     
     // MARK: - Date Parsing Edge Cases
@@ -604,7 +601,7 @@ struct BackupViewModelTests {
 struct BackupViewModelExportTests {
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)
@@ -613,21 +610,21 @@ struct BackupViewModelExportTests {
     // MARK: - Export Expenses Tests
     
     @Test
-    func testExportExpensesAsCSV() async {
+    func testExportTransactionsAsCSV() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .expenses
+        viewModel.selectedDataType = .transactions
         
-        let expense = Expense(
+        let expense = Transaction(
             amount: 100.50,
             category: "Food & Dining",
             date: Date(),
-            expenseDescription: "Lunch"
+            transactionDescription: "Lunch"
         )
         
         await viewModel.exportData(
-            expenses: [expense],
-            recurringExpenses: [],
+            transactions: [expense],
+            recurringTransactions: [],
             budgets: [],
             categories: []
         )
@@ -646,21 +643,21 @@ struct BackupViewModelExportTests {
     }
     
     @Test
-    func testExportExpensesAsJSON() async {
+    func testExportTransactionsAsJSON() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
-        viewModel.selectedDataType = .expenses
+        viewModel.selectedDataType = .transactions
         
-        let expense = Expense(
+        let expense = Transaction(
             amount: 200.0,
             category: "Transport",
             date: Date(),
-            expenseDescription: "Uber"
+            transactionDescription: "Uber"
         )
         
         await viewModel.exportData(
-            expenses: [expense],
-            recurringExpenses: [],
+            transactions: [expense],
+            recurringTransactions: [],
             budgets: [],
             categories: []
         )
@@ -673,25 +670,25 @@ struct BackupViewModelExportTests {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let decoded = try! decoder.decode(ExportData.self, from: data)
-            #expect(decoded.expenses?.count == 1)
-            #expect(decoded.expenses?.first?.amount == 200.0)
-            #expect(decoded.expenses?.first?.category == "Transport")
+            #expect(decoded.transactions?.count == 1)
+            #expect(decoded.transactions?.first?.amount == 200.0)
+            #expect(decoded.transactions?.first?.category == "Transport")
         }
     }
     
     @Test
-    func testExportExpensesFiltersDeletedExpenses() async {
+    func testExportTransactionsFiltersDeletedTransactions() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .expenses
+        viewModel.selectedDataType = .transactions
         
-        let active = Expense(amount: 100, category: "Food", date: Date())
-        let deleted = Expense(amount: 200, category: "Food", date: Date())
+        let active = Transaction(amount: 100, category: "Food", date: Date())
+        let deleted = Transaction(amount: 200, category: "Food", date: Date())
         deleted.isDeleted = true
         
         await viewModel.exportData(
-            expenses: [active, deleted],
-            recurringExpenses: [],
+            transactions: [active, deleted],
+            recurringTransactions: [],
             budgets: [],
             categories: []
         )
@@ -716,8 +713,8 @@ struct BackupViewModelExportTests {
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [],
+            transactions: [],
+            recurringTransactions: [],
             budgets: [budget],
             categories: []
         )
@@ -740,8 +737,8 @@ struct BackupViewModelExportTests {
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [],
+            transactions: [],
+            recurringTransactions: [],
             budgets: [budget],
             categories: []
         )
@@ -768,8 +765,8 @@ struct BackupViewModelExportTests {
         )
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [],
+            transactions: [],
+            recurringTransactions: [],
             budgets: [],
             categories: [category]
         )
@@ -796,8 +793,8 @@ struct BackupViewModelExportTests {
         )
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [],
+            transactions: [],
+            recurringTransactions: [],
             budgets: [],
             categories: [category]
         )
@@ -812,12 +809,12 @@ struct BackupViewModelExportTests {
     // MARK: - Export Recurring Expenses Tests
     
     @Test
-    func testExportRecurringExpensesAsCSV() async {
+    func testExportRecurringTransactionsAsCSV() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .recurringExpenses
+        viewModel.selectedDataType = .recurring
         
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -828,8 +825,8 @@ struct BackupViewModelExportTests {
         )
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [recurring],
+            transactions: [],
+            recurringTransactions: [recurring],
             budgets: [],
             categories: []
         )
@@ -844,12 +841,12 @@ struct BackupViewModelExportTests {
     }
     
     @Test
-    func testExportRecurringExpensesAsJSON() async {
+    func testExportRecurringTransactionsAsJSON() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
-        viewModel.selectedDataType = .recurringExpenses
+        viewModel.selectedDataType = .recurring
         
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
@@ -860,8 +857,8 @@ struct BackupViewModelExportTests {
         )
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [recurring],
+            transactions: [],
+            recurringTransactions: [recurring],
             budgets: [],
             categories: []
         )
@@ -881,14 +878,14 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .all
         
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringExpense(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
+        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
         
         await viewModel.exportData(
-            expenses: [expense],
-            recurringExpenses: [recurring],
+            transactions: [expense],
+            recurringTransactions: [recurring],
             budgets: [budget],
             categories: [category]
         )
@@ -896,7 +893,7 @@ struct BackupViewModelExportTests {
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
-            #expect(content.contains("# EXPENSES"))
+            #expect(content.contains("# TRANSACTIONS"))
             #expect(content.contains("# RECURRING EXPENSES"))
             #expect(content.contains("# BUDGETS"))
             #expect(content.contains("# CATEGORIES"))
@@ -909,14 +906,14 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .all
         
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringExpense(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
+        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
         
         await viewModel.exportData(
-            expenses: [expense],
-            recurringExpenses: [recurring],
+            transactions: [expense],
+            recurringTransactions: [recurring],
             budgets: [budget],
             categories: [category]
         )
@@ -932,11 +929,11 @@ struct BackupViewModelExportTests {
     func testExportResetsExportingFlag() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .expenses
+        viewModel.selectedDataType = .transactions
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [],
+            transactions: [],
+            recurringTransactions: [],
             budgets: [],
             categories: []
         )
@@ -947,30 +944,29 @@ struct BackupViewModelExportTests {
     // MARK: - Export with Optional Fields
     
     @Test
-    func testExportExpenseWithOptionalFields() async {
+    func testExportTransactionWithOptionalFields() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .expenses
+        viewModel.selectedDataType = .transactions
         
-        let expense = Expense(
+        let expense = Transaction(
             amount: 500,
             category: "Travel",
             date: Date(),
             time: Date(),
-            expenseDescription: "Flight, to NYC",
+            transactionDescription: "Flight, to NYC",
             notes: "Business \"trip\"",
             recurringExpenseId: UUID(),
-            groupId: UUID(),
-            groupName: "Work Travel"
+            groupTransactionId: UUID()
         )
-        
+
         await viewModel.exportData(
-            expenses: [expense],
-            recurringExpenses: [],
+            transactions: [expense],
+            recurringTransactions: [],
             budgets: [],
             categories: []
         )
-        
+
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
@@ -983,9 +979,9 @@ struct BackupViewModelExportTests {
     func testExportRecurringWithDaysOfWeek() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .recurringExpenses
+        viewModel.selectedDataType = .recurring
         
-        let recurring = RecurringExpense(
+        let recurring = RecurringTransaction(
             name: "Gym",
             amount: 500,
             category: "Health",
@@ -998,8 +994,8 @@ struct BackupViewModelExportTests {
         )
         
         await viewModel.exportData(
-            expenses: [],
-            recurringExpenses: [recurring],
+            transactions: [],
+            recurringTransactions: [recurring],
             budgets: [],
             categories: []
         )
@@ -1018,7 +1014,7 @@ struct BackupViewModelExportTests {
 struct BackupViewModelImportTests {
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
+        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return ModelContext(container)
@@ -1027,28 +1023,27 @@ struct BackupViewModelImportTests {
     // MARK: - JSON Import Tests
     
     @Test
-    func testImportExpensesFromJSON() async throws {
+    func testImportTransactionsFromJSON() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: [
-                ExportData.ExpenseData(
+            transactions: [
+                ExportData.TransactionData(
                     id: UUID().uuidString,
                     amount: 100.50,
                     category: "Food",
                     date: Date(),
                     time: nil,
-                    expenseDescription: "Lunch",
+                    transactionDescription: "Lunch",
                     notes: nil,
                     recurringExpenseId: nil,
-                    groupId: nil,
-                    groupName: nil
+                    groupTransactionId: nil
                 )
             ],
-            recurringExpenses: nil,
+            recurringTransactions: nil,
             budgets: nil,
             categories: nil
         )
@@ -1066,9 +1061,9 @@ struct BackupViewModelImportTests {
         
         #expect(viewModel.isImporting == false)
         #expect(viewModel.showSuccess == true)
-        #expect(viewModel.successMessage?.contains("1 expenses") == true)
+        #expect(viewModel.successMessage?.contains("1 transactions") == true)
         
-        let descriptor = FetchDescriptor<Expense>()
+        let descriptor = FetchDescriptor<Transaction>()
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported.first?.amount == 100.50)
@@ -1083,8 +1078,8 @@ struct BackupViewModelImportTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: nil,
-            recurringExpenses: nil,
+            transactions: nil,
+            recurringTransactions: nil,
             budgets: [
                 ExportData.MonthlyBudgetData(id: UUID().uuidString, year: 2026, month: 3, limit: 5000),
                 ExportData.MonthlyBudgetData(id: UUID().uuidString, year: 2026, month: 4, limit: 6000)
@@ -1119,8 +1114,8 @@ struct BackupViewModelImportTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: nil,
-            recurringExpenses: nil,
+            transactions: nil,
+            recurringTransactions: nil,
             budgets: nil,
             categories: [
                 ExportData.CustomCategoryData(
@@ -1156,16 +1151,16 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportRecurringExpensesFromJSON() async throws {
+    func testImportRecurringTransactionsFromJSON() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: nil,
-            recurringExpenses: [
-                ExportData.RecurringExpenseData(
+            transactions: nil,
+            recurringTransactions: [
+                ExportData.RecurringTransactionData(
                     id: UUID().uuidString,
                     name: "Netflix",
                     amount: 649,
@@ -1198,9 +1193,9 @@ struct BackupViewModelImportTests {
         await viewModel.importData(from: tempURL, context: context)
         
         #expect(viewModel.showSuccess == true)
-        #expect(viewModel.successMessage?.contains("1 recurring expenses") == true)
+        #expect(viewModel.successMessage?.contains("1 recurring transactions") == true)
         
-        let descriptor = FetchDescriptor<RecurringExpense>()
+        let descriptor = FetchDescriptor<RecurringTransaction>()
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported.first?.name == "Netflix")
@@ -1215,15 +1210,15 @@ struct BackupViewModelImportTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: [
-                ExportData.ExpenseData(
+            transactions: [
+                ExportData.TransactionData(
                     id: UUID().uuidString, amount: 100, category: "Food", date: Date(),
-                    time: nil, expenseDescription: nil, notes: nil,
-                    recurringExpenseId: recId, groupId: nil, groupName: nil
+                    time: nil, transactionDescription: nil, notes: nil,
+                    recurringExpenseId: recId, groupTransactionId: nil
                 )
             ],
-            recurringExpenses: [
-                ExportData.RecurringExpenseData(
+            recurringTransactions: [
+                ExportData.RecurringTransactionData(
                     id: recId, name: "Lunch", amount: 100, category: "Food",
                     frequency: "daily", dayOfMonth: nil, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
@@ -1253,8 +1248,8 @@ struct BackupViewModelImportTests {
         await viewModel.importData(from: tempURL, context: context)
         
         #expect(viewModel.showSuccess == true)
-        #expect(viewModel.successMessage?.contains("recurring expenses") == true)
-        #expect(viewModel.successMessage?.contains("expenses") == true)
+        #expect(viewModel.successMessage?.contains("recurring transactions") == true)
+        #expect(viewModel.successMessage?.contains("transactions") == true)
         #expect(viewModel.successMessage?.contains("budgets") == true)
         #expect(viewModel.successMessage?.contains("categories") == true)
     }
@@ -1267,8 +1262,8 @@ struct BackupViewModelImportTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: nil,
-            recurringExpenses: nil,
+            transactions: nil,
+            recurringTransactions: nil,
             budgets: nil,
             categories: nil
         )
@@ -1308,7 +1303,7 @@ struct BackupViewModelImportTests {
     // MARK: - CSV Import Tests
     
     @Test
-    func testImportExpensesFromCSV() async throws {
+    func testImportTransactionsFromCSV() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
@@ -1327,7 +1322,7 @@ struct BackupViewModelImportTests {
         #expect(viewModel.showSuccess == true)
         #expect(viewModel.isImporting == false)
         
-        let descriptor = FetchDescriptor<Expense>()
+        let descriptor = FetchDescriptor<Transaction>()
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported.first?.amount == 150.50)
@@ -1389,9 +1384,9 @@ struct BackupViewModelImportTests {
         let context = createTestContext()
         
         let csv = """
-        # EXPENSES
-        id,amount,category,date,time,description,notes,recurring expense id,group id,group name
-        \(UUID().uuidString),100,Food,2026-03-12T10:30:00.000Z,,Lunch,,,,
+        # TRANSACTIONS
+        id,amount,category,date,time,description,notes,recurring expense id,group transaction id
+        \(UUID().uuidString),100,Food,2026-03-12T10:30:00.000Z,,Lunch,,,
         
         # BUDGETS
         id,year,month,limit
@@ -1411,7 +1406,7 @@ struct BackupViewModelImportTests {
         
         #expect(viewModel.showSuccess == true)
         
-        let expDescriptor = FetchDescriptor<Expense>()
+        let expDescriptor = FetchDescriptor<Transaction>()
         let budDescriptor = FetchDescriptor<MonthlyBudget>()
         let catDescriptor = FetchDescriptor<CustomCategory>()
         
@@ -1469,8 +1464,8 @@ struct BackupViewModelImportTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: nil,
-            recurringExpenses: nil,
+            transactions: nil,
+            recurringTransactions: nil,
             budgets: nil,
             categories: [
                 ExportData.CustomCategoryData(
@@ -1508,7 +1503,7 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportExpenseWithRecurringExpenseIdMapping() async throws {
+    func testImportTransactionWithRecurringTransactionIdMapping() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
@@ -1516,15 +1511,15 @@ struct BackupViewModelImportTests {
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: [
-                ExportData.ExpenseData(
+            transactions: [
+                ExportData.TransactionData(
                     id: UUID().uuidString, amount: 649, category: "Entertainment",
-                    date: Date(), time: nil, expenseDescription: "Netflix",
-                    notes: nil, recurringExpenseId: recId, groupId: nil, groupName: nil
+                    date: Date(), time: nil, transactionDescription: "Netflix",
+                    notes: nil, recurringExpenseId: recId, groupTransactionId: nil
                 )
             ],
-            recurringExpenses: [
-                ExportData.RecurringExpenseData(
+            recurringTransactions: [
+                ExportData.RecurringTransactionData(
                     id: recId, name: "Netflix", amount: 649, category: "Entertainment",
                     frequency: "monthly", dayOfMonth: 1, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
@@ -1546,9 +1541,9 @@ struct BackupViewModelImportTests {
         viewModel.selectedImportFormat = .json
         await viewModel.importData(from: tempURL, context: context)
         
-        let expDescriptor = FetchDescriptor<Expense>()
+        let expDescriptor = FetchDescriptor<Transaction>()
         let expenses = try context.fetch(expDescriptor)
-        let recDescriptor = FetchDescriptor<RecurringExpense>()
+        let recDescriptor = FetchDescriptor<RecurringTransaction>()
         let recurrings = try context.fetch(recDescriptor)
         
         #expect(expenses.count == 1)
@@ -1558,43 +1553,42 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportExpenseWithGroupFields() async throws {
+    func testImportTransactionWithGroupFields() async throws {
         let viewModel = BackupViewModel()
         let context = createTestContext()
         
-        let groupId = UUID().uuidString
+        let groupTransactionId = UUID().uuidString
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
-            expenses: [
-                ExportData.ExpenseData(
+            transactions: [
+                ExportData.TransactionData(
                     id: UUID().uuidString, amount: 500, category: "Travel",
-                    date: Date(), time: Date(), expenseDescription: "Hotel",
+                    date: Date(), time: Date(), transactionDescription: "Hotel",
                     notes: "Business", recurringExpenseId: nil,
-                    groupId: groupId, groupName: "Work Trip"
+                    groupTransactionId: groupTransactionId
                 )
             ],
-            recurringExpenses: nil,
+            recurringTransactions: nil,
             budgets: nil,
             categories: nil
         )
-        
+
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(exportData)
-        
+
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_import_groups.json")
         try data.write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
-        
+
         viewModel.selectedImportFormat = .json
         await viewModel.importData(from: tempURL, context: context)
-        
-        let descriptor = FetchDescriptor<Expense>()
+
+        let descriptor = FetchDescriptor<Transaction>()
         let expenses = try context.fetch(descriptor)
-        
+
         #expect(expenses.count == 1)
-        #expect(expenses.first?.groupName == "Work Trip")
-        #expect(expenses.first?.groupId != nil)
+        #expect(expenses.first?.groupTransactionId != nil)
     }
 }

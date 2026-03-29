@@ -16,8 +16,8 @@ final class SplitGroupModel {
     @Relationship(deleteRule: .cascade, inverse: \GroupMemberModel.group)
     var members: [GroupMemberModel] = []
 
-    @Relationship(deleteRule: .cascade, inverse: \GroupExpenseModel.group)
-    var expenses: [GroupExpenseModel] = []
+    @Relationship(deleteRule: .cascade, inverse: \GroupTransactionModel.group)
+    var transactions: [GroupTransactionModel] = []
 
     @Relationship(deleteRule: .cascade, inverse: \GroupBalanceModel.group)
     var balances: [GroupBalanceModel] = []
@@ -48,9 +48,9 @@ final class GroupMemberModel {
 }
 
 @Model
-final class GroupExpenseModel {
+final class GroupTransactionModel {
     @Attribute(.unique) var id: UUID
-    var expenseDescription: String
+    var transactionDescription: String
     var totalAmount: Double
     var paidBy: UUID
     var createdAt: Date
@@ -59,7 +59,7 @@ final class GroupExpenseModel {
 
     init(id: UUID, description: String, totalAmount: Double, paidBy: UUID, createdAt: Date) {
         self.id = id
-        self.expenseDescription = description
+        self.transactionDescription = description
         self.totalAmount = totalAmount
         self.paidBy = paidBy
         self.createdAt = createdAt

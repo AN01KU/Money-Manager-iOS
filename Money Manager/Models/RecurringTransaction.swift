@@ -1,5 +1,5 @@
 //
-//  RecurringExpense.swift
+//  RecurringTransaction.swift
 //  Money Manager
 //
 //  Created by Ankush Ganesh on 13/01/26.
@@ -9,26 +9,28 @@ import Foundation
 import SwiftData
 
 @Model
-final class RecurringExpense {
+final class RecurringTransaction {
     @Attribute(.unique) var id: UUID
-    
+
     var name: String
     var amount: Double
     var category: String
-    
+
     var frequency: String
     var dayOfMonth: Int?
     var daysOfWeek: [Int]?
-    
+
     var startDate: Date
     var endDate: Date?
     var isActive: Bool
     var lastAddedDate: Date?
-    
+
     var notes: String?
 
-    /// UUID of the linked CustomCategory. Nil for recurring expenses created before this field was added.
+    /// UUID of the linked CustomCategory. Nil for recurring transactions created before this field was added.
     var categoryId: UUID?
+
+    var type: String  // "expense" or "income"
 
     var createdAt: Date
     var updatedAt: Date
@@ -46,7 +48,8 @@ final class RecurringExpense {
         isActive: Bool = true,
         lastAddedDate: Date? = nil,
         notes: String? = nil,
-        categoryId: UUID? = nil
+        categoryId: UUID? = nil,
+        type: String = "expense"
     ) {
         self.id = id
         self.name = name
@@ -61,6 +64,7 @@ final class RecurringExpense {
         self.lastAddedDate = lastAddedDate
         self.notes = notes
         self.categoryId = categoryId
+        self.type = type
         self.createdAt = Date()
         self.updatedAt = Date()
     }

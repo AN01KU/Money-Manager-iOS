@@ -7,7 +7,7 @@
 
 import XCTest
 
-final class RecurringExpensesTests: XCTestCase {
+final class RecurringTransactionsTests: XCTestCase {
     
     var app: XCUIApplication!
     
@@ -41,7 +41,7 @@ final class RecurringExpensesTests: XCTestCase {
     
     // MARK: - Active Recurring Expenses
     
-    func testActiveExpensesDisplayed() throws {
+    func testActiveTransactionsDisplayed() throws {
         navigateToRecurring()
         
         // Test data has recurring expenses (Netflix, Gym, Insurance, Internet, Lunch)
@@ -59,13 +59,13 @@ final class RecurringExpensesTests: XCTestCase {
                          gymText.waitForExistence(timeout: 3) ||
                          insuranceText.waitForExistence(timeout: 3)
         
-        let emptyState = app.staticTexts["No recurring expenses"]
+        let emptyState = app.staticTexts["No recurring transactions"]
         let hasEmptyState = emptyState.waitForExistence(timeout: 2)
         
         XCTAssertTrue(hasExpenses || hasEmptyState, "Should show recurring expenses or empty state")
     }
     
-    func testExpenseRowShowsAmount() throws {
+    func testTransactionRowShowsAmount() throws {
         navigateToRecurring()
         
         // Look for currency amount display
@@ -76,7 +76,7 @@ final class RecurringExpensesTests: XCTestCase {
         }
     }
     
-    func testExpenseRowShowsFrequency() throws {
+    func testTransactionRowShowsFrequency() throws {
         navigateToRecurring()
         
         // Test data uses "monthly" and "weekly" frequencies
@@ -90,7 +90,7 @@ final class RecurringExpensesTests: XCTestCase {
         }
     }
     
-    func testExpenseRowShowsNextOccurrence() throws {
+    func testTransactionRowShowsNextOccurrence() throws {
         navigateToRecurring()
         
         let nextText = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Next:'")).firstMatch
@@ -202,7 +202,7 @@ final class RecurringExpensesTests: XCTestCase {
     
     // MARK: - Edit Recurring Expense
     
-    func testTapExpenseOpensEditSheet() throws {
+    func testTapTransactionOpensEditSheet() throws {
         navigateToRecurring()
         
         // Tap on first recurring expense
@@ -275,7 +275,7 @@ final class RecurringExpensesTests: XCTestCase {
         // This test verifies the empty state message text when it appears
         navigateToRecurring()
         
-        let emptyMessage = app.staticTexts["No recurring expenses"]
+        let emptyMessage = app.staticTexts["No recurring transactions"]
         let emptySubMessage = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'subscriptions'")).firstMatch
         
         if emptyMessage.waitForExistence(timeout: 2) {
