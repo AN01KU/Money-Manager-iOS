@@ -43,6 +43,7 @@ extension Transaction {
         self.isDeleted = api.is_deleted
         self.recurringExpenseId = api.recurring_expense_id
         self.groupTransactionId = api.group_transaction_id
+        self.groupId = api.group_id
         self.groupName = api.group_name
         self.settlementId = api.settlement_id
         self.updatedAt = api.updated_at

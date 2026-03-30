@@ -25,6 +25,7 @@ final class Transaction {
     
     var recurringExpenseId: UUID?
     var groupTransactionId: UUID?
+    var groupId: UUID?
     var groupName: String?
     var settlementId: UUID?
     

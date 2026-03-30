@@ -22,6 +22,10 @@ import SwiftData
         transaction.groupTransactionId != nil
     }
 
+    var isSettlementTransaction: Bool {
+        transaction.settlementId != nil
+    }
+
     private let changeQueue: ChangeQueueManagerProtocol
     private let auth: AuthServiceProtocol
 

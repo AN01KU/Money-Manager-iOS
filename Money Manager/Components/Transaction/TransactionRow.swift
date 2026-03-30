@@ -42,7 +42,7 @@ struct TransactionRow: View {
 
                 if transaction.settlementId != nil, let groupName = transaction.groupName {
                     SettlementBadge(groupName: groupName)
-                } else if let groupID = transaction.groupTransactionId {
+                } else if transaction.groupTransactionId != nil, let groupID = transaction.groupId {
                     GroupBadge(
                         groupName: transaction.groupName ?? "Group",
                         groupID: groupID
@@ -87,8 +87,10 @@ private struct SettlementBadge: View {
                 .font(AppTypography.rowMeta)
             Text(groupName)
                 .font(AppTypography.rowMeta)
+            Image(systemName: authService.isAuthenticated ? "chevron.right" : "lock.fill")
+                .font(AppTypography.badgeIcon)
         }
-        .foregroundStyle(AppColors.warning)
+        .foregroundStyle(authService.isAuthenticated ? AppColors.warning : .secondary)
     }
 }
 

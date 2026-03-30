@@ -23,9 +23,15 @@ struct TransactionDetailView: View {
                     // Hero
                     heroSection
 
+                    // Settlement banner
+                    if viewModel.isSettlementTransaction {
+                        SettlementTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId)
+                            .padding(.horizontal)
+                    }
+
                     // Group banner (single, no duplication)
                     if viewModel.isGroupTransaction {
-                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupTransactionId)
+                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId)
                             .padding(.horizontal)
                     }
 
