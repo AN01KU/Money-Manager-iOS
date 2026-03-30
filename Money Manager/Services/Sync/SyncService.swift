@@ -278,6 +278,11 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
+            let groupTxns = allTransactions.filter { $0.group_transaction_id != nil || $0.group_id != nil }
+            AppLogger.sync.debug("[GroupDebug] pullTransactions: total=\(allTransactions.count) with_group_data=\(groupTxns.count)")
+            for t in groupTxns {
+                AppLogger.sync.debug("[GroupDebug] txn id=\(t.id) group_transaction_id=\(t.group_transaction_id?.uuidString ?? "nil") group_id=\(t.group_id?.uuidString ?? "nil") group_name=\(t.group_name ?? "nil") settlement_id=\(t.settlement_id?.uuidString ?? "nil")")
+            }
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -302,6 +307,12 @@ final class SyncService: SyncServiceProtocol {
                 if local.groupName == nil, let name = remote.group_name {
                     local.groupName = name
                 }
+                if local.groupId == nil, let id = remote.group_id {
+                    local.groupId = id
+                }
+                if remote.group_transaction_id != nil {
+                    AppLogger.sync.debug("[GroupDebug] upsert existing txn=\(remote.id) local.groupTransactionId=\(local.groupTransactionId?.uuidString ?? "nil") local.groupId=\(local.groupId?.uuidString ?? "nil") remote.group_id=\(remote.group_id?.uuidString ?? "nil")")
+                }
                 if remote.updated_at > local.updatedAt {
                     if pendingIDs.contains(remote.id) {
                         AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — local pending change will be overwritten")
@@ -322,7 +333,11 @@ final class SyncService: SyncServiceProtocol {
                     groupTransactionId: remote.group_transaction_id,
                     settlementId: remote.settlement_id
                 )
+                tx.groupId = remote.group_id
                 tx.groupName = remote.group_name
+                if remote.group_transaction_id != nil {
+                    AppLogger.sync.debug("[GroupDebug] insert new txn=\(remote.id) group_transaction_id=\(remote.group_transaction_id?.uuidString ?? "nil") group_id=\(remote.group_id?.uuidString ?? "nil") group_name=\(remote.group_name ?? "nil")")
+                }
                 context.insert(tx)
             }
         }

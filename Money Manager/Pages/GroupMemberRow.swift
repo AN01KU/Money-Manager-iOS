@@ -11,7 +11,7 @@ struct GroupMemberRow: View {
     var isPending: Bool = false
 
     private var displayName: String {
-        member.email.components(separatedBy: "@").first?.capitalized ?? member.email
+        member.username
     }
 
     var body: some View {

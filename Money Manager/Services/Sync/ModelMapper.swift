@@ -107,15 +107,15 @@ extension MonthlyBudget {
             id: id,
             year: year,
             month: month,
-            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+            limit: String(format: "%.2f", limit)
         )
     }
-    
+
     func toUpdateRequest() -> APIUpdateBudgetRequest {
         APIUpdateBudgetRequest(
             year: year,
             month: month,
-            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+            limit: String(format: "%.2f", limit)
         )
     }
     

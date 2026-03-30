@@ -25,13 +25,13 @@ struct TransactionDetailView: View {
 
                     // Settlement banner
                     if viewModel.isSettlementTransaction {
-                        SettlementTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId)
+                        SettlementTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId, onDismiss: { dismiss() })
                             .padding(.horizontal)
                     }
 
                     // Group banner (single, no duplication)
                     if viewModel.isGroupTransaction {
-                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId)
+                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId, onDismiss: { dismiss() })
                             .padding(.horizontal)
                     }
 

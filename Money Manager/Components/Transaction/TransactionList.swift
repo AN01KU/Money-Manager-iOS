@@ -145,13 +145,15 @@ private struct SwipeToDeleteRow<Content: View>: View {
                             }
                         }
                 )
-                .onTapGesture {
-                    if isRevealed {
-                        resetSwipe()
-                    } else {
-                        onTap()
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        if isRevealed {
+                            resetSwipe()
+                        } else {
+                            onTap()
+                        }
                     }
-                }
+                )
         }
         .onChange(of: isRevealed) { _, newValue in
             if !newValue && offset != 0 {

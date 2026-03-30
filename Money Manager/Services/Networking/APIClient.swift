@@ -27,7 +27,7 @@ final class APIClient {
         self.session = URLSession(configuration: config)
         
         #if DEBUG
-        self.baseURL = "http://localhost:8080"
+        self.baseURL = "https://moneymanager.ankushganesh.cloud"
         #else
         self.baseURL = "https://moneymanager.ankushganesh.cloud"
         #endif
