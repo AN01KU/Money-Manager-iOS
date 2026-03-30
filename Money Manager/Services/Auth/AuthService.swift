@@ -101,6 +101,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APISignupRequest(email: email, username: username, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
+            session.saveLastLoggedInEmail(email.lowercased())
             authState = .authenticated(response.user)
             isLoading = false
         } catch {
