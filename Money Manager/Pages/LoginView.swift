@@ -47,7 +47,9 @@ struct LoginView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showSignup) {
+            .sheet(isPresented: $showSignup, onDismiss: {
+                if authService.isAuthenticated { dismiss() }
+            }) {
                 SignupView()
             }
             .alert("Login Error", isPresented: .constant(errorMessage != nil)) {
