@@ -72,6 +72,22 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: GroupBalanceModel.self)
         try? context.save()
     }
+
+    func clearAllUserData() {
+        guard let container = modelContainer else { return }
+        let context = ModelContext(container)
+        try? context.delete(model: Transaction.self)
+        try? context.delete(model: RecurringTransaction.self)
+        try? context.delete(model: MonthlyBudget.self)
+        try? context.delete(model: CustomCategory.self)
+        try? context.delete(model: PendingChange.self)
+        try? context.delete(model: SplitGroupModel.self)
+        try? context.delete(model: GroupMemberModel.self)
+        try? context.delete(model: GroupTransactionModel.self)
+        try? context.delete(model: GroupBalanceModel.self)
+        try? context.save()
+        UserDefaults.standard.removeObject(forKey: lastSyncKey)
+    }
     
     func syncOnLaunch() async {
         guard authService?.isAuthenticated == true else { return }

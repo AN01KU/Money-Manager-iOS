@@ -72,10 +72,17 @@ final class AuthService: AuthServiceProtocol {
         isLoading = true
         errorMessage = nil
 
+        // If a different user was previously logged in, wipe their local data first
+        let normalizedEmail = email.lowercased()
+        if let lastEmail = session.getLastLoggedInEmail(), lastEmail != normalizedEmail {
+            SyncService.shared.clearAllUserData()
+        }
+
         do {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
             session.saveToken(response.token)
+            session.saveLastLoggedInEmail(normalizedEmail)
             authState = .authenticated(response.user)
             isLoading = false
         } catch {
