@@ -38,13 +38,14 @@ import SwiftData
         upcomingThisMonth.reduce(0) { $0 + $1.amount }
     }
 
-    var modelContext: ModelContext?
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
+    let persistence: PersistenceService
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.changeQueue = changeQueue
-        self.auth = auth
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
     }
 
     func update(recurring: [RecurringTransaction]) {
@@ -56,7 +57,7 @@ import SwiftData
         let item = activeRecurring[index]
         item.isActive = false
         item.updatedAt = Date()
-        try? modelContext?.save()
+        try? persistence.save()
     }
 
     func toggle(at index: Int) {
@@ -65,27 +66,8 @@ import SwiftData
         item.isActive.toggle()
         item.updatedAt = Date()
 
-        guard let modelContext = modelContext else { return }
-
         do {
-            try modelContext.save()
-
-            let payload = try? APIClient.apiEncoder.encode(item.toUpdateRequest())
-            changeQueue.enqueue(
-                entityType: "recurring",
-                entityID: item.id,
-                action: "update",
-                endpoint: "/recurring-transactions",
-                httpMethod: "PUT",
-                payload: payload,
-                context: modelContext
-            )
-
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
+            try persistence.saveRecurring(item, action: "update")
             AppLogger.data.info("Recurring transaction toggled: \(item.id) isActive=\(item.isActive)")
         } catch {
             AppLogger.data.error("Error toggling recurring transaction: \(error)")
@@ -109,23 +91,14 @@ import SwiftData
         modelContext.delete(recurring)
 
         do {
-            try modelContext.save()
-
-            changeQueue.enqueue(
+            try persistence.saveAndSync(
                 entityType: "recurring",
                 entityID: recurringId,
                 action: "delete",
                 endpoint: "/recurring-transactions",
                 httpMethod: "DELETE",
-                payload: nil,
-                context: modelContext
+                payload: nil
             )
-
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
             AppLogger.data.info("Recurring transaction deleted: \(recurringId)")
         } catch {
             AppLogger.data.error("Error deleting recurring transaction: \(error)")
@@ -138,7 +111,7 @@ import SwiftData
     var name: String = ""
     var amount: String = ""
     var selectedCategory: String = ""
-    var frequency: String = "monthly"
+    var frequency: RecurringFrequency = .monthly
     var startDate: Date = Date()
     var hasEndDate: Bool = false
     var endDate: Date = Date()
@@ -148,16 +121,17 @@ import SwiftData
     var showError = false
     var errorMessage = ""
 
-    let frequencies = ["daily", "weekly", "monthly", "yearly"]
+    let frequencies = RecurringFrequency.allCases
 
-    var modelContext: ModelContext?
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
     var customCategories: [CustomCategory] = []
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    let persistence: PersistenceService
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.changeQueue = changeQueue
-        self.auth = auth
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
     }
 
     var isValid: Bool {
@@ -201,7 +175,7 @@ import SwiftData
             amount: amountValue,
             category: selectedCategory,
             frequency: frequency,
-            dayOfMonth: frequency == "monthly" ? dayOfMonth : nil,
+            dayOfMonth: frequency == .monthly ? dayOfMonth : nil,
             startDate: startDate,
             endDate: hasEndDate ? endDate : nil,
             notes: notes.isEmpty ? nil : notes,
@@ -211,24 +185,8 @@ import SwiftData
         modelContext.insert(recurringTransaction)
 
         do {
-            try modelContext.save()
+            try persistence.saveRecurring(recurringTransaction, action: "create")
             AppLogger.data.info("Recurring transaction saved: \(recurringTransaction.id)")
-            let payload = try? APIClient.apiEncoder.encode(recurringTransaction.toCreateRequest())
-            changeQueue.enqueue(
-                entityType: "recurring",
-                entityID: recurringTransaction.id,
-                action: "create",
-                endpoint: "/recurring-transactions",
-                httpMethod: "POST",
-                payload: payload,
-                context: modelContext
-            )
-
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
         } catch {
             AppLogger.data.error("Failed to save recurring transaction: \(error)")
             errorMessage = "Failed to save: \(error.localizedDescription)"

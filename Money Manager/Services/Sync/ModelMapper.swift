@@ -9,7 +9,7 @@ extension Transaction {
     func toCreateRequest() -> APICreateTransactionRequest {
         APICreateTransactionRequest(
             id: id,
-            type: type,
+            type: type.rawValue,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
@@ -22,7 +22,7 @@ extension Transaction {
 
     func toUpdateRequest() -> APIUpdateTransactionRequest {
         APIUpdateTransactionRequest(
-            type: type,
+            type: type.rawValue,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
             date: date,
@@ -33,7 +33,7 @@ extension Transaction {
     }
 
     func applyRemote(_ api: APITransaction) {
-        self.type = api.type
+        self.type = TransactionKind(rawValue: api.type) ?? self.type
         self.amount = Double(api.amount) ?? self.amount
         self.category = api.category
         self.date = api.date
@@ -57,14 +57,14 @@ extension RecurringTransaction {
             name: name,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
-            frequency: frequency,
+            frequency: frequency.rawValue,
             day_of_month: dayOfMonth,
             days_of_week: daysOfWeek,
             start_date: startDate,
             end_date: endDate,
             is_active: isActive,
             notes: notes,
-            type: type
+            type: type.rawValue
         )
     }
 
@@ -73,14 +73,14 @@ extension RecurringTransaction {
             name: name,
             amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: category,
-            frequency: frequency,
+            frequency: frequency.rawValue,
             day_of_month: dayOfMonth,
             days_of_week: daysOfWeek,
             start_date: startDate,
             end_date: endDate,
             is_active: isActive,
             notes: notes,
-            type: type
+            type: type.rawValue
         )
     }
 
@@ -88,7 +88,7 @@ extension RecurringTransaction {
         self.name = api.name
         self.amount = Double(api.amount) ?? self.amount
         self.category = api.category
-        self.frequency = api.frequency
+        self.frequency = RecurringFrequency(rawValue: api.frequency) ?? self.frequency
         self.dayOfMonth = api.day_of_month
         self.daysOfWeek = api.days_of_week
         self.startDate = api.start_date
@@ -96,7 +96,9 @@ extension RecurringTransaction {
         self.isActive = api.is_active
         self.lastAddedDate = api.last_added_date
         self.notes = api.notes
-        self.type = api.type ?? self.type
+        if let apiType = api.type, let kind = TransactionKind(rawValue: apiType) {
+            self.type = kind
+        }
         self.updatedAt = api.updated_at
     }
 }

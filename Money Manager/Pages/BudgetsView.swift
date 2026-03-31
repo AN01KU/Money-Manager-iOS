@@ -26,7 +26,7 @@ struct BudgetsView: View {
 
         return allTransactions.filter { transaction in
             !transaction.isDeleted &&
-            transaction.type == "expense" &&
+            transaction.type == .expense &&
             transaction.date >= startOfMonth &&
             transaction.date < firstDayNextMonth
         }

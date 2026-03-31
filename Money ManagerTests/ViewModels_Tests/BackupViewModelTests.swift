@@ -90,7 +90,7 @@ struct ExportDataStructTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             daysOfWeek: nil,
             startDate: Date(),
@@ -212,7 +212,7 @@ struct ExportDataStructTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             daysOfWeek: [1, 3, 5],
             startDate: Date(),
@@ -818,7 +818,7 @@ struct BackupViewModelExportTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             startDate: Date(),
             isActive: true
@@ -850,7 +850,7 @@ struct BackupViewModelExportTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             startDate: Date(),
             isActive: true
@@ -879,7 +879,7 @@ struct BackupViewModelExportTests {
         viewModel.selectedDataType = .all
         
         let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
         
@@ -907,7 +907,7 @@ struct BackupViewModelExportTests {
         viewModel.selectedDataType = .all
         
         let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
         
@@ -985,7 +985,7 @@ struct BackupViewModelExportTests {
             name: "Gym",
             amount: 500,
             category: "Health",
-            frequency: "weekly",
+            frequency: .weekly,
             daysOfWeek: [1, 3, 5],
             startDate: Date(),
             endDate: Date().addingTimeInterval(86400 * 365),
@@ -1165,7 +1165,7 @@ struct BackupViewModelImportTests {
                     name: "Netflix",
                     amount: 649,
                     category: "Entertainment",
-                    frequency: "monthly",
+                    frequency: .monthly,
                     dayOfMonth: 1,
                     daysOfWeek: nil,
                     startDate: Date(),
@@ -1220,7 +1220,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
                     id: recId, name: "Lunch", amount: 100, category: "Food",
-                    frequency: "daily", dayOfMonth: nil, daysOfWeek: nil,
+                    frequency: .daily, dayOfMonth: nil, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
                 )
@@ -1521,7 +1521,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
                     id: recId, name: "Netflix", amount: 649, category: "Entertainment",
-                    frequency: "monthly", dayOfMonth: 1, daysOfWeek: nil,
+                    frequency: .monthly, dayOfMonth: 1, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
                 )

@@ -89,9 +89,9 @@ struct TransactionDetailView: View {
                 .font(AppTypography.heroCategory)
                 .foregroundStyle(.secondary)
 
-            Text((transaction.type == "income" ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
+            Text((transaction.type == .income ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
                 .font(AppTypography.amountHero)
-                .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
+                .foregroundStyle(transaction.type == .income ? AppColors.positive : AppColors.expense)
 
             Text(viewModel.formatDateAndTime(transaction.date, time: transaction.time))
                 .font(AppTypography.heroDate)
@@ -117,8 +117,8 @@ struct TransactionDetailView: View {
 
             InfoRow(
                 label: "Type",
-                value: transaction.type == "income" ? "Income" : "Expense",
-                valueColor: transaction.type == "income" ? AppColors.positive : AppColors.expense
+                value: transaction.type == .income ? "Income" : "Expense",
+                valueColor: transaction.type == .income ? AppColors.positive : AppColors.expense
             )
             Divider().padding(.leading, 16)
 

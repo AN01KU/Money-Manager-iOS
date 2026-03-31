@@ -55,7 +55,7 @@ struct AddTransactionViewModelTests {
         vm.transactionType = .income
         #expect(vm.navigationTitle == "Add Income")
 
-        let income = Transaction(type: "income", amount: 100, category: "Work & Professional", date: Date())
+        let income = Transaction(type: .income, amount: 100, category: "Work & Professional", date: Date())
         let editVM = AddTransactionViewModel(mode: .personal(editing: income))
         #expect(editVM.navigationTitle == "Edit Income")
     }
@@ -86,7 +86,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSetupPopulatesTransactionTypeForIncome() {
         let income = Transaction(
-            type: "income",
+            type: .income,
             amount: 5000,
             category: "Work & Professional",
             date: Date()

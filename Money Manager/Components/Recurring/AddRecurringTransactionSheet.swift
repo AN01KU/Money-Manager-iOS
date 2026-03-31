@@ -116,14 +116,14 @@ struct AddRecurringTransactionSheet: View {
                         
                         Picker("Frequency", selection: $viewModel.frequency) {
                             ForEach(viewModel.frequencies, id: \.self) { freq in
-                                Text(freq.capitalized).tag(freq)
+                                Text(freq.rawValue.capitalized).tag(freq)
                             }
                         }
                         .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 8)
-                    
-                    if viewModel.frequency == "monthly" {
+
+                    if viewModel.frequency == .monthly {
                         Picker("Day of Month", selection: $viewModel.dayOfMonth) {
                             ForEach(1...28, id: \.self) { day in
                                 Text("\(day)").tag(day)

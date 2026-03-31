@@ -400,7 +400,7 @@ private func previewContainer(
     let transactions = [
         Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
         Transaction(amount: 120, category: "Food & Dining", date: today, transactionDescription: "Morning coffee"),
-        Transaction(type: "income", amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
+        Transaction(type: .income, amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
         Transaction(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Fuel"),
         Transaction(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "New shirt"),
         Transaction(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, transactionDescription: "Phone bill"),

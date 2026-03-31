@@ -30,12 +30,12 @@ struct TransactionModelTests {
     @Test
     func testTransactionDefaultTypeIsExpense() {
         let expense = Transaction(amount: 100, category: "Food & Dining", date: Date())
-        #expect(expense.type == "expense")
+        #expect(expense.type == .expense)
     }
 
     @Test
     func testIncomeType() {
-        let income = Transaction(type: "income", amount: 5000, category: "Work & Professional", date: Date())
-        #expect(income.type == "income")
+        let income = Transaction(type: .income, amount: 5000, category: "Work & Professional", date: Date())
+        #expect(income.type == .income)
     }
 }

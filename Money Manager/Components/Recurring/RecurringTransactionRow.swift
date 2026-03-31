@@ -50,7 +50,7 @@ struct RecurringTransactionRow: View {
                         .foregroundStyle(recurring.isActive ? .primary : .secondary)
 
                     HStack(spacing: 6) {
-                        Text(recurring.frequency.capitalized)
+                        Text(recurring.frequency.rawValue.capitalized)
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 8)

@@ -31,13 +31,14 @@ enum TransactionTypeFilter: String, CaseIterable {
     private var allTransactions: [Transaction] = []
     private var budgets: [MonthlyBudget] = []
     private var customCategories: [CustomCategory] = []
-    var modelContext: ModelContext?
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
+    let persistence: PersistenceService
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.changeQueue = changeQueue
-        self.auth = auth
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
     }
 
     func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
@@ -94,13 +95,13 @@ enum TransactionTypeFilter: String, CaseIterable {
         }
 
         // Compute totals before applying type filter (so budget card is always accurate)
-        totalSpent = result.filter { $0.type == "expense" }.reduce(0) { $0 + $1.amount }
-        totalIncome = result.filter { $0.type == "income" }.reduce(0) { $0 + $1.amount }
+        totalSpent = result.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
+        totalIncome = result.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
 
         switch transactionTypeFilter {
         case .all:      break
-        case .expenses: result = result.filter { $0.type == "expense" }
-        case .income:   result = result.filter { $0.type == "income" }
+        case .expenses: result = result.filter { $0.type == .expense }
+        case .income:   result = result.filter { $0.type == .income }
         }
 
         filteredTransactions = result
@@ -123,7 +124,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             categoryBase = result  // already income-only at this point
             categoryTotal = totalIncome
         } else {
-            categoryBase = result.filter { $0.type == "expense" }
+            categoryBase = result.filter { $0.type == .expense }
             categoryTotal = totalSpent
         }
 
@@ -178,28 +179,10 @@ enum TransactionTypeFilter: String, CaseIterable {
         transaction.updatedAt = Date()
         transactionToDelete = nil
 
-        if let modelContext = modelContext {
-            do {
-                try modelContext.save()
-
-                changeQueue.enqueue(
-                    entityType: "transaction",
-                    entityID: transaction.id,
-                    action: "delete",
-                    endpoint: "/transactions",
-                    httpMethod: "DELETE",
-                    payload: nil,
-                    context: modelContext
-                )
-
-                if NetworkMonitor.shared.isConnected {
-                    Task {
-                        await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                    }
-                }
-            } catch {
-                AppLogger.data.error("Error deleting transaction: \(error)")
-            }
+        do {
+            try persistence.saveTransaction(transaction, action: "delete")
+        } catch {
+            AppLogger.data.error("Error deleting transaction: \(error)")
         }
 
         recalculate()

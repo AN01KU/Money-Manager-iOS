@@ -53,9 +53,9 @@ struct TransactionRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text((transaction.type == "income" ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
+                Text((transaction.type == .income ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
                     .font(AppTypography.amount)
-                    .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
+                    .foregroundStyle(transaction.type == .income ? AppColors.positive : AppColors.expense)
 
                 if let time = transaction.time {
                     Text(formatTime(time))

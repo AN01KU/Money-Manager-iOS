@@ -8,6 +8,13 @@
 import Foundation
 import SwiftData
 
+enum RecurringFrequency: String, Codable, CaseIterable {
+    case daily
+    case weekly
+    case monthly
+    case yearly
+}
+
 @Model
 final class RecurringTransaction {
     @Attribute(.unique) var id: UUID
@@ -16,7 +23,7 @@ final class RecurringTransaction {
     var amount: Double
     var category: String
 
-    var frequency: String
+    var frequency: RecurringFrequency
     var dayOfMonth: Int?
     var daysOfWeek: [Int]?
 
@@ -30,7 +37,7 @@ final class RecurringTransaction {
     /// UUID of the linked CustomCategory. Nil for recurring transactions created before this field was added.
     var categoryId: UUID?
 
-    var type: String  // "expense" or "income"
+    var type: TransactionKind
 
     var createdAt: Date
     var updatedAt: Date
@@ -40,7 +47,7 @@ final class RecurringTransaction {
         name: String,
         amount: Double,
         category: String,
-        frequency: String,
+        frequency: RecurringFrequency,
         dayOfMonth: Int? = nil,
         daysOfWeek: [Int]? = nil,
         startDate: Date = Date(),
@@ -49,7 +56,7 @@ final class RecurringTransaction {
         lastAddedDate: Date? = nil,
         notes: String? = nil,
         categoryId: UUID? = nil,
-        type: String = "expense"
+        type: TransactionKind = .expense
     ) {
         self.id = id
         self.name = name

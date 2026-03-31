@@ -10,7 +10,19 @@ enum TransactionType: String, CaseIterable {
     case expense = "Expense"
     case income  = "Income"
 
-    var apiValue: String { rawValue.lowercased() }
+    var kind: TransactionKind {
+        switch self {
+        case .expense: .expense
+        case .income: .income
+        }
+    }
+
+    init(kind: TransactionKind) {
+        switch kind {
+        case .expense: self = .expense
+        case .income: self = .income
+        }
+    }
 }
 
 enum SplitType: String, CaseIterable {
@@ -42,11 +54,13 @@ enum SplitType: String, CaseIterable {
     var customAmounts: [UUID: String] = [:]
 
     let mode: AddTransactionMode
-    var modelContext: ModelContext?
+    let persistence: PersistenceService
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
     var customCategories: [CustomCategory] = []
     private let groupService: GroupServiceProtocol
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
 
     // MARK: - Computed
 
@@ -59,7 +73,7 @@ enum SplitType: String, CaseIterable {
         switch mode {
         case .personal(let editing):
             if let editing {
-                return editing.type == "income" ? "Edit Income" : "Edit Expense"
+                return editing.type == .income ? "Edit Income" : "Edit Expense"
             }
             return transactionType == .income ? "Add Income" : "Add Expense"
         case .shared(_, _, let editing, _):
@@ -101,13 +115,11 @@ enum SplitType: String, CaseIterable {
     init(
         mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
-        changeQueue: ChangeQueueManagerProtocol = changeQueueManager,
-        auth: AuthServiceProtocol = authService
+        persistence: PersistenceService = PersistenceService()
     ) {
         self.mode = mode
         self.groupService = groupService
-        self.changeQueue = changeQueue
-        self.auth = auth
+        self.persistence = persistence
         setup()
     }
 
@@ -122,7 +134,7 @@ enum SplitType: String, CaseIterable {
             hasTime = expense.time != nil
             description = expense.transactionDescription ?? ""
             notes = expense.notes ?? ""
-            transactionType = expense.type == "income" ? .income : .expense
+            transactionType = TransactionType(kind: expense.type)
 
         case .shared(_, let members, let editing, _):
             if let tx = editing {
@@ -132,7 +144,7 @@ enum SplitType: String, CaseIterable {
                 paidByUserId = tx.paid_by_user_id
                 selectedMembers = Set(tx.splits.map(\.user_id))
             } else {
-                paidByUserId = auth.currentUser?.id
+                paidByUserId = authService.currentUser?.id
                 selectedMembers = Set(members.map(\.id))
             }
         }
@@ -194,7 +206,7 @@ enum SplitType: String, CaseIterable {
     // MARK: - Private: personal save (unchanged logic)
 
     private func savePersonal(amountValue: Double, completion: @escaping () -> Void) {
-        guard let modelContext else {
+        guard modelContext != nil else {
             isSaving = false
             return
         }
@@ -209,13 +221,10 @@ enum SplitType: String, CaseIterable {
                                         of: selectedDate) ?? selectedDate
         }
 
-        let expenseID: UUID
-        let action: String
-        let endpoint: String
-        let httpMethod: String
-        var payload: Data?
-
         let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+
+        let transaction: Transaction
+        let action: String
 
         if case .personal(let existing) = mode, let existingExpense = existing {
             existingExpense.amount = amountValue
@@ -226,14 +235,11 @@ enum SplitType: String, CaseIterable {
             existingExpense.transactionDescription = description.isEmpty ? nil : description
             existingExpense.notes = notes.isEmpty ? nil : notes
             existingExpense.updatedAt = Date()
-            expenseID = existingExpense.id
+            transaction = existingExpense
             action = "update"
-            endpoint = "/transactions"
-            httpMethod = "PATCH"
-            payload = try? APIClient.apiEncoder.encode(existingExpense.toUpdateRequest())
         } else {
             let expense = Transaction(
-                type: transactionType.apiValue,
+                type: transactionType.kind,
                 amount: amountValue,
                 category: selectedCategory,
                 date: expenseDate,
@@ -242,29 +248,14 @@ enum SplitType: String, CaseIterable {
                 notes: notes.isEmpty ? nil : notes,
                 categoryId: resolvedCategoryId
             )
-            modelContext.insert(expense)
-            expenseID = expense.id
+            persistence.modelContext?.insert(expense)
+            transaction = expense
             action = "create"
-            endpoint = "/transactions"
-            httpMethod = "POST"
-            payload = try? APIClient.apiEncoder.encode(expense.toCreateRequest())
         }
 
         do {
-            try modelContext.save()
-            AppLogger.data.info("Expense saved: \(expenseID) action=\(action)")
-            changeQueue.enqueue(
-                entityType: "transaction",
-                entityID: expenseID,
-                action: action,
-                endpoint: endpoint,
-                httpMethod: httpMethod,
-                payload: payload,
-                context: modelContext
-            )
-            if NetworkMonitor.shared.isConnected {
-                Task { await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated) }
-            }
+            try persistence.saveTransaction(transaction, action: action)
+            AppLogger.data.info("Expense saved: \(transaction.id) action=\(action)")
         } catch {
             AppLogger.data.error("Failed to save expense: \(error)")
             errorMessage = "Failed to save expense"

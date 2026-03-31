@@ -3,16 +3,16 @@ import SwiftUI
 struct RecurringDetailsSheet: View {
     @Environment(\.dismiss) var dismiss
     
-    @Binding var frequency: String
+    @Binding var frequency: RecurringFrequency
     @Binding var dayOfMonth: Int
     @Binding var hasEndDate: Bool
     @Binding var recurringEndDate: Date
     
-    let frequencies = ["daily", "weekly", "monthly", "yearly"]
+    let frequencies = RecurringFrequency.allCases
     let startDate: Date
     
     init(
-        frequency: Binding<String>,
+        frequency: Binding<RecurringFrequency>,
         dayOfMonth: Binding<Int>,
         hasEndDate: Binding<Bool>,
         recurringEndDate: Binding<Date>,
@@ -36,14 +36,14 @@ struct RecurringDetailsSheet: View {
                         
                         Picker("Frequency", selection: $frequency) {
                             ForEach(frequencies, id: \.self) { freq in
-                                Text(freq.capitalized).tag(freq)
+                                Text(freq.rawValue.capitalized).tag(freq)
                             }
                         }
                         .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 8)
-                    
-                    if frequency == "monthly" {
+
+                    if frequency == .monthly {
                         Picker("Day of Month", selection: $dayOfMonth) {
                             ForEach(1...28, id: \.self) { day in
                                 Text("\(day)").tag(day)
@@ -81,7 +81,7 @@ struct RecurringDetailsSheet: View {
 
 #Preview {
     RecurringDetailsSheet(
-        frequency: .constant("monthly"),
+        frequency: .constant(.monthly),
         dayOfMonth: .constant(1),
         hasEndDate: .constant(false),
         recurringEndDate: .constant(Date())

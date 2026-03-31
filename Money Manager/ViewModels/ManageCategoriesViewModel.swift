@@ -8,13 +8,15 @@ import SwiftData
     var categoryToDelete: CustomCategory?
     var showDeleteConfirmation = false
     
-    var modelContext: ModelContext?
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    let persistence: PersistenceService
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.changeQueue = changeQueue
-        self.auth = auth
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
+
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
     }
 
     // Legacy computed properties kept for test compatibility
@@ -37,28 +39,9 @@ import SwiftData
         category.isHidden = true
         category.updatedAt = Date()
         
-        guard let modelContext = modelContext else { return }
-        
         do {
-            try modelContext.save()
-            
-            let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            changeQueue.enqueue(
-                entityType: "category",
-                entityID: category.id,
-                action: "update",
-                endpoint: "/categories",
-                httpMethod: "PUT",
-                payload: payload,
-                context: modelContext
-            )
-            
+            try persistence.saveCategory(category, action: "update")
             AppLogger.data.info("Category hidden: \(category.name)")
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
         } catch {
             AppLogger.data.error("Error hiding category: \(error)")
         }
@@ -71,31 +54,12 @@ import SwiftData
     }
     
     func restoreCategory(_ category: CustomCategory) {
-        guard let modelContext = modelContext else { return }
-        
         category.isHidden = false
         category.updatedAt = Date()
         
         do {
-            try modelContext.save()
-            
-            let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            changeQueue.enqueue(
-                entityType: "category",
-                entityID: category.id,
-                action: "update",
-                endpoint: "/categories",
-                httpMethod: "PUT",
-                payload: payload,
-                context: modelContext
-            )
-            
+            try persistence.saveCategory(category, action: "update")
             AppLogger.data.info("Category restored: \(category.name)")
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
         } catch {
             AppLogger.data.error("Error restoring category: \(error)")
         }
@@ -141,24 +105,15 @@ import SwiftData
         modelContext.delete(category)
         
         do {
-            try modelContext.save()
-            
-            changeQueue.enqueue(
+            try persistence.saveAndSync(
                 entityType: "category",
                 entityID: categoryId,
                 action: "delete",
                 endpoint: "/categories",
                 httpMethod: "DELETE",
-                payload: nil,
-                context: modelContext
+                payload: nil
             )
-            
             AppLogger.data.info("Category deleted: \(categoryName)")
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
         } catch {
             AppLogger.data.error("Error deleting category: \(error)")
         }
@@ -170,6 +125,7 @@ import SwiftData
     
     func restoreDefaults(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
+        persistence.modelContext = context
         
         let descriptor = FetchDescriptor<CustomCategory>(
             predicate: #Predicate { $0.isPredefined == true }
@@ -186,35 +142,14 @@ import SwiftData
                 category.updatedAt = Date()
                 
                 do {
-                    let payload = try APIClient.apiEncoder.encode(category.toUpdateRequest())
-                    changeQueue.enqueue(
-                        entityType: "category",
-                        entityID: category.id,
-                        action: "update",
-                        endpoint: "/categories",
-                        httpMethod: "PUT",
-                        payload: payload,
-                        context: context
-                    )
+                    try persistence.saveCategory(category, action: "update")
                 } catch {
-                    AppLogger.data.error("Error queuing category update: \(error)")
+                    AppLogger.data.error("Error restoring category \(category.name): \(error)")
                 }
             }
         }
         
-        do {
-            try context.save()
-            
-            AppLogger.data.info("Default categories restored")
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: context, isAuthenticated: auth.isAuthenticated)
-                }
-            }
-        } catch {
-            AppLogger.data.error("Error restoring default categories: \(error)")
-        }
-        
+        AppLogger.data.info("Default categories restored")
         resetTrigger += 1
     }
     
@@ -311,9 +246,12 @@ class AddCategoryViewModel: CategoryEditorViewModel {
     var showError = false
     var errorMessage = ""
 
-    var modelContext: ModelContext?
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    let persistence: PersistenceService
+
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -321,9 +259,8 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.changeQueue = changeQueue
-        self.auth = auth
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
         super.init(icon: "tag.circle.fill", color: "#4ECDC4")
     }
     
@@ -360,24 +297,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         modelContext.insert(category)
         
         do {
-            try modelContext.save()
-            
-            let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
-            changeQueue.enqueue(
-                entityType: "category",
-                entityID: category.id,
-                action: "create",
-                endpoint: "/categories",
-                httpMethod: "POST",
-                payload: payload,
-                context: modelContext
-            )
-            
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
+            try persistence.saveCategory(category, action: "create")
         } catch {
             errorMessage = "Failed to save category locally"
             showError = true
@@ -398,9 +318,12 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     var errorMessage = ""
     
     let category: CustomCategory
-    var modelContext: ModelContext?
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    let persistence: PersistenceService
+
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -410,11 +333,10 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(category: CustomCategory, allCategories: [CustomCategory] = [], changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
+    init(category: CustomCategory, allCategories: [CustomCategory] = [], persistence: PersistenceService = PersistenceService()) {
         self.category = category
         self.name = category.name
-        self.changeQueue = changeQueue
-        self.auth = auth
+        self.persistence = persistence
         super.init(icon: category.icon, color: category.color)
         self.allCategories = allCategories
     }
@@ -480,24 +402,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         }
 
         do {
-            try modelContext.save()
-            
-            let payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
-            changeQueue.enqueue(
-                entityType: "category",
-                entityID: category.id,
-                action: "update",
-                endpoint: "/categories",
-                httpMethod: "PUT",
-                payload: payload,
-                context: modelContext
-            )
-            
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
+            try persistence.saveCategory(category, action: "update")
         } catch {
             errorMessage = "Failed to save changes"
             showError = true

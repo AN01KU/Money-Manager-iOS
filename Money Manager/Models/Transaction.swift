@@ -7,11 +7,16 @@ import Foundation
 import SwiftUI
 import SwiftData
 
+enum TransactionKind: String, Codable, CaseIterable {
+    case expense
+    case income
+}
+
 @Model
 final class Transaction {
     @Attribute(.unique) var id: UUID
     
-    var type: String          // "expense" or "income"
+    var type: TransactionKind
     var amount: Double
     var category: String
     var date: Date
@@ -34,7 +39,7 @@ final class Transaction {
     
     init(
         id: UUID = UUID(),
-        type: String = "expense",
+        type: TransactionKind = .expense,
         amount: Double,
         category: String,
         date: Date,

@@ -10,9 +10,9 @@ struct RecurringTransactionsViewModelTests {
     func testActiveRecurringFiltersOutInactive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly")
-        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly")
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [active1, active2, inactive])
 
@@ -23,7 +23,7 @@ struct RecurringTransactionsViewModelTests {
     func testActiveRecurringReturnsEmptyWhenAllInactive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [inactive])
 
@@ -34,9 +34,9 @@ struct RecurringTransactionsViewModelTests {
     func testPausedRecurringReturnsOnlyInactive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly")
-        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly")
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [active1, active2, inactive])
 
@@ -48,8 +48,8 @@ struct RecurringTransactionsViewModelTests {
     func testAllRecurringReturnsAll() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly")
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [active, inactive])
 
@@ -60,7 +60,7 @@ struct RecurringTransactionsViewModelTests {
     func testToggleSwapsActiveState() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
 
         viewModel.update(recurring: [active])
 
@@ -75,7 +75,7 @@ struct RecurringTransactionsViewModelTests {
     func testToggleInactiveBecomesActive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let inactive = RecurringTransaction(name: "Old Gym", amount: 500, category: "Health", frequency: "monthly", isActive: false)
+        let inactive = RecurringTransaction(name: "Old Gym", amount: 500, category: "Health", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [inactive])
 
@@ -90,7 +90,7 @@ struct RecurringTransactionsViewModelTests {
     func testDeactivateSetsIsActiveToFalse() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
 
         viewModel.update(recurring: [active])
 
@@ -105,7 +105,7 @@ struct RecurringTransactionsViewModelTests {
     func testDeactivateDoesNothingForInvalidIndex() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
 
         viewModel.update(recurring: [active])
 
@@ -118,8 +118,8 @@ struct RecurringTransactionsViewModelTests {
     func testDeactivateRemovesFromActiveList() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", isActive: true)
-        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", isActive: true)
+        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
+        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, isActive: true)
 
         viewModel.update(recurring: [active1, active2])
 
@@ -135,7 +135,7 @@ struct RecurringTransactionsViewModelTests {
     func testDeleteDoesNothingForInvalidIndex() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let paused = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        let paused = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [paused])
 
@@ -146,7 +146,7 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeleteRemovesFromDatabase() {
-        let paused = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: "monthly", isActive: false)
+        let paused = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
         let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)

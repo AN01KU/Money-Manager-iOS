@@ -342,7 +342,7 @@ struct ExportData: Codable {
                 name: recurring.name,
                 amount: recurring.amount,
                 category: recurring.category,
-                frequency: recurring.frequency,
+                frequency: recurring.frequency.rawValue,
                 dayOfMonth: recurring.dayOfMonth,
                 daysOfWeek: recurring.daysOfWeek,
                 startDate: recurring.startDate,
@@ -352,7 +352,7 @@ struct ExportData: Codable {
                 notes: recurring.notes,
                 createdAt: recurring.createdAt,
                 updatedAt: recurring.updatedAt,
-                type: recurring.type
+                type: recurring.type.rawValue
             )
         }
 
@@ -376,14 +376,14 @@ struct ExportData: Codable {
             let name = escapeCSV(recurring.name)
             let amount = String(recurring.amount)
             let category = escapeCSV(recurring.category)
-            let frequency = recurring.frequency
+            let frequency = recurring.frequency.rawValue
             let dayOfMonth = recurring.dayOfMonth.map { String($0) } ?? ""
             let daysOfWeek = recurring.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
             let startDate = iso8601Formatter.string(from: recurring.startDate)
             let endDate = recurring.endDate.map { iso8601Formatter.string(from: $0) } ?? ""
             let isActive = String(recurring.isActive)
             let notes = escapeCSV(recurring.notes ?? "")
-            
+
             let row = [id, name, amount, category, frequency, dayOfMonth, daysOfWeek, startDate, endDate, isActive, notes].joined(separator: ",")
             csv += row + "\n"
         }
@@ -432,7 +432,7 @@ struct ExportData: Codable {
             let name = escapeCSV(recurring.name)
             let amount = String(recurring.amount)
             let category = escapeCSV(recurring.category)
-            let frequency = recurring.frequency
+            let frequency = recurring.frequency.rawValue
             let dayOfMonth = recurring.dayOfMonth.map { String($0) } ?? ""
             let daysOfWeek = recurring.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
             let startDate = iso8601Formatter.string(from: recurring.startDate)
@@ -549,7 +549,7 @@ struct ExportData: Codable {
         let transactionData = transactions.map { transaction in
             ExportData.TransactionData(
                 id: transaction.id.uuidString,
-                type: transaction.type,
+                type: transaction.type.rawValue,
                 amount: transaction.amount,
                 category: transaction.category,
                 date: transaction.date,
@@ -624,7 +624,7 @@ struct ExportData: Codable {
         let transactionsData = transactions.map { transaction in
             ExportData.TransactionData(
                 id: transaction.id.uuidString,
-                type: transaction.type,
+                type: transaction.type.rawValue,
                 amount: transaction.amount,
                 category: transaction.category,
                 date: transaction.date,
@@ -642,7 +642,7 @@ struct ExportData: Codable {
                 name: recurring.name,
                 amount: recurring.amount,
                 category: recurring.category,
-                frequency: recurring.frequency,
+                frequency: recurring.frequency.rawValue,
                 dayOfMonth: recurring.dayOfMonth,
                 daysOfWeek: recurring.daysOfWeek,
                 startDate: recurring.startDate,
@@ -652,7 +652,7 @@ struct ExportData: Codable {
                 notes: recurring.notes,
                 createdAt: recurring.createdAt,
                 updatedAt: recurring.updatedAt,
-                type: recurring.type
+                type: recurring.type.rawValue
             )
         }
         
@@ -822,7 +822,7 @@ struct ExportData: Codable {
                     name: recurringData.name,
                     amount: recurringData.amount,
                     category: recurringData.category,
-                    frequency: recurringData.frequency,
+                    frequency: RecurringFrequency(rawValue: recurringData.frequency) ?? .monthly,
                     dayOfMonth: recurringData.dayOfMonth,
                     daysOfWeek: recurringData.daysOfWeek,
                     startDate: recurringData.startDate,
@@ -830,7 +830,7 @@ struct ExportData: Codable {
                     isActive: recurringData.isActive,
                     lastAddedDate: recurringData.lastAddedDate,
                     notes: recurringData.notes,
-                    type: recurringData.type
+                    type: TransactionKind(rawValue: recurringData.type) ?? .expense
                 )
                 context.insert(recurringTransaction)
                 recurringImported += 1
@@ -850,7 +850,7 @@ struct ExportData: Codable {
                 
                 let transaction = Transaction(
                     id: UUID(uuidString: transactionData.id) ?? UUID(),
-                    type: transactionData.type,
+                    type: TransactionKind(rawValue: transactionData.type) ?? .expense,
                     amount: transactionData.amount,
                     category: transactionData.category,
                     date: transactionData.date,

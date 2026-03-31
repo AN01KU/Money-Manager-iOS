@@ -7,7 +7,10 @@ import SwiftData
     var showDeleteAlert = false
 
     let transaction: Transaction
-    var modelContext: ModelContext?
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
     var customCategories: [CustomCategory] = []
 
     var categoryIcon: String {
@@ -26,43 +29,24 @@ import SwiftData
         transaction.settlementId != nil
     }
 
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    let persistence: PersistenceService
 
-    init(transaction: Transaction, changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
+    init(transaction: Transaction, persistence: PersistenceService = PersistenceService()) {
         self.transaction = transaction
-        self.changeQueue = changeQueue
-        self.auth = auth
+        self.persistence = persistence
     }
 
     func deleteTransaction(completion: @escaping () -> Void) {
         transaction.isDeleted = true
         transaction.updatedAt = Date()
 
-        guard let modelContext = modelContext else {
+        guard persistence.modelContext != nil else {
             completion()
             return
         }
 
         do {
-            try modelContext.save()
-
-            changeQueue.enqueue(
-                entityType: "transaction",
-                entityID: transaction.id,
-                action: "delete",
-                endpoint: "/transactions",
-                httpMethod: "DELETE",
-                payload: nil,
-                context: modelContext
-            )
-
-            if NetworkMonitor.shared.isConnected {
-                Task {
-                    await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                }
-            }
-
+            try persistence.saveTransaction(transaction, action: "delete")
             AppLogger.data.info("Transaction deleted: \(self.transaction.id)")
             completion()
         } catch {

@@ -12,7 +12,7 @@ struct RecurringTransactionServiceTests {
             name: "Old",
             amount: 100,
             category: "Other",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: Date(),
             isActive: false
         )
@@ -42,7 +42,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
@@ -75,7 +75,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
@@ -105,7 +105,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: today,
             isActive: true,
             lastAddedDate: nextMonth
@@ -136,7 +136,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
@@ -168,7 +168,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix Subscription",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
@@ -198,7 +198,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true,
             notes: "Monthly subscription"
@@ -229,7 +229,7 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )

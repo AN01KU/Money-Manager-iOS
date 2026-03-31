@@ -322,7 +322,7 @@ final class SyncService: SyncServiceProtocol {
             } else {
                 let tx = Transaction(
                     id: remote.id,
-                    type: remote.type,
+                    type: TransactionKind(rawValue: remote.type) ?? .expense,
                     amount: Double(remote.amount) ?? 0,
                     category: remote.category,
                     date: remote.date,
@@ -367,7 +367,7 @@ final class SyncService: SyncServiceProtocol {
                     local.name = remote.name
                     local.amount = Double(remote.amount) ?? local.amount
                     local.category = remote.category
-                    local.frequency = remote.frequency
+                    local.frequency = RecurringFrequency(rawValue: remote.frequency) ?? local.frequency
                     local.dayOfMonth = remote.day_of_month
                     local.daysOfWeek = remote.days_of_week
                     local.startDate = remote.start_date
@@ -375,7 +375,9 @@ final class SyncService: SyncServiceProtocol {
                     local.isActive = remote.is_active
                     local.lastAddedDate = remote.last_added_date
                     local.notes = remote.notes
-                    local.type = remote.type ?? local.type
+                    if let remoteType = remote.type, let kind = TransactionKind(rawValue: remoteType) {
+                        local.type = kind
+                    }
                     local.updatedAt = remote.updated_at
                 }
             } else {
@@ -384,7 +386,7 @@ final class SyncService: SyncServiceProtocol {
                     name: remote.name,
                     amount: Double(remote.amount) ?? 0,
                     category: remote.category,
-                    frequency: remote.frequency,
+                    frequency: RecurringFrequency(rawValue: remote.frequency) ?? .monthly,
                     dayOfMonth: remote.day_of_month,
                     daysOfWeek: remote.days_of_week,
                     startDate: remote.start_date,
@@ -392,7 +394,7 @@ final class SyncService: SyncServiceProtocol {
                     isActive: remote.is_active,
                     lastAddedDate: remote.last_added_date,
                     notes: remote.notes,
-                    type: remote.type ?? "expense"
+                    type: TransactionKind(rawValue: remote.type ?? "expense") ?? .expense
                 )
                 context.insert(item)
             }
