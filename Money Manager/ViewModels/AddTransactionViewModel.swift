@@ -61,6 +61,7 @@ enum SplitType: String, CaseIterable {
     }
     var customCategories: [CustomCategory] = []
     private let groupService: GroupServiceProtocol
+    private let auth: AuthServiceProtocol
 
     // MARK: - Computed
 
@@ -115,11 +116,13 @@ enum SplitType: String, CaseIterable {
     init(
         mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
-        persistence: PersistenceService = PersistenceService()
+        persistence: PersistenceService = PersistenceService(),
+        auth: AuthServiceProtocol = authService
     ) {
         self.mode = mode
         self.groupService = groupService
         self.persistence = persistence
+        self.auth = auth
         setup()
     }
 
@@ -144,7 +147,7 @@ enum SplitType: String, CaseIterable {
                 paidByUserId = tx.paid_by_user_id
                 selectedMembers = Set(tx.splits.map(\.user_id))
             } else {
-                paidByUserId = authService.currentUser?.id
+                paidByUserId = auth.currentUser?.id
                 selectedMembers = Set(members.map(\.id))
             }
         }

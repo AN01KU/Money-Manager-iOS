@@ -15,6 +15,7 @@ private struct ScaleButtonStyle: ButtonStyle {
 /// Used in TransactionDetailView for both group transactions and settlements.
 /// `isSettlement` switches the icon and accent color; everything else is shared.
 private struct GroupBannerContent: View {
+    @Environment(\.authService) private var authService
     let groupName: String?
     let groupId: UUID?
     let isSettlement: Bool

@@ -50,6 +50,7 @@ private struct OverviewBody: View {
     @Bindable var viewModel: OverviewViewModel
     let defaultBudgetLimit: Double
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.authService) private var authService
 
     var body: some View {
         ScrollView {

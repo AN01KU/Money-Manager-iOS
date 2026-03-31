@@ -94,6 +94,9 @@ struct Money_ManagerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.authService, authService)
+                .environment(\.syncService, syncService)
+                .environment(\.changeQueueManager, changeQueueManager)
                 .onAppear {
                     Task {
                         await authService.checkAuthState()

@@ -90,7 +90,7 @@ struct ExportDataStructTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: .monthly,
+            frequency: RecurringFrequency.monthly.rawValue,
             dayOfMonth: 1,
             daysOfWeek: nil,
             startDate: Date(),
@@ -212,7 +212,7 @@ struct ExportDataStructTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: .monthly,
+            frequency: RecurringFrequency.monthly.rawValue,
             dayOfMonth: 1,
             daysOfWeek: [1, 3, 5],
             startDate: Date(),
@@ -1165,7 +1165,7 @@ struct BackupViewModelImportTests {
                     name: "Netflix",
                     amount: 649,
                     category: "Entertainment",
-                    frequency: .monthly,
+                    frequency: RecurringFrequency.monthly.rawValue,
                     dayOfMonth: 1,
                     daysOfWeek: nil,
                     startDate: Date(),
@@ -1220,7 +1220,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
                     id: recId, name: "Lunch", amount: 100, category: "Food",
-                    frequency: .daily, dayOfMonth: nil, daysOfWeek: nil,
+                    frequency: RecurringFrequency.daily.rawValue, dayOfMonth: nil, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
                 )
@@ -1521,7 +1521,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
                     id: recId, name: "Netflix", amount: 649, category: "Entertainment",
-                    frequency: .monthly, dayOfMonth: 1, daysOfWeek: nil,
+                    frequency: RecurringFrequency.monthly.rawValue, dayOfMonth: 1, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
                 )

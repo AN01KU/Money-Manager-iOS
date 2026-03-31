@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
+    @Environment(\.authService) private var authService
+    @Environment(\.syncService) private var syncService
+    @Environment(\.changeQueueManager) private var changeQueueManager
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false

@@ -3,6 +3,9 @@ import SwiftUI
 /// Displays the current sync state as a compact inline pill.
 /// States (in priority order): syncing → offline → error → pending → synced
 struct SyncStatusView: View {
+    @Environment(\.syncService) private var syncService
+    @Environment(\.changeQueueManager) private var changeQueueManager
+
     private var status: SyncStatus {
         if syncService.isSyncing {
             return .syncing

@@ -8,6 +8,7 @@ enum TabItem: String, CaseIterable {
 }
 
 struct MainTabView: View {
+    @Environment(\.authService) private var authService
     @AppStorage("selectedTab") private var selectedTab: TabItem = .overview
     @State private var tabChanged = false
     @State private var pendingRoute: AppRoute?

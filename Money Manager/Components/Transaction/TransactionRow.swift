@@ -79,6 +79,7 @@ struct TransactionRow: View {
 // MARK: - Settlement Badge
 
 private struct SettlementBadge: View {
+    @Environment(\.authService) private var authService
     let groupName: String
 
     var body: some View {
@@ -97,6 +98,7 @@ private struct SettlementBadge: View {
 // MARK: - Group Badge
 
 private struct GroupBadge: View {
+    @Environment(\.authService) private var authService
     let groupName: String
     let groupID: UUID
 

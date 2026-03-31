@@ -290,7 +290,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.name = "  Netflix  "
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
-        viewModel.frequency = "monthly"
+        viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
 
         let result = viewModel.save()
@@ -302,10 +302,10 @@ struct AddRecurringTransactionViewModelTests {
     func testFrequenciesContainsStandardOptions() {
         let viewModel = AddRecurringTransactionViewModel()
 
-        #expect(viewModel.frequencies.contains("daily"))
-        #expect(viewModel.frequencies.contains("weekly"))
-        #expect(viewModel.frequencies.contains("monthly"))
-        #expect(viewModel.frequencies.contains("yearly"))
+        #expect(viewModel.frequencies.contains(.daily))
+        #expect(viewModel.frequencies.contains(.weekly))
+        #expect(viewModel.frequencies.contains(.monthly))
+        #expect(viewModel.frequencies.contains(.yearly))
     }
 
     @Test
@@ -314,7 +314,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.name = "Netflix"
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
-        viewModel.frequency = "monthly"
+        viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
 
         let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
@@ -341,7 +341,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
-        viewModel.frequency = "monthly"
+        viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
 
         let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
@@ -364,7 +364,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
-        viewModel.frequency = "weekly"
+        viewModel.frequency = .weekly
 
         let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)

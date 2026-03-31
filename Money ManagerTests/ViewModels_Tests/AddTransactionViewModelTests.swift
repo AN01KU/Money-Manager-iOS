@@ -174,7 +174,7 @@ struct AddTransactionViewModelTests {
         vm.save {}
 
         let transactions = try context.fetch(FetchDescriptor<Transaction>())
-        #expect(transactions.first?.type == "income")
+        #expect(transactions.first?.type == .income)
     }
 
     @Test

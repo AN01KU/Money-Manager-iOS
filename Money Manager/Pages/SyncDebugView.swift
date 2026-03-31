@@ -4,6 +4,9 @@ import SwiftData
 
 struct SyncDebugView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.authService) private var authService
+    @Environment(\.syncService) private var syncService
+    @Environment(\.changeQueueManager) private var changeQueueManager
     @Query(sort: \PendingChange.createdAt) private var pendingChanges: [PendingChange]
     @Query(sort: \FailedChange.failedAt, order: .reverse) private var failedChanges: [FailedChange]
 

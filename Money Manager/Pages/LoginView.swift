@@ -10,6 +10,8 @@ struct LoginView: View {
     var isDismissable: Bool = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.authService) private var authService
+    @Environment(\.syncService) private var syncService
     @State private var email = ""
     @State private var password = ""
     @State private var showSignup = false

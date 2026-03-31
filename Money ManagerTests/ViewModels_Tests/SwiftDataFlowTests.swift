@@ -25,7 +25,7 @@ struct AddRecurringTransactionSwiftDataTests {
         viewModel.name = "Netflix"
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
-        viewModel.frequency = "monthly"
+        viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
         viewModel.notes = "Streaming subscription"
         
@@ -40,7 +40,7 @@ struct AddRecurringTransactionSwiftDataTests {
         #expect(saved.first?.name == "Netflix")
         #expect(saved.first?.amount == 649)
         #expect(saved.first?.category == "Entertainment")
-        #expect(saved.first?.frequency == "monthly")
+        #expect(saved.first?.frequency == .monthly)
         #expect(saved.first?.dayOfMonth == 15)
         #expect(saved.first?.notes == "Streaming subscription")
         #expect(saved.first?.isActive == true)
@@ -56,7 +56,7 @@ struct AddRecurringTransactionSwiftDataTests {
         viewModel.name = "Gym"
         viewModel.amount = "500"
         viewModel.selectedCategory = "Health"
-        viewModel.frequency = "monthly"
+        viewModel.frequency = .monthly
         viewModel.hasEndDate = false
         
         let result = viewModel.save()
@@ -81,7 +81,7 @@ struct AddRecurringTransactionSwiftDataTests {
         viewModel.name = "Trial Sub"
         viewModel.amount = "99"
         viewModel.selectedCategory = "Entertainment"
-        viewModel.frequency = "monthly"
+        viewModel.frequency = .monthly
         viewModel.hasEndDate = true
         viewModel.endDate = endDate
         

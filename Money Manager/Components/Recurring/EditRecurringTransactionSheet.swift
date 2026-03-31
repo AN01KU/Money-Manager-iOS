@@ -4,6 +4,8 @@ import SwiftData
 struct EditRecurringTransactionSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.authService) private var authService
+    @Environment(\.changeQueueManager) private var changeQueueManager
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @Bindable var recurring: RecurringTransaction
