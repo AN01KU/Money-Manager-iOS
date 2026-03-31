@@ -6,7 +6,7 @@ struct TransactionsView: View {
     @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
-    @State private var viewModel = OverviewViewModel()
+    @State private var viewModel = TransactionsViewModel()
 
     var body: some View {
         NavigationStack {
@@ -15,13 +15,13 @@ struct TransactionsView: View {
         }
         .task {
             viewModel.modelContext = modelContext
-            viewModel.update(allTransactions: allTransactions, budgets: [], customCategories: customCategories)
+            viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
         .onChange(of: allTransactions) { _, newValue in
-            viewModel.update(allTransactions: newValue, budgets: [], customCategories: customCategories)
+            viewModel.update(allTransactions: newValue, customCategories: customCategories)
         }
         .onChange(of: customCategories) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, budgets: [], customCategories: newValue)
+            viewModel.update(allTransactions: allTransactions, customCategories: newValue)
         }
         .onReceive(NotificationCenter.default.publisher(for: .transactionsCategoryFilter)) { notification in
             guard let category = notification.object as? String else { return }
@@ -36,7 +36,7 @@ struct TransactionsView: View {
 // MARK: - Body
 
 private struct TransactionsBody: View {
-    @Bindable var viewModel: OverviewViewModel
+    @Bindable var viewModel: TransactionsViewModel
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -116,7 +116,7 @@ private struct TransactionsBody: View {
 // MARK: - Month Selector
 
 private struct TransactionsMonthSelector: View {
-    @Bindable var viewModel: OverviewViewModel
+    @Bindable var viewModel: TransactionsViewModel
     @State private var showDatePicker = false
     @State private var tapped = false
 
@@ -188,7 +188,7 @@ private struct TransactionsMonthSelector: View {
 // MARK: - Filter Bar
 
 private struct TransactionsFilterBar: View {
-    @Bindable var viewModel: OverviewViewModel
+    @Bindable var viewModel: TransactionsViewModel
     @State private var selectionChanged = false
 
     var body: some View {
