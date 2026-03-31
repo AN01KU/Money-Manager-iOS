@@ -23,7 +23,7 @@ build:
 
 test:
 	rm -rf $(TEST_RESULTS)
-	$(XCODEBUILD_TEST) -skip-testing:"Money ManagerTests/APIIntegrationTests"
+	$(XCODEBUILD_TEST)
 	
 test-unit:
 	rm -rf $(TEST_RESULTS)
