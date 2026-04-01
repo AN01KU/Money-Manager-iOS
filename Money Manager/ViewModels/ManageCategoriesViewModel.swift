@@ -19,7 +19,6 @@ import SwiftData
         self.persistence = persistence
     }
 
-    // Legacy computed properties kept for test compatibility
     var customCategories: [CustomCategory] = []
     
     var visibleCategories: [CustomCategory] {
@@ -76,7 +75,6 @@ import SwiftData
         let categoryName = category.name
         let categoryId = category.id
 
-        // Reassign all linked Transactions to "Other"
         let transactionDescriptor = FetchDescriptor<Transaction>()
         if let transactions = try? modelContext.fetch(transactionDescriptor) {
             for transaction in transactions {
@@ -88,7 +86,6 @@ import SwiftData
             }
         }
 
-        // Reassign all linked RecurringTransactions to "Other"
         let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
         if let recurrings = try? modelContext.fetch(recurringDescriptor) {
             for recurring in recurrings {
@@ -178,239 +175,5 @@ import SwiftData
         
         try? context.save()
         resetTrigger += 1
-    }
-}
-
-@MainActor
-@Observable class CategoryEditorViewModel {
-    var selectedIcon: String
-    var selectedColor: String
-    var showColorWarning = false
-    var colorWarningMessage = ""
-    
-    var allCategories: [CustomCategory] = []
-    private var pendingSaveAfterWarning = false
-    
-    static let colorOptions = [
-        "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4",
-        "#FFEAA7", "#DDA15E", "#BC6C25", "#8E44AD",
-        "#3498DB", "#E74C3C", "#F39C12", "#E91E63",
-        "#2ECC71", "#1ABC9C", "#9B59B6", "#34495E"
-    ]
-    
-    static let iconOptions = [
-        "tag.circle.fill", "cart.circle.fill", "heart.circle.fill",
-        "star.circle.fill", "flame.circle.fill", "drop.circle.fill",
-        "leaf.circle.fill", "pawprint.circle.fill", "cup.and.saucer.fill",
-        "tshirt.fill", "dumbbell.fill", "music.note",
-        "film.circle.fill", "bicycle.circle.fill", "bus.fill", "fuelpump.circle.fill",
-        "wrench.and.screwdriver.fill", "camera.circle.fill", "phone.circle.fill",
-        "wifi.circle.fill", "banknote.fill", "giftcard.fill",
-        "stroller.fill"
-    ]
-    
-    var colorConflictCategory: String? { nil }
-    
-    func confirmSaveDespiteColorWarning() {
-        pendingSaveAfterWarning = true
-    }
-    
-    func checkColorConflict() -> Bool {
-        if let conflicting = colorConflictCategory, !pendingSaveAfterWarning {
-            colorWarningMessage = "\"\(conflicting)\" already uses this color. Charts may look confusing with duplicate colors. Use it anyway?"
-            showColorWarning = true
-            return false
-        }
-        pendingSaveAfterWarning = false
-        return true
-    }
-    
-    func resetColorWarning() {
-        pendingSaveAfterWarning = false
-    }
-    
-    init(icon: String, color: String) {
-        self.selectedIcon = icon
-        self.selectedColor = color
-    }
-    
-    convenience init() {
-        self.init(icon: "tag.circle.fill", color: "#4ECDC4")
-    }
-}
-
-@MainActor
-class AddCategoryViewModel: CategoryEditorViewModel {
-    var name = ""
-    var isSaving = false
-    var showError = false
-    var errorMessage = ""
-
-    let persistence: PersistenceService
-
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-
-    override var colorConflictCategory: String? {
-        allCategories.first(where: {
-            $0.color.lowercased() == selectedColor.lowercased() && !$0.isHidden
-        })?.name
-    }
-
-    init(persistence: PersistenceService = PersistenceService()) {
-        self.persistence = persistence
-        super.init(icon: "tag.circle.fill", color: "#4ECDC4")
-    }
-    
-    func save() async -> Bool {
-        guard let modelContext = modelContext else { return false }
-
-        let trimmedName = name.trimmingCharacters(in: .whitespaces)
-
-        guard !trimmedName.isEmpty else {
-            errorMessage = "Category name cannot be empty"
-            showError = true
-            return false
-        }
-
-        let isDuplicate = allCategories.contains {
-            $0.name.lowercased() == trimmedName.lowercased() && !$0.isHidden
-        }
-        guard !isDuplicate else {
-            errorMessage = "\"\(trimmedName)\" already exists"
-            showError = true
-            return false
-        }
-
-        guard checkColorConflict() else { return false }
-        
-        isSaving = true
-        resetColorWarning()
-        
-        let category = CustomCategory(
-            name: trimmedName,
-            icon: selectedIcon,
-            color: selectedColor
-        )
-        modelContext.insert(category)
-        
-        do {
-            try persistence.saveCategory(category, action: "create")
-        } catch {
-            errorMessage = "Failed to save category locally"
-            showError = true
-            isSaving = false
-            return false
-        }
-        
-        isSaving = false
-        return true
-    }
-}
-
-@MainActor
-class EditCategoryViewModel: CategoryEditorViewModel {
-    var name: String
-    var isSaving = false
-    var showError = false
-    var errorMessage = ""
-    
-    let category: CustomCategory
-    let persistence: PersistenceService
-
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-
-    override var colorConflictCategory: String? {
-        allCategories.first(where: {
-            $0.id != category.id &&
-            $0.color.lowercased() == selectedColor.lowercased() &&
-            !$0.isHidden
-        })?.name
-    }
-
-    init(category: CustomCategory, allCategories: [CustomCategory] = [], persistence: PersistenceService = PersistenceService()) {
-        self.category = category
-        self.name = category.name
-        self.persistence = persistence
-        super.init(icon: category.icon, color: category.color)
-        self.allCategories = allCategories
-    }
-    
-    func save() -> Bool {
-        let trimmedName = name.trimmingCharacters(in: .whitespaces)
-
-        guard !trimmedName.isEmpty else {
-            errorMessage = "Category name cannot be empty"
-            showError = true
-            return false
-        }
-
-        let isDuplicate = allCategories.contains {
-            $0.id != category.id &&
-            $0.name.lowercased() == trimmedName.lowercased() &&
-            !$0.isHidden
-        }
-        guard !isDuplicate else {
-            errorMessage = "\"\(trimmedName)\" already exists"
-            showError = true
-            return false
-        }
-
-        guard checkColorConflict() else { return false }
-        
-        guard let modelContext = modelContext else { return false }
-        
-        isSaving = true
-        resetColorWarning()
-
-        let oldName = category.name
-        category.name = trimmedName
-        category.icon = selectedIcon
-        category.color = selectedColor
-        category.updatedAt = Date()
-
-        // Cascade rename to all linked Transactions and RecurringTransactions
-        if oldName != trimmedName {
-            let categoryId = category.id
-
-            let transactionDescriptor = FetchDescriptor<Transaction>()
-            if let transactions = try? modelContext.fetch(transactionDescriptor) {
-                for transaction in transactions {
-                    if transaction.categoryId == categoryId || transaction.category == oldName {
-                        transaction.category = trimmedName
-                        if transaction.categoryId == nil { transaction.categoryId = categoryId }
-                        transaction.updatedAt = Date()
-                    }
-                }
-            }
-
-            let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
-            if let recurrings = try? modelContext.fetch(recurringDescriptor) {
-                for recurring in recurrings {
-                    if recurring.categoryId == categoryId || recurring.category == oldName {
-                        recurring.category = trimmedName
-                        if recurring.categoryId == nil { recurring.categoryId = categoryId }
-                        recurring.updatedAt = Date()
-                    }
-                }
-            }
-        }
-
-        do {
-            try persistence.saveCategory(category, action: "update")
-        } catch {
-            errorMessage = "Failed to save changes"
-            showError = true
-            isSaving = false
-            return false
-        }
-        
-        isSaving = false
-        return true
     }
 }
