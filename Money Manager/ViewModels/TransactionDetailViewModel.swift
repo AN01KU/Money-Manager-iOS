@@ -59,27 +59,19 @@ import SwiftData
     }
 
     func formatDateAndTime(_ date: Date, time: Date?) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-
         if let time = time {
             let calendar = Calendar.current
             let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
             let combined = calendar.date(bySettingHour: timeComponents.hour ?? 0,
                                          minute: timeComponents.minute ?? 0,
                                          second: 0, of: date) ?? date
-            dateFormatter.timeStyle = .short
-            return dateFormatter.string(from: combined)
+            return combined.formatted(date: .abbreviated, time: .shortened)
         } else {
-            dateFormatter.timeStyle = .none
-            return dateFormatter.string(from: date)
+            return date.formatted(date: .abbreviated, time: .omitted)
         }
     }
 
     func formatFullDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 }
