@@ -31,7 +31,7 @@ struct APIIntegrationTests {
             let email = "api_\(UUID().uuidString.prefix(8))@test.com"
             let username = "user_\(UUID().uuidString.prefix(8))"
             
-            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword)
+            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, invite_code: "FIN-INVITE-2026")
             let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
             
             Self.authToken = signupResponse.token
@@ -49,7 +49,7 @@ struct APIIntegrationTests {
         let email = "api_\(UUID().uuidString.prefix(8))@test.com"
         let username = "user_\(UUID().uuidString.prefix(8))"
         
-        let request = APISignupRequest(email: email, username: username, password: testPassword)
+        let request = APISignupRequest(email: email, username: username, password: testPassword, invite_code: "FIN-INVITE-2026")
         let response: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: request)
         
         #expect(!response.token.isEmpty)

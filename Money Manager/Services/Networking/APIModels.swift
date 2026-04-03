@@ -104,6 +104,7 @@ struct APISignupRequest: Codable {
     let email: String
     let username: String
     let password: String
+    let invite_code: String
 }
 
 struct APILoginRequest: Codable {
