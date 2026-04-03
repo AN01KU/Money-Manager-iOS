@@ -131,18 +131,21 @@ struct SettingsView: View {
             } label: {
                 Label("Budgets", systemImage: "chart.bar.fill")
             }
+            .accessibilityIdentifier("settings.budgets-row")
 
             NavigationLink {
                 RecurringTransactionsView()
             } label: {
                 Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
             }
+            .accessibilityIdentifier("settings.recurring-row")
 
             NavigationLink {
                 ManageCategoriesView()
             } label: {
                 Label("Categories", systemImage: "square.grid.2x2.fill")
             }
+            .accessibilityIdentifier("settings.categories-row")
         }
     }
 

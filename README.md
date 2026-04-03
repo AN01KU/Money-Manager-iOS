@@ -79,13 +79,13 @@
 
 ## Screenshots
 
-| Overview | Breakdown | Add Transaction |
-|:--------:|:----------:|:----------:|
-| <img src="Screenshots/expenses-list.png" width="200"/> | <img src="Screenshots/expenses-breakdown.png" width="200"/> | <img src="Screenshots/expense-add.png" width="200"/> |
+| Overview | Transactions | Add Transaction |
+|:--------:|:------------:|:---------------:|
+| <img src="Screenshots/overview.png" width="200"/> | <img src="Screenshots/transactions-list.png" width="200"/> | <img src="Screenshots/transaction-add.png" width="200"/> |
 
-| Category | Recurring Transactions | Settings |
-|:--------:|:--------:|:--------:|
-| <img src="Screenshots/categories.png" width="200"/> | <img src="Screenshots/expense-recurring-list.png" width="200"/> | <img src="Screenshots/settings.png" width="200"/> |
+| Budget | Groups | Group Detail |
+|:------:|:------:|:------------:|
+| <img src="Screenshots/budget-set.png" width="200"/> | <img src="Screenshots/groups-list.png" width="200"/> | <img src="Screenshots/group-detail.png" width="200"/> |
 
 ## Architecture
 
@@ -136,6 +136,9 @@ make test-unit
 
 # Run UI tests
 make test-ui
+
+# Capture screenshots (requires backend reachable)
+make screenshots
 
 # Run a single test class
 make test-one TEST=BackupViewModelTests

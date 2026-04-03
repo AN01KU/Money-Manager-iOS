@@ -76,7 +76,7 @@ enum SplitType: String, CaseIterable {
             if let editing {
                 return editing.type == .income ? "Edit Income" : "Edit Expense"
             }
-            return transactionType == .income ? "Add Income" : "Add Expense"
+            return transactionType == .income ? "Add Income" : "Add Transaction"
         case .shared(_, _, let editing, _):
             return editing != nil ? "Edit Group Expense" : "Add Group Expense"
         }

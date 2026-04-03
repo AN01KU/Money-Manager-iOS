@@ -6,7 +6,8 @@ private let processInfo = ProcessInfo.processInfo
 private let useTestData = processInfo.useTestData
 private let skipOnboarding = processInfo.skipOnboarding
 private let resetOnboarding = processInfo.resetOnboarding
-private let useMockServices = processInfo.useMockServices
+private let isScreenshotMode = processInfo.isScreenshotMode
+private let useMockServices = isScreenshotMode ? false : processInfo.useMockServices
 #endif
 
 // MARK:  GLOBAL Services
@@ -22,7 +23,7 @@ struct Money_ManagerApp: App {
     
     init() {
         #if DEBUG
-        if skipOnboarding {
+        if skipOnboarding || isScreenshotMode {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
             UserDefaults.standard.set(true, forKey: "hasSeenLogin")
         }
@@ -99,6 +100,22 @@ struct Money_ManagerApp: App {
                 .environment(\.changeQueueManager, changeQueueManager)
                 .onAppear {
                     Task {
+                        #if DEBUG
+                        if isScreenshotMode {
+                            let args = ProcessInfo.processInfo.arguments
+                            if let emailIdx = args.firstIndex(of: LaunchArguments.testEmail.rawValue),
+                               let passIdx = args.firstIndex(of: LaunchArguments.testPassword.rawValue),
+                               args.indices.contains(emailIdx + 1),
+                               args.indices.contains(passIdx + 1) {
+                                try? await authService.login(
+                                    email: args[emailIdx + 1],
+                                    password: args[passIdx + 1]
+                                )
+                                await syncService.fullSync()
+                                return
+                            }
+                        }
+                        #endif
                         await authService.checkAuthState()
                         if authService.isAuthenticated {
                             await syncService.syncOnLaunch()

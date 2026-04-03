@@ -124,6 +124,7 @@ struct GroupsListView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("groups.group-row")
 
                         if group.id != viewModel.filteredGroups.last?.id {
                             Divider()

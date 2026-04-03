@@ -13,6 +13,9 @@ public enum LaunchArguments: String {
     case useMockServices = "--useMocks"
     case skipOnboarding = "--skipOnboarding"
     case resetOnboarding = "--resetOnboarding"
+    case screenshotMode = "--screenshotMode"
+    case testEmail = "--testEmail"
+    case testPassword = "--testPassword"
 }
 
 public extension ProcessInfo {
@@ -38,5 +41,9 @@ public extension ProcessInfo {
     
     var isRunningTests: Bool {
         return environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    var isScreenshotMode: Bool {
+        return arguments.contains(LaunchArguments.screenshotMode.rawValue)
     }
 }

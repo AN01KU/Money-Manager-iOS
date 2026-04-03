@@ -95,6 +95,7 @@ private struct TransactionsBody: View {
             }
             .padding(.trailing, 24)
             .padding(.bottom, 24)
+            .accessibilityIdentifier("transactions.add-button")
         }
         .background(Color(.systemGroupedBackground))
         .searchable(text: $viewModel.searchText, prompt: "Search transactions")
