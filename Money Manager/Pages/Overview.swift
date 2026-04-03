@@ -13,6 +13,10 @@ struct Overview: View {
     @State private var navigationPath: [AppRoute] = []
     var pendingRoute: Binding<AppRoute?>?
 
+    private var queryData: QuerySnapshot {
+        QuerySnapshot(transactions: allTransactions, budgets: budgets, categories: customCategories)
+    }
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit)
@@ -32,15 +36,7 @@ struct Overview: View {
             viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
         }
-        .onChange(of: allTransactions) { _, newValue in
-            viewModel.update(allTransactions: newValue, budgets: budgets, customCategories: customCategories)
-        }
-        .onChange(of: budgets) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, budgets: newValue, customCategories: customCategories)
-        }
-        .onChange(of: customCategories) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: newValue)
-        }
+        .onChange(of: queryData) { viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories) }
     }
 }
 
@@ -370,6 +366,14 @@ private struct BudgetInlineRow: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+// MARK: - Query Snapshot
+
+private struct QuerySnapshot: Equatable {
+    let transactions: [Transaction]
+    let budgets: [MonthlyBudget]
+    let categories: [CustomCategory]
 }
 
 // MARK: - Preview Helpers
