@@ -33,55 +33,41 @@ struct RecurringTransactionRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(recurring.isActive ? categoryColor.opacity(0.2) : AppColors.grayMedium)
-                        .frame(width: 48, height: 48)
+                Image(systemName: categoryIcon)
+                    .foregroundStyle(recurring.isActive ? categoryColor : .secondary)
+                    .frame(width: 28)
 
-                    Image(systemName: categoryIcon)
-                        .font(.title3)
-                        .foregroundStyle(recurring.isActive ? categoryColor : .secondary)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(displayName)
                         .font(.body)
-                        .fontWeight(.semibold)
                         .foregroundStyle(recurring.isActive ? .primary : .secondary)
 
                     HStack(spacing: 6) {
                         Text(recurring.frequency.rawValue.capitalized)
-                            .font(.caption)
-                            .fontWeight(.medium)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(recurring.isActive ? AppColors.accentLight : AppColors.grayLight)
-                            .foregroundStyle(recurring.isActive ? AppColors.accent : .secondary)
+                            .padding(.vertical, 3)
+                            .background(Color(.systemGray5))
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         if !recurring.isActive {
                             Text("Paused")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(AppColors.warning.opacity(0.1))
+                                .font(.caption2)
                                 .foregroundStyle(AppColors.warning)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(AppColors.warning.opacity(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                     }
-
-                    Text(recurring.isActive ? "Next: \(recurring.nextOccurrence?.relativeString ?? "Unknown")" : "Last: \(recurring.lastOccurrence?.shortDateString ?? "Never")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 8) {
+                VStack(alignment: .trailing, spacing: 4) {
                     Text(CurrencyFormatter.format(recurring.amount))
                         .font(.body)
-                        .fontWeight(.semibold)
                         .foregroundStyle(recurring.isActive ? AppColors.expense : .secondary)
 
                     Toggle("", isOn: Binding(
@@ -96,9 +82,6 @@ struct RecurringTransactionRow: View {
                     .accessibilityRemoveTraits(.isButton)
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(displayName), \(CurrencyFormatter.format(recurring.amount)), \(recurring.isActive ? "Active" : "Paused")")
