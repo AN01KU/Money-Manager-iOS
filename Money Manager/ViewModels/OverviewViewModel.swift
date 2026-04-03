@@ -10,13 +10,13 @@ enum TransactionTypeFilter: String, CaseIterable {
 @MainActor
 @Observable class OverviewViewModel {
     var selectedView: ViewType = .daily
-    var selectedDate: Date = Date() { didSet { recalculate() } }
-    var filterMode: FilterMode = .monthly { didSet { recalculate() } }
+    var selectedDate: Date = Date() { didSet { if oldValue != selectedDate { recalculate() } } }
+    var filterMode: FilterMode = .monthly { didSet { if oldValue != filterMode { recalculate() } } }
     var showAddTransaction = false
     var showBudgetSheet = false
-    var searchText = "" { didSet { recalculate() } }
-    var selectedCategoryFilter: String? { didSet { recalculate() } }
-    var transactionTypeFilter: TransactionTypeFilter = .all { didSet { recalculate() } }
+    var searchText = "" { didSet { if oldValue != searchText { recalculate() } } }
+    var selectedCategoryFilter: String? { didSet { if oldValue != selectedCategoryFilter { recalculate() } } }
+    var transactionTypeFilter: TransactionTypeFilter = .all { didSet { if oldValue != transactionTypeFilter { recalculate() } } }
 
     var filteredTransactions: [Transaction] = []
     var currentBudget: MonthlyBudget?
