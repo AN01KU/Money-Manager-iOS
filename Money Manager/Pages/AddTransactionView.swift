@@ -15,8 +15,8 @@ struct AddTransactionView: View {
     @State private var saveSuccess = false
     @State private var errorTriggered = 0
 
-    init(mode: AddTransactionMode = .personal()) {
-        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode))
+    init(mode: AddTransactionMode = .personal(), groupService: GroupServiceProtocol = GroupService.shared) {
+        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode, groupService: groupService))
     }
 
     init(transactionToEdit: Transaction) {
@@ -54,6 +54,7 @@ struct AddTransactionView: View {
             }
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier(viewModel.navigationTitleIdentifier)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
@@ -229,7 +230,7 @@ struct AddTransactionView: View {
 
     private var paidBySection: some View {
         Section("Paid By") {
-            if case .shared(_, let members, _, _) = viewModel.mode {
+            if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
                     let isSelected = viewModel.paidByUserId == member.id
                     Button {
@@ -286,7 +287,7 @@ struct AddTransactionView: View {
 
     private var splitMembersSection: some View {
         Section("Split Between") {
-            if case .shared(_, let members, _, _) = viewModel.mode {
+            if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
                     let isIncluded = viewModel.selectedMembers.contains(member.id)
                     Button {
@@ -379,6 +380,6 @@ struct AddTransactionView: View {
     let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
             let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joined_at: Date())
     let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", created_by: alice.id, created_at: Date(), members: [alice, bob], balances: [])
-    AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }))
+    AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }), groupService: GroupService.shared)
         .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }

@@ -10,8 +10,8 @@ struct GroupDetailView: View {
     @State private var selectedTransaction: APIGroupTransaction?
     @State private var transactionToEdit: APIGroupTransaction?
 
-    init(group: APIGroupWithDetails) {
-        _viewModel = State(wrappedValue: GroupDetailViewModel(group: group))
+    init(group: APIGroupWithDetails, currentUserId: UUID?) {
+        _viewModel = State(wrappedValue: GroupDetailViewModel(group: group, currentUserId: currentUserId))
     }
 
     var body: some View {
@@ -45,10 +45,12 @@ struct GroupDetailView: View {
             AddTransactionView(
                 mode: .shared(
                     group: viewModel.group,
-                    members: viewModel.members
+                    members: viewModel.members,
+                    currentUserId: viewModel.currentUserId
                 ) { newExpense in
                     viewModel.transactionAdded(newExpense)
-                }
+                },
+                groupService: viewModel.groupService
             )
         }
         .sheet(isPresented: $viewModel.showSettlement) {
@@ -94,10 +96,12 @@ struct GroupDetailView: View {
                 mode: .shared(
                     group: viewModel.group,
                     members: viewModel.members,
+                    currentUserId: viewModel.currentUserId,
                     editing: transaction
                 ) { updated in
                     viewModel.transactionEdited(replacing: transaction, with: updated)
-                }
+                },
+                groupService: viewModel.groupService
             )
         }
         .task {
@@ -319,6 +323,6 @@ struct GroupDetailView: View {
         balances: []
     )
     NavigationStack {
-        GroupDetailView(group: group)
+        GroupDetailView(group: group, currentUserId: nil)
     }
 }

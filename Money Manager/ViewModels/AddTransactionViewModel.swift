@@ -3,7 +3,7 @@ import SwiftData
 
 enum AddTransactionMode {
     case personal(editing: Transaction? = nil)
-    case shared(group: APIGroupWithDetails, members: [APIGroupMember], editing: APIGroupTransaction? = nil, onAdd: (APIGroupTransaction) -> Void)
+    case shared(group: APIGroupWithDetails, members: [APIGroupMember], currentUserId: UUID? = nil, editing: APIGroupTransaction? = nil, onAdd: (APIGroupTransaction) -> Void)
 }
 
 enum TransactionType: String, CaseIterable {
@@ -61,7 +61,6 @@ enum SplitType: String, CaseIterable {
     }
     var customCategories: [CustomCategory] = []
     private let groupService: GroupServiceProtocol
-    private let auth: AuthServiceProtocol
 
     // MARK: - Computed
 
@@ -77,8 +76,22 @@ enum SplitType: String, CaseIterable {
                 return editing.type == .income ? "Edit Income" : "Edit Expense"
             }
             return transactionType == .income ? "Add Income" : "Add Transaction"
-        case .shared(_, _, let editing, _):
+        case .shared(_, _, _, let editing, _):
             return editing != nil ? "Edit Group Expense" : "Add Group Expense"
+        }
+    }
+
+    /// Stable identifier for the current screen mode — use in tests and accessibility.
+    /// Unaffected by display copy changes.
+    var navigationTitleIdentifier: String {
+        switch mode {
+        case .personal(let editing):
+            if let editing {
+                return editing.type == .income ? "edit-income" : "edit-expense"
+            }
+            return transactionType == .income ? "add-income" : "add-transaction"
+        case .shared(_, _, _, let editing, _):
+            return editing != nil ? "edit-group-expense" : "add-group-expense"
         }
     }
 
@@ -116,13 +129,11 @@ enum SplitType: String, CaseIterable {
     init(
         mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
-        persistence: PersistenceService = PersistenceService(),
-        auth: AuthServiceProtocol = authService
+        persistence: PersistenceService = PersistenceService()
     ) {
         self.mode = mode
         self.groupService = groupService
         self.persistence = persistence
-        self.auth = auth
         setup()
     }
 
@@ -139,7 +150,7 @@ enum SplitType: String, CaseIterable {
             notes = expense.notes ?? ""
             transactionType = TransactionType(kind: expense.type)
 
-        case .shared(_, let members, let editing, _):
+        case .shared(_, let members, let currentUserId, let editing, _):
             if let tx = editing {
                 amount = (Double(tx.total_amount) ?? 0).formatted(.number.precision(.fractionLength(2)))
                 selectedCategory = tx.category
@@ -147,7 +158,7 @@ enum SplitType: String, CaseIterable {
                 paidByUserId = tx.paid_by_user_id
                 selectedMembers = Set(tx.splits.map(\.user_id))
             } else {
-                paidByUserId = auth.currentUser?.id
+                paidByUserId = currentUserId
                 selectedMembers = Set(members.map(\.id))
             }
         }
@@ -197,7 +208,7 @@ enum SplitType: String, CaseIterable {
         switch mode {
         case .personal:
             savePersonal(amountValue: amountValue, completion: completion)
-        case .shared(let group, _, _, let onAdd):
+        case .shared(let group, _, _, _, let onAdd):
             saveShared(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
         }
     }

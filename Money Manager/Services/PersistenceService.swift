@@ -11,11 +11,9 @@ final class PersistenceService {
 
     var modelContext: ModelContext?
     private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
+    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
         self.changeQueue = changeQueue
-        self.auth = auth
     }
 
     // MARK: - Save + Sync
@@ -43,7 +41,7 @@ final class PersistenceService {
 
         if NetworkMonitor.shared.isConnected {
             Task {
-                await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
+                await changeQueue.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
             }
         }
     }

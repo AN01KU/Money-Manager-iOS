@@ -40,24 +40,24 @@ struct AddTransactionViewModelTests {
     // MARK: - Navigation Title
 
     @Test
-    func testNavigationTitle() {
+    func testNavigationTitleIdentifier() {
         let addVM = AddTransactionViewModel(mode: .personal())
-        #expect(addVM.navigationTitle == "Add Expense")
+        #expect(addVM.navigationTitleIdentifier == "add-transaction")
 
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         let editVM = AddTransactionViewModel(mode: .personal(editing: expense))
-        #expect(editVM.navigationTitle == "Edit Expense")
+        #expect(editVM.navigationTitleIdentifier == "edit-expense")
     }
 
     @Test
-    func testNavigationTitleForIncome() {
+    func testNavigationTitleIdentifierForIncome() {
         let vm = AddTransactionViewModel(mode: .personal())
         vm.transactionType = .income
-        #expect(vm.navigationTitle == "Add Income")
+        #expect(vm.navigationTitleIdentifier == "add-income")
 
         let income = Transaction(type: .income, amount: 100, category: "Work & Professional", date: Date())
         let editVM = AddTransactionViewModel(mode: .personal(editing: income))
-        #expect(editVM.navigationTitle == "Edit Income")
+        #expect(editVM.navigationTitleIdentifier == "edit-income")
     }
 
     // MARK: - Setup from existing transaction

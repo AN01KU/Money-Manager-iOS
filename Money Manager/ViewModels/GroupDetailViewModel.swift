@@ -50,20 +50,14 @@ final class GroupDetailViewModel {
     var showSettlement = false
 
     let groupService: GroupServiceProtocol
-    private let auth: AuthServiceProtocol
+    let currentUserId: UUID?
 
-    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, auth: AuthServiceProtocol = authService) {
+    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {
         self.group = group
         self.members = group.members
         self.balances = group.balances
         self.groupService = groupService
-        self.auth = auth
-    }
-
-    // MARK: - Computed
-
-    var currentUserId: UUID? {
-        auth.currentUser?.id
+        self.currentUserId = currentUserId
     }
 
     var groupTotal: Double {

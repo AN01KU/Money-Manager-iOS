@@ -47,17 +47,15 @@ final class GroupsListViewModel {
     var searchText = ""
 
     let groupService: GroupServiceProtocol
-    private let auth: AuthServiceProtocol
+    private(set) var currentUserId: UUID?
 
-    init(groupService: GroupServiceProtocol = GroupService.shared, auth: AuthServiceProtocol = authService) {
+    init(groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {
         self.groupService = groupService
-        self.auth = auth
+        self.currentUserId = currentUserId
     }
 
-    // MARK: - Computed
-
-    var currentUserId: UUID? {
-        auth.currentUser?.id
+    func setCurrentUser(_ userId: UUID?) {
+        currentUserId = userId
     }
 
     var filteredGroups: [APIGroupWithDetails] {
@@ -103,7 +101,6 @@ final class GroupsListViewModel {
     }
 
     private func loadActivity() async {
-        guard let userId = currentUserId else { return }
         var items: [ActivityItem] = []
 
         await withTaskGroup(of: (String, [APIGroupTransaction], [APISettlement], [APIGroupMember]).self) { taskGroup in
@@ -121,8 +118,10 @@ final class GroupsListViewModel {
                 for tx in transactions {
                     items.append(.transaction(tx, groupName: groupName))
                 }
-                for settlement in settlements where settlement.from_user == userId || settlement.to_user == userId {
-                    items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
+                if let userId = currentUserId {
+                    for settlement in settlements where settlement.from_user == userId || settlement.to_user == userId {
+                        items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
+                    }
                 }
             }
         }
