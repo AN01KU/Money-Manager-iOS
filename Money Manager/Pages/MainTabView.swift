@@ -10,7 +10,7 @@ enum TabItem: String, CaseIterable {
 struct MainTabView: View {
     @Environment(\.authService) private var authService
     @State private var selectedTab: TabItem = .overview
-    @State private var tabChanged = false
+    @State private var tabChanged = 0
     @State private var pendingRoute: AppRoute?
 
     var body: some View {
@@ -36,10 +36,7 @@ struct MainTabView: View {
         .tint(.teal)
         .sensoryFeedback(.selection, trigger: tabChanged)
         .onChange(of: selectedTab) { _, _ in
-            tabChanged = true
-        }
-        .onChange(of: tabChanged) { _, newValue in
-            if newValue { tabChanged = false }
+            tabChanged += 1
         }
         .onReceive(NotificationCenter.default.publisher(for: .appRouteReceived)) { notification in
             guard let route = notification.object as? AppRoute else { return }

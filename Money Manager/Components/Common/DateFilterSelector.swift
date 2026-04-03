@@ -16,14 +16,14 @@ struct DateFilterSelector: View {
     @Binding var selectedDate: Date
     @Binding var filterMode: FilterMode
     @State private var showDatePicker = false
-    @State private var datePickerTapped = false
-    @State private var filterToggled = false
+    @State private var datePickerTapped = 0
+    @State private var filterToggled = 0
     
     var body: some View {
         HStack(spacing: 12) {
             // Date Picker Button
             Button(action: {
-                datePickerTapped = true
+                datePickerTapped += 1
                 showDatePicker = true
             }) {
                 HStack {
@@ -42,13 +42,10 @@ struct DateFilterSelector: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .sensoryFeedback(.impact(weight: .light), trigger: datePickerTapped)
-            .onChange(of: datePickerTapped) { _, newValue in
-                if newValue { datePickerTapped = false }
-            }
             
             // Filter Mode Toggle
             Button(action: {
-                filterToggled = true
+                filterToggled += 1
                 filterMode = filterMode == .daily ? .monthly : .daily
             }) {
                 HStack(spacing: 6) {
@@ -65,9 +62,6 @@ struct DateFilterSelector: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .sensoryFeedback(.selection, trigger: filterToggled)
-            .onChange(of: filterToggled) { _, newValue in
-                if newValue { filterToggled = false }
-            }
             
             Spacer()
         }

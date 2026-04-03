@@ -113,7 +113,7 @@ private struct OverviewScrollContent: View {
 private struct OverviewHeaderCard: View {
     @Bindable var viewModel: OverviewViewModel
     @State private var showDatePicker = false
-    @State private var navTapped = false
+    @State private var navTapped = 0
 
     private var budgetPercentage: Int {
         guard let budget = viewModel.currentBudget, budget.limit > 0 else { return 0 }
@@ -135,7 +135,7 @@ private struct OverviewHeaderCard: View {
                         let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
                         if let prev = Calendar.current.date(byAdding: step, value: -1, to: viewModel.selectedDate) {
                             viewModel.selectedDate = prev
-                            navTapped = true
+                            navTapped += 1
                         }
                     } label: {
                         Image(systemName: "chevron.left")
@@ -158,7 +158,7 @@ private struct OverviewHeaderCard: View {
                         let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
                         if let next = Calendar.current.date(byAdding: step, value: 1, to: viewModel.selectedDate) {
                             viewModel.selectedDate = next
-                            navTapped = true
+                            navTapped += 1
                         }
                     } label: {
                         Image(systemName: "chevron.right")
@@ -169,7 +169,6 @@ private struct OverviewHeaderCard: View {
                     .buttonStyle(.plain)
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: navTapped)
-                .onChange(of: navTapped) { _, v in if v { navTapped = false } }
 
                 Spacer()
 

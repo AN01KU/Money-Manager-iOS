@@ -22,8 +22,8 @@ struct EditRecurringTransactionSheet: View {
     @State private var showCategoryPicker = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var categoryTapped = false
-    @State private var saveSuccess = false
+    @State private var categoryTapped = 0
+    @State private var saveSuccess = 0
 
     private let frequencies = RecurringFrequency.allCases
 
@@ -66,7 +66,7 @@ struct EditRecurringTransactionSheet: View {
                             .foregroundStyle(.secondary)
 
                         Button(action: {
-                            categoryTapped = true
+                            categoryTapped += 1
                             showCategoryPicker = true
                         }) {
                             HStack {
@@ -85,9 +85,6 @@ struct EditRecurringTransactionSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
-                        .onChange(of: categoryTapped) { _, newValue in
-                            if newValue { categoryTapped = false }
-                        }
                     }
                     .padding(.vertical, 8)
                 }
@@ -225,7 +222,7 @@ struct EditRecurringTransactionSheet: View {
                 }
             }
 
-            saveSuccess = true
+            saveSuccess += 1
             dismiss()
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"

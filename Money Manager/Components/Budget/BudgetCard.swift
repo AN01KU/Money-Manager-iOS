@@ -15,7 +15,7 @@ struct BudgetCard: View {
     let daysRemaining: Int
     let dailyAverage: Double
     let onEdit: () -> Void
-    @State private var editTapped = false
+    @State private var editTapped = 0
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -33,7 +33,7 @@ struct BudgetCard: View {
                 Spacer()
                 
                 Button(action: {
-                    editTapped = true
+                    editTapped += 1
                     onEdit()
                 }) {
                     Image(systemName: "pencil.circle.fill")
@@ -41,9 +41,6 @@ struct BudgetCard: View {
                         .foregroundStyle(AppColors.accent)
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
-                .onChange(of: editTapped) { _, newValue in
-                    if newValue { editTapped = false }
-                }
                 .accessibilityLabel("Edit budget")
             }
             

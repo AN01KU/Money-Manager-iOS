@@ -7,9 +7,9 @@ struct RecurringTransactionsView: View {
     private var recurringTransactions: [RecurringTransaction]
 
     @State private var viewModel = RecurringTransactionsViewModel()
-    @State private var rowTapped = false
-    @State private var deleteTriggered = false
-    @State private var addTriggered = false
+    @State private var rowTapped = 0
+    @State private var deleteTriggered = 0
+    @State private var addTriggered = 0
 
     var body: some View {
         Group {
@@ -25,13 +25,10 @@ struct RecurringTransactionsView: View {
                         Section {
                             ForEach(viewModel.upcomingThisMonth) { item in
                                 RecurringTransactionRow(recurring: item, onTap: {
-                                    rowTapped = true
+                                    rowTapped += 1
                                     viewModel.editingRecurring = item
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                                .onChange(of: rowTapped) { _, newValue in
-                                    if newValue { rowTapped = false }
-                                }
                             }
                         } header: {
                             HStack {
@@ -48,24 +45,18 @@ struct RecurringTransactionsView: View {
                         Section("Active") {
                             ForEach(viewModel.activeRecurring) { item in
                                 RecurringTransactionRow(recurring: item, onTap: {
-                                    rowTapped = true
+                                    rowTapped += 1
                                     viewModel.editingRecurring = item
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                                .onChange(of: rowTapped) { _, newValue in
-                                    if newValue { rowTapped = false }
-                                }
                             }
                             .onDelete { indexSet in
-                                deleteTriggered = true
+                                deleteTriggered += 1
                                 for index in indexSet {
                                     viewModel.deactivate(at: index)
                                 }
                             }
                             .sensoryFeedback(.warning, trigger: deleteTriggered)
-                            .onChange(of: deleteTriggered) { _, newValue in
-                                if newValue { deleteTriggered = false }
-                            }
                         }
                     }
 
@@ -73,16 +64,13 @@ struct RecurringTransactionsView: View {
                         Section("Paused") {
                             ForEach(viewModel.pausedRecurring) { item in
                                 RecurringTransactionRow(recurring: item, onTap: {
-                                    rowTapped = true
+                                    rowTapped += 1
                                     viewModel.editingRecurring = item
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                                .onChange(of: rowTapped) { _, newValue in
-                                    if newValue { rowTapped = false }
-                                }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
-                                        deleteTriggered = true
+                                        deleteTriggered += 1
                                         if let index = viewModel.pausedRecurring.firstIndex(where: { $0.id == item.id }) {
                                             viewModel.delete(at: index)
                                         }
@@ -102,15 +90,12 @@ struct RecurringTransactionsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: {
-                    addTriggered = true
+                    addTriggered += 1
                     viewModel.showAddSheet = true
                 }) {
                     Image(systemName: "plus")
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
-                .onChange(of: addTriggered) { _, newValue in
-                    if newValue { addTriggered = false }
-                }
                 .accessibilityLabel("Add recurring transaction")
             }
         }

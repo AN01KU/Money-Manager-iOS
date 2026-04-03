@@ -7,13 +7,13 @@ struct AddTransactionView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @State private var viewModel: AddTransactionViewModel
-    @State private var amount100Tapped = false
-    @State private var amount500Tapped = false
-    @State private var amount1000Tapped = false
-    @State private var categoryTapped = false
-    @State private var todayTapped = false
+    @State private var amount100Tapped = 0
+    @State private var amount500Tapped = 0
+    @State private var amount1000Tapped = 0
+    @State private var categoryTapped = 0
+    @State private var todayTapped = 0
     @State private var saveSuccess = false
-    @State private var errorTriggered = false
+    @State private var errorTriggered = 0
 
     init(mode: AddTransactionMode = .personal()) {
         _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode))
@@ -82,12 +82,9 @@ struct AddTransactionView: View {
                 Text(viewModel.errorMessage)
             }
             .onChange(of: viewModel.showError) { _, show in
-                if show { errorTriggered = true }
+                if show { errorTriggered += 1 }
             }
             .sensoryFeedback(.error, trigger: errorTriggered)
-            .onChange(of: errorTriggered) { _, newValue in
-                if newValue { errorTriggered = false }
-            }
             .task {
                 viewModel.modelContext = modelContext
                 viewModel.customCategories = customCategories
@@ -113,15 +110,12 @@ struct AddTransactionView: View {
                     .fontWeight(.semibold)
 
                 HStack(spacing: 12) {
-                    QuickAmountButton(amount: 100) { amount100Tapped = true; viewModel.amount = "100" }
+                    QuickAmountButton(amount: 100) { amount100Tapped += 1; viewModel.amount = "100" }
                         .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
-                        .onChange(of: amount100Tapped) { _, v in if v { amount100Tapped = false } }
-                    QuickAmountButton(amount: 500) { amount500Tapped = true; viewModel.amount = "500" }
+                    QuickAmountButton(amount: 500) { amount500Tapped += 1; viewModel.amount = "500" }
                         .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
-                        .onChange(of: amount500Tapped) { _, v in if v { amount500Tapped = false } }
-                    QuickAmountButton(amount: 1000) { amount1000Tapped = true; viewModel.amount = "1000" }
+                    QuickAmountButton(amount: 1000) { amount1000Tapped += 1; viewModel.amount = "1000" }
                         .sensoryFeedback(.impact(weight: .light), trigger: amount1000Tapped)
-                        .onChange(of: amount1000Tapped) { _, v in if v { amount1000Tapped = false } }
                 }
             }
             .padding(.vertical, 8)
@@ -132,7 +126,7 @@ struct AddTransactionView: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    categoryTapped = true
+                    categoryTapped += 1
                     viewModel.showCategoryPicker = true
                 } label: {
                     HStack {
@@ -154,7 +148,6 @@ struct AddTransactionView: View {
                     .clipShape(.rect(cornerRadius: 8))
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
-                .onChange(of: categoryTapped) { _, v in if v { categoryTapped = false } }
             }
             .padding(.vertical, 8)
         }
@@ -187,9 +180,8 @@ struct AddTransactionView: View {
                     .labelsHidden()
 
                 HStack(spacing: 12) {
-                    QuickDateButton(label: "Today") { todayTapped = true; viewModel.selectedDate = Date() }
+                    QuickDateButton(label: "Today") { todayTapped += 1; viewModel.selectedDate = Date() }
                         .sensoryFeedback(.impact(weight: .light), trigger: todayTapped)
-                        .onChange(of: todayTapped) { _, v in if v { todayTapped = false } }
                     QuickDateButton(label: "Yesterday") {
                         viewModel.selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                     }

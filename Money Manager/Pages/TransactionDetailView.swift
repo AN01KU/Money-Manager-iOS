@@ -7,8 +7,8 @@ struct TransactionDetailView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let transaction: Transaction
     @State private var viewModel: TransactionDetailViewModel
-    @State private var editTapped = false
-    @State private var deleteTapped = false
+    @State private var editTapped = 0
+    @State private var deleteTapped = 0
     @State private var deleteSuccess = false
 
     init(transaction: Transaction) {
@@ -161,7 +161,7 @@ struct TransactionDetailView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             Button {
-                editTapped = true
+                editTapped += 1
                 viewModel.showEditSheet = true
             } label: {
                 Label("Edit", systemImage: "pencil")
@@ -173,10 +173,9 @@ struct TransactionDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
-            .onChange(of: editTapped) { _, v in if v { editTapped = false } }
 
             Button {
-                deleteTapped = true
+                deleteTapped += 1
                 viewModel.showDeleteAlert = true
             } label: {
                 Label("Delete", systemImage: "trash")
@@ -188,7 +187,6 @@ struct TransactionDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .sensoryFeedback(.warning, trigger: deleteTapped)
-            .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
         }
         .padding(.horizontal)
     }

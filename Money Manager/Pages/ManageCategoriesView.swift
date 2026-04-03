@@ -7,12 +7,12 @@ struct ManageCategoriesView: View {
     @Query(filter: #Predicate<Transaction> { !$0.isDeleted }) private var allTransactions: [Transaction]
 
     @State private var viewModel = ManageCategoriesViewModel()
-    @State private var rowTapped = false
-    @State private var deleteTriggered = false
-    @State private var hideTriggered = false
-    @State private var restoreTriggered = false
-    @State private var addTriggered = false
-    @State private var showResetMenu = false
+    @State private var rowTapped = 0
+    @State private var deleteTriggered = 0
+    @State private var hideTriggered = 0
+    @State private var restoreTriggered = 0
+    @State private var addTriggered = 0
+    @State private var showResetMenu = 0
     
     @State private var lastDeleteCount = 0
     @State private var lastResetCount = 0
@@ -40,38 +40,29 @@ struct ManageCategoriesView: View {
                 Section {
                     ForEach(predefinedCategories) { category in
                         CategoryRow(category: category, usageCount: usageCounts[category.name, default: 0], onTap: {
-                            rowTapped = true
+                            rowTapped += 1
                             viewModel.categoryToEdit = category
                         })
                         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                        .onChange(of: rowTapped) { _, newValue in
-                            if newValue { rowTapped = false }
-                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if category.isDeletable {
                                 Button(role: .destructive) {
-                                    deleteTriggered = true
+                                    deleteTriggered += 1
                                     viewModel.deleteCategory(category)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
                                 .tint(.red)
                                 .sensoryFeedback(.warning, trigger: deleteTriggered)
-                                .onChange(of: deleteTriggered) { _, newValue in
-                                    if newValue { deleteTriggered = false }
-                                }
                             }
                             Button {
-                                hideTriggered = true
+                                hideTriggered += 1
                                 viewModel.hideCategory(category)
                             } label: {
                                 Label("Hide", systemImage: "eye.slash")
                             }
                             .tint(.orange)
                             .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
-                            .onChange(of: hideTriggered) { _, newValue in
-                                if newValue { hideTriggered = false }
-                            }
                         }
                     }
                 } header: {
@@ -85,37 +76,28 @@ struct ManageCategoriesView: View {
                 Section("Your Categories") {
                     ForEach(userCategories) { category in
                         CategoryRow(category: category, usageCount: usageCounts[category.name, default: 0], onTap: {
-                            rowTapped = true
+                            rowTapped += 1
                             viewModel.categoryToEdit = category
                         })
                         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                        .onChange(of: rowTapped) { _, newValue in
-                            if newValue { rowTapped = false }
-                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
-                                deleteTriggered = true
+                                deleteTriggered += 1
                                 viewModel.deleteCategory(category)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
                             .tint(.red)
                             .sensoryFeedback(.warning, trigger: deleteTriggered)
-                            .onChange(of: deleteTriggered) { _, newValue in
-                                if newValue { deleteTriggered = false }
-                            }
                             
                             Button {
-                                hideTriggered = true
+                                hideTriggered += 1
                                 viewModel.hideCategory(category)
                             } label: {
                                 Label("Hide", systemImage: "eye.slash")
                             }
                             .tint(.orange)
                             .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
-                            .onChange(of: hideTriggered) { _, newValue in
-                                if newValue { hideTriggered = false }
-                            }
                         }
                     }
                 }
@@ -125,26 +107,20 @@ struct ManageCategoriesView: View {
                 Section("Hidden Categories") {
                     ForEach(hiddenCategories) { category in
                         HiddenCategoryRow(category: category) {
-                            restoreTriggered = true
+                            restoreTriggered += 1
                             viewModel.restoreCategory(category)
                         }
                         .sensoryFeedback(.success, trigger: restoreTriggered)
-                        .onChange(of: restoreTriggered) { _, newValue in
-                            if newValue { restoreTriggered = false }
-                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if category.isDeletable {
                                 Button(role: .destructive) {
-                                    deleteTriggered = true
+                                    deleteTriggered += 1
                                     viewModel.deleteCategory(category)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
                                 .tint(.red)
                                 .sensoryFeedback(.warning, trigger: deleteTriggered)
-                                .onChange(of: deleteTriggered) { _, newValue in
-                                    if newValue { deleteTriggered = false }
-                                }
                             }
                         }
                     }
@@ -156,14 +132,14 @@ struct ManageCategoriesView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        showResetMenu = true
+                        showResetMenu += 1
                         viewModel.restoreDefaults(modelContext: modelContext)
                     } label: {
                         Label("Restore Defaults", systemImage: "arrow.counterclockwise")
                     }
                     
                     Button(role: .destructive) {
-                        showResetMenu = true
+                        showResetMenu += 1
                         viewModel.resetAll(modelContext: modelContext)
                     } label: {
                         Label("Reset All Categories", systemImage: "trash")
@@ -172,21 +148,15 @@ struct ManageCategoriesView: View {
                     Image(systemName: "ellipsis.circle")
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: showResetMenu)
-                .onChange(of: showResetMenu) { _, newValue in
-                    if newValue { showResetMenu = false }
-                }
                 
                 Button {
-                    addTriggered = true
+                    addTriggered += 1
                     viewModel.showAddCategory = true
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(AppColors.accent)
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
-                .onChange(of: addTriggered) { _, newValue in
-                    if newValue { addTriggered = false }
-                }
                 .accessibilityLabel("Add category")
             }
         }

@@ -10,8 +10,8 @@ struct GroupTransactionDetailSheet: View {
     let onEdit: (() -> Void)?
 
     @State private var showDeleteAlert = false
-    @State private var deleteTapped = false
-    @State private var editTapped = false
+    @State private var deleteTapped = 0
+    @State private var editTapped = 0
 
     private var amount: Double { Double(transaction.total_amount) ?? 0 }
 
@@ -93,7 +93,7 @@ struct GroupTransactionDetailSheet: View {
                         HStack(spacing: 16) {
                             if let onEdit {
                                 Button {
-                                    editTapped = true
+                                    editTapped += 1
                                     onEdit()
                                     dismiss()
                                 } label: {
@@ -106,12 +106,11 @@ struct GroupTransactionDetailSheet: View {
                                         .clipShape(.rect(cornerRadius: 12))
                                 }
                                 .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
-                                .onChange(of: editTapped) { _, v in if v { editTapped = false } }
                             }
 
                             if let onDelete {
                                 Button {
-                                    deleteTapped = true
+                                    deleteTapped += 1
                                     showDeleteAlert = true
                                 } label: {
                                     Text("Delete")
@@ -123,7 +122,6 @@ struct GroupTransactionDetailSheet: View {
                                         .clipShape(.rect(cornerRadius: 12))
                                 }
                                 .sensoryFeedback(.warning, trigger: deleteTapped)
-                                .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
                             }
                         }
                         .padding(.horizontal)

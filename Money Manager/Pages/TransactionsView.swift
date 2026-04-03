@@ -118,7 +118,7 @@ private struct TransactionsBody: View {
 private struct TransactionsMonthSelector: View {
     @Bindable var viewModel: TransactionsViewModel
     @State private var showDatePicker = false
-    @State private var tapped = false
+    @State private var tapped = 0
 
     private var formattedMonth: String {
         let f = DateFormatter()
@@ -131,7 +131,7 @@ private struct TransactionsMonthSelector: View {
             Button {
                 if let prev = Calendar.current.date(byAdding: .month, value: -1, to: viewModel.selectedDate) {
                     viewModel.selectedDate = prev
-                    tapped = true
+                    tapped += 1
                 }
             } label: {
                 Image(systemName: "chevron.left")
@@ -153,7 +153,7 @@ private struct TransactionsMonthSelector: View {
             Button {
                 if let next = Calendar.current.date(byAdding: .month, value: 1, to: viewModel.selectedDate) {
                     viewModel.selectedDate = next
-                    tapped = true
+                    tapped += 1
                 }
             } label: {
                 Image(systemName: "chevron.right")
@@ -166,7 +166,6 @@ private struct TransactionsMonthSelector: View {
             Spacer()
         }
         .sensoryFeedback(.impact(weight: .light), trigger: tapped)
-        .onChange(of: tapped) { _, v in if v { tapped = false } }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
                 DatePicker("Select Month", selection: $viewModel.selectedDate, displayedComponents: [.date])
@@ -189,7 +188,7 @@ private struct TransactionsMonthSelector: View {
 
 private struct TransactionsFilterBar: View {
     @Bindable var viewModel: TransactionsViewModel
-    @State private var selectionChanged = false
+    @State private var selectionChanged = 0
 
     var body: some View {
         HStack(spacing: 8) {
@@ -198,7 +197,7 @@ private struct TransactionsFilterBar: View {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         viewModel.transactionTypeFilter = filter
                     }
-                    selectionChanged = true
+                    selectionChanged += 1
                 } label: {
                     Text(filter.rawValue)
                         .font(viewModel.transactionTypeFilter == filter ? AppTypography.chipSelected : AppTypography.chip)
@@ -213,6 +212,5 @@ private struct TransactionsFilterBar: View {
             Spacer()
         }
         .sensoryFeedback(.selection, trigger: selectionChanged)
-        .onChange(of: selectionChanged) { _, v in if v { selectionChanged = false } }
     }
 }

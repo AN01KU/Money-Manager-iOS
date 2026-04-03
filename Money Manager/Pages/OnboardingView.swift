@@ -19,9 +19,9 @@ struct OnboardingPage: Identifiable {
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var currentPage = 0
-    @State private var getStartedTapped = false
-    @State private var skipTapped = false
-    @State private var nextTapped = false
+    @State private var getStartedTapped = 0
+    @State private var skipTapped = 0
+    @State private var nextTapped = 0
     
     private let pages: [OnboardingPage] = [
         OnboardingPage(
@@ -89,7 +89,7 @@ struct OnboardingView: View {
             
             if currentPage == pages.count - 1 {
                 Button {
-                    getStartedTapped = true
+                    getStartedTapped += 1
                     hasCompletedOnboarding = true
                 } label: {
                     Text("Get Started")
@@ -101,14 +101,11 @@ struct OnboardingView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: getStartedTapped)
-                .onChange(of: getStartedTapped) { _, newValue in
-                    if newValue { getStartedTapped = false }
-                }
                 .accessibilityLabel("Get started with Money Manager")
             } else {
                 HStack {
                     Button {
-                        skipTapped = true
+                        skipTapped += 1
                         hasCompletedOnboarding = true
                     } label: {
                         Text("Skip")
@@ -116,15 +113,12 @@ struct OnboardingView: View {
                             .foregroundStyle(.secondary)
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: skipTapped)
-                    .onChange(of: skipTapped) { _, newValue in
-                        if newValue { skipTapped = false }
-                    }
                     .accessibilityLabel("Skip onboarding")
                     
                     Spacer()
                     
                     Button {
-                        nextTapped = true
+                        nextTapped += 1
                         withAnimation {
                             currentPage += 1
                         }
@@ -137,9 +131,6 @@ struct OnboardingView: View {
                         .foregroundStyle(AppColors.accent)
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: nextTapped)
-                    .onChange(of: nextTapped) { _, newValue in
-                        if newValue { nextTapped = false }
-                    }
                     .accessibilityLabel("Next page")
                 }
             }

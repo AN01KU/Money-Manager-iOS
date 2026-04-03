@@ -6,9 +6,9 @@ struct EditCategorySheet: View {
     @Environment(\.modelContext) private var modelContext
     
     @State private var viewModel: EditCategoryViewModel
-    @State private var iconTapped = false
-    @State private var colorTapped = false
-    @State private var saveSuccess = false
+    @State private var iconTapped = 0
+    @State private var colorTapped = 0
+    @State private var saveSuccess = 0
     
     init(category: CustomCategory, allCategories: [CustomCategory]) {
         _viewModel = State(wrappedValue: EditCategoryViewModel(category: category, allCategories: allCategories))
@@ -22,22 +22,16 @@ struct EditCategorySheet: View {
                 selectedColor: $viewModel.selectedColor,
                 colorConflictCategory: viewModel.colorConflictCategory,
                 onSelectIcon: { icon in
-                    iconTapped = true
+                    iconTapped += 1
                     viewModel.selectedIcon = icon
                 },
                 onSelectColor: { color in
-                    colorTapped = true
+                    colorTapped += 1
                     viewModel.selectedColor = color
                 }
             )
             .sensoryFeedback(.impact(weight: .light), trigger: iconTapped)
-            .onChange(of: iconTapped) { _, newValue in
-                if newValue { iconTapped = false }
-            }
             .sensoryFeedback(.impact(weight: .light), trigger: colorTapped)
-            .onChange(of: colorTapped) { _, newValue in
-                if newValue { colorTapped = false }
-            }
             .navigationTitle("Edit Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -58,7 +52,7 @@ struct EditCategorySheet: View {
                 Button("Use Anyway") {
                     viewModel.confirmSaveDespiteColorWarning()
                     if viewModel.save() {
-                        saveSuccess = true
+                        saveSuccess += 1
                         dismiss()
                     }
                 }
@@ -66,9 +60,6 @@ struct EditCategorySheet: View {
                 Text(viewModel.colorWarningMessage)
             }
             .sensoryFeedback(.success, trigger: saveSuccess)
-            .onChange(of: saveSuccess) { _, newValue in
-                if newValue { saveSuccess = false }
-            }
             .task {
                 viewModel.modelContext = modelContext
             }
@@ -79,7 +70,7 @@ struct EditCategorySheet: View {
     private var saveButton: some View {
         Button("Save") {
             if viewModel.save() {
-                saveSuccess = true
+                saveSuccess += 1
                 dismiss()
             }
         }
