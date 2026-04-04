@@ -36,7 +36,7 @@ final class MockAuthService: AuthServiceProtocol {
         authState = .authenticated(mockUser)
     }
 
-    func signup(email: String, username: String, password: String) async throws {
+    func signup(email: String, username: String, password: String, inviteCode: String) async throws {
         isLoading = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         isLoading = false

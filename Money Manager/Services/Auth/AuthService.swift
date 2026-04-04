@@ -93,12 +93,12 @@ final class AuthService: AuthServiceProtocol {
     }
 
     @MainActor
-    func signup(email: String, username: String, password: String) async throws {
+    func signup(email: String, username: String, password: String, inviteCode: String) async throws {
         isLoading = true
         errorMessage = nil
 
         do {
-            let request = APISignupRequest(email: email, username: username, password: password, inviteCode: "")
+            let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
             session.saveLastLoggedInEmail(email.lowercased())

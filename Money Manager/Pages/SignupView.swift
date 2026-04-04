@@ -15,6 +15,8 @@ struct SignupView: View {
     @State private var confirmPassword = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var inviteCode = ""
+    @State private var showingInviteCodeAlert = false
     
     var body: some View {
         NavigationStack {
@@ -41,6 +43,15 @@ struct SignupView: View {
                 Button("OK") { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
+            }
+            .alert("Enter Invite Code", isPresented: $showingInviteCodeAlert) {
+                TextField("Invite code", text: $inviteCode)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Cancel", role: .cancel) { }
+                Button("Continue") { signup() }
+            } message: {
+                Text("This beta requires an invite code to sign up.")
             }
         }
     }
@@ -105,7 +116,8 @@ struct SignupView: View {
     
     private var signupButton: some View {
         Button {
-            signup()
+            inviteCode = ""
+            showingInviteCodeAlert = true
         } label: {
             Group {
                 if isLoading {
@@ -136,10 +148,10 @@ struct SignupView: View {
     private func signup() {
         isLoading = true
         errorMessage = nil
-        
+
         Task {
             do {
-                try await authService.signup(email: email, username: username, password: password)
+                try await authService.signup(email: email, username: username, password: password, inviteCode: inviteCode)
                 await syncService.bootstrapAfterSignup()
                 dismiss()
             } catch {

@@ -32,7 +32,7 @@ protocol AuthServiceProtocol: AnyObject {
 
     func checkAuthState() async
     func login(email: String, password: String) async throws
-    func signup(email: String, username: String, password: String) async throws
+    func signup(email: String, username: String, password: String, inviteCode: String) async throws
     func logout()
 }
 
