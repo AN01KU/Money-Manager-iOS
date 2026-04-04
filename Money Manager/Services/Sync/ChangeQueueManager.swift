@@ -227,4 +227,3 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     }
 }
 
-private struct EmptyResponse: Decodable {}

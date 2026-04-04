@@ -86,25 +86,7 @@ enum PredefinedCategory: String, CaseIterable, Identifiable {
     }
     
     /// A stable identifier for linking CustomCategory back to this enum case.
-    var key: String {
-        switch self {
-        case .foodDining: return "foodDining"
-        case .transport: return "transport"
-        case .housing: return "housing"
-        case .healthMedical: return "healthMedical"
-        case .shopping: return "shopping"
-        case .utilities: return "utilities"
-        case .entertainment: return "entertainment"
-        case .travel: return "travel"
-        case .workProfessional: return "workProfessional"
-        case .education: return "education"
-        case .debtPayments: return "debtPayments"
-        case .booksMedia: return "booksMedia"
-        case .familyKids: return "familyKids"
-        case .gifts: return "gifts"
-        case .other: return "other"
-        }
-    }
+    var key: String { String(describing: self) }
 }
 
 extension Color {

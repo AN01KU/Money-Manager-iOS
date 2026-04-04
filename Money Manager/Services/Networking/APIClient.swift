@@ -205,7 +205,7 @@ final class APIClient {
     }
 }
 
-private struct EmptyResponse: Decodable {}
+struct EmptyResponse: Decodable {}
 
 private struct HealthResponse: Decodable {
     let status: String
