@@ -91,19 +91,19 @@ struct SettlementHistoryRow: View {
     let currentUserId: UUID?
 
     private var fromName: String {
-        if settlement.from_user == currentUserId { return "You" }
-        return members.first(where: { $0.id == settlement.from_user })?.username ?? "Unknown"
+        if settlement.fromUser == currentUserId { return "You" }
+        return members.first(where: { $0.id == settlement.fromUser })?.username ?? "Unknown"
     }
 
     private var toName: String {
-        if settlement.to_user == currentUserId { return "you" }
-        return members.first(where: { $0.id == settlement.to_user })?.username ?? "Unknown"
+        if settlement.toUser == currentUserId { return "you" }
+        return members.first(where: { $0.id == settlement.toUser })?.username ?? "Unknown"
     }
 
     private var amount: Double { Double(settlement.amount) ?? 0 }
 
-    private var isCurrentUserPayer: Bool { settlement.from_user == currentUserId }
-    private var isCurrentUserReceiver: Bool { settlement.to_user == currentUserId }
+    private var isCurrentUserPayer: Bool { settlement.fromUser == currentUserId }
+    private var isCurrentUserReceiver: Bool { settlement.toUser == currentUserId }
 
     private var accentColor: Color {
         if isCurrentUserPayer { return AppColors.expense }
@@ -127,7 +127,7 @@ struct SettlementHistoryRow: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 HStack(spacing: 4) {
-                    Text(settlementDateFormatter.string(from: settlement.created_at))
+                    Text(settlementDateFormatter.string(from: settlement.createdAt))
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
                     if let notes = settlement.notes {

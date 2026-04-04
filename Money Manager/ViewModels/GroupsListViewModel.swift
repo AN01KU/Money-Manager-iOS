@@ -24,7 +24,7 @@ enum ActivityItem: Identifiable {
     var date: Date {
         switch self {
         case .transaction(let tx, _): return tx.date
-        case .settlement(let s, _, _): return s.created_at
+        case .settlement(let s, _, _): return s.createdAt
         }
     }
 
@@ -68,7 +68,7 @@ final class GroupsListViewModel {
     var netBalance: Double {
         guard let userId = currentUserId else { return 0 }
         return groups.reduce(0.0) { total, group in
-            let balance = group.balances.first(where: { $0.user_id == userId })
+            let balance = group.balances.first(where: { $0.userId == userId })
             return total + (Double(balance?.amount ?? "0") ?? 0)
         }
     }
@@ -119,7 +119,7 @@ final class GroupsListViewModel {
                     items.append(.transaction(tx, groupName: groupName))
                 }
                 if let userId = currentUserId {
-                    for settlement in settlements where settlement.from_user == userId || settlement.to_user == userId {
+                    for settlement in settlements where settlement.fromUser == userId || settlement.toUser == userId {
                         items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
                     }
                 }
@@ -134,8 +134,8 @@ final class GroupsListViewModel {
         let newGroup = APIGroupWithDetails(
             id: created.id,
             name: created.name,
-            created_by: created.created_by,
-            created_at: created.created_at,
+            createdBy: created.createdBy,
+            createdAt: created.createdAt,
             members: [],
             balances: []
         )
@@ -147,7 +147,7 @@ final class GroupsListViewModel {
 
     func userBalance(for group: APIGroupWithDetails) -> Double {
         guard let userId = currentUserId else { return 0 }
-        let balance = group.balances.first(where: { $0.user_id == userId })
+        let balance = group.balances.first(where: { $0.userId == userId })
         return Double(balance?.amount ?? "0") ?? 0
     }
 

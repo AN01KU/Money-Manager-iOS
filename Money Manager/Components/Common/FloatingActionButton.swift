@@ -29,6 +29,7 @@ struct FloatingActionButton: View {
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: tapped)
         .accessibilityLabel("Add new transaction")
+        .accessibilityIdentifier("fab-add")
     }
 }
 

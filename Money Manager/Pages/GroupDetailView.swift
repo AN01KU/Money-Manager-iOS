@@ -83,10 +83,10 @@ struct GroupDetailView: View {
                 transaction: transaction,
                 members: viewModel.members,
                 currentUserId: viewModel.currentUserId,
-                onDelete: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                onDelete: viewModel.currentUserId == transaction.paidByUserId ? {
                     viewModel.deleteTransaction(transaction)
                 } : nil,
-                onEdit: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                onEdit: viewModel.currentUserId == transaction.paidByUserId ? {
                     transactionToEdit = transaction
                 } : nil
             )
@@ -156,7 +156,7 @@ struct GroupDetailView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                            if transaction.paid_by_user_id == viewModel.currentUserId {
+                                            if transaction.paidByUserId == viewModel.currentUserId {
                                                 Button(role: .destructive) {
                                                     viewModel.deleteTransaction(transaction)
                                                 } label: {
@@ -292,7 +292,7 @@ struct GroupDetailView: View {
                         ForEach(Array(viewModel.members.enumerated()), id: \.element.id) { index, member in
                             GroupMemberRow(
                                 member: member,
-                                isAdmin: member.id == viewModel.group.created_by,
+                                isAdmin: member.id == viewModel.group.createdBy,
                                 isPending: viewModel.isPending(member)
                             )
                             if index < viewModel.members.count - 1 {
@@ -317,8 +317,8 @@ struct GroupDetailView: View {
     let group = APIGroupWithDetails(
         id: UUID(),
         name: "Weekend Trip",
-        created_by: UUID(),
-        created_at: Date(),
+        createdBy: UUID(),
+        createdAt: Date(),
         members: [],
         balances: []
     )

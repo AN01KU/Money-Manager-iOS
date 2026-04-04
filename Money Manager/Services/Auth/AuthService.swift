@@ -98,7 +98,7 @@ final class AuthService: AuthServiceProtocol {
         errorMessage = nil
 
         do {
-            let request = APISignupRequest(email: email, username: username, password: password, invite_code: "")
+            let request = APISignupRequest(email: email, username: username, password: password, inviteCode: "")
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
             session.saveLastLoggedInEmail(email.lowercased())

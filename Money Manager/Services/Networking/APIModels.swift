@@ -9,7 +9,7 @@ import Foundation
 
 struct APITransaction: Codable {
     let id: UUID
-    let user_id: UUID
+    let userId: UUID
     let type: String          // "expense" or "income"
     let amount: String
     let category: String
@@ -17,63 +17,132 @@ struct APITransaction: Codable {
     let time: Date?
     let description: String?
     let notes: String?
-    let created_at: Date
-    let updated_at: Date
-    let is_deleted: Bool
-    let recurring_expense_id: UUID?
-    let group_transaction_id: UUID?
-    let group_id: UUID?
-    let group_name: String?
-    let settlement_id: UUID?
+    let createdAt: Date
+    let updatedAt: Date
+    let isDeleted: Bool
+    let recurringExpenseId: UUID?
+    let groupTransactionId: UUID?
+    let groupId: UUID?
+    let groupName: String?
+    let settlementId: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case type
+        case amount
+        case category
+        case date
+        case time
+        case description
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case isDeleted = "is_deleted"
+        case recurringExpenseId = "recurring_expense_id"
+        case groupTransactionId = "group_transaction_id"
+        case groupId = "group_id"
+        case groupName = "group_name"
+        case settlementId = "settlement_id"
+    }
 }
 
 struct APIRecurringTransaction: Codable {
     let id: UUID
-    let user_id: UUID
+    let userId: UUID
     let name: String
     let amount: String
     let category: String
     let frequency: String
-    let day_of_month: Int?
-    let days_of_week: [Int]?
-    let start_date: Date
-    let end_date: Date?
-    let is_active: Bool
-    let last_added_date: Date?
+    let dayOfMonth: Int?
+    let daysOfWeek: [Int]?
+    let startDate: Date
+    let endDate: Date?
+    let isActive: Bool
+    let lastAddedDate: Date?
     let notes: String?
-    let created_at: Date
-    let updated_at: Date
+    let createdAt: Date
+    let updatedAt: Date
     let type: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case name
+        case amount
+        case category
+        case frequency
+        case dayOfMonth = "day_of_month"
+        case daysOfWeek = "days_of_week"
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case isActive = "is_active"
+        case lastAddedDate = "last_added_date"
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case type
+    }
 }
 
 struct APIMonthlyBudget: Codable {
     let id: UUID
-    let user_id: UUID
+    let userId: UUID
     let year: Int
     let month: Int
     let limit: String
-    let created_at: Date
-    let updated_at: Date
+    let createdAt: Date
+    let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case year
+        case month
+        case limit
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
 }
 
 struct APICustomCategory: Codable {
     let id: UUID
-    let user_id: UUID
+    let userId: UUID
     let name: String
     let icon: String
     let color: String
-    let is_hidden: Bool
-    let is_predefined: Bool
-    let predefined_key: String?
-    let created_at: Date
-    let updated_at: Date
+    let isHidden: Bool
+    let isPredefined: Bool
+    let predefinedKey: String?
+    let createdAt: Date
+    let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case name
+        case icon
+        case color
+        case isHidden = "is_hidden"
+        case isPredefined = "is_predefined"
+        case predefinedKey = "predefined_key"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
 }
 
 struct APIUser: Codable {
     let id: UUID
     let email: String
     let username: String
-    let created_at: Date
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case username
+        case createdAt = "created_at"
+    }
 }
 
 struct APIAuthResponse: Codable {
@@ -104,7 +173,14 @@ struct APISignupRequest: Codable {
     let email: String
     let username: String
     let password: String
-    let invite_code: String
+    let inviteCode: String
+
+    enum CodingKeys: String, CodingKey {
+        case email
+        case username
+        case password
+        case inviteCode = "invite_code"
+    }
 }
 
 struct APILoginRequest: Codable {
@@ -121,7 +197,19 @@ struct APICreateTransactionRequest: Codable {
     let time: Date?
     let description: String?
     let notes: String?
-    let recurring_expense_id: UUID?
+    let recurringExpenseId: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case amount
+        case category
+        case date
+        case time
+        case description
+        case notes
+        case recurringExpenseId = "recurring_expense_id"
+    }
 }
 
 struct APIUpdateTransactionRequest: Codable {
@@ -140,13 +228,28 @@ struct APICreateRecurringTransactionRequest: Codable {
     let amount: String
     let category: String
     let frequency: String
-    let day_of_month: Int?
-    let days_of_week: [Int]?
-    let start_date: Date
-    let end_date: Date?
-    let is_active: Bool
+    let dayOfMonth: Int?
+    let daysOfWeek: [Int]?
+    let startDate: Date
+    let endDate: Date?
+    let isActive: Bool
     let notes: String?
     let type: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case amount
+        case category
+        case frequency
+        case dayOfMonth = "day_of_month"
+        case daysOfWeek = "days_of_week"
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case isActive = "is_active"
+        case notes
+        case type
+    }
 }
 
 struct APIUpdateRecurringTransactionRequest: Codable {
@@ -154,13 +257,27 @@ struct APIUpdateRecurringTransactionRequest: Codable {
     let amount: String?
     let category: String?
     let frequency: String?
-    let day_of_month: Int?
-    let days_of_week: [Int]?
-    let start_date: Date?
-    let end_date: Date?
-    let is_active: Bool?
+    let dayOfMonth: Int?
+    let daysOfWeek: [Int]?
+    let startDate: Date?
+    let endDate: Date?
+    let isActive: Bool?
     let notes: String?
     let type: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case amount
+        case category
+        case frequency
+        case dayOfMonth = "day_of_month"
+        case daysOfWeek = "days_of_week"
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case isActive = "is_active"
+        case notes
+        case type
+    }
 }
 
 struct APICreateBudgetRequest: Codable {
@@ -195,8 +312,15 @@ struct APIUpdateCategoryRequest: Codable {
 struct APIGroup: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     let name: String
-    let created_by: UUID
-    let created_at: Date
+    let createdBy: UUID
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case createdBy = "created_by"
+        case createdAt = "created_at"
+    }
 
     static func == (lhs: APIGroup, rhs: APIGroup) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
@@ -206,21 +330,42 @@ struct APIGroupMember: Codable, Identifiable, Sendable {
     let id: UUID
     let email: String
     let username: String
-    let joined_at: Date?
+    let joinedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case username
+        case joinedAt = "joined_at"
+    }
 }
 
 struct APIGroupBalance: Codable, Sendable {
-    let user_id: UUID
+    let userId: UUID
     let amount: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case amount
+    }
 }
 
 struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     let name: String
-    let created_by: UUID
-    let created_at: Date
+    let createdBy: UUID
+    let createdAt: Date
     let members: [APIGroupMember]
     let balances: [APIGroupBalance]
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case createdBy = "created_by"
+        case createdAt = "created_at"
+        case members
+        case balances
+    }
 
     static func == (lhs: APIGroupWithDetails, rhs: APIGroupWithDetails) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
@@ -228,44 +373,86 @@ struct APIGroupWithDetails: Codable, Identifiable, Hashable, Sendable {
 
 struct APIGroupTransaction: Codable, Identifiable, Sendable {
     let id: UUID
-    let group_id: UUID
-    let paid_by_user_id: UUID
-    let total_amount: String
+    let groupId: UUID
+    let paidByUserId: UUID
+    let totalAmount: String
     let category: String
     let date: Date
     let description: String?
     let notes: String?
-    let is_deleted: Bool
-    let created_at: Date
-    let updated_at: Date
+    let isDeleted: Bool
+    let createdAt: Date
+    let updatedAt: Date
     let splits: [APIGroupTransactionSplit]
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case groupId = "group_id"
+        case paidByUserId = "paid_by_user_id"
+        case totalAmount = "total_amount"
+        case category
+        case date
+        case description
+        case notes
+        case isDeleted = "is_deleted"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case splits
+    }
 }
 
 struct APIGroupTransactionSplit: Codable, Sendable {
     let id: UUID
-    let user_id: UUID
+    let userId: UUID
     let amount: String
-    let transaction_id: UUID?
+    let transactionId: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case amount
+        case transactionId = "transaction_id"
+    }
 }
 
 struct APIGroupDetails: Codable, Sendable {
     let group: APIGroupDetailsBody
-    let is_member: Bool
+    let isMember: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case group
+        case isMember = "is_member"
+    }
 }
 
 struct APIGroupDetailsBody: Codable, Identifiable, Sendable {
     let id: UUID
     let name: String
-    let created_by: UUID
-    let created_at: Date
+    let createdBy: UUID
+    let createdAt: Date
     let members: [APIGroupMember]
     let balances: [APIGroupBalance]
     let settlements: [APISettlement]?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case createdBy = "created_by"
+        case createdAt = "created_at"
+        case members
+        case balances
+        case settlements
+    }
 }
 
 struct APIGroupTransactionSplitInput: Codable, Sendable {
-    let user_id: UUID
+    let userId: UUID
     let amount: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case amount
+    }
 }
 
 struct APICreateGroupRequest: Codable, Sendable {
@@ -277,13 +464,23 @@ struct APIAddMemberRequest: Codable, Sendable {
 }
 
 struct APICreateGroupTransactionRequest: Codable, Sendable {
-    let paid_by_user_id: UUID
-    let total_amount: String
+    let paidByUserId: UUID
+    let totalAmount: String
     let category: String
     let date: Date
     let description: String?
     let notes: String?
     let splits: [APIGroupTransactionSplitInput]
+
+    enum CodingKeys: String, CodingKey {
+        case paidByUserId = "paid_by_user_id"
+        case totalAmount = "total_amount"
+        case category
+        case date
+        case description
+        case notes
+        case splits
+    }
 }
 
 struct APIGroupMembersResponse: Codable, Sendable {
@@ -295,16 +492,24 @@ struct APIGroupsListResponse: Codable, Sendable {
 }
 
 struct APICreateSettlementRequest: Codable, Sendable {
-    let group_id: UUID
-    let from_user: UUID
-    let to_user: UUID
+    let groupId: UUID
+    let fromUser: UUID
+    let toUser: UUID
     let amount: String
     let notes: String?
 
-    init(group_id: UUID, from_user: UUID, to_user: UUID, amount: String, notes: String? = nil) {
-        self.group_id = group_id
-        self.from_user = from_user
-        self.to_user = to_user
+    enum CodingKeys: String, CodingKey {
+        case groupId = "group_id"
+        case fromUser = "from_user"
+        case toUser = "to_user"
+        case amount
+        case notes
+    }
+
+    init(groupId: UUID, fromUser: UUID, toUser: UUID, amount: String, notes: String? = nil) {
+        self.groupId = groupId
+        self.fromUser = fromUser
+        self.toUser = toUser
         self.amount = amount
         self.notes = notes
     }
@@ -312,12 +517,22 @@ struct APICreateSettlementRequest: Codable, Sendable {
 
 struct APISettlement: Codable, Identifiable, Sendable {
     let id: UUID
-    let group_id: UUID?
-    let from_user: UUID
-    let to_user: UUID
+    let groupId: UUID?
+    let fromUser: UUID
+    let toUser: UUID
     let amount: String
     let notes: String?
-    let created_at: Date
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case groupId = "group_id"
+        case fromUser = "from_user"
+        case toUser = "to_user"
+        case amount
+        case notes
+        case createdAt = "created_at"
+    }
 }
 
 // MARK: - Dashboard
@@ -326,17 +541,13 @@ struct APIMonthlyDashboardResponse: Codable {
     let totalTransactions: String?
     let transactionCount: Int?
     let categoryBreakdown: [APICategoryBreakdown]?
-    let category_breakdown: [APICategoryBreakdown]?
     let budgetStatus: APIBudgetStatus?
-    let budget_status: APIBudgetStatus?
 
     enum CodingKeys: String, CodingKey {
         case totalTransactions = "total_expenses"
         case transactionCount = "expenseCount"
-        case categoryBreakdown = "categoryBreakdown"
-        case category_breakdown = "category_breakdown"
-        case budgetStatus = "budgetStatus"
-        case budget_status = "budget_status"
+        case categoryBreakdown = "category_breakdown"
+        case budgetStatus = "budget_status"
     }
 }
 

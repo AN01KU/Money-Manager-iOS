@@ -64,8 +64,8 @@ struct CreateGroupSheet: View {
                 let newGroup = APIGroupWithDetails(
                     id: created.id,
                     name: created.name,
-                    created_by: created.created_by,
-                    created_at: created.created_at,
+                    createdBy: created.createdBy,
+                    createdAt: created.createdAt,
                     members: [],
                     balances: []
                 )

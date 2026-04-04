@@ -5,14 +5,14 @@ struct GroupTransactionRow: View {
     let members: [APIGroupMember]
     var currentUserId: UUID? = nil
 
-    private var amount: Double { Double(transaction.total_amount) ?? 0 }
-    private var isCurrentUserPayer: Bool { transaction.paid_by_user_id == currentUserId }
+    private var amount: Double { Double(transaction.totalAmount) ?? 0 }
+    private var isCurrentUserPayer: Bool { transaction.paidByUserId == currentUserId }
     private var isCurrentUserInvolved: Bool {
-        isCurrentUserPayer || transaction.splits.contains { $0.user_id == currentUserId }
+        isCurrentUserPayer || transaction.splits.contains { $0.userId == currentUserId }
     }
 
     private var paidByName: String {
-        members.first(where: { $0.id == transaction.paid_by_user_id })?.username ?? "Unknown"
+        members.first(where: { $0.id == transaction.paidByUserId })?.username ?? "Unknown"
     }
 
     private var resolved: (icon: String, color: Color) {

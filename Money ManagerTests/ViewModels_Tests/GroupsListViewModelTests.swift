@@ -17,32 +17,32 @@ struct GroupsListViewModelTests {
         APIGroupWithDetails(
             id: id,
             name: name,
-            created_by: createdBy,
-            created_at: Date(),
+            createdBy: createdBy,
+            createdAt: Date(),
             members: members,
             balances: balances
         )
     }
 
     private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
-        APIGroupBalance(user_id: userId, amount: amount)
+        APIGroupBalance(userId: userId, amount: amount)
     }
 
     private func makeTransaction(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
         APIGroupTransaction(
-            id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
-            total_amount: totalAmount, category: "Food", date: createdAt,
-            description: description, notes: nil, is_deleted: false,
-            created_at: createdAt, updated_at: Date(), splits: []
+            id: UUID(), groupId: UUID(), paidByUserId: paidBy,
+            totalAmount: totalAmount, category: "Food", date: createdAt,
+            description: description, notes: nil, isDeleted: false,
+            createdAt: createdAt, updatedAt: Date(), splits: []
         )
     }
 
     private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
-            id: groupId, name: groupName, created_by: UUID(), created_at: Date(),
+            id: groupId, name: groupName, createdBy: UUID(), createdAt: Date(),
             members: [], balances: [], settlements: []
         )
-        return APIGroupDetails(group: body, is_member: true)
+        return APIGroupDetails(group: body, isMember: true)
     }
 
     // MARK: - Initial state
@@ -224,14 +224,14 @@ struct GroupsListViewModelTests {
     @Test
     func testDisplayNameReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
+        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
         #expect(vm.displayName(for: member) == "alice")
     }
 
     @Test
     func testDisplayNameWithNoAtSignReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joined_at: Date())
+        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joinedAt: Date())
         #expect(vm.displayName(for: member) == "noatsign")
     }
 

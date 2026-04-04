@@ -33,16 +33,16 @@ final class MockGroupService: GroupServiceProtocol {
     func createGroup(name: String) async throws -> APIGroup {
         createGroupCalls.append(name)
         if let result = createGroupResult { return result }
-        return APIGroup(id: UUID(), name: name, created_by: UUID(), created_at: Date())
+        return APIGroup(id: UUID(), name: name, createdBy: UUID(), createdAt: Date())
     }
 
     func fetchGroupDetails(groupId: UUID) async throws -> APIGroupDetails {
         if let details = stubbedGroupDetails { return details }
         let body = APIGroupDetailsBody(
-            id: groupId, name: "Mock Group", created_by: UUID(), created_at: Date(),
+            id: groupId, name: "Mock Group", createdBy: UUID(), createdAt: Date(),
             members: stubbedMembers, balances: stubbedBalances, settlements: []
         )
-        return APIGroupDetails(group: body, is_member: true)
+        return APIGroupDetails(group: body, isMember: true)
     }
 
     func fetchMembers(groupId: UUID) async throws -> [APIGroupMember] {
@@ -69,16 +69,16 @@ final class MockGroupService: GroupServiceProtocol {
     func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction {
         APIGroupTransaction(
             id: UUID(),
-            group_id: groupId,
-            paid_by_user_id: request.paid_by_user_id,
-            total_amount: request.total_amount,
+            groupId: groupId,
+            paidByUserId: request.paidByUserId,
+            totalAmount: request.totalAmount,
             category: request.category,
             date: request.date,
             description: request.description,
             notes: request.notes,
-            is_deleted: false,
-            created_at: Date(),
-            updated_at: Date(),
+            isDeleted: false,
+            createdAt: Date(),
+            updatedAt: Date(),
             splits: []
         )
     }
@@ -86,12 +86,12 @@ final class MockGroupService: GroupServiceProtocol {
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         APISettlement(
             id: UUID(),
-            group_id: request.group_id,
-            from_user: request.from_user,
-            to_user: request.to_user,
+            groupId: request.groupId,
+            fromUser: request.fromUser,
+            toUser: request.toUser,
             amount: request.amount,
             notes: request.notes,
-            created_at: Date()
+            createdAt: Date()
         )
     }
 }

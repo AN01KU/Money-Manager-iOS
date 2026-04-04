@@ -11,28 +11,28 @@ struct GroupDetailViewModelTests {
         APIGroupWithDetails(
             id: id,
             name: "Test Group",
-            created_by: createdBy,
-            created_at: Date(),
+            createdBy: createdBy,
+            createdAt: Date(),
             members: [],
             balances: []
         )
     }
 
     private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> APIGroupMember {
-        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joined_at: Date())
+        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
     }
 
     private func makeTransaction(totalAmount: String, paidBy: UUID = UUID()) -> APIGroupTransaction {
         APIGroupTransaction(
-            id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
-            total_amount: totalAmount, category: "Food", date: Date(),
-            description: "Test", notes: nil, is_deleted: false,
-            created_at: Date(), updated_at: Date(), splits: []
+            id: UUID(), groupId: UUID(), paidByUserId: paidBy,
+            totalAmount: totalAmount, category: "Food", date: Date(),
+            description: "Test", notes: nil, isDeleted: false,
+            createdAt: Date(), updatedAt: Date(), splits: []
         )
     }
 
     private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
-        APIGroupBalance(user_id: userId, amount: amount)
+        APIGroupBalance(userId: userId, amount: amount)
     }
 
     private func makeDetails(
@@ -41,10 +41,10 @@ struct GroupDetailViewModelTests {
         balances: [APIGroupBalance] = []
     ) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
-            id: groupId, name: "Test Group", created_by: UUID(), created_at: Date(),
+            id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(),
             members: members, balances: balances, settlements: []
         )
-        return APIGroupDetails(group: body, is_member: true)
+        return APIGroupDetails(group: body, isMember: true)
     }
 
     // MARK: - Initial state
@@ -53,7 +53,7 @@ struct GroupDetailViewModelTests {
     func testInitSeedsMembersAndBalancesFromGroup() {
         let alice = makeMember(email: "alice@example.com")
         let group = APIGroupWithDetails(
-            id: UUID(), name: "Trip", created_by: alice.id, created_at: Date(),
+            id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
             members: [alice],
             balances: [makeBalance(userId: alice.id, amount: "50.00")]
         )
@@ -89,7 +89,7 @@ struct GroupDetailViewModelTests {
         let mock = MockGroupService.fresh()
         let alice = makeMember(email: "alice@example.com")
         let group = APIGroupWithDetails(
-            id: UUID(), name: "Trip", created_by: alice.id, created_at: Date(),
+            id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
             members: [alice], balances: []
         )
         let vm = GroupDetailViewModel(group: group, groupService: mock)
@@ -154,7 +154,7 @@ struct GroupDetailViewModelTests {
         let second = makeTransaction(totalAmount: "50")
         vm.transactionAdded(first)
         vm.transactionAdded(second)
-        #expect(vm.transactions.first?.total_amount == "50")
+        #expect(vm.transactions.first?.totalAmount == "50")
     }
 
     @Test
@@ -282,9 +282,9 @@ struct GroupDetailViewModelTests {
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.members = [alice, bob]
         let settlement = APISettlement(
-            id: UUID(), group_id: vm.group.id,
-            from_user: bob.id, to_user: alice.id,
-            amount: "50.00", notes: nil, created_at: Date()
+            id: UUID(), groupId: vm.group.id,
+            fromUser: bob.id, toUser: alice.id,
+            amount: "50.00", notes: nil, createdAt: Date()
         )
         vm.settlementRecorded(settlement)
         #expect(vm.settlements.count == 1)

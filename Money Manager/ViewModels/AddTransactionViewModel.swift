@@ -152,11 +152,11 @@ enum SplitType: String, CaseIterable {
 
         case .shared(_, let members, let currentUserId, let editing, _):
             if let tx = editing {
-                amount = (Double(tx.total_amount) ?? 0).formatted(.number.precision(.fractionLength(2)))
+                amount = (Double(tx.totalAmount) ?? 0).formatted(.number.precision(.fractionLength(2)))
                 selectedCategory = tx.category
                 description = tx.description ?? ""
-                paidByUserId = tx.paid_by_user_id
-                selectedMembers = Set(tx.splits.map(\.user_id))
+                paidByUserId = tx.paidByUserId
+                selectedMembers = Set(tx.splits.map(\.userId))
             } else {
                 paidByUserId = currentUserId
                 selectedMembers = Set(members.map(\.id))
@@ -297,18 +297,18 @@ enum SplitType: String, CaseIterable {
         if splitType == .equal {
             let share = amountValue / Double(max(selectedMembers.count, 1))
             splits = selectedMembers.map {
-                APIGroupTransactionSplitInput(user_id: $0, amount: share.formatted(.number.precision(.fractionLength(2)).grouping(.never)))
+                APIGroupTransactionSplitInput(userId: $0, amount: share.formatted(.number.precision(.fractionLength(2)).grouping(.never)))
             }
         } else {
             splits = selectedMembers.compactMap { id in
                 guard let raw = customAmounts[id], let _ = Double(raw) else { return nil }
-                return APIGroupTransactionSplitInput(user_id: id, amount: raw)
+                return APIGroupTransactionSplitInput(userId: id, amount: raw)
             }
         }
 
         let request = APICreateGroupTransactionRequest(
-            paid_by_user_id: paidBy,
-            total_amount: amountValue.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            paidByUserId: paidBy,
+            totalAmount: amountValue.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
             category: selectedCategory,
             date: selectedDate,
             description: description.trimmingCharacters(in: .whitespaces),

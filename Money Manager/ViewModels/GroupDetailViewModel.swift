@@ -61,7 +61,7 @@ final class GroupDetailViewModel {
     }
 
     var groupTotal: Double {
-        transactions.compactMap { Double($0.total_amount) }.reduce(0, +)
+        transactions.compactMap { Double($0.totalAmount) }.reduce(0, +)
     }
 
     var hasUnsettledBalances: Bool {
@@ -78,9 +78,9 @@ final class GroupDetailViewModel {
         for b in balances {
             let amt = Double(b.amount) ?? 0
             if amt < 0 {
-                debtors.append((b.user_id, abs(amt)))
+                debtors.append((b.userId, abs(amt)))
             } else if amt > 0 {
-                creditors.append((b.user_id, amt))
+                creditors.append((b.userId, amt))
             }
         }
 
@@ -222,18 +222,18 @@ final class GroupDetailViewModel {
         for m in members { map[m.id] = 0 }
 
         for tx in transactions {
-            map[tx.paid_by_user_id, default: 0] += Double(tx.total_amount) ?? 0
+            map[tx.paidByUserId, default: 0] += Double(tx.totalAmount) ?? 0
         }
 
         // Split equally among all members for now (server is authoritative for custom splits)
         let memberCount = members.isEmpty ? 1 : members.count
         for tx in transactions {
-            let share = (Double(tx.total_amount) ?? 0) / Double(memberCount)
+            let share = (Double(tx.totalAmount) ?? 0) / Double(memberCount)
             for m in members {
                 map[m.id, default: 0] -= share
             }
         }
 
-        balances = map.map { APIGroupBalance(user_id: $0.key, amount: String(format: "%.2f", $0.value)) }
+        balances = map.map { APIGroupBalance(userId: $0.key, amount: String(format: "%.2f", $0.value)) }
     }
 }

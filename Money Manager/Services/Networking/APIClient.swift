@@ -26,12 +26,7 @@ final class APIClient {
         config.timeoutIntervalForResource = AppConstants.API.defaultTimeout
         self.session = URLSession(configuration: config)
         
-        #if DEBUG
         self.baseURL = "https://moneymanager.ankushganesh.cloud"
-        #else
-        self.baseURL = "https://moneymanager.ankushganesh.cloud"
-        #endif
-
         
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .custom { decoder in

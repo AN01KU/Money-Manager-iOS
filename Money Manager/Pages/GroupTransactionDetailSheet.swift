@@ -13,14 +13,14 @@ struct GroupTransactionDetailSheet: View {
     @State private var deleteTapped = 0
     @State private var editTapped = 0
 
-    private var amount: Double { Double(transaction.total_amount) ?? 0 }
+    private var amount: Double { Double(transaction.totalAmount) ?? 0 }
 
     private var paidByName: String {
-        members.first(where: { $0.id == transaction.paid_by_user_id })?.username ?? "Unknown"
+        members.first(where: { $0.id == transaction.paidByUserId })?.username ?? "Unknown"
     }
 
     private var isOwner: Bool {
-        transaction.paid_by_user_id == currentUserId
+        transaction.paidByUserId == currentUserId
     }
 
     var body: some View {
@@ -73,8 +73,8 @@ struct GroupTransactionDetailSheet: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
 
-                            ForEach(transaction.splits, id: \.user_id) { split in
-                                let name = members.first(where: { $0.id == split.user_id })?.username ?? "Unknown"
+                            ForEach(transaction.splits, id: \.userId) { split in
+                                let name = members.first(where: { $0.id == split.userId })?.username ?? "Unknown"
                                 HStack {
                                     Text(name)
                                     Spacer()

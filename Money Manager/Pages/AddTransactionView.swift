@@ -58,6 +58,7 @@ struct AddTransactionView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier("cancel-button")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.isSaving {
@@ -68,6 +69,7 @@ struct AddTransactionView: View {
                         }
                         .fontWeight(.semibold)
                         .disabled(!viewModel.isValid)
+                        .accessibilityIdentifier("save-button")
                     }
                 }
             }
@@ -109,6 +111,7 @@ struct AddTransactionView: View {
                     .keyboardType(.decimalPad)
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier("amount-field")
 
                 HStack(spacing: 12) {
                     QuickAmountButton(amount: 100) { amount100Tapped += 1; viewModel.amount = "100" }
@@ -149,6 +152,7 @@ struct AddTransactionView: View {
                     .clipShape(.rect(cornerRadius: 8))
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
+                .accessibilityIdentifier("category-picker-button")
             }
             .padding(.vertical, 8)
         }
@@ -208,6 +212,7 @@ struct AddTransactionView: View {
         Section("Details") {
             TextField("Description (e.g., Lunch at cafe)", text: $viewModel.description)
                 .textInputAutocapitalization(.sentences)
+                .accessibilityIdentifier("description-field")
             TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                 .lineLimit(3...6)
                 .textInputAutocapitalization(.sentences)
@@ -377,9 +382,9 @@ struct AddTransactionView: View {
 
 #Preview("Group Transaction") {
     let groupId = UUID()
-    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
-            let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joined_at: Date())
-    let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", created_by: alice.id, created_at: Date(), members: [alice, bob], balances: [])
+    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
+            let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joinedAt: Date())
+    let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", createdBy: alice.id, createdAt: Date(), members: [alice, bob], balances: [])
     AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }), groupService: GroupService.shared)
         .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }
