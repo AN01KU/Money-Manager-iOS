@@ -12,15 +12,19 @@ struct MainTabView: View {
     @State private var selectedTab: TabItem = .overview
     @State private var tabChanged = 0
     @State private var pendingRoute: AppRoute?
+    @State private var pendingCategoryFilter: String?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Overview", systemImage: "house.fill", value: .overview) {
-                Overview(pendingRoute: $pendingRoute)
+                Overview(pendingRoute: $pendingRoute, onCategoryTapped: { category in
+                    pendingCategoryFilter = category
+                    selectedTab = .transactions
+                })
             }
 
             Tab("Transactions", systemImage: "list.bullet", value: .transactions) {
-                TransactionsView()
+                TransactionsView(categoryFilter: $pendingCategoryFilter)
             }
 
             if authService.isAuthenticated {
@@ -48,9 +52,6 @@ struct MainTabView: View {
                 selectedTab = .groups
             }
             pendingRoute = route
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .transactionsCategoryFilter)) { _ in
-            selectedTab = .transactions
         }
     }
 }

@@ -12,6 +12,7 @@ struct Overview: View {
     @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []
     var pendingRoute: Binding<AppRoute?>?
+    var onCategoryTapped: ((String) -> Void)?
 
     private var queryData: QuerySnapshot {
         QuerySnapshot(transactions: allTransactions, budgets: budgets, categories: customCategories)
@@ -19,7 +20,7 @@ struct Overview: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit)
+            OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit, onCategoryTapped: onCategoryTapped)
                 .navigationDestination(for: AppRoute.self) { route in
                     if case .transaction(let id) = route,
                        let transaction = allTransactions.first(where: { $0.id == id }) {
@@ -45,12 +46,13 @@ struct Overview: View {
 private struct OverviewBody: View {
     @Bindable var viewModel: OverviewViewModel
     let defaultBudgetLimit: Double
+    let onCategoryTapped: ((String) -> Void)?
     @Environment(\.modelContext) private var modelContext
     @Environment(\.authService) private var authService
 
     var body: some View {
         ScrollView {
-            OverviewScrollContent(viewModel: viewModel)
+            OverviewScrollContent(viewModel: viewModel, onCategoryTapped: onCategoryTapped)
         }
         .navigationTitle("Overview")
         .toolbar { overviewToolbar }
@@ -76,6 +78,7 @@ private struct OverviewBody: View {
 
 private struct OverviewScrollContent: View {
     @Bindable var viewModel: OverviewViewModel
+    let onCategoryTapped: ((String) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -85,10 +88,7 @@ private struct OverviewScrollContent: View {
 
             if !viewModel.categorySpending.isEmpty {
                 CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
-                    NotificationCenter.default.post(
-                        name: .transactionsCategoryFilter,
-                        object: categoryName
-                    )
+                    onCategoryTapped?(categoryName)
                 }
                 .padding(.horizontal)
             } else {

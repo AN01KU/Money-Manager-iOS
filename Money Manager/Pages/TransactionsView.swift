@@ -7,6 +7,7 @@ struct TransactionsView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @State private var viewModel = TransactionsViewModel()
+    var categoryFilter: Binding<String?>?
 
     var body: some View {
         NavigationStack {
@@ -23,12 +24,13 @@ struct TransactionsView: View {
         .onChange(of: customCategories) { _, newValue in
             viewModel.update(allTransactions: allTransactions, customCategories: newValue)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .transactionsCategoryFilter)) { notification in
-            guard let category = notification.object as? String else { return }
+        .onChange(of: categoryFilter?.wrappedValue) { _, newValue in
+            guard let category = newValue else { return }
             withAnimation {
                 viewModel.selectedCategoryFilter = category
                 viewModel.transactionTypeFilter = .expenses
             }
+            categoryFilter?.wrappedValue = nil
         }
     }
 }
