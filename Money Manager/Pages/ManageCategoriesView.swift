@@ -4,7 +4,7 @@ import SwiftData
 struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }) private var allTransactions: [Transaction]
+    @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }) private var allTransactions: [Transaction]
 
     @State private var viewModel = ManageCategoriesViewModel()
     @State private var rowTapped = 0

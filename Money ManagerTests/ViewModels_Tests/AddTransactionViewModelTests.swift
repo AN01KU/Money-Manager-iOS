@@ -7,10 +7,7 @@ import Testing
 struct AddTransactionViewModelTests {
 
     private func makeContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+        ModelContext(makeTestContainer())
     }
 
     // MARK: - Validation

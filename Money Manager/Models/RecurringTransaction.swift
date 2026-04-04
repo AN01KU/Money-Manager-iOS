@@ -39,6 +39,8 @@ final class RecurringTransaction {
 
     var type: TransactionKind
 
+    @Attribute(originalName: "isDeleted") var isSoftDeleted: Bool
+
     var createdAt: Date
     var updatedAt: Date
 
@@ -56,7 +58,8 @@ final class RecurringTransaction {
         lastAddedDate: Date? = nil,
         notes: String? = nil,
         categoryId: UUID? = nil,
-        type: TransactionKind = .expense
+        type: TransactionKind = .expense,
+        isSoftDeleted: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -72,6 +75,7 @@ final class RecurringTransaction {
         self.notes = notes
         self.categoryId = categoryId
         self.type = type
+        self.isSoftDeleted = isSoftDeleted
         self.createdAt = Date()
         self.updatedAt = Date()
     }

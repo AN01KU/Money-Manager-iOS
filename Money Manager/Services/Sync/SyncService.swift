@@ -154,7 +154,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func enqueueLocalData(context: ModelContext) {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
-        for transaction in transactions where !transaction.isDeleted {
+        for transaction in transactions where !transaction.isSoftDeleted {
             let payload = try? APIClient.apiEncoder.encode(transaction.toCreateRequest())
             changeQueueManager.enqueue(
                 entityType: "transaction",
@@ -196,7 +196,7 @@ final class SyncService: SyncServiceProtocol {
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
-        for item in recurringItems {
+        for item in recurringItems where !item.isSoftDeleted {
             let payload = try? APIClient.apiEncoder.encode(item.toCreateRequest())
             changeQueueManager.enqueue(
                 entityType: "recurring",
@@ -360,6 +360,7 @@ final class SyncService: SyncServiceProtocol {
         for remote in apiExpenses {
             guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
+                if local.isSoftDeleted { continue }
                 if remote.updatedAt > local.updatedAt {
                     if pendingIDs.contains(remote.id) {
                         AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — local pending change will be overwritten")

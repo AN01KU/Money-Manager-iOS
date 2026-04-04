@@ -60,7 +60,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             }
 
             dateFiltered = allTransactions.filter { transaction in
-                !transaction.isDeleted &&
+                !transaction.isSoftDeleted &&
                 transaction.date >= startOfDay &&
                 transaction.date <= endOfDay
             }
@@ -74,7 +74,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             }
 
             dateFiltered = allTransactions.filter { transaction in
-                !transaction.isDeleted &&
+                !transaction.isSoftDeleted &&
                 transaction.date >= startOfMonth &&
                 transaction.date < firstDayNextMonth
             }
@@ -175,7 +175,7 @@ enum TransactionTypeFilter: String, CaseIterable {
     func confirmDeleteTransaction() {
         guard let transaction = transactionToDelete else { return }
 
-        transaction.isDeleted = true
+        transaction.isSoftDeleted = true
         transaction.updatedAt = Date()
         transactionToDelete = nil
 

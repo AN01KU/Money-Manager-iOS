@@ -22,9 +22,9 @@ struct TransactionModelTests {
     @Test
     func testTransactionCanBeMarkedAsDeleted() {
         let expense = Transaction(amount: 100, category: "Other", date: Date())
-        #expect(expense.isDeleted == false)
-        expense.isDeleted = true
-        #expect(expense.isDeleted == true)
+        #expect(expense.isSoftDeleted == false)
+        expense.isSoftDeleted = true
+        #expect(expense.isSoftDeleted == true)
     }
 
     @Test

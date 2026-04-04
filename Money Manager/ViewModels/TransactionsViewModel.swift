@@ -42,7 +42,7 @@ import SwiftData
         }
 
         var result = allTransactions.filter { transaction in
-            !transaction.isDeleted &&
+            !transaction.isSoftDeleted &&
             transaction.date >= startOfMonth &&
             transaction.date < firstDayNextMonth
         }
@@ -74,7 +74,7 @@ import SwiftData
 
     func confirmDeleteTransaction() {
         guard let transaction = transactionToDelete else { return }
-        transaction.isDeleted = true
+        transaction.isSoftDeleted = true
         transaction.updatedAt = Date()
         transactionToDelete = nil
         do {

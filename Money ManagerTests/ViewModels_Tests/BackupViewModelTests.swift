@@ -600,10 +600,7 @@ struct BackupViewModelTests {
 struct BackupViewModelExportTests {
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+        ModelContext(makeTestContainer())
     }
     
     // MARK: - Export Expenses Tests
@@ -683,7 +680,7 @@ struct BackupViewModelExportTests {
         
         let active = Transaction(amount: 100, category: "Food", date: Date())
         let deleted = Transaction(amount: 200, category: "Food", date: Date())
-        deleted.isDeleted = true
+        deleted.isSoftDeleted = true
         
         await viewModel.exportData(
             transactions: [active, deleted],
@@ -1013,10 +1010,7 @@ struct BackupViewModelExportTests {
 struct BackupViewModelImportTests {
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+        ModelContext(makeTestContainer())
     }
     
     // MARK: - JSON Import Tests

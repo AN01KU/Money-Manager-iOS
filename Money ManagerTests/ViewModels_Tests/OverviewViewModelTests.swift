@@ -41,7 +41,7 @@ struct OverviewViewModelTests {
         
         let activeExpense = Transaction(amount: 100, category: "Food & Dining", date: Date())
         let deletedExpense = Transaction(amount: 200, category: "Transport", date: Date())
-        deletedExpense.isDeleted = true
+        deletedExpense.isSoftDeleted = true
         
         viewModel.update(allTransactions: [activeExpense, deletedExpense], budgets: [], customCategories: [])
         
@@ -562,10 +562,7 @@ struct OverviewViewModelTests {
         
         viewModel.update(allTransactions: [], budgets: [existingBudget], customCategories: [])
         
-        let schema = Schema([Transaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
         
         viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
         
@@ -580,10 +577,7 @@ struct OverviewViewModelTests {
         
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
-        let schema = Schema([Transaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
         
         #expect(viewModel.currentBudget == nil)
         
@@ -602,10 +596,7 @@ struct OverviewViewModelTests {
         
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
-        let schema = Schema([Transaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
         
         viewModel.ensureBudgetExists(defaultBudgetLimit: 0, modelContext: context)
         
@@ -648,7 +639,7 @@ struct OverviewViewModelTests {
         viewModel.deleteTransaction(expense)
         viewModel.confirmDeleteTransaction()
         
-        #expect(expense.isDeleted == true)
+        #expect(expense.isSoftDeleted == true)
         #expect(viewModel.transactionToDelete == nil)
     }
     

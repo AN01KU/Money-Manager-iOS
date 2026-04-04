@@ -17,10 +17,7 @@ struct RecurringTransactionServiceTests {
             isActive: false
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(inactive)
         try? context.save()
@@ -47,10 +44,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -80,10 +74,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -111,10 +102,7 @@ struct RecurringTransactionServiceTests {
             lastAddedDate: nextMonth
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -141,10 +129,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -173,10 +158,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -204,10 +186,7 @@ struct RecurringTransactionServiceTests {
             notes: "Monthly subscription"
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -234,10 +213,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()

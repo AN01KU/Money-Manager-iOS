@@ -3,7 +3,7 @@ import SwiftData
 
 struct RecurringTransactionsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \RecurringTransaction.name)
+    @Query(filter: #Predicate<RecurringTransaction> { !$0.isSoftDeleted }, sort: \RecurringTransaction.name)
     private var recurringTransactions: [RecurringTransaction]
 
     @State private var viewModel = RecurringTransactionsViewModel()

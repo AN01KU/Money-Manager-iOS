@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 struct ExportDataView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var transactions: [Transaction]
-    @Query private var recurringTransactions: [RecurringTransaction]
+    @Query(filter: #Predicate<RecurringTransaction> { !$0.isSoftDeleted }) private var recurringTransactions: [RecurringTransaction]
     @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [CustomCategory]
     @Query private var groups: [SplitGroupModel]

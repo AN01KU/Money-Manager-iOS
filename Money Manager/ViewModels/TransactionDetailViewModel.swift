@@ -37,7 +37,7 @@ import SwiftData
     }
 
     func deleteTransaction(completion: @escaping () -> Void) {
-        transaction.isDeleted = true
+        transaction.isSoftDeleted = true
         transaction.updatedAt = Date()
 
         guard persistence.modelContext != nil else {

@@ -12,7 +12,7 @@ struct ExportService {
     // MARK: - Public API
 
     func exportTransactions(format: ExportFormat, transactions: [Transaction], groups: [SplitGroupModel]) throws -> URL {
-        let activeTransactions = transactions.filter { !$0.isDeleted }
+        let activeTransactions = transactions.filter { !$0.isSoftDeleted }
         switch format {
         case .csv: return try exportTransactionsToCSV(transactions: activeTransactions, groups: groups)
         case .json: return try exportTransactionsToJSON(transactions: activeTransactions)
@@ -41,7 +41,7 @@ struct ExportService {
     }
 
     func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
-        let activeTransactions = transactions.filter { !$0.isDeleted }
+        let activeTransactions = transactions.filter { !$0.isSoftDeleted }
         switch format {
         case .csv: return try exportAllToCSV(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         case .json: return try exportAllToJSON(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)

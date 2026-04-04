@@ -187,8 +187,33 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             return
         }
 
+        if change.action == "delete" {
+            hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
+        }
         context.delete(change)
         try? context.save()
+    }
+
+    /// Hard-deletes the local SwiftData record after a successful backend DELETE.
+    private func hardDeleteEntity(entityType: String, entityID: UUID, context: ModelContext) {
+        switch entityType {
+        case "recurring":
+            let descriptor = FetchDescriptor<RecurringTransaction>(
+                predicate: #Predicate { $0.id == entityID }
+            )
+            if let record = try? context.fetch(descriptor), let item = record.first {
+                context.delete(item)
+            }
+        case "transaction":
+            let descriptor = FetchDescriptor<Transaction>(
+                predicate: #Predicate { $0.id == entityID }
+            )
+            if let record = try? context.fetch(descriptor), let item = record.first {
+                context.delete(item)
+            }
+        default:
+            break
+        }
     }
 
     func clearAll(context: ModelContext) {

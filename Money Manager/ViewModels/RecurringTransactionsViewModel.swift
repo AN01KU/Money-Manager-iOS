@@ -75,20 +75,23 @@ import SwiftData
     }
 
     func delete(at index: Int) {
-        guard index < pausedRecurring.count, let modelContext = modelContext else { return }
+        guard index < pausedRecurring.count else { return }
         let recurring = pausedRecurring[index]
         let recurringId = recurring.id
 
-        let descriptor = FetchDescriptor<Transaction>(
-            predicate: #Predicate { $0.recurringExpenseId == recurringId }
-        )
-        if let linked = try? modelContext.fetch(descriptor) {
-            for linked in linked {
-                linked.recurringExpenseId = nil
+        recurring.isSoftDeleted = true
+        recurring.updatedAt = Date()
+
+        if let modelContext {
+            let descriptor = FetchDescriptor<Transaction>(
+                predicate: #Predicate { $0.recurringExpenseId == recurringId }
+            )
+            if let linked = try? modelContext.fetch(descriptor) {
+                for linked in linked {
+                    linked.recurringExpenseId = nil
+                }
             }
         }
-
-        modelContext.delete(recurring)
 
         do {
             try persistence.saveAndSync(

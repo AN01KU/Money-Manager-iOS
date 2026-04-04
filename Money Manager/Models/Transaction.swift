@@ -26,7 +26,7 @@ final class Transaction {
     
     var createdAt: Date
     var updatedAt: Date
-    var isDeleted: Bool
+    @Attribute(originalName: "isDeleted") var isSoftDeleted: Bool
     
     var recurringExpenseId: UUID?
     var groupTransactionId: UUID?
@@ -64,7 +64,7 @@ final class Transaction {
         self.settlementId = settlementId
         self.createdAt = Date()
         self.updatedAt = Date()
-        self.isDeleted = false
+        self.isSoftDeleted = false
         self.categoryId = categoryId
     }
 }

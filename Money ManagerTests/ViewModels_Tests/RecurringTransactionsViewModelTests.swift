@@ -145,27 +145,15 @@ struct RecurringTransactionsViewModelTests {
     }
 
     @Test
-    func testDeleteRemovesFromDatabase() {
+    func testDeleteSoftDeletesRecord() {
         let paused = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly, isActive: false)
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
-
-        context.insert(paused)
-        try? context.save()
-
         let viewModel = RecurringTransactionsViewModel()
-        viewModel.modelContext = context
         viewModel.update(recurring: [paused])
 
         viewModel.delete(at: 0)
 
-        let descriptor = FetchDescriptor<RecurringTransaction>()
-        let remaining = (try? context.fetch(descriptor)) ?? []
-
-        #expect(remaining.isEmpty)
+        #expect(paused.isSoftDeleted == true)
     }
 }
 
@@ -317,10 +305,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
 
@@ -344,10 +329,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -366,10 +348,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.selectedCategory = "Food"
         viewModel.frequency = .weekly
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -389,10 +368,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.hasEndDate = true
         viewModel.endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -411,10 +387,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = false
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -433,10 +406,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.selectedCategory = "Food"
         viewModel.notes = "Test notes"
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -455,10 +425,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.selectedCategory = "Food"
         viewModel.notes = ""
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()

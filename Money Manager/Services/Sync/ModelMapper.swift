@@ -40,7 +40,7 @@ extension Transaction {
         self.time = api.time
         self.transactionDescription = api.description
         self.notes = api.notes
-        self.isDeleted = api.isDeleted
+        self.isSoftDeleted = api.isDeleted
         self.recurringExpenseId = api.recurringExpenseId
         self.groupTransactionId = api.groupTransactionId
         self.groupId = api.groupId
