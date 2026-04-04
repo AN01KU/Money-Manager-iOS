@@ -77,23 +77,19 @@ import SwiftData
 
         let transactionDescriptor = FetchDescriptor<Transaction>()
         if let transactions = try? modelContext.fetch(transactionDescriptor) {
-            for transaction in transactions {
-                if transaction.categoryId == categoryId || transaction.category == categoryName {
-                    transaction.category = "Other"
-                    transaction.categoryId = nil
-                    transaction.updatedAt = Date()
-                }
+            for transaction in transactions where transaction.categoryId == categoryId {
+                transaction.category = "Other"
+                transaction.categoryId = nil
+                transaction.updatedAt = Date()
             }
         }
 
         let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
         if let recurrings = try? modelContext.fetch(recurringDescriptor) {
-            for recurring in recurrings {
-                if recurring.categoryId == categoryId || recurring.category == categoryName {
-                    recurring.category = "Other"
-                    recurring.categoryId = nil
-                    recurring.updatedAt = Date()
-                }
+            for recurring in recurrings where recurring.categoryId == categoryId {
+                recurring.category = "Other"
+                recurring.categoryId = nil
+                recurring.updatedAt = Date()
             }
         }
 

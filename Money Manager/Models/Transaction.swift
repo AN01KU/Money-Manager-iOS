@@ -34,9 +34,9 @@ final class Transaction {
     var groupName: String?
     var settlementId: UUID?
     
-    /// UUID of the linked CustomCategory. Nil for transactions created before this field was added.
+    /// UUID of the linked CustomCategory.
     var categoryId: UUID?
-    
+
     init(
         id: UUID = UUID(),
         type: TransactionKind = .expense,

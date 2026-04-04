@@ -112,7 +112,7 @@ struct ManageCategoriesViewModelTests {
         let context = makeContext()
         
         let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let foodExpense = Transaction(amount: 100, category: "Food", date: Date())
+        let foodExpense = Transaction(amount: 100, category: "Food", date: Date(), categoryId: category.id)
         let otherExpense = Transaction(amount: 200, category: "Transport", date: Date())
         
         context.insert(category)

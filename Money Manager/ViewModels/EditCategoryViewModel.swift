@@ -58,23 +58,17 @@ class EditCategoryViewModel: CategoryEditorViewModel {
 
             let transactionDescriptor = FetchDescriptor<Transaction>()
             if let transactions = try? modelContext.fetch(transactionDescriptor) {
-                for transaction in transactions {
-                    if transaction.categoryId == categoryId || transaction.category == oldName {
-                        transaction.category = trimmedName
-                        if transaction.categoryId == nil { transaction.categoryId = categoryId }
-                        transaction.updatedAt = Date()
-                    }
+                for transaction in transactions where transaction.categoryId == categoryId {
+                    transaction.category = trimmedName
+                    transaction.updatedAt = Date()
                 }
             }
 
             let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
             if let recurrings = try? modelContext.fetch(recurringDescriptor) {
-                for recurring in recurrings {
-                    if recurring.categoryId == categoryId || recurring.category == oldName {
-                        recurring.category = trimmedName
-                        if recurring.categoryId == nil { recurring.categoryId = categoryId }
-                        recurring.updatedAt = Date()
-                    }
+                for recurring in recurrings where recurring.categoryId == categoryId {
+                    recurring.category = trimmedName
+                    recurring.updatedAt = Date()
                 }
             }
         }
