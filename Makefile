@@ -34,7 +34,7 @@ test-ui:
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests" -skip-testing:"Money ManagerUITests/ScreenshotGenerator"
 	
 test-api:
-	@echo "Running API integration tests sequentially (backend must running, `curl https://{BASE_URL}/health`) "
+	@echo "Running API integration tests sequentially"
 	@echo ""
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/APIIntegrationTests" -parallel-testing-enabled NO
