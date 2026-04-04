@@ -11,7 +11,7 @@ struct APITransaction: Codable {
     let id: UUID
     let userId: UUID
     let type: String          // "expense" or "income"
-    let amount: String
+    let amount: Double
     let category: String
     let date: Date
     let time: Date?
@@ -51,7 +51,7 @@ struct APIRecurringTransaction: Codable {
     let id: UUID
     let userId: UUID
     let name: String
-    let amount: String
+    let amount: Double
     let category: String
     let frequency: String
     let dayOfMonth: Int?
@@ -90,7 +90,7 @@ struct APIMonthlyBudget: Codable {
     let userId: UUID
     let year: Int
     let month: Int
-    let limit: String
+    let limit: Double
     let createdAt: Date
     let updatedAt: Date
 
@@ -191,7 +191,7 @@ struct APILoginRequest: Codable {
 struct APICreateTransactionRequest: Codable {
     let id: UUID?
     let type: String          // "expense" or "income"
-    let amount: String
+    let amount: Double
     let category: String
     let date: Date
     let time: Date?
@@ -214,7 +214,7 @@ struct APICreateTransactionRequest: Codable {
 
 struct APIUpdateTransactionRequest: Codable {
     let type: String?
-    let amount: String?
+    let amount: Double?
     let category: String?
     let date: Date?
     let time: Date?
@@ -225,7 +225,7 @@ struct APIUpdateTransactionRequest: Codable {
 struct APICreateRecurringTransactionRequest: Codable {
     let id: UUID?
     let name: String
-    let amount: String
+    let amount: Double
     let category: String
     let frequency: String
     let dayOfMonth: Int?
@@ -254,7 +254,7 @@ struct APICreateRecurringTransactionRequest: Codable {
 
 struct APIUpdateRecurringTransactionRequest: Codable {
     let name: String?
-    let amount: String?
+    let amount: Double?
     let category: String?
     let frequency: String?
     let dayOfMonth: Int?
@@ -284,13 +284,13 @@ struct APICreateBudgetRequest: Codable {
     let id: UUID?
     let year: Int
     let month: Int
-    let limit: String
+    let limit: Double
 }
 
 struct APIUpdateBudgetRequest: Codable {
     let year: Int?
     let month: Int?
-    let limit: String?
+    let limit: Double?
 }
 
 struct APICreateCategoryRequest: Codable {
@@ -342,7 +342,7 @@ struct APIGroupMember: Codable, Identifiable, Sendable {
 
 struct APIGroupBalance: Codable, Sendable {
     let userId: UUID
-    let amount: String
+    let amount: Double
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -375,7 +375,7 @@ struct APIGroupTransaction: Codable, Identifiable, Sendable {
     let id: UUID
     let groupId: UUID
     let paidByUserId: UUID
-    let totalAmount: String
+    let totalAmount: Double
     let category: String
     let date: Date
     let description: String?
@@ -404,7 +404,7 @@ struct APIGroupTransaction: Codable, Identifiable, Sendable {
 struct APIGroupTransactionSplit: Codable, Sendable {
     let id: UUID
     let userId: UUID
-    let amount: String
+    let amount: Double
     let transactionId: UUID?
 
     enum CodingKeys: String, CodingKey {
@@ -447,7 +447,7 @@ struct APIGroupDetailsBody: Codable, Identifiable, Sendable {
 
 struct APIGroupTransactionSplitInput: Codable, Sendable {
     let userId: UUID
-    let amount: String
+    let amount: Double
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -465,7 +465,7 @@ struct APIAddMemberRequest: Codable, Sendable {
 
 struct APICreateGroupTransactionRequest: Codable, Sendable {
     let paidByUserId: UUID
-    let totalAmount: String
+    let totalAmount: Double
     let category: String
     let date: Date
     let description: String?
@@ -495,7 +495,7 @@ struct APICreateSettlementRequest: Codable, Sendable {
     let groupId: UUID
     let fromUser: UUID
     let toUser: UUID
-    let amount: String
+    let amount: Double
     let notes: String?
 
     enum CodingKeys: String, CodingKey {
@@ -505,14 +505,6 @@ struct APICreateSettlementRequest: Codable, Sendable {
         case amount
         case notes
     }
-
-    init(groupId: UUID, fromUser: UUID, toUser: UUID, amount: String, notes: String? = nil) {
-        self.groupId = groupId
-        self.fromUser = fromUser
-        self.toUser = toUser
-        self.amount = amount
-        self.notes = notes
-    }
 }
 
 struct APISettlement: Codable, Identifiable, Sendable {
@@ -520,7 +512,7 @@ struct APISettlement: Codable, Identifiable, Sendable {
     let groupId: UUID?
     let fromUser: UUID
     let toUser: UUID
-    let amount: String
+    let amount: Double
     let notes: String?
     let createdAt: Date
 
@@ -538,7 +530,7 @@ struct APISettlement: Codable, Identifiable, Sendable {
 // MARK: - Dashboard
 
 struct APIMonthlyDashboardResponse: Codable {
-    let totalTransactions: String?
+    let totalTransactions: Double?
     let transactionCount: Int?
     let categoryBreakdown: [APICategoryBreakdown]?
     let budgetStatus: APIBudgetStatus?
@@ -553,8 +545,8 @@ struct APIMonthlyDashboardResponse: Codable {
 
 struct APICategoryBreakdown: Codable {
     let category: String?
-    let total: String?
-    let amount: String?
+    let total: Double?
+    let amount: Double?
     let count: Int?
 
     enum CodingKeys: String, CodingKey {
@@ -566,8 +558,8 @@ struct APICategoryBreakdown: Codable {
 }
 
 struct APIBudgetStatus: Codable {
-    let limit: String
-    let spent: String
-    let remaining: String
+    let limit: Double
+    let spent: Double
+    let remaining: Double
     let percentage: Double
 }

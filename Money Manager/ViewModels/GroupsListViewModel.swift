@@ -69,7 +69,7 @@ final class GroupsListViewModel {
         guard let userId = currentUserId else { return 0 }
         return groups.reduce(0.0) { total, group in
             let balance = group.balances.first(where: { $0.userId == userId })
-            return total + (Double(balance?.amount ?? "0") ?? 0)
+            return total + (balance?.amount ?? 0)
         }
     }
 
@@ -148,7 +148,7 @@ final class GroupsListViewModel {
     func userBalance(for group: APIGroupWithDetails) -> Double {
         guard let userId = currentUserId else { return 0 }
         let balance = group.balances.first(where: { $0.userId == userId })
-        return Double(balance?.amount ?? "0") ?? 0
+        return balance?.amount ?? 0
     }
 
     func displayName(for member: APIGroupMember) -> String {

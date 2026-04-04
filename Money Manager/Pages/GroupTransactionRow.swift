@@ -5,7 +5,7 @@ struct GroupTransactionRow: View {
     let members: [APIGroupMember]
     var currentUserId: UUID? = nil
 
-    private var amount: Double { Double(transaction.totalAmount) ?? 0 }
+    private var amount: Double { transaction.totalAmount }
     private var isCurrentUserPayer: Bool { transaction.paidByUserId == currentUserId }
     private var isCurrentUserInvolved: Bool {
         isCurrentUserPayer || transaction.splits.contains { $0.userId == currentUserId }

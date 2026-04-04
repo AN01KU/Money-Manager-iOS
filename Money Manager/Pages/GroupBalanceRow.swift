@@ -100,7 +100,7 @@ struct SettlementHistoryRow: View {
         return members.first(where: { $0.id == settlement.toUser })?.username ?? "Unknown"
     }
 
-    private var amount: Double { Double(settlement.amount) ?? 0 }
+    private var amount: Double { settlement.amount }
 
     private var isCurrentUserPayer: Bool { settlement.fromUser == currentUserId }
     private var isCurrentUserReceiver: Bool { settlement.toUser == currentUserId }

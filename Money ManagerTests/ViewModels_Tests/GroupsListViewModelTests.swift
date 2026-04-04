@@ -24,11 +24,11 @@ struct GroupsListViewModelTests {
         )
     }
 
-    private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
+    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
         APIGroupBalance(userId: userId, amount: amount)
     }
 
-    private func makeTransaction(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
+    private func makeTransaction(description: String = "Test", totalAmount: Double = 10.0, paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
         APIGroupTransaction(
             id: UUID(), groupId: UUID(), paidByUserId: paidBy,
             totalAmount: totalAmount, category: "Food", date: createdAt,
@@ -87,8 +87,8 @@ struct GroupsListViewModelTests {
     func testLoadRecentActivitySortedNewestFirst() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let older = makeTransaction(description: "Old", totalAmount: "10", createdAt: Date(timeIntervalSinceNow: -3600))
-        let newer = makeTransaction(description: "New", totalAmount: "20", createdAt: Date(timeIntervalSinceNow: -60))
+        let older = makeTransaction(description: "Old", totalAmount: 10, createdAt: Date(timeIntervalSinceNow: -3600))
+        let newer = makeTransaction(description: "New", totalAmount: 20, createdAt: Date(timeIntervalSinceNow: -60))
         mock.stubbedGroups = [makeGroup(id: groupId)]
         mock.stubbedTransactions = [older, newer]
         let vm = GroupsListViewModel(groupService: mock)
@@ -191,7 +191,7 @@ struct GroupsListViewModelTests {
     func testNetBalanceWithNoCurrentUserReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let uid = UUID()
-        vm.groups = [makeGroup(balances: [makeBalance(userId: uid, amount: "50.00")])]
+        vm.groups = [makeGroup(balances: [makeBalance(userId: uid, amount: 50.0)])]
         #expect(vm.netBalance == 0)
     }
 
@@ -208,7 +208,7 @@ struct GroupsListViewModelTests {
     func testUserBalanceWithNoCurrentUserReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let uid = UUID()
-        let group = makeGroup(balances: [makeBalance(userId: uid, amount: "75.00")])
+        let group = makeGroup(balances: [makeBalance(userId: uid, amount: 75.0)])
         #expect(vm.userBalance(for: group) == 0)
     }
 

@@ -30,7 +30,7 @@ private struct TransactionActivityRow: View {
     let transaction: APIGroupTransaction
     let groupName: String
 
-    private var amount: Double { Double(transaction.totalAmount) ?? 0 }
+    private var amount: Double { transaction.totalAmount }
 
     private var resolved: (icon: String, color: Color) {
         CategoryResolver.resolve(transaction.category, customCategories: [])
@@ -85,7 +85,7 @@ private struct SettlementActivityRow: View {
     let currentUserId: UUID?
 
     private var isCurrentUserPayer: Bool { settlement.fromUser == currentUserId }
-    private var amount: Double { Double(settlement.amount) ?? 0 }
+    private var amount: Double { settlement.amount }
 
     private var fromName: String {
         if settlement.fromUser == currentUserId { return "You" }

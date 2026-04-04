@@ -323,7 +323,7 @@ final class SyncService: SyncServiceProtocol {
                 let tx = Transaction(
                     id: remote.id,
                     type: TransactionKind(rawValue: remote.type) ?? .expense,
-                    amount: Double(remote.amount) ?? 0,
+                    amount: remote.amount,
                     category: remote.category,
                     date: remote.date,
                     time: remote.time,
@@ -366,7 +366,7 @@ final class SyncService: SyncServiceProtocol {
                         AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — local pending change will be overwritten")
                     }
                     local.name = remote.name
-                    local.amount = Double(remote.amount) ?? local.amount
+                    local.amount = remote.amount
                     local.category = remote.category
                     local.frequency = RecurringFrequency(rawValue: remote.frequency) ?? local.frequency
                     local.dayOfMonth = remote.dayOfMonth
@@ -385,7 +385,7 @@ final class SyncService: SyncServiceProtocol {
                 let item = RecurringTransaction(
                     id: remote.id,
                     name: remote.name,
-                    amount: Double(remote.amount) ?? 0,
+                    amount: remote.amount,
                     category: remote.category,
                     frequency: RecurringFrequency(rawValue: remote.frequency) ?? .monthly,
                     dayOfMonth: remote.dayOfMonth,
@@ -425,7 +425,7 @@ final class SyncService: SyncServiceProtocol {
                     }
                     local.year = remote.year
                     local.month = remote.month
-                    local.limit = Double(remote.limit) ?? local.limit
+                    local.limit = remote.limit
                     local.updatedAt = remote.updatedAt
                 }
             } else {
@@ -433,7 +433,7 @@ final class SyncService: SyncServiceProtocol {
                     id: remote.id,
                     year: remote.year,
                     month: remote.month,
-                    limit: Double(remote.limit) ?? 0
+                    limit: remote.limit
                 )
                 context.insert(budget)
             }
@@ -560,8 +560,7 @@ final class SyncService: SyncServiceProtocol {
             for b in existingBalances { context.delete(b) }
 
             for balance in remote.balances {
-                guard let amount = Double(balance.amount) else { continue }
-                let newBalance = GroupBalanceModel(userId: balance.userId, amount: amount)
+                let newBalance = GroupBalanceModel(userId: balance.userId, amount: balance.amount)
                 newBalance.group = dbGroup
                 context.insert(newBalance)
             }
@@ -598,13 +597,13 @@ final class SyncService: SyncServiceProtocol {
             for gt in remote where !gt.isDeleted {
                 if let existing = localGroupTransactionsByID[gt.id] {
                     existing.transactionDescription = gt.description ?? ""
-                    existing.totalAmount = Double(gt.totalAmount) ?? existing.totalAmount
+                    existing.totalAmount = gt.totalAmount
                     AppLogger.sync.debug("[GroupDebug] Updated GroupTransactionModel id=\(gt.id) description='\(gt.description ?? "nil")'")
                 } else {
                     let newGT = GroupTransactionModel(
                         id: gt.id,
                         description: gt.description ?? "",
-                        totalAmount: Double(gt.totalAmount) ?? 0,
+                        totalAmount: gt.totalAmount,
                         paidBy: gt.paidByUserId,
                         createdAt: gt.createdAt
                     )
@@ -623,10 +622,6 @@ final class SyncService: SyncServiceProtocol {
     // MARK: - Validation
 
     private func isValid(_ api: APITransaction) -> Bool {
-        guard Double(api.amount) != nil else {
-            AppLogger.sync.error("Validation failed: transaction \(api.id) has unparseable amount '\(api.amount)'")
-            return false
-        }
         guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
             AppLogger.sync.error("Validation failed: transaction \(api.id) has empty category")
             return false
@@ -635,10 +630,6 @@ final class SyncService: SyncServiceProtocol {
     }
 
     private func isValid(_ api: APIRecurringTransaction) -> Bool {
-        guard Double(api.amount) != nil else {
-            AppLogger.sync.error("Validation failed: recurring \(api.id) has unparseable amount '\(api.amount)'")
-            return false
-        }
         guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
             AppLogger.sync.error("Validation failed: recurring \(api.id) has empty category")
             return false
@@ -647,10 +638,6 @@ final class SyncService: SyncServiceProtocol {
     }
 
     private func isValid(_ api: APIMonthlyBudget) -> Bool {
-        guard Double(api.limit) != nil else {
-            AppLogger.sync.error("Validation failed: budget \(api.id) has unparseable limit '\(api.limit)'")
-            return false
-        }
         guard api.year >= 2000 && api.year <= 2100 else {
             AppLogger.sync.error("Validation failed: budget \(api.id) has out-of-range year \(api.year)")
             return false

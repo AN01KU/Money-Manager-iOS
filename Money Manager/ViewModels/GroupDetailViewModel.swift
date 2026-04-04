@@ -61,11 +61,11 @@ final class GroupDetailViewModel {
     }
 
     var groupTotal: Double {
-        transactions.compactMap { Double($0.totalAmount) }.reduce(0, +)
+        transactions.reduce(0) { $0 + $1.totalAmount }
     }
 
     var hasUnsettledBalances: Bool {
-        balances.contains { (Double($0.amount) ?? 0) != 0 }
+        balances.contains { $0.amount != 0 }
     }
 
     /// Pairwise debts derived from backend net balances.
@@ -76,11 +76,10 @@ final class GroupDetailViewModel {
         var creditors: [(userId: UUID, amount: Double)] = []
 
         for b in balances {
-            let amt = Double(b.amount) ?? 0
-            if amt < 0 {
-                debtors.append((b.userId, abs(amt)))
-            } else if amt > 0 {
-                creditors.append((b.userId, amt))
+            if b.amount < 0 {
+                debtors.append((b.userId, abs(b.amount)))
+            } else if b.amount > 0 {
+                creditors.append((b.userId, b.amount))
             }
         }
 
@@ -222,18 +221,18 @@ final class GroupDetailViewModel {
         for m in members { map[m.id] = 0 }
 
         for tx in transactions {
-            map[tx.paidByUserId, default: 0] += Double(tx.totalAmount) ?? 0
+            map[tx.paidByUserId, default: 0] += tx.totalAmount
         }
 
         // Split equally among all members for now (server is authoritative for custom splits)
         let memberCount = members.isEmpty ? 1 : members.count
         for tx in transactions {
-            let share = (Double(tx.totalAmount) ?? 0) / Double(memberCount)
+            let share = tx.totalAmount / Double(memberCount)
             for m in members {
                 map[m.id, default: 0] -= share
             }
         }
 
-        balances = map.map { APIGroupBalance(userId: $0.key, amount: String(format: "%.2f", $0.value)) }
+        balances = map.map { APIGroupBalance(userId: $0.key, amount: $0.value) }
     }
 }

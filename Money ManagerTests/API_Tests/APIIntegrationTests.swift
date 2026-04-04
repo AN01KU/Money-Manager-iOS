@@ -18,10 +18,8 @@ struct APIIntegrationTests {
         try? await Task.sleep(nanoseconds: UInt64(ms * 1_000_000))
     }
     
-    private func compareAmount(_ a: String, _ b: String) -> Bool {
-        guard let decimalA = Decimal(string: a),
-              let decimalB = Decimal(string: b) else { return false }
-        return decimalA == decimalB
+    private func compareAmount(_ a: Double, _ b: Double) -> Bool {
+        abs(a - b) < 0.001
     }
     
     private func ensureAuthenticated() async throws {
@@ -140,7 +138,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: "5000.00")
+        let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: 5000.00)
         let response: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
         
         #expect(compareAmount(response.limit, request.limit))
@@ -161,15 +159,15 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: "1000.00")
+        let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: 1000.00)
         let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: createRequest)
-        
+
         await delay(200)
-        
-        let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: "1500.00")
+
+        let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: 1500.00)
         let updated: APIMonthlyBudget = try await APIClient.shared.put("/budgets/\(created.id)", body: updateRequest)
-        
-        #expect(compareAmount(updated.limit, "1500"))
+
+        #expect(compareAmount(updated.limit, 1500))
     }
     
     @Test("Delete budget removes it")
@@ -177,7 +175,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
         
-        let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: "999.00")
+        let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: 999.00)
         let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
         
         await delay(200)
@@ -196,7 +194,7 @@ struct APIIntegrationTests {
         let request = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Netflix \(UUID().uuidString.prefix(4))",
-            amount: "15.99",
+            amount: 15.99,
             category: "Entertainment",
             frequency: "monthly",
             dayOfMonth: 15,
@@ -223,7 +221,7 @@ struct APIIntegrationTests {
         let request = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Gym \(UUID().uuidString.prefix(4))",
-            amount: "50.00",
+            amount: 50.00,
             category: "Health & Medical",
             frequency: "weekly",
             dayOfMonth: nil,
@@ -261,7 +259,7 @@ struct APIIntegrationTests {
         let createRequest = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Get Test \(UUID().uuidString.prefix(4))",
-            amount: "5.00",
+            amount: 5.00,
             category: "Other",
             frequency: "monthly",
             dayOfMonth: 20,
@@ -290,7 +288,7 @@ struct APIIntegrationTests {
         let createRequest = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Update Test \(UUID().uuidString.prefix(4))",
-            amount: "10.00",
+            amount: 10.00,
             category: "Entertainment",
             frequency: "monthly",
             dayOfMonth: 5,
@@ -306,14 +304,14 @@ struct APIIntegrationTests {
         await delay(200)
         
         let updateRequest = APIUpdateRecurringTransactionRequest(
-            name: nil, amount: "12.00", category: nil, frequency: nil,
+            name: nil, amount: 12.00, category: nil, frequency: nil,
             dayOfMonth: nil, daysOfWeek: nil, startDate: nil, endDate: nil,
             isActive: false, notes: nil,
             type: "expense"
         )
         let updated: APIRecurringTransaction = try await APIClient.shared.put("/recurring-transactions/\(created.id)", body: updateRequest)
         
-        #expect(compareAmount(updated.amount, "12"))
+        #expect(compareAmount(updated.amount, 12))
         #expect(updated.isActive == false)
     }
     
@@ -326,7 +324,7 @@ struct APIIntegrationTests {
         let createRequest = APICreateRecurringTransactionRequest(
             id: nil,
             name: "Delete Test \(UUID().uuidString.prefix(4))",
-            amount: "8.00",
+            amount: 8.00,
             category: "Other",
             frequency: "monthly",
             dayOfMonth: 10,
@@ -354,7 +352,7 @@ struct APIIntegrationTests {
         let request = APICreateTransactionRequest(
             id: nil,
             type: "expense",
-            amount: "25.50",
+            amount: 25.50,
             category: "Food & Dining",
             date: Date(),
             time: nil,
@@ -379,7 +377,7 @@ struct APIIntegrationTests {
         let request = APICreateTransactionRequest(
             id: nil,
             type: "income",
-            amount: "5000.00",
+            amount: 5000.00,
             category: "Work & Professional",
             date: Date(),
             time: nil,
@@ -402,7 +400,7 @@ struct APIIntegrationTests {
         let request = APICreateTransactionRequest(
             id: nil,
             type: "expense",
-            amount: "45.00",
+            amount: 45.00,
             category: "Shopping",
             date: Date(),
             time: ISO8601DateFormatter().date(from: "2026-03-22T14:30:00Z"),
@@ -462,7 +460,7 @@ struct APIIntegrationTests {
         let createRequest = APICreateTransactionRequest(
             id: nil,
             type: "expense",
-            amount: "100.00",
+            amount: 100.00,
             category: "Transport",
             date: Date(),
             time: nil,
@@ -488,7 +486,7 @@ struct APIIntegrationTests {
         let createRequest = APICreateTransactionRequest(
             id: nil,
             type: "expense",
-            amount: "50.00",
+            amount: 50.00,
             category: "Food & Dining",
             date: Date(),
             time: nil,
@@ -502,7 +500,7 @@ struct APIIntegrationTests {
 
         let updateRequest = APIUpdateTransactionRequest(
             type: nil,
-            amount: "55.00",
+            amount: 55.00,
             category: nil,
             date: nil,
             time: nil,
@@ -511,7 +509,7 @@ struct APIIntegrationTests {
         )
         let updated: APITransaction = try await APIClient.shared.patch("/transactions/\(created.id)", body: updateRequest)
 
-        #expect(compareAmount(updated.amount, "55"))
+        #expect(compareAmount(updated.amount, 55))
         #expect(updated.description == "After update")
     }
 
@@ -523,7 +521,7 @@ struct APIIntegrationTests {
         let createRequest = APICreateTransactionRequest(
             id: nil,
             type: "expense",
-            amount: "75.00",
+            amount: 75.00,
             category: "Shopping",
             date: Date(),
             time: nil,
@@ -565,13 +563,13 @@ struct APIIntegrationTests {
 
         let txRequest = APICreateGroupTransactionRequest(
             paidByUserId: member.id,
-            totalAmount: "90.00",
+            totalAmount: 90.00,
             category: "Food & Dining",
             date: Date(),
             description: "Group dinner",
             notes: nil,
             splits: [
-                APIGroupTransactionSplitInput(userId: member.id, amount: "90.00")
+                APIGroupTransactionSplitInput(userId: member.id, amount: 90.00)
             ]
         )
 
@@ -580,7 +578,7 @@ struct APIIntegrationTests {
             body: txRequest
         )
 
-        #expect(compareAmount(response.totalAmount, "90.00"))
+        #expect(compareAmount(response.totalAmount, 90.00))
         #expect(response.category == "Food & Dining")
         #expect(response.paidByUserId == member.id)
         #expect(!response.splits.isEmpty)
@@ -604,13 +602,13 @@ struct APIIntegrationTests {
 
         let txRequest = APICreateGroupTransactionRequest(
             paidByUserId: member.id,
-            totalAmount: "30.00",
+            totalAmount: 30.00,
             category: "Transport",
             date: Date(),
             description: "Cab ride",
             notes: nil,
             splits: [
-                APIGroupTransactionSplitInput(userId: member.id, amount: "30.00")
+                APIGroupTransactionSplitInput(userId: member.id, amount: 30.00)
             ]
         )
         let _: APIGroupTransaction = try await APIClient.shared.post("/groups/\(group.id)/transactions", body: txRequest)

@@ -13,7 +13,7 @@ struct GroupTransactionDetailSheet: View {
     @State private var deleteTapped = 0
     @State private var editTapped = 0
 
-    private var amount: Double { Double(transaction.totalAmount) ?? 0 }
+    private var amount: Double { transaction.totalAmount }
 
     private var paidByName: String {
         members.first(where: { $0.id == transaction.paidByUserId })?.username ?? "Unknown"
@@ -78,7 +78,7 @@ struct GroupTransactionDetailSheet: View {
                                 HStack {
                                     Text(name)
                                     Spacer()
-                                    Text(CurrencyFormatter.format(Double(split.amount) ?? 0, showDecimals: true))
+                                    Text(CurrencyFormatter.format(split.amount, showDecimals: true))
                                         .fontWeight(.medium)
                                 }
                                 .font(.subheadline)

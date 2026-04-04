@@ -22,7 +22,7 @@ struct GroupDetailViewModelTests {
         APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
     }
 
-    private func makeTransaction(totalAmount: String, paidBy: UUID = UUID()) -> APIGroupTransaction {
+    private func makeTransaction(totalAmount: Double, paidBy: UUID = UUID()) -> APIGroupTransaction {
         APIGroupTransaction(
             id: UUID(), groupId: UUID(), paidByUserId: paidBy,
             totalAmount: totalAmount, category: "Food", date: Date(),
@@ -31,7 +31,7 @@ struct GroupDetailViewModelTests {
         )
     }
 
-    private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
+    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
         APIGroupBalance(userId: userId, amount: amount)
     }
 
@@ -55,7 +55,7 @@ struct GroupDetailViewModelTests {
         let group = APIGroupWithDetails(
             id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
             members: [alice],
-            balances: [makeBalance(userId: alice.id, amount: "50.00")]
+            balances: [makeBalance(userId: alice.id, amount: 50.00)]
         )
         let vm = GroupDetailViewModel(group: group)
         #expect(vm.members.count == 1)
@@ -73,9 +73,9 @@ struct GroupDetailViewModelTests {
         mock.stubbedGroupDetails = makeDetails(
             groupId: groupId,
             members: [alice],
-            balances: [makeBalance(userId: alice.id, amount: "30.00")]
+            balances: [makeBalance(userId: alice.id, amount: 30.00)]
         )
-        mock.stubbedTransactions = [makeTransaction(totalAmount: "60.00")]
+        mock.stubbedTransactions = [makeTransaction(totalAmount: 60.00)]
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
         await vm.loadData()
         #expect(vm.transactions.count == 1)
@@ -103,8 +103,8 @@ struct GroupDetailViewModelTests {
     func testGroupTotalSumsAllTransactions() {
         let vm = GroupDetailViewModel(group: makeGroup())
         vm.transactions = [
-            makeTransaction(totalAmount: "100.00"),
-            makeTransaction(totalAmount: "50.50")
+            makeTransaction(totalAmount: 100.00),
+            makeTransaction(totalAmount: 50.50)
         ]
         #expect(vm.groupTotal == 150.5)
     }
@@ -115,33 +115,26 @@ struct GroupDetailViewModelTests {
         #expect(vm.groupTotal == 0)
     }
 
-    @Test
-    func testGroupTotalIgnoresInvalidAmounts() {
-        let vm = GroupDetailViewModel(group: makeGroup())
-        vm.transactions = [makeTransaction(totalAmount: "not-a-number")]
-        #expect(vm.groupTotal == 0)
-    }
-
     // MARK: - hasUnsettledBalances
 
     @Test
     func testHasUnsettledBalancesWhenAllZeroReturnsFalse() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.balances = [makeBalance(userId: UUID(), amount: "0.00")]
+        vm.balances = [makeBalance(userId: UUID(), amount: 0.00)]
         #expect(vm.hasUnsettledBalances == false)
     }
 
     @Test
     func testHasUnsettledBalancesWhenSomeNonZeroReturnsTrue() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.balances = [makeBalance(userId: UUID(), amount: "25.00")]
+        vm.balances = [makeBalance(userId: UUID(), amount: 25.00)]
         #expect(vm.hasUnsettledBalances == true)
     }
 
     @Test
     func testHasUnsettledBalancesWhenNegativeBalanceReturnsTrue() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.balances = [makeBalance(userId: UUID(), amount: "-30.00")]
+        vm.balances = [makeBalance(userId: UUID(), amount: -30.00)]
         #expect(vm.hasUnsettledBalances == true)
     }
 
@@ -150,17 +143,17 @@ struct GroupDetailViewModelTests {
     @Test
     func testTransactionAddedInsertsAtTop() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        let first  = makeTransaction(totalAmount: "100")
-        let second = makeTransaction(totalAmount: "50")
+        let first  = makeTransaction(totalAmount: 100)
+        let second = makeTransaction(totalAmount: 50)
         vm.transactionAdded(first)
         vm.transactionAdded(second)
-        #expect(vm.transactions.first?.totalAmount == "50")
+        #expect(vm.transactions.first?.totalAmount == 50)
     }
 
     @Test
     func testTransactionAddedUpdatesGroupTotal() {
         let vm = GroupDetailViewModel(group: makeGroup())
-        vm.transactionAdded(makeTransaction(totalAmount: "200"))
+        vm.transactionAdded(makeTransaction(totalAmount: 200))
         #expect(vm.groupTotal == 200)
     }
 
@@ -284,7 +277,7 @@ struct GroupDetailViewModelTests {
         let settlement = APISettlement(
             id: UUID(), groupId: vm.group.id,
             fromUser: bob.id, toUser: alice.id,
-            amount: "50.00", notes: nil, createdAt: Date()
+            amount: 50.00, notes: nil, createdAt: Date()
         )
         vm.settlementRecorded(settlement)
         #expect(vm.settlements.count == 1)

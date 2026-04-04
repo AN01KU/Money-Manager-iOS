@@ -10,7 +10,7 @@ extension Transaction {
         APICreateTransactionRequest(
             id: id,
             type: type.rawValue,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            amount: amount,
             category: category,
             date: date,
             time: time,
@@ -23,7 +23,7 @@ extension Transaction {
     func toUpdateRequest() -> APIUpdateTransactionRequest {
         APIUpdateTransactionRequest(
             type: type.rawValue,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            amount: amount,
             category: category,
             date: date,
             time: time,
@@ -34,7 +34,7 @@ extension Transaction {
 
     func applyRemote(_ api: APITransaction) {
         self.type = TransactionKind(rawValue: api.type) ?? self.type
-        self.amount = Double(api.amount) ?? self.amount
+        self.amount = api.amount
         self.category = api.category
         self.date = api.date
         self.time = api.time
@@ -55,7 +55,7 @@ extension RecurringTransaction {
         APICreateRecurringTransactionRequest(
             id: id,
             name: name,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            amount: amount,
             category: category,
             frequency: frequency.rawValue,
             dayOfMonth: dayOfMonth,
@@ -71,7 +71,7 @@ extension RecurringTransaction {
     func toUpdateRequest() -> APIUpdateRecurringTransactionRequest {
         APIUpdateRecurringTransactionRequest(
             name: name,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            amount: amount,
             category: category,
             frequency: frequency.rawValue,
             dayOfMonth: dayOfMonth,
@@ -86,7 +86,7 @@ extension RecurringTransaction {
 
     func applyRemote(_ api: APIRecurringTransaction) {
         self.name = api.name
-        self.amount = Double(api.amount) ?? self.amount
+        self.amount = api.amount
         self.category = api.category
         self.frequency = RecurringFrequency(rawValue: api.frequency) ?? self.frequency
         self.dayOfMonth = api.dayOfMonth
@@ -109,7 +109,7 @@ extension MonthlyBudget {
             id: id,
             year: year,
             month: month,
-            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+            limit: limit
         )
     }
 
@@ -117,14 +117,14 @@ extension MonthlyBudget {
         APIUpdateBudgetRequest(
             year: year,
             month: month,
-            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+            limit: limit
         )
     }
-    
+
     func applyRemote(_ api: APIMonthlyBudget) {
         self.year = api.year
         self.month = api.month
-        self.limit = Double(api.limit) ?? self.limit
+        self.limit = api.limit
         self.updatedAt = api.updatedAt
     }
 }

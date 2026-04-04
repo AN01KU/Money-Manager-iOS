@@ -297,18 +297,18 @@ enum SplitType: String, CaseIterable {
         if splitType == .equal {
             let share = amountValue / Double(max(selectedMembers.count, 1))
             splits = selectedMembers.map {
-                APIGroupTransactionSplitInput(userId: $0, amount: share.formatted(.number.precision(.fractionLength(2)).grouping(.never)))
+                APIGroupTransactionSplitInput(userId: $0, amount: share)
             }
         } else {
             splits = selectedMembers.compactMap { id in
-                guard let raw = customAmounts[id], let _ = Double(raw) else { return nil }
-                return APIGroupTransactionSplitInput(userId: id, amount: raw)
+                guard let raw = customAmounts[id], let value = Double(raw) else { return nil }
+                return APIGroupTransactionSplitInput(userId: id, amount: value)
             }
         }
 
         let request = APICreateGroupTransactionRequest(
             paidByUserId: paidBy,
-            totalAmount: amountValue.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            totalAmount: amountValue,
             category: selectedCategory,
             date: selectedDate,
             description: description.trimmingCharacters(in: .whitespaces),
