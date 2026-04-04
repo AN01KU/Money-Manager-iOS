@@ -60,6 +60,7 @@ struct APIRecurringTransaction: Codable {
     let endDate: Date?
     let isActive: Bool
     let lastAddedDate: Date?
+    let nextOccurrence: Date?
     let notes: String?
     let createdAt: Date
     let updatedAt: Date
@@ -78,6 +79,7 @@ struct APIRecurringTransaction: Codable {
         case endDate = "end_date"
         case isActive = "is_active"
         case lastAddedDate = "last_added_date"
+        case nextOccurrence = "next_occurrence"
         case notes
         case createdAt = "created_at"
         case updatedAt = "updated_at"
