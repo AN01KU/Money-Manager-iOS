@@ -31,6 +31,7 @@ enum TransactionTypeFilter: String, CaseIterable {
     private var allTransactions: [Transaction] = []
     private var budgets: [MonthlyBudget] = []
     private var customCategories: [CustomCategory] = []
+    private var categoryLookup: [String: CustomCategory] = [:]
     var modelContext: ModelContext? {
         get { persistence.modelContext }
         set { persistence.modelContext = newValue }
@@ -45,6 +46,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         self.allTransactions = allTransactions
         self.budgets = budgets
         self.customCategories = customCategories
+        self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
     }
 
@@ -193,6 +195,6 @@ enum TransactionTypeFilter: String, CaseIterable {
     }
 
     func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
-        CategoryResolver.resolve(categoryName, customCategories: customCategories)
+        CategoryResolver.resolve(categoryName, lookup: categoryLookup)
     }
 }

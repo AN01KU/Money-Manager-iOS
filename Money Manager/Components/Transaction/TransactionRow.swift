@@ -15,7 +15,7 @@ struct TransactionRow: View {
     }
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, customCategories: customCategories)
+        CategoryResolver.resolve(transaction.category, lookup: CategoryResolver.makeLookup(from: customCategories))
     }
 
     private var resolvedIcon: String { resolved.icon }

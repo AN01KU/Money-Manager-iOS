@@ -11,14 +11,16 @@ import SwiftData
         get { persistence.modelContext }
         set { persistence.modelContext = newValue }
     }
-    var customCategories: [CustomCategory] = []
-
-    var categoryIcon: String {
-        CategoryResolver.resolve(transaction.category, customCategories: customCategories).icon
+    var customCategories: [CustomCategory] = [] {
+        didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
     }
+    private var categoryLookup: [String: CustomCategory] = [:]
 
-    var categoryColor: Color {
-        CategoryResolver.resolve(transaction.category, customCategories: customCategories).color
+    var categoryIcon: String { resolvedCategory.icon }
+    var categoryColor: Color { resolvedCategory.color }
+
+    private var resolvedCategory: (icon: String, color: Color) {
+        CategoryResolver.resolve(transaction.category, lookup: categoryLookup)
     }
 
     var isGroupTransaction: Bool {
