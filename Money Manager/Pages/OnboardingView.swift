@@ -14,6 +14,7 @@ struct OnboardingPage: Identifiable {
     let title: String
     let description: String
     let color: Color
+    var features: [String] = []
 }
 
 struct OnboardingView: View {
@@ -27,32 +28,68 @@ struct OnboardingView: View {
         OnboardingPage(
             icon: "indianrupeesign.circle.fill",
             title: "Track Expenses",
-            description: "Quickly log your daily expenses with categories, descriptions, and timestamps. Stay on top of every rupee you spend.",
-            color: .teal
+            description: "Quickly log your daily expenses with categories, descriptions, and timestamps.",
+            color: .teal,
+            features: [
+                "Add expenses in seconds",
+                "Categorise every transaction",
+                "Filter and search your history"
+            ]
         ),
         OnboardingPage(
             icon: "chart.bar.fill",
             title: "Set Budgets",
-            description: "Create monthly budgets and get real-time progress updates. Know exactly how much you can spend each day.",
-            color: .orange
+            description: "Create monthly budgets and get real-time progress updates.",
+            color: .orange,
+            features: [
+                "Per-category budget limits",
+                "Visual progress tracking",
+                "Overspend alerts"
+            ]
         ),
         OnboardingPage(
             icon: "arrow.clockwise.circle.fill",
             title: "Recurring Expenses",
             description: "Set up recurring expenses so they're automatically tracked. Never forget a subscription or bill again.",
-            color: .purple
+            color: .purple,
+            features: [
+                "Auto-log subscriptions",
+                "Custom repeat intervals",
+                "Upcoming expense reminders"
+            ]
         ),
         OnboardingPage(
             icon: "square.grid.2x2.fill",
             title: "Custom Categories",
-            description: "Organise your spending your way. Create custom categories that match your lifestyle and spending habits.",
-            color: .blue
+            description: "Organise your spending your way with categories that match your lifestyle.",
+            color: .blue,
+            features: [
+                "Create unlimited categories",
+                "Custom icons and colours",
+                "Reorder to fit your habits"
+            ]
+        ),
+        OnboardingPage(
+            icon: "person.2.fill",
+            title: "Groups & Sharing",
+            description: "Split expenses with friends and family. Track who owes what and settle up — all in one place.",
+            color: .indigo,
+            features: [
+                "Create shared expense groups",
+                "Split costs any way you like",
+                "Track balances and settlements"
+            ]
         ),
         OnboardingPage(
             icon: "archivebox.fill",
             title: "Backup & Export",
             description: "Export your data anytime as CSV. Your financial data stays on your device — private and secure.",
-            color: .green
+            color: .green,
+            features: [
+                "Export to CSV anytime",
+                "Sync across devices",
+                "Private and secure"
+            ]
         )
     ]
     
