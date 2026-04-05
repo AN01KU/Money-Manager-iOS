@@ -3,7 +3,7 @@ import SwiftData
 
 struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query private var overrides: [CustomCategory]
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }) private var allTransactions: [Transaction]
 
     @State private var viewModel = ManageCategoriesViewModel()
@@ -13,27 +13,27 @@ struct ManageCategoriesView: View {
     @State private var restoreTriggered = 0
     @State private var addTriggered = 0
     @State private var showResetMenu = 0
-    
-    @State private var lastDeleteCount = 0
-    @State private var lastResetCount = 0
-    
-    private var predefinedCategories: [CustomCategory] {
-        customCategories.filter { $0.isPredefined && !$0.isHidden }
+
+    private var allCategories: [TransactionCategory] {
+        TransactionCategory.merge(overrides: overrides)
     }
 
-    private var userCategories: [CustomCategory] {
-        customCategories.filter { !$0.isPredefined && !$0.isHidden }
+    private var predefinedCategories: [TransactionCategory] {
+        allCategories.filter { $0.isPredefined && !$0.isHidden }
     }
 
-    private var hiddenCategories: [CustomCategory] {
-        customCategories.filter { $0.isHidden }
+    private var userCategories: [TransactionCategory] {
+        allCategories.filter { !$0.isPredefined && !$0.isHidden }
     }
 
-    /// Count of non-deleted transactions per category name.
+    private var hiddenCategories: [TransactionCategory] {
+        allCategories.filter { $0.isHidden }
+    }
+
     private var usageCounts: [String: Int] {
         Dictionary(grouping: allTransactions, by: \.category).mapValues(\.count)
     }
-    
+
     var body: some View {
         List {
             if !predefinedCategories.isEmpty {
@@ -71,7 +71,7 @@ struct ManageCategoriesView: View {
                     Text("Tap to edit icon, color, or name. Swipe left to hide or delete.")
                 }
             }
-            
+
             if !userCategories.isEmpty {
                 Section("Your Categories") {
                     ForEach(userCategories) { category in
@@ -89,7 +89,7 @@ struct ManageCategoriesView: View {
                             }
                             .tint(.red)
                             .sensoryFeedback(.warning, trigger: deleteTriggered)
-                            
+
                             Button {
                                 hideTriggered += 1
                                 viewModel.hideCategory(category)
@@ -102,7 +102,7 @@ struct ManageCategoriesView: View {
                     }
                 }
             }
-            
+
             if !hiddenCategories.isEmpty {
                 Section("Hidden Categories") {
                     ForEach(hiddenCategories) { category in
@@ -137,7 +137,7 @@ struct ManageCategoriesView: View {
                     } label: {
                         Label("Restore Defaults", systemImage: "arrow.counterclockwise")
                     }
-                    
+
                     Button(role: .destructive) {
                         showResetMenu += 1
                         viewModel.resetAll(modelContext: modelContext)
@@ -148,7 +148,7 @@ struct ManageCategoriesView: View {
                     Image(systemName: "ellipsis.circle")
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: showResetMenu)
-                
+
                 Button {
                     addTriggered += 1
                     viewModel.showAddCategory = true
@@ -161,10 +161,10 @@ struct ManageCategoriesView: View {
             }
         }
         .sheet(isPresented: $viewModel.showAddCategory) {
-            AddCategorySheet(allCategories: customCategories)
+            AddCategorySheet(allCategories: overrides)
         }
         .sheet(item: $viewModel.categoryToEdit) { category in
-            EditCategorySheet(category: category, allCategories: customCategories)
+            EditCategorySheet(category: category, allCategories: overrides)
         }
         .alert("Delete Category?", isPresented: $viewModel.showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -185,21 +185,21 @@ struct ManageCategoriesView: View {
 }
 
 struct HiddenCategoryRow: View {
-    let category: CustomCategory
+    let category: TransactionCategory
     let onRestore: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: category.icon)
-                .foregroundStyle(Color(hex: category.color).opacity(0.5))
+                .foregroundStyle(category.color.opacity(0.5))
                 .frame(width: 28)
-            
+
             Text(category.name)
                 .font(.body)
                 .foregroundStyle(.secondary)
-            
+
             Spacer()
-            
+
             Button("Restore") {
                 onRestore()
             }

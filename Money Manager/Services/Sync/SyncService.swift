@@ -137,7 +137,7 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.info("Bootstrap after signup started")
         let context = ModelContext(container)
 
-        // 1. Pull server-seeded categories (reconciles predefined by key)
+        // 1. Pull any existing category overrides/custom categories from server
         await pullCategories(context: context)
 
         // 2. Enqueue all local user data as creates
@@ -458,8 +458,28 @@ final class SyncService: SyncServiceProtocol {
             return (key, cat)
         })
 
+        // Build a lookup of predefined defaults for comparison
+        let predefinedDefaults = Dictionary(uniqueKeysWithValues: PredefinedCategory.allCases.map { ($0.key, $0) })
+
         for remote in apiCategories {
             guard isValid(remote) else { continue }
+
+            // Skip predefined rows that are identical to the enum default —
+            // the client derives these from PredefinedCategory and doesn't store them locally.
+            if remote.isPredefined,
+               let key = remote.predefinedKey,
+               let defaults = predefinedDefaults[key],
+               remote.name == defaults.rawValue,
+               remote.icon == defaults.icon,
+               remote.color == defaults.defaultColorHex,
+               !remote.isHidden {
+                // Plain default — remove any stale local row that was previously seeded
+                if let staleLocal = localByPredefinedKey[key] {
+                    context.delete(staleLocal)
+                }
+                continue
+            }
+
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
                     if pendingIDs.contains(remote.id) {

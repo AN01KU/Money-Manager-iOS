@@ -55,7 +55,6 @@ struct Money_ManagerApp: App {
             SessionStore.shared.configure(container: container)
 
             RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
-            CategorySeeder.seedIfNeeded(context: container.mainContext)
             
             #if DEBUG
             if useTestData {

@@ -4,16 +4,19 @@ import SwiftData
 struct EditCategorySheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    
+
     @State private var viewModel: EditCategoryViewModel
     @State private var iconTapped = 0
     @State private var colorTapped = 0
     @State private var saveSuccess = 0
-    
-    init(category: CustomCategory, allCategories: [CustomCategory]) {
-        _viewModel = State(wrappedValue: EditCategoryViewModel(category: category, allCategories: allCategories))
+
+    init(category: TransactionCategory, allCategories: [CustomCategory]) {
+        _viewModel = State(wrappedValue: EditCategoryViewModel(
+            category: category,
+            allCategories: allCategories
+        ))
     }
-    
+
     var body: some View {
         NavigationStack {
             CategoryEditorView(
@@ -65,7 +68,7 @@ struct EditCategorySheet: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private var saveButton: some View {
         Button("Save") {
