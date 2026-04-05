@@ -8,10 +8,11 @@ struct TransactionsView: View {
 
     @State private var viewModel = TransactionsViewModel()
     var categoryFilter: Binding<String?>?
+    var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
         NavigationStack {
-            TransactionsBody(viewModel: viewModel)
+            TransactionsBody(viewModel: viewModel, onGroupTapped: onGroupTapped)
                 .navigationTitle("Transactions")
         }
         .task {
@@ -39,6 +40,7 @@ struct TransactionsView: View {
 
 private struct TransactionsBody: View {
     @Bindable var viewModel: TransactionsViewModel
+    var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -83,9 +85,11 @@ private struct TransactionsBody: View {
                         .padding(.horizontal)
                         .padding(.top, 40)
                     } else {
-                        TransactionList(transactions: viewModel.filteredTransactions) { transaction in
-                            viewModel.deleteTransaction(transaction)
-                        }
+                        TransactionList(
+                            transactions: viewModel.filteredTransactions,
+                            onDelete: { transaction in viewModel.deleteTransaction(transaction) },
+                            onGroupTapped: onGroupTapped
+                        )
                         .padding(.horizontal)
                     }
                 }

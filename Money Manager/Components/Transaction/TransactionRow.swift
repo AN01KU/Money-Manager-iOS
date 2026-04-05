@@ -9,9 +9,11 @@ private let timeFormatter: DateFormatter = {
 
 struct TransactionRow: View {
     let transaction: Transaction
+    var onGroupTapped: ((UUID) -> Void)?
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    init(transaction: Transaction) {
+    init(transaction: Transaction, onGroupTapped: ((UUID) -> Void)? = nil) {
         self.transaction = transaction
+        self.onGroupTapped = onGroupTapped
     }
 
     private var resolved: (icon: String, color: Color) {
@@ -45,7 +47,8 @@ struct TransactionRow: View {
                 } else if transaction.groupTransactionId != nil, let groupID = transaction.groupId {
                     GroupBadge(
                         groupName: transaction.groupName ?? "Group",
-                        groupID: groupID
+                        groupID: groupID,
+                        onGroupTapped: onGroupTapped
                     )
                 }
             }
@@ -101,14 +104,12 @@ private struct GroupBadge: View {
     @Environment(\.authService) private var authService
     let groupName: String
     let groupID: UUID
+    var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
         Button {
             guard authService.isAuthenticated else { return }
-            NotificationCenter.default.post(
-                name: .appRouteReceived,
-                object: AppRoute.group(groupID)
-            )
+            onGroupTapped?(groupID)
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: "person.2.fill")
