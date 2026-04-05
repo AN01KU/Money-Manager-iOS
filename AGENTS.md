@@ -187,6 +187,6 @@ Before submitting changes, verify:
 - [ ] Tests cover the actual behavior being changed
 - [ ] `make test-one TEST=<relevant>` passes
 - [ ] No force unwraps introduced
-- [ ] Uses existing shared utilities (`AppColors`, `AppConstants`, `CurrencyFormatter`)
+- [ ] Uses existing shared utilities (`AppColors`, `AppConstants`, `CurrencyFormatter`, `AppLogger`, `AppRoute`)
 - [ ] Code is straightforward — no cleverness for its own sake
 - [ ] If a major flow changed, update `README.md` to reflect it
