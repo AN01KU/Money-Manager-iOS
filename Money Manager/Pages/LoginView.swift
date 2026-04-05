@@ -17,6 +17,7 @@ struct LoginView: View {
     @State private var showSignup = false
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showDataWipeAlert = false
     
     var body: some View {
         NavigationStack {
@@ -58,6 +59,14 @@ struct LoginView: View {
                 Button("OK") { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
+            }
+            .alert("Switch Account?", isPresented: $showDataWipeAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Continue", role: .destructive) {
+                    performLogin()
+                }
+            } message: {
+                Text("You were previously signed in with a different account. All local data will be cleared before signing in.")
             }
         }
     }
@@ -140,9 +149,18 @@ struct LoginView: View {
     }
     
     private func login() {
+        let normalizedEmail = email.lowercased()
+        if let lastEmail = SessionStore.shared.getLastLoggedInEmail(), lastEmail != normalizedEmail {
+            showDataWipeAlert = true
+            return
+        }
+        performLogin()
+    }
+
+    private func performLogin() {
         isLoading = true
         errorMessage = nil
-        
+
         Task {
             do {
                 try await authService.login(email: email, password: password)
