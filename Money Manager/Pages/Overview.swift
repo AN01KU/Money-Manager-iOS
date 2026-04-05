@@ -67,7 +67,7 @@ private struct OverviewBody: View {
     @ToolbarContentBuilder
     private var overviewToolbar: some ToolbarContent {
         if authService.isAuthenticated {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 SyncStatusView()
             }
         }
