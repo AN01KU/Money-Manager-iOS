@@ -8,7 +8,6 @@ struct BudgetsView: View {
     
     @State private var selectedMonth: Date = Date()
     @State private var showBudgetSheet = false
-    @State private var refreshTrigger = false
     
     private var currentBudget: MonthlyBudget? {
         let calendar = Calendar.current
@@ -164,9 +163,6 @@ struct BudgetsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showBudgetSheet) {
             BudgetSheet(selectedMonth: selectedMonth)
-        }
-        .onAppear {
-            refreshTrigger.toggle()
         }
     }
 }
