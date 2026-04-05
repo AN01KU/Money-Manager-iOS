@@ -124,12 +124,6 @@ private struct TransactionsMonthSelector: View {
     @State private var showDatePicker = false
     @State private var tapped = 0
 
-    private var formattedMonth: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: viewModel.selectedDate)
-    }
-
     var body: some View {
         HStack(spacing: 8) {
             Button {
@@ -148,7 +142,7 @@ private struct TransactionsMonthSelector: View {
             Button {
                 showDatePicker = true
             } label: {
-                Text(formattedMonth)
+                Text(viewModel.selectedDate, format: .dateTime.month(.wide).year())
                     .font(AppTypography.chipSelected)
                     .foregroundStyle(.primary)
             }

@@ -5,6 +5,12 @@
 
 import SwiftUI
 
+private let activitySectionDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "MMMM dd"
+    return f
+}()
+
 struct GroupsListView: View {
     @Environment(\.authService) private var authService
     @State private var viewModel = GroupsListViewModel()
@@ -187,15 +193,13 @@ struct GroupsListView: View {
 
     private var groupedActivity: [ActivitySection] {
         let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM dd"
         var grouped: [String: [ActivityItem]] = [:]
 
         for item in viewModel.filteredActivity {
             let day = calendar.startOfDay(for: item.date)
             let key = calendar.isDateInToday(day)
                 ? "TODAY"
-                : formatter.string(from: day).uppercased()
+                : activitySectionDateFormatter.string(from: day).uppercased()
             grouped[key, default: []].append(item)
         }
 

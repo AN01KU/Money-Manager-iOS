@@ -29,7 +29,9 @@ struct DateFilterSelector: View {
                 HStack {
                     Image(systemName: "calendar")
                         .font(.caption)
-                    Text(formatDate(selectedDate))
+                    Text(selectedDate, format: filterMode == .daily
+                        ? .dateTime.day().month(.abbreviated).year()
+                        : .dateTime.month(.wide).year())
                         .font(.body)
                         .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
@@ -90,15 +92,6 @@ struct DateFilterSelector: View {
         }
     }
     
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        if filterMode == .daily {
-            formatter.dateFormat = "MMM d, yyyy"
-        } else {
-            formatter.dateFormat = "MMMM yyyy"
-        }
-        return formatter.string(from: date)
-    }
 }
 
 #Preview {

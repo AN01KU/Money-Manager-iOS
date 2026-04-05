@@ -144,7 +144,9 @@ private struct OverviewHeaderCard: View {
                     Button {
                         showDatePicker = true
                     } label: {
-                        Text(formattedPeriod)
+                        Text(viewModel.selectedDate, format: viewModel.filterMode == .daily
+                            ? .dateTime.day().month(.abbreviated).year()
+                            : .dateTime.month(.wide).year())
                             .font(AppTypography.cardValue)
                             .foregroundStyle(.primary)
                     }
@@ -286,11 +288,6 @@ private struct OverviewHeaderCard: View {
         }
     }
 
-    private var formattedPeriod: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = viewModel.filterMode == .daily ? "MMM d, yyyy" : "MMMM yyyy"
-        return formatter.string(from: viewModel.selectedDate)
-    }
 }
 
 private struct SummaryStatView: View {

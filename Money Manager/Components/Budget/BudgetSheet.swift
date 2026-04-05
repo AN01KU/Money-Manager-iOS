@@ -39,7 +39,7 @@ struct BudgetSheet: View {
                 } header: {
                     Text("Monthly Budget Amount")
                 } footer: {
-                    Text("Set your monthly spending limit for \(formatMonth(selectedMonth))")
+                    Text("Set your monthly spending limit for \(selectedMonth.formatted(.dateTime.month(.wide).year()))")
                 }
                 
                 if let amount = Double(budgetAmount), amount > 0 {
@@ -180,11 +180,6 @@ struct BudgetSheet: View {
         dismiss()
     }
     
-    private func formatMonth(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
-    }
 }
 
 #Preview {

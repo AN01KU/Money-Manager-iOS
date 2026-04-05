@@ -5,6 +5,12 @@
 
 import SwiftUI
 
+private let groupSectionDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "MMMM dd"
+    return f
+}()
+
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
     @State private var selectedTransaction: APIGroupTransaction?
@@ -191,15 +197,13 @@ struct GroupDetailView: View {
 
     private var groupedTransactions: [GroupTransactionSection] {
         let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM dd"
         var grouped: [String: [APIGroupTransaction]] = [:]
 
         for tx in viewModel.transactions {
             let day = calendar.startOfDay(for: tx.date)
             let key = calendar.isDateInToday(day)
                 ? "TODAY"
-                : formatter.string(from: day).uppercased()
+                : groupSectionDateFormatter.string(from: day).uppercased()
             grouped[key, default: []].append(tx)
         }
 
