@@ -7,16 +7,16 @@ struct AddTransactionView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @State private var viewModel: AddTransactionViewModel
-    @State private var amount100Tapped = false
-    @State private var amount500Tapped = false
-    @State private var amount1000Tapped = false
-    @State private var categoryTapped = false
-    @State private var todayTapped = false
+    @State private var amount100Tapped = 0
+    @State private var amount500Tapped = 0
+    @State private var amount1000Tapped = 0
+    @State private var categoryTapped = 0
+    @State private var todayTapped = 0
     @State private var saveSuccess = false
-    @State private var errorTriggered = false
+    @State private var errorTriggered = 0
 
-    init(mode: AddTransactionMode = .personal()) {
-        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode))
+    init(mode: AddTransactionMode = .personal(), groupService: GroupServiceProtocol = GroupService.shared) {
+        _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode, groupService: groupService))
     }
 
     init(transactionToEdit: Transaction) {
@@ -54,9 +54,11 @@ struct AddTransactionView: View {
             }
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier(viewModel.navigationTitleIdentifier)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier("cancel-button")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.isSaving {
@@ -67,6 +69,7 @@ struct AddTransactionView: View {
                         }
                         .fontWeight(.semibold)
                         .disabled(!viewModel.isValid)
+                        .accessibilityIdentifier("save-button")
                     }
                 }
             }
@@ -82,12 +85,9 @@ struct AddTransactionView: View {
                 Text(viewModel.errorMessage)
             }
             .onChange(of: viewModel.showError) { _, show in
-                if show { errorTriggered = true }
+                if show { errorTriggered += 1 }
             }
             .sensoryFeedback(.error, trigger: errorTriggered)
-            .onChange(of: errorTriggered) { _, newValue in
-                if newValue { errorTriggered = false }
-            }
             .task {
                 viewModel.modelContext = modelContext
                 viewModel.customCategories = customCategories
@@ -111,17 +111,15 @@ struct AddTransactionView: View {
                     .keyboardType(.decimalPad)
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier("amount-field")
 
                 HStack(spacing: 12) {
-                    QuickAmountButton(amount: 100) { amount100Tapped = true; viewModel.amount = "100" }
+                    QuickAmountButton(amount: 100) { amount100Tapped += 1; viewModel.amount = "100" }
                         .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
-                        .onChange(of: amount100Tapped) { _, v in if v { amount100Tapped = false } }
-                    QuickAmountButton(amount: 500) { amount500Tapped = true; viewModel.amount = "500" }
+                    QuickAmountButton(amount: 500) { amount500Tapped += 1; viewModel.amount = "500" }
                         .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
-                        .onChange(of: amount500Tapped) { _, v in if v { amount500Tapped = false } }
-                    QuickAmountButton(amount: 1000) { amount1000Tapped = true; viewModel.amount = "1000" }
+                    QuickAmountButton(amount: 1000) { amount1000Tapped += 1; viewModel.amount = "1000" }
                         .sensoryFeedback(.impact(weight: .light), trigger: amount1000Tapped)
-                        .onChange(of: amount1000Tapped) { _, v in if v { amount1000Tapped = false } }
                 }
             }
             .padding(.vertical, 8)
@@ -132,7 +130,7 @@ struct AddTransactionView: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    categoryTapped = true
+                    categoryTapped += 1
                     viewModel.showCategoryPicker = true
                 } label: {
                     HStack {
@@ -154,7 +152,7 @@ struct AddTransactionView: View {
                     .clipShape(.rect(cornerRadius: 8))
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
-                .onChange(of: categoryTapped) { _, v in if v { categoryTapped = false } }
+                .accessibilityIdentifier("category-picker-button")
             }
             .padding(.vertical, 8)
         }
@@ -187,9 +185,8 @@ struct AddTransactionView: View {
                     .labelsHidden()
 
                 HStack(spacing: 12) {
-                    QuickDateButton(label: "Today") { todayTapped = true; viewModel.selectedDate = Date() }
+                    QuickDateButton(label: "Today") { todayTapped += 1; viewModel.selectedDate = Date() }
                         .sensoryFeedback(.impact(weight: .light), trigger: todayTapped)
-                        .onChange(of: todayTapped) { _, v in if v { todayTapped = false } }
                     QuickDateButton(label: "Yesterday") {
                         viewModel.selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                     }
@@ -215,6 +212,7 @@ struct AddTransactionView: View {
         Section("Details") {
             TextField("Description (e.g., Lunch at cafe)", text: $viewModel.description)
                 .textInputAutocapitalization(.sentences)
+                .accessibilityIdentifier("description-field")
             TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                 .lineLimit(3...6)
                 .textInputAutocapitalization(.sentences)
@@ -237,7 +235,7 @@ struct AddTransactionView: View {
 
     private var paidBySection: some View {
         Section("Paid By") {
-            if case .shared(_, let members, _, _) = viewModel.mode {
+            if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
                     let isSelected = viewModel.paidByUserId == member.id
                     Button {
@@ -294,7 +292,7 @@ struct AddTransactionView: View {
 
     private var splitMembersSection: some View {
         Section("Split Between") {
-            if case .shared(_, let members, _, _) = viewModel.mode {
+            if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
                     let isIncluded = viewModel.selectedMembers.contains(member.id)
                     Button {
@@ -384,9 +382,9 @@ struct AddTransactionView: View {
 
 #Preview("Group Transaction") {
     let groupId = UUID()
-    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
-            let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joined_at: Date())
-    let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", created_by: alice.id, created_at: Date(), members: [alice, bob], balances: [])
-    AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }))
+    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
+            let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joinedAt: Date())
+    let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", createdBy: alice.id, createdAt: Date(), members: [alice, bob], balances: [])
+    AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }), groupService: GroupService.shared)
         .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
 }

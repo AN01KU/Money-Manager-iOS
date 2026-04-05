@@ -17,32 +17,32 @@ struct GroupsListViewModelTests {
         APIGroupWithDetails(
             id: id,
             name: name,
-            created_by: createdBy,
-            created_at: Date(),
+            createdBy: createdBy,
+            createdAt: Date(),
             members: members,
             balances: balances
         )
     }
 
-    private func makeBalance(userId: UUID, amount: String) -> APIGroupBalance {
-        APIGroupBalance(user_id: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
+        APIGroupBalance(userId: userId, amount: amount)
     }
 
-    private func makeTransaction(description: String = "Test", totalAmount: String = "10.00", paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
+    private func makeTransaction(description: String = "Test", totalAmount: Double = 10.0, paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
         APIGroupTransaction(
-            id: UUID(), group_id: UUID(), paid_by_user_id: paidBy,
-            total_amount: totalAmount, category: "Food", date: createdAt,
-            description: description, notes: nil, is_deleted: false,
-            created_at: createdAt, updated_at: Date(), splits: []
+            id: UUID(), groupId: UUID(), paidByUserId: paidBy,
+            totalAmount: totalAmount, category: "Food", date: createdAt,
+            description: description, notes: nil, isDeleted: false,
+            createdAt: createdAt, updatedAt: Date(), splits: []
         )
     }
 
     private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
-            id: groupId, name: groupName, created_by: UUID(), created_at: Date(),
+            id: groupId, name: groupName, createdBy: UUID(), createdAt: Date(),
             members: [], balances: [], settlements: []
         )
-        return APIGroupDetails(group: body, is_member: true)
+        return APIGroupDetails(group: body, isMember: true)
     }
 
     // MARK: - Initial state
@@ -87,8 +87,8 @@ struct GroupsListViewModelTests {
     func testLoadRecentActivitySortedNewestFirst() async {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let older = makeTransaction(description: "Old", totalAmount: "10", createdAt: Date(timeIntervalSinceNow: -3600))
-        let newer = makeTransaction(description: "New", totalAmount: "20", createdAt: Date(timeIntervalSinceNow: -60))
+        let older = makeTransaction(description: "Old", totalAmount: 10, createdAt: Date(timeIntervalSinceNow: -3600))
+        let newer = makeTransaction(description: "New", totalAmount: 20, createdAt: Date(timeIntervalSinceNow: -60))
         mock.stubbedGroups = [makeGroup(id: groupId)]
         mock.stubbedTransactions = [older, newer]
         let vm = GroupsListViewModel(groupService: mock)
@@ -191,7 +191,7 @@ struct GroupsListViewModelTests {
     func testNetBalanceWithNoCurrentUserReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let uid = UUID()
-        vm.groups = [makeGroup(balances: [makeBalance(userId: uid, amount: "50.00")])]
+        vm.groups = [makeGroup(balances: [makeBalance(userId: uid, amount: 50.0)])]
         #expect(vm.netBalance == 0)
     }
 
@@ -208,7 +208,7 @@ struct GroupsListViewModelTests {
     func testUserBalanceWithNoCurrentUserReturnsZero() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         let uid = UUID()
-        let group = makeGroup(balances: [makeBalance(userId: uid, amount: "75.00")])
+        let group = makeGroup(balances: [makeBalance(userId: uid, amount: 75.0)])
         #expect(vm.userBalance(for: group) == 0)
     }
 
@@ -224,14 +224,14 @@ struct GroupsListViewModelTests {
     @Test
     func testDisplayNameReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joined_at: Date())
+        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
         #expect(vm.displayName(for: member) == "alice")
     }
 
     @Test
     func testDisplayNameWithNoAtSignReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joined_at: Date())
+        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joinedAt: Date())
         #expect(vm.displayName(for: member) == "noatsign")
     }
 

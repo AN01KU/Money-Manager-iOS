@@ -4,6 +4,8 @@ import SwiftData
 struct EditRecurringTransactionSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.authService) private var authService
+    @Environment(\.changeQueueManager) private var changeQueueManager
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @Bindable var recurring: RecurringTransaction
@@ -11,7 +13,7 @@ struct EditRecurringTransactionSheet: View {
     @State private var name: String = ""
     @State private var amount: String = ""
     @State private var selectedCategory: String = ""
-    @State private var frequency: String = "monthly"
+    @State private var frequency: RecurringFrequency = .monthly
     @State private var startDate: Date = Date()
     @State private var hasEndDate: Bool = false
     @State private var endDate: Date = Date()
@@ -20,10 +22,10 @@ struct EditRecurringTransactionSheet: View {
     @State private var showCategoryPicker = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var categoryTapped = false
-    @State private var saveSuccess = false
+    @State private var categoryTapped = 0
+    @State private var saveSuccess = 0
 
-    private let frequencies = ["daily", "weekly", "monthly", "yearly"]
+    private let frequencies = RecurringFrequency.allCases
 
     private var isValid: Bool {
         guard let amountValue = Double(amount), amountValue > 0 else {
@@ -64,7 +66,7 @@ struct EditRecurringTransactionSheet: View {
                             .foregroundStyle(.secondary)
 
                         Button(action: {
-                            categoryTapped = true
+                            categoryTapped += 1
                             showCategoryPicker = true
                         }) {
                             HStack {
@@ -83,9 +85,6 @@ struct EditRecurringTransactionSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
-                        .onChange(of: categoryTapped) { _, newValue in
-                            if newValue { categoryTapped = false }
-                        }
                     }
                     .padding(.vertical, 8)
                 }
@@ -98,14 +97,14 @@ struct EditRecurringTransactionSheet: View {
 
                         Picker("Frequency", selection: $frequency) {
                             ForEach(frequencies, id: \.self) { freq in
-                                Text(freq.capitalized).tag(freq)
+                                Text(freq.rawValue.capitalized).tag(freq)
                             }
                         }
                         .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 8)
 
-                    if frequency == "monthly" {
+                    if frequency == .monthly {
                         Picker("Day of Month", selection: $dayOfMonth) {
                             ForEach(1...28, id: \.self) { day in
                                 Text("\(day)").tag(day)
@@ -198,7 +197,7 @@ struct EditRecurringTransactionSheet: View {
         recurring.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
         recurring.frequency = frequency
         recurring.startDate = startDate
-        recurring.dayOfMonth = frequency == "monthly" ? dayOfMonth : nil
+        recurring.dayOfMonth = frequency == .monthly ? dayOfMonth : nil
         recurring.endDate = hasEndDate ? endDate : nil
         recurring.notes = notes.isEmpty ? nil : notes
         recurring.updatedAt = Date()
@@ -223,7 +222,7 @@ struct EditRecurringTransactionSheet: View {
                 }
             }
 
-            saveSuccess = true
+            saveSuccess += 1
             dismiss()
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"

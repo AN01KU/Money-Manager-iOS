@@ -10,17 +10,17 @@ struct GroupTransactionDetailSheet: View {
     let onEdit: (() -> Void)?
 
     @State private var showDeleteAlert = false
-    @State private var deleteTapped = false
-    @State private var editTapped = false
+    @State private var deleteTapped = 0
+    @State private var editTapped = 0
 
-    private var amount: Double { Double(transaction.total_amount) ?? 0 }
+    private var amount: Double { transaction.totalAmount }
 
     private var paidByName: String {
-        members.first(where: { $0.id == transaction.paid_by_user_id })?.username ?? "Unknown"
+        members.first(where: { $0.id == transaction.paidByUserId })?.username ?? "Unknown"
     }
 
     private var isOwner: Bool {
-        transaction.paid_by_user_id == currentUserId
+        transaction.paidByUserId == currentUserId
     }
 
     var body: some View {
@@ -73,12 +73,12 @@ struct GroupTransactionDetailSheet: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
 
-                            ForEach(transaction.splits, id: \.user_id) { split in
-                                let name = members.first(where: { $0.id == split.user_id })?.username ?? "Unknown"
+                            ForEach(transaction.splits, id: \.userId) { split in
+                                let name = members.first(where: { $0.id == split.userId })?.username ?? "Unknown"
                                 HStack {
                                     Text(name)
                                     Spacer()
-                                    Text(CurrencyFormatter.format(Double(split.amount) ?? 0, showDecimals: true))
+                                    Text(CurrencyFormatter.format(split.amount, showDecimals: true))
                                         .fontWeight(.medium)
                                 }
                                 .font(.subheadline)
@@ -93,7 +93,7 @@ struct GroupTransactionDetailSheet: View {
                         HStack(spacing: 16) {
                             if let onEdit {
                                 Button {
-                                    editTapped = true
+                                    editTapped += 1
                                     onEdit()
                                     dismiss()
                                 } label: {
@@ -106,12 +106,11 @@ struct GroupTransactionDetailSheet: View {
                                         .clipShape(.rect(cornerRadius: 12))
                                 }
                                 .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
-                                .onChange(of: editTapped) { _, v in if v { editTapped = false } }
                             }
 
                             if let onDelete {
                                 Button {
-                                    deleteTapped = true
+                                    deleteTapped += 1
                                     showDeleteAlert = true
                                 } label: {
                                     Text("Delete")
@@ -123,7 +122,6 @@ struct GroupTransactionDetailSheet: View {
                                         .clipShape(.rect(cornerRadius: 12))
                                 }
                                 .sensoryFeedback(.warning, trigger: deleteTapped)
-                                .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
                             }
                         }
                         .padding(.horizontal)

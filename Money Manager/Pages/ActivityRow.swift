@@ -30,7 +30,7 @@ private struct TransactionActivityRow: View {
     let transaction: APIGroupTransaction
     let groupName: String
 
-    private var amount: Double { Double(transaction.total_amount) ?? 0 }
+    private var amount: Double { transaction.totalAmount }
 
     private var resolved: (icon: String, color: Color) {
         CategoryResolver.resolve(transaction.category, customCategories: [])
@@ -84,17 +84,17 @@ private struct SettlementActivityRow: View {
     let memberMap: [UUID: String]
     let currentUserId: UUID?
 
-    private var isCurrentUserPayer: Bool { settlement.from_user == currentUserId }
-    private var amount: Double { Double(settlement.amount) ?? 0 }
+    private var isCurrentUserPayer: Bool { settlement.fromUser == currentUserId }
+    private var amount: Double { settlement.amount }
 
     private var fromName: String {
-        if settlement.from_user == currentUserId { return "You" }
-        return memberMap[settlement.from_user] ?? "Unknown"
+        if settlement.fromUser == currentUserId { return "You" }
+        return memberMap[settlement.fromUser] ?? "Unknown"
     }
 
     private var toName: String {
-        if settlement.to_user == currentUserId { return "you" }
-        return memberMap[settlement.to_user] ?? "Unknown"
+        if settlement.toUser == currentUserId { return "you" }
+        return memberMap[settlement.toUser] ?? "Unknown"
     }
 
     private var accentColor: Color {
@@ -124,7 +124,7 @@ private struct SettlementActivityRow: View {
                     Text("·")
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
-                    Text(settlement.created_at, style: .date)
+                    Text(settlement.createdAt, style: .date)
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
                 }

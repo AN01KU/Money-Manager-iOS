@@ -24,20 +24,20 @@ struct RecordSettlementView: View {
 
     /// Backend: negative balance = owes money (paid less than share)
     private var membersWhoOwe: [APIGroupMember] {
-        let ids = balances.filter { (Double($0.amount) ?? 0) < 0 }.map(\.user_id)
+        let ids = balances.filter { $0.amount < 0 }.map(\.userId)
         return members.filter { ids.contains($0.id) }
     }
 
     /// Backend: positive balance = is owed money (paid more than share)
     private var membersWhoAreOwed: [APIGroupMember] {
-        let ids = balances.filter { (Double($0.amount) ?? 0) > 0 }.map(\.user_id)
+        let ids = balances.filter { $0.amount > 0 }.map(\.userId)
         return members.filter { ids.contains($0.id) }
     }
 
     private var suggestedAmount: Double? {
         guard let fromId = fromUserId, let toId = toUserId else { return nil }
-        let fromBal = abs(Double(balances.first(where: { $0.user_id == fromId })?.amount ?? "0") ?? 0)
-        let toBal   = abs(Double(balances.first(where: { $0.user_id == toId })?.amount ?? "0") ?? 0)
+        let fromBal = abs(balances.first(where: { $0.userId == fromId })?.amount ?? 0)
+        let toBal   = abs(balances.first(where: { $0.userId == toId })?.amount ?? 0)
         let suggested = min(fromBal, toBal)
         return suggested > 0 ? suggested : nil
     }
@@ -64,7 +64,7 @@ struct RecordSettlementView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(displayName(for: member)).foregroundStyle(.primary)
-                                        let owes = abs(Double(balances.first(where: { $0.user_id == member.id })?.amount ?? "0") ?? 0)
+                                        let owes = abs(balances.first(where: { $0.userId == member.id })?.amount ?? 0)
                                         Text("owes \(CurrencyFormatter.format(owes, showDecimals: true))")
                                             .font(.caption).foregroundStyle(AppColors.expense)
                                     }
@@ -89,7 +89,7 @@ struct RecordSettlementView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(displayName(for: member)).foregroundStyle(.primary)
-                                        let owed = abs(Double(balances.first(where: { $0.user_id == member.id })?.amount ?? "0") ?? 0)
+                                        let owed = abs(balances.first(where: { $0.userId == member.id })?.amount ?? 0)
                                         Text("is owed \(CurrencyFormatter.format(owed, showDecimals: true))")
                                             .font(.caption).foregroundStyle(AppColors.positive)
                                     }
@@ -168,10 +168,10 @@ struct RecordSettlementView: View {
             do {
                 let trimmedNotes = notes.trimmingCharacters(in: .whitespaces)
                 let request = APICreateSettlementRequest(
-                    group_id: group.id,
-                    from_user: from,
-                    to_user: to,
-                    amount: String(format: "%.2f", amt),
+                    groupId: group.id,
+                    fromUser: from,
+                    toUser: to,
+                    amount: amt,
                     notes: trimmedNotes.isEmpty ? nil : trimmedNotes
                 )
                 let settlement = try await groupService.createSettlement(request)

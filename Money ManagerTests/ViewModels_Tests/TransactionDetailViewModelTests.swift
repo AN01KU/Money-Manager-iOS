@@ -124,10 +124,7 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testConfigureWithSwiftDataContext() throws {
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: schema, configurations: [config])
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         let transaction = Transaction(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
@@ -138,7 +135,7 @@ struct TransactionDetailViewModelTests {
             completionCalled = true
         }
         #expect(completionCalled == true)
-        #expect(transaction.isDeleted == true)
+        #expect(transaction.isSoftDeleted == true)
     }
 
     // MARK: - deleteTransaction
@@ -154,7 +151,7 @@ struct TransactionDetailViewModelTests {
             completionCalled = true
         }
 
-        #expect(transaction.isDeleted == true)
+        #expect(transaction.isSoftDeleted == true)
         #expect(transaction.updatedAt >= originalUpdatedAt)
         #expect(completionCalled == true)
     }

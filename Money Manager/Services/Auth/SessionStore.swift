@@ -44,6 +44,18 @@ final class SessionStore {
         try? context.save()
     }
 
+    // MARK: - Last Logged In Email
+
+    private let lastEmailKey = "last_logged_in_email"
+
+    func saveLastLoggedInEmail(_ email: String) {
+        UserDefaults.standard.set(email.lowercased(), forKey: lastEmailKey)
+    }
+
+    func getLastLoggedInEmail() -> String? {
+        UserDefaults.standard.string(forKey: lastEmailKey)
+    }
+
     // MARK: - Private
 
     private func deleteAllTokens(in context: ModelContext) {

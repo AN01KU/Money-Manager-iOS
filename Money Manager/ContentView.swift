@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.authService) private var authService
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showSessionExpiredAlert = false
     @State private var showLoginSheet = false

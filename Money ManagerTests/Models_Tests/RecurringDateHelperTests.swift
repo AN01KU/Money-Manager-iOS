@@ -12,7 +12,7 @@ struct RecurringDateHelperTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             isActive: false
         )
         
@@ -27,7 +27,7 @@ struct RecurringDateHelperTests {
             name: "Daily Coffee",
             amount: 50,
             category: "Food",
-            frequency: "daily",
+            frequency: .daily,
             startDate: yesterday
         )
         
@@ -44,7 +44,7 @@ struct RecurringDateHelperTests {
             name: "Weekly Gym",
             amount: 500,
             category: "Health",
-            frequency: "weekly",
+            frequency: .weekly,
             startDate: pastDate
         )
 
@@ -61,7 +61,7 @@ struct RecurringDateHelperTests {
             name: "Rent",
             amount: 15000,
             category: "Housing",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             startDate: lastMonth
         )
@@ -78,7 +78,7 @@ struct RecurringDateHelperTests {
             name: "Subscription",
             amount: 100,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: lastMonth
         )
         
@@ -94,7 +94,7 @@ struct RecurringDateHelperTests {
             name: "Insurance",
             amount: 12000,
             category: "Insurance",
-            frequency: "yearly",
+            frequency: .yearly,
             startDate: lastYear
         )
 
@@ -112,26 +112,13 @@ struct RecurringDateHelperTests {
             name: "Active Subscription",
             amount: 100,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: startDate,
             endDate: endDate,
             isActive: true
         )
         
         #expect(expense.nextOccurrence != nil)
-    }
-    
-    @Test
-    func testNextOccurrenceReturnsNilForUnknownFrequency() {
-        let expense = RecurringTransaction(
-            name: "Unknown",
-            amount: 100,
-            category: "Other",
-            frequency: "bi-monthly",
-            startDate: Date()
-        )
-        
-        #expect(expense.nextOccurrence == nil)
     }
     
     @Test
@@ -142,7 +129,7 @@ struct RecurringDateHelperTests {
             name: "Weekly Yoga",
             amount: 200,
             category: "Health",
-            frequency: "weekly",
+            frequency: .weekly,
             daysOfWeek: [1, 3, 5],
             startDate: pastDate
         )
@@ -159,7 +146,7 @@ struct RecurringDateHelperTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: startDate
         )
         
@@ -175,7 +162,7 @@ struct RecurringDateHelperTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: startDate,
             lastAddedDate: lastAdded
         )

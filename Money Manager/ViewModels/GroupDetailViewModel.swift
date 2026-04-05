@@ -50,28 +50,22 @@ final class GroupDetailViewModel {
     var showSettlement = false
 
     let groupService: GroupServiceProtocol
-    private let auth: AuthServiceProtocol
+    let currentUserId: UUID?
 
-    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, auth: AuthServiceProtocol = authService) {
+    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {
         self.group = group
         self.members = group.members
         self.balances = group.balances
         self.groupService = groupService
-        self.auth = auth
-    }
-
-    // MARK: - Computed
-
-    var currentUserId: UUID? {
-        auth.currentUser?.id
+        self.currentUserId = currentUserId
     }
 
     var groupTotal: Double {
-        transactions.compactMap { Double($0.total_amount) }.reduce(0, +)
+        transactions.reduce(0) { $0 + $1.totalAmount }
     }
 
     var hasUnsettledBalances: Bool {
-        balances.contains { (Double($0.amount) ?? 0) != 0 }
+        balances.contains { $0.amount != 0 }
     }
 
     /// Pairwise debts derived from backend net balances.
@@ -82,11 +76,10 @@ final class GroupDetailViewModel {
         var creditors: [(userId: UUID, amount: Double)] = []
 
         for b in balances {
-            let amt = Double(b.amount) ?? 0
-            if amt < 0 {
-                debtors.append((b.user_id, abs(amt)))
-            } else if amt > 0 {
-                creditors.append((b.user_id, amt))
+            if b.amount < 0 {
+                debtors.append((b.userId, abs(b.amount)))
+            } else if b.amount > 0 {
+                creditors.append((b.userId, b.amount))
             }
         }
 
@@ -228,18 +221,18 @@ final class GroupDetailViewModel {
         for m in members { map[m.id] = 0 }
 
         for tx in transactions {
-            map[tx.paid_by_user_id, default: 0] += Double(tx.total_amount) ?? 0
+            map[tx.paidByUserId, default: 0] += tx.totalAmount
         }
 
         // Split equally among all members for now (server is authoritative for custom splits)
         let memberCount = members.isEmpty ? 1 : members.count
         for tx in transactions {
-            let share = (Double(tx.total_amount) ?? 0) / Double(memberCount)
+            let share = tx.totalAmount / Double(memberCount)
             for m in members {
                 map[m.id, default: 0] -= share
             }
         }
 
-        balances = map.map { APIGroupBalance(user_id: $0.key, amount: String(format: "%.2f", $0.value)) }
+        balances = map.map { APIGroupBalance(userId: $0.key, amount: $0.value) }
     }
 }

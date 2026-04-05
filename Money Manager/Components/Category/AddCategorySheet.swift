@@ -7,9 +7,9 @@ struct AddCategorySheet: View {
     
     let allCategories: [CustomCategory]
     @State private var viewModel = AddCategoryViewModel()
-    @State private var iconTapped = false
-    @State private var colorTapped = false
-    @State private var saveSuccess = false
+    @State private var iconTapped = 0
+    @State private var colorTapped = 0
+    @State private var saveSuccess = 0
     
     var body: some View {
         NavigationStack {
@@ -19,22 +19,16 @@ struct AddCategorySheet: View {
                 selectedColor: $viewModel.selectedColor,
                 colorConflictCategory: viewModel.colorConflictCategory,
                 onSelectIcon: { icon in
-                    iconTapped = true
+                    iconTapped += 1
                     viewModel.selectedIcon = icon
                 },
                 onSelectColor: { color in
-                    colorTapped = true
+                    colorTapped += 1
                     viewModel.selectedColor = color
                 }
             )
             .sensoryFeedback(.impact(weight: .light), trigger: iconTapped)
-            .onChange(of: iconTapped) { _, newValue in
-                if newValue { iconTapped = false }
-            }
             .sensoryFeedback(.impact(weight: .light), trigger: colorTapped)
-            .onChange(of: colorTapped) { _, newValue in
-                if newValue { colorTapped = false }
-            }
             .navigationTitle("New Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -56,7 +50,7 @@ struct AddCategorySheet: View {
                     viewModel.confirmSaveDespiteColorWarning()
                     Task {
                         if await viewModel.save() {
-                            saveSuccess = true
+                            saveSuccess += 1
                             dismiss()
                         }
                     }
@@ -65,9 +59,6 @@ struct AddCategorySheet: View {
                 Text(viewModel.colorWarningMessage)
             }
             .sensoryFeedback(.success, trigger: saveSuccess)
-            .onChange(of: saveSuccess) { _, newValue in
-                if newValue { saveSuccess = false }
-            }
             .task {
                 viewModel.modelContext = modelContext
                 viewModel.allCategories = allCategories
@@ -83,7 +74,7 @@ struct AddCategorySheet: View {
             Button("Add") {
                 Task {
                     if await viewModel.save() {
-                        saveSuccess = true
+                        saveSuccess += 1
                         dismiss()
                     }
                 }

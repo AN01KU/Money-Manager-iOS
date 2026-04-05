@@ -8,18 +8,23 @@ enum TabItem: String, CaseIterable {
 }
 
 struct MainTabView: View {
-    @AppStorage("selectedTab") private var selectedTab: TabItem = .overview
-    @State private var tabChanged = false
+    @Environment(\.authService) private var authService
+    @State private var selectedTab: TabItem = .overview
+    @State private var tabChanged = 0
     @State private var pendingRoute: AppRoute?
+    @State private var pendingCategoryFilter: String?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Overview", systemImage: "house.fill", value: .overview) {
-                Overview(pendingRoute: $pendingRoute)
+                Overview(pendingRoute: $pendingRoute, onCategoryTapped: { category in
+                    pendingCategoryFilter = category
+                    selectedTab = .transactions
+                })
             }
 
             Tab("Transactions", systemImage: "list.bullet", value: .transactions) {
-                TransactionsView()
+                TransactionsView(categoryFilter: $pendingCategoryFilter)
             }
 
             if authService.isAuthenticated {
@@ -35,10 +40,7 @@ struct MainTabView: View {
         .tint(.teal)
         .sensoryFeedback(.selection, trigger: tabChanged)
         .onChange(of: selectedTab) { _, _ in
-            tabChanged = true
-        }
-        .onChange(of: tabChanged) { _, newValue in
-            if newValue { tabChanged = false }
+            tabChanged += 1
         }
         .onReceive(NotificationCenter.default.publisher(for: .appRouteReceived)) { notification in
             guard let route = notification.object as? AppRoute else { return }
@@ -50,9 +52,6 @@ struct MainTabView: View {
                 selectedTab = .groups
             }
             pendingRoute = route
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .transactionsCategoryFilter)) { _ in
-            selectedTab = .transactions
         }
     }
 }

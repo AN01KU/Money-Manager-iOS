@@ -2,7 +2,6 @@ import Foundation
 
 extension Notification.Name {
     static let appRouteReceived = Notification.Name("appRouteReceived")
-    static let transactionsCategoryFilter = Notification.Name("transactionsCategoryFilter")
 }
 
 /// Supported deep link routes.

@@ -135,11 +135,11 @@ struct TestData {
         let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
 
         return [
-            RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: "monthly", dayOfMonth: 1, startDate: startOfMonth, isActive: true),
-            RecurringTransaction(name: "Gym", amount: 1500, category: "Health & Medical", frequency: "monthly", dayOfMonth: 5, startDate: startOfMonth, isActive: true),
-            RecurringTransaction(name: "Insurance", amount: 5000, category: "Debt & Payments", frequency: "monthly", dayOfMonth: 10, startDate: startOfMonth, isActive: true),
-            RecurringTransaction(name: "Internet", amount: 799, category: "Utilities", frequency: "monthly", dayOfMonth: 15, startDate: startOfMonth, isActive: true),
-            RecurringTransaction(name: "Lunch", amount: 150, category: "Food & Dining", frequency: "weekly", daysOfWeek: [2, 4], startDate: startOfMonth, isActive: true),
+            RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, dayOfMonth: 1, startDate: startOfMonth, isActive: true),
+            RecurringTransaction(name: "Gym", amount: 1500, category: "Health & Medical", frequency: .monthly, dayOfMonth: 5, startDate: startOfMonth, isActive: true),
+            RecurringTransaction(name: "Insurance", amount: 5000, category: "Debt & Payments", frequency: .monthly, dayOfMonth: 10, startDate: startOfMonth, isActive: true),
+            RecurringTransaction(name: "Internet", amount: 799, category: "Utilities", frequency: .monthly, dayOfMonth: 15, startDate: startOfMonth, isActive: true),
+            RecurringTransaction(name: "Lunch", amount: 150, category: "Food & Dining", frequency: .weekly, daysOfWeek: [2, 4], startDate: startOfMonth, isActive: true),
         ]
     }
 }

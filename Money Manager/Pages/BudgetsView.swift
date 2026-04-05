@@ -3,7 +3,7 @@ import SwiftData
 
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
+    @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     
     @State private var selectedMonth: Date = Date()
@@ -25,8 +25,8 @@ struct BudgetsView: View {
         else { return [] }
 
         return allTransactions.filter { transaction in
-            !transaction.isDeleted &&
-            transaction.type == "expense" &&
+            !transaction.isSoftDeleted &&
+            transaction.type == .expense &&
             transaction.date >= startOfMonth &&
             transaction.date < firstDayNextMonth
         }

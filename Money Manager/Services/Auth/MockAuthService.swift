@@ -10,7 +10,7 @@ private let mockUser = APIUser(
     id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
     email: "test@example.com",
     username: "Test User",
-    created_at: Date()
+    createdAt: Date()
 )
 
 @Observable
@@ -36,11 +36,11 @@ final class MockAuthService: AuthServiceProtocol {
         authState = .authenticated(mockUser)
     }
 
-    func signup(email: String, username: String, password: String) async throws {
+    func signup(email: String, username: String, password: String, inviteCode: String) async throws {
         isLoading = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         isLoading = false
-        authState = .authenticated(APIUser(id: UUID(), email: email, username: username, created_at: Date()))
+        authState = .authenticated(APIUser(id: UUID(), email: email, username: username, createdAt: Date()))
     }
 
     func logout() {

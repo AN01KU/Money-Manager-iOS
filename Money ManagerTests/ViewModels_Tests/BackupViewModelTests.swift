@@ -90,7 +90,7 @@ struct ExportDataStructTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: RecurringFrequency.monthly.rawValue,
             dayOfMonth: 1,
             daysOfWeek: nil,
             startDate: Date(),
@@ -212,7 +212,7 @@ struct ExportDataStructTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: RecurringFrequency.monthly.rawValue,
             dayOfMonth: 1,
             daysOfWeek: [1, 3, 5],
             startDate: Date(),
@@ -303,36 +303,36 @@ struct BackupViewModelTests {
     
     @Test
     func testEscapeCSVWithComma() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.escapeCSV("Hello, World")
+        let service = ExportService()
+        let result = service.escapeCSV("Hello, World")
         #expect(result == "\"Hello, World\"")
     }
     
     @Test
     func testEscapeCSVWithQuote() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.escapeCSV("He said \"Hello\"")
+        let service = ExportService()
+        let result = service.escapeCSV("He said \"Hello\"")
         #expect(result == "\"He said \"\"Hello\"\"\"")
     }
     
     @Test
     func testEscapeCSVWithNewline() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.escapeCSV("Line1\nLine2")
+        let service = ExportService()
+        let result = service.escapeCSV("Line1\nLine2")
         #expect(result == "\"Line1\nLine2\"")
     }
     
     @Test
     func testEscapeCSVWithoutSpecialChars() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.escapeCSV("Simple Text")
+        let service = ExportService()
+        let result = service.escapeCSV("Simple Text")
         #expect(result == "Simple Text")
     }
     
     @Test
     func testEscapeCSVEmptyString() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.escapeCSV("")
+        let service = ExportService()
+        let result = service.escapeCSV("")
         #expect(result == "")
     }
     
@@ -340,30 +340,30 @@ struct BackupViewModelTests {
     
     @Test
     func testParseCSVLineSimple() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseCSVLine("a,b,c")
+        let service = ImportService()
+        let result = service.parseCSVLine("a,b,c")
         #expect(result == ["a", "b", "c"])
     }
     
     @Test
     func testParseCSVLineWithQuotes() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseCSVLine("\"a,b\",c")
+        let service = ImportService()
+        let result = service.parseCSVLine("\"a,b\",c")
         #expect(result[0] == "a,b")
         #expect(result[1] == "c")
     }
     
     @Test
     func testParseCSVLineWithSpaces() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseCSVLine("a , b , c")
+        let service = ImportService()
+        let result = service.parseCSVLine("a , b , c")
         #expect(result == ["a", "b", "c"])
     }
     
     @Test
     func testParseCSVLineEmptyValues() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseCSVLine("a,,c")
+        let service = ImportService()
+        let result = service.parseCSVLine("a,,c")
         #expect(result == ["a", "", "c"])
     }
     
@@ -371,31 +371,31 @@ struct BackupViewModelTests {
     
     @Test
     func testParseDateISO8601() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("2026-03-12T10:30:00Z")
+        let service = ImportService()
+        let result = service.parseDate("2026-03-12T10:30:00Z")
         let calendar = Calendar.current
         #expect(calendar.component(.year, from: result.date) == 2026)
     }
 
     @Test
     func testParseDateWithTime() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("2026-03-12T10:30:00Z", "2026-03-12T14:45:00.000Z")
+        let service = ImportService()
+        let result = service.parseDate("2026-03-12T10:30:00Z", "2026-03-12T14:45:00.000Z")
         #expect(result.time != nil)
     }
     
     @Test
     func testParseDateMediumFormat() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("Mar 12, 2026 at 10:30 AM")
+        let service = ImportService()
+        let result = service.parseDate("Mar 12, 2026 at 10:30 AM")
         let calendar = Calendar.current
         #expect(calendar.component(.year, from: result.date) == 2026)
     }
     
     @Test
     func testParseDateSlashFormat() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("03/12/2026")
+        let service = ImportService()
+        let result = service.parseDate("03/12/2026")
         let calendar = Calendar.current
         #expect(calendar.component(.year, from: result.date) == 2026)
         #expect(calendar.component(.month, from: result.date) == 3)
@@ -404,9 +404,8 @@ struct BackupViewModelTests {
     
     @Test
     func testParseDateEmptyString() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("")
-        // Empty string falls back to today's date; just verify it's a plausible date
+        let service = ImportService()
+        let result = service.parseDate("")
         #expect(result.date.timeIntervalSince1970 > 0)
     }
     
@@ -414,11 +413,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseTransactionCSVRow() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group id", "group name"]
         let values = ["uuid-123", "100.50", "Food", "2026-03-12T10:30:00Z", "", "Lunch", "", "", "", ""]
         
-        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
+        let result = service.parseTransactionCSVRow(values, headers: headers)
         
         #expect(result != nil)
         #expect(result?.id == "uuid-123")
@@ -429,11 +428,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseTransactionCSVRowWithMissingValues() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "amount", "category", "date"]
         let values = ["uuid-123", "100", "Food"]
         
-        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
+        let result = service.parseTransactionCSVRow(values, headers: headers)
         #expect(result == nil)
     }
     
@@ -441,11 +440,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseBudgetCSVRow() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "year", "month", "limit"]
         let values = ["budget-1", "2026", "3", "5000"]
         
-        let result = viewModel.parseBudgetCSVRow(values, headers: headers)
+        let result = service.parseBudgetCSVRow(values, headers: headers)
         
         #expect(result != nil)
         #expect(result?.id == "budget-1")
@@ -456,11 +455,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseBudgetCSVRowWithDefaults() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "year", "month", "limit"]
         let values = ["budget-1"]
         
-        let result = viewModel.parseBudgetCSVRow(values, headers: headers)
+        let result = service.parseBudgetCSVRow(values, headers: headers)
         #expect(result == nil)
     }
     
@@ -468,11 +467,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseCategoryCSVRow() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "name", "icon", "color", "is hidden", "is predefined", "predefined key"]
         let values = ["cat-1", "Groceries", "cart.fill", "#FF0000", "false", "true", "food"]
         
-        let result = viewModel.parseCategoryCSVRow(values, headers: headers)
+        let result = service.parseCategoryCSVRow(values, headers: headers)
         
         #expect(result != nil)
         #expect(result?.id == "cat-1")
@@ -486,11 +485,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseCategoryCSVRowWithDefaults() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "name", "icon", "color"]
         let values = ["cat-1", "Test", "star.fill", "#000000"]
         
-        let result = viewModel.parseCategoryCSVRow(values, headers: headers)
+        let result = service.parseCategoryCSVRow(values, headers: headers)
         
         #expect(result != nil)
         #expect(result?.name == "Test")
@@ -500,31 +499,31 @@ struct BackupViewModelTests {
     
     @Test
     func testParseCategoryCSVRowMismatchedCount() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "name", "icon", "color", "is hidden"]
         let values = ["cat-1", "Test"]
         
-        let result = viewModel.parseCategoryCSVRow(values, headers: headers)
+        let result = service.parseCategoryCSVRow(values, headers: headers)
         #expect(result == nil)
     }
     
     @Test
     func testParseBudgetCSVRowMismatchedCount() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "year", "month", "limit"]
         let values = ["budget-1", "2026"]
         
-        let result = viewModel.parseBudgetCSVRow(values, headers: headers)
+        let result = service.parseBudgetCSVRow(values, headers: headers)
         #expect(result == nil)
     }
     
     @Test
     func testParseTransactionCSVRowWithAllFields() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
         let values = ["uuid-1", "250.75", "Transport", "2026-03-12T10:30:00Z", "2026-03-12T14:00:00Z", "Uber ride", "To airport", "rec-uuid", "grp-uuid"]
 
-        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
+        let result = service.parseTransactionCSVRow(values, headers: headers)
 
         #expect(result != nil)
         #expect(result?.amount == 250.75)
@@ -537,11 +536,11 @@ struct BackupViewModelTests {
     
     @Test
     func testParseTransactionCSVRowWithEmptyOptionalFields() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
         let values = ["uuid-1", "50", "Food", "2026-03-12T10:30:00Z", "", "", "", "", ""]
 
-        let result = viewModel.parseTransactionCSVRow(values, headers: headers)
+        let result = service.parseTransactionCSVRow(values, headers: headers)
 
         #expect(result != nil)
         #expect(result?.transactionDescription == nil)
@@ -554,8 +553,8 @@ struct BackupViewModelTests {
     
     @Test
     func testParseDateYYYYMMDDFormat() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("2026-03-15")
+        let service = ImportService()
+        let result = service.parseDate("2026-03-15")
         let calendar = Calendar.current
         #expect(calendar.component(.year, from: result.date) == 2026)
         #expect(calendar.component(.month, from: result.date) == 3)
@@ -564,24 +563,24 @@ struct BackupViewModelTests {
     
     @Test
     func testParseDateISO8601WithFractionalSeconds() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("2026-03-12T10:30:00.123Z")
+        let service = ImportService()
+        let result = service.parseDate("2026-03-12T10:30:00.123Z")
         let calendar = Calendar.current
         #expect(calendar.component(.year, from: result.date) == 2026)
     }
     
     @Test
     func testParseDateWithEmptyTimeString() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("2026-03-12T10:30:00Z", "")
+        let service = ImportService()
+        let result = service.parseDate("2026-03-12T10:30:00Z", "")
         #expect(result.time == nil)
     }
     
     @Test
     func testParseDateWithInvalidDateReturnsCurrentDate() {
-        let viewModel = BackupViewModel()
+        let service = ImportService()
         let before = Date()
-        let result = viewModel.parseDate("completely-invalid-date")
+        let result = service.parseDate("completely-invalid-date")
         let after = Date()
         #expect(result.date >= before)
         #expect(result.date <= after)
@@ -589,8 +588,8 @@ struct BackupViewModelTests {
     
     @Test
     func testParseDateTimeWithNonISOFormat() {
-        let viewModel = BackupViewModel()
-        let result = viewModel.parseDate("03/12/2026", "03/12/2026")
+        let service = ImportService()
+        let result = service.parseDate("03/12/2026", "03/12/2026")
         #expect(result.time != nil)
     }
 }
@@ -601,10 +600,7 @@ struct BackupViewModelTests {
 struct BackupViewModelExportTests {
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+        ModelContext(makeTestContainer())
     }
     
     // MARK: - Export Expenses Tests
@@ -684,7 +680,7 @@ struct BackupViewModelExportTests {
         
         let active = Transaction(amount: 100, category: "Food", date: Date())
         let deleted = Transaction(amount: 200, category: "Food", date: Date())
-        deleted.isDeleted = true
+        deleted.isSoftDeleted = true
         
         await viewModel.exportData(
             transactions: [active, deleted],
@@ -818,7 +814,7 @@ struct BackupViewModelExportTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             startDate: Date(),
             isActive: true
@@ -850,7 +846,7 @@ struct BackupViewModelExportTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             startDate: Date(),
             isActive: true
@@ -879,7 +875,7 @@ struct BackupViewModelExportTests {
         viewModel.selectedDataType = .all
         
         let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
         
@@ -907,7 +903,7 @@ struct BackupViewModelExportTests {
         viewModel.selectedDataType = .all
         
         let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: "monthly", startDate: Date(), isActive: true)
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
         let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
         
@@ -985,7 +981,7 @@ struct BackupViewModelExportTests {
             name: "Gym",
             amount: 500,
             category: "Health",
-            frequency: "weekly",
+            frequency: .weekly,
             daysOfWeek: [1, 3, 5],
             startDate: Date(),
             endDate: Date().addingTimeInterval(86400 * 365),
@@ -1014,10 +1010,7 @@ struct BackupViewModelExportTests {
 struct BackupViewModelImportTests {
     
     private func createTestContext() -> ModelContext {
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+        ModelContext(makeTestContainer())
     }
     
     // MARK: - JSON Import Tests
@@ -1165,7 +1158,7 @@ struct BackupViewModelImportTests {
                     name: "Netflix",
                     amount: 649,
                     category: "Entertainment",
-                    frequency: "monthly",
+                    frequency: RecurringFrequency.monthly.rawValue,
                     dayOfMonth: 1,
                     daysOfWeek: nil,
                     startDate: Date(),
@@ -1220,7 +1213,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
                     id: recId, name: "Lunch", amount: 100, category: "Food",
-                    frequency: "daily", dayOfMonth: nil, daysOfWeek: nil,
+                    frequency: RecurringFrequency.daily.rawValue, dayOfMonth: nil, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
                 )
@@ -1521,7 +1514,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
                     id: recId, name: "Netflix", amount: 649, category: "Entertainment",
-                    frequency: "monthly", dayOfMonth: 1, daysOfWeek: nil,
+                    frequency: RecurringFrequency.monthly.rawValue, dayOfMonth: 1, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
                 )

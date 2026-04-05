@@ -76,4 +76,41 @@ struct CategoryResolverTests {
         #expect(result.icon == "pawprint.fill")
         #expect(result.color == Color(hex: "#FF00FF"))
     }
+
+    // MARK: - Lookup-based resolve (O(1) path)
+
+    @Test
+    func testResolveLookupMatchesConvenienceOverload() {
+        let custom = CustomCategory(name: "Food & Dining", icon: "fork.knife", color: "#AABBCC")
+        let lookup = CategoryResolver.makeLookup(from: [custom])
+        let fast = CategoryResolver.resolve("Food & Dining", lookup: lookup)
+        let slow = CategoryResolver.resolve("Food & Dining", customCategories: [custom])
+        #expect(fast.icon == slow.icon)
+        #expect(fast.color == slow.color)
+    }
+
+    @Test
+    func testMakeLookupExcludesHiddenCategories() {
+        let hidden = CustomCategory(name: "Hidden", icon: "eye.slash", color: "#000000")
+        hidden.isHidden = true
+        let visible = CustomCategory(name: "Visible", icon: "eye", color: "#FFFFFF")
+        let lookup = CategoryResolver.makeLookup(from: [hidden, visible])
+        #expect(lookup["Hidden"] == nil)
+        #expect(lookup["Visible"] != nil)
+    }
+
+    @Test
+    func testResolveLookupFallsBackToPredefinedWhenNotInLookup() {
+        let lookup = CategoryResolver.makeLookup(from: [])
+        let result = CategoryResolver.resolve("Food & Dining", lookup: lookup)
+        #expect(result.icon == PredefinedCategory.foodDining.icon)
+    }
+
+    @Test
+    func testResolveLookupReturnsDefaultForUnknownCategory() {
+        let lookup = CategoryResolver.makeLookup(from: [])
+        let result = CategoryResolver.resolve("Unknown Category XYZ", lookup: lookup)
+        #expect(result.icon == "ellipsis.circle.fill")
+        #expect(result.color == .gray)
+    }
 }

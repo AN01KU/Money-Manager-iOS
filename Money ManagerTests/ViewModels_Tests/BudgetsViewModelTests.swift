@@ -30,7 +30,7 @@ struct BudgetsViewModelTests {
         
         let activeExpense = Transaction(amount: 500, category: "Food", date: Date())
         let deletedExpense = Transaction(amount: 300, category: "Transport", date: Date())
-        deletedExpense.isDeleted = true
+        deletedExpense.isSoftDeleted = true
         
         viewModel.configure(allTransactions: [activeExpense, deletedExpense], budgets: [], modelContext: nil)
         

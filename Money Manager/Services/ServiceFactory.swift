@@ -9,7 +9,7 @@ struct ServiceFactory {
     private let useMocks: Bool
     private let isRunningTests: Bool
     
-    init(_ useMocks: Bool) {
+    init(_ useMocks: Bool = false) {
         self.useMocks = useMocks
         self.isRunningTests = ProcessInfo.processInfo.isRunningTests
     }

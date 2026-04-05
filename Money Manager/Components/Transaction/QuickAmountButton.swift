@@ -17,5 +17,6 @@ struct QuickAmountButton: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.borderless)
+        .accessibilityIdentifier("quick-amount-\(amount)")
     }
 }

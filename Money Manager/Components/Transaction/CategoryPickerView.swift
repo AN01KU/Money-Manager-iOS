@@ -5,7 +5,7 @@ struct CategoryPickerView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedCategory: String
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    @State private var selectionToggled = false
+    @State private var selectionToggled = 0
     
     private var visiblePredefined: [CustomCategory] {
         customCategories.filter { $0.isPredefined && !$0.isHidden }
@@ -22,14 +22,11 @@ struct CategoryPickerView: View {
                     Section("Your Categories") {
                         ForEach(visibleCustom) { category in
                             CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
-                                selectionToggled = true
+                                selectionToggled += 1
                                 selectedCategory = category.name
                                 dismiss()
                             }
                             .sensoryFeedback(.selection, trigger: selectionToggled)
-                            .onChange(of: selectionToggled) { _, newValue in
-                                if newValue { selectionToggled = false }
-                            }
                         }
                     }
                 }
@@ -37,14 +34,11 @@ struct CategoryPickerView: View {
                 Section("Default Categories") {
                     ForEach(visiblePredefined) { category in
                         CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
-                            selectionToggled = true
+                            selectionToggled += 1
                             selectedCategory = category.name
                             dismiss()
                         }
                         .sensoryFeedback(.selection, trigger: selectionToggled)
-                        .onChange(of: selectionToggled) { _, newValue in
-                            if newValue { selectionToggled = false }
-                        }
                     }
                 }
             }

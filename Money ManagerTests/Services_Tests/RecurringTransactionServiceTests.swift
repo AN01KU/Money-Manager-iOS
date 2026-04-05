@@ -12,15 +12,12 @@ struct RecurringTransactionServiceTests {
             name: "Old",
             amount: 100,
             category: "Other",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: Date(),
             isActive: false
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(inactive)
         try? context.save()
@@ -42,15 +39,12 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -75,15 +69,12 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -105,16 +96,13 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: today,
             isActive: true,
             lastAddedDate: nextMonth
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -136,15 +124,12 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -168,15 +153,12 @@ struct RecurringTransactionServiceTests {
             name: "Netflix Subscription",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -198,16 +180,13 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true,
             notes: "Monthly subscription"
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -229,15 +208,12 @@ struct RecurringTransactionServiceTests {
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
         )
 
-        let schema = Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
+        let context = ModelContext(makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -249,5 +225,111 @@ struct RecurringTransactionServiceTests {
         let transactions = (try? context.fetch(descriptor)) ?? []
 
         #expect(transactions.count == 1)
+    }
+
+    @Test("Skips soft-deleted recurring items")
+    func testSkipsSoftDeletedItems() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        let recurring = RecurringTransaction(
+            name: "Deleted Sub",
+            amount: 199,
+            category: "Entertainment",
+            frequency: .monthly,
+            startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
+            isActive: true,
+            isSoftDeleted: true
+        )
+
+        let context = ModelContext(makeTestContainer())
+        context.insert(recurring)
+
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        #expect(transactions.isEmpty)
+    }
+
+    @Test("Does not generate a transaction past the end date")
+    func testSkipsItemsPastEndDate() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        // Daily frequency so nextOccurrence is tomorrow — but endDate is yesterday,
+        // so nextOccurrence returns nil and service skips it.
+        let recurring = RecurringTransaction(
+            name: "Expired Sub",
+            amount: 99,
+            category: "Entertainment",
+            frequency: .daily,
+            startDate: calendar.date(byAdding: .day, value: -5, to: today)!,
+            endDate: calendar.date(byAdding: .day, value: -1, to: today)!,
+            isActive: true
+        )
+
+        let context = ModelContext(makeTestContainer())
+        context.insert(recurring)
+
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        #expect(transactions.isEmpty)
+    }
+
+    @Test("lastAddedDate is set to nextOccurrence after offline generation, preventing future duplicates")
+    func testLastAddedDatePreventsSecondGeneration() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        // Daily item that is due — service will generate once and set lastAddedDate.
+        // A second call should produce no new transaction because lastAddedDate >= nextOccurrence.
+        let recurring = RecurringTransaction(
+            name: "Gym",
+            amount: 500,
+            category: "Health",
+            frequency: .daily,
+            startDate: calendar.date(byAdding: .day, value: -1, to: today)!,
+            isActive: true
+        )
+
+        let context = ModelContext(makeTestContainer())
+        context.insert(recurring)
+
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let lastAdded = recurring.lastAddedDate
+        #expect(lastAdded != nil)
+
+        // Second call: lastAddedDate is now set, so nextOccurrence <= lastAddedDay — skipped.
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        #expect(transactions.count == 1)
+    }
+
+    @Test("Generates transactions for multiple due items in one pass")
+    func testGeneratesForMultipleDueItems() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        let context = ModelContext(makeTestContainer())
+
+        for i in 1...3 {
+            let recurring = RecurringTransaction(
+                name: "Sub \(i)",
+                amount: Double(i * 100),
+                category: "Entertainment",
+                frequency: .monthly,
+                startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
+                isActive: true
+            )
+            context.insert(recurring)
+        }
+
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        #expect(transactions.count == 3)
     }
 }

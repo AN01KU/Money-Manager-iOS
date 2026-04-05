@@ -3,7 +3,7 @@ import SwiftData
 
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Transaction> { !$0.isDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
+    @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
@@ -12,10 +12,15 @@ struct Overview: View {
     @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []
     var pendingRoute: Binding<AppRoute?>?
+    var onCategoryTapped: ((String) -> Void)?
+
+    private var queryData: QuerySnapshot {
+        QuerySnapshot(transactions: allTransactions, budgets: budgets, categories: customCategories)
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit)
+            OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit, onCategoryTapped: onCategoryTapped)
                 .navigationDestination(for: AppRoute.self) { route in
                     if case .transaction(let id) = route,
                        let transaction = allTransactions.first(where: { $0.id == id }) {
@@ -32,15 +37,7 @@ struct Overview: View {
             viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
         }
-        .onChange(of: allTransactions) { _, newValue in
-            viewModel.update(allTransactions: newValue, budgets: budgets, customCategories: customCategories)
-        }
-        .onChange(of: budgets) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, budgets: newValue, customCategories: customCategories)
-        }
-        .onChange(of: customCategories) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: newValue)
-        }
+        .onChange(of: queryData) { viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories) }
     }
 }
 
@@ -49,11 +46,13 @@ struct Overview: View {
 private struct OverviewBody: View {
     @Bindable var viewModel: OverviewViewModel
     let defaultBudgetLimit: Double
+    let onCategoryTapped: ((String) -> Void)?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.authService) private var authService
 
     var body: some View {
         ScrollView {
-            OverviewScrollContent(viewModel: viewModel)
+            OverviewScrollContent(viewModel: viewModel, onCategoryTapped: onCategoryTapped)
         }
         .navigationTitle("Overview")
         .toolbar { overviewToolbar }
@@ -79,6 +78,7 @@ private struct OverviewBody: View {
 
 private struct OverviewScrollContent: View {
     @Bindable var viewModel: OverviewViewModel
+    let onCategoryTapped: ((String) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -88,10 +88,7 @@ private struct OverviewScrollContent: View {
 
             if !viewModel.categorySpending.isEmpty {
                 CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
-                    NotificationCenter.default.post(
-                        name: .transactionsCategoryFilter,
-                        object: categoryName
-                    )
+                    onCategoryTapped?(categoryName)
                 }
                 .padding(.horizontal)
             } else {
@@ -112,7 +109,7 @@ private struct OverviewScrollContent: View {
 private struct OverviewHeaderCard: View {
     @Bindable var viewModel: OverviewViewModel
     @State private var showDatePicker = false
-    @State private var navTapped = false
+    @State private var navTapped = 0
 
     private var budgetPercentage: Int {
         guard let budget = viewModel.currentBudget, budget.limit > 0 else { return 0 }
@@ -134,7 +131,7 @@ private struct OverviewHeaderCard: View {
                         let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
                         if let prev = Calendar.current.date(byAdding: step, value: -1, to: viewModel.selectedDate) {
                             viewModel.selectedDate = prev
-                            navTapped = true
+                            navTapped += 1
                         }
                     } label: {
                         Image(systemName: "chevron.left")
@@ -157,7 +154,7 @@ private struct OverviewHeaderCard: View {
                         let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
                         if let next = Calendar.current.date(byAdding: step, value: 1, to: viewModel.selectedDate) {
                             viewModel.selectedDate = next
-                            navTapped = true
+                            navTapped += 1
                         }
                     } label: {
                         Image(systemName: "chevron.right")
@@ -168,7 +165,6 @@ private struct OverviewHeaderCard: View {
                     .buttonStyle(.plain)
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: navTapped)
-                .onChange(of: navTapped) { _, v in if v { navTapped = false } }
 
                 Spacer()
 
@@ -372,6 +368,14 @@ private struct BudgetInlineRow: View {
     }
 }
 
+// MARK: - Query Snapshot
+
+private struct QuerySnapshot: Equatable {
+    let transactions: [Transaction]
+    let budgets: [MonthlyBudget]
+    let categories: [CustomCategory]
+}
+
 // MARK: - Preview Helpers
 
 @MainActor
@@ -400,7 +404,7 @@ private func previewContainer(
     let transactions = [
         Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
         Transaction(amount: 120, category: "Food & Dining", date: today, transactionDescription: "Morning coffee"),
-        Transaction(type: "income", amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
+        Transaction(type: .income, amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
         Transaction(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Fuel"),
         Transaction(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "New shirt"),
         Transaction(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, transactionDescription: "Phone bill"),

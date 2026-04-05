@@ -24,7 +24,7 @@ enum ActivityItem: Identifiable {
     var date: Date {
         switch self {
         case .transaction(let tx, _): return tx.date
-        case .settlement(let s, _, _): return s.created_at
+        case .settlement(let s, _, _): return s.createdAt
         }
     }
 
@@ -47,17 +47,15 @@ final class GroupsListViewModel {
     var searchText = ""
 
     let groupService: GroupServiceProtocol
-    private let auth: AuthServiceProtocol
+    private(set) var currentUserId: UUID?
 
-    init(groupService: GroupServiceProtocol = GroupService.shared, auth: AuthServiceProtocol = authService) {
+    init(groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {
         self.groupService = groupService
-        self.auth = auth
+        self.currentUserId = currentUserId
     }
 
-    // MARK: - Computed
-
-    var currentUserId: UUID? {
-        auth.currentUser?.id
+    func setCurrentUser(_ userId: UUID?) {
+        currentUserId = userId
     }
 
     var filteredGroups: [APIGroupWithDetails] {
@@ -70,8 +68,8 @@ final class GroupsListViewModel {
     var netBalance: Double {
         guard let userId = currentUserId else { return 0 }
         return groups.reduce(0.0) { total, group in
-            let balance = group.balances.first(where: { $0.user_id == userId })
-            return total + (Double(balance?.amount ?? "0") ?? 0)
+            let balance = group.balances.first(where: { $0.userId == userId })
+            return total + (balance?.amount ?? 0)
         }
     }
 
@@ -103,7 +101,6 @@ final class GroupsListViewModel {
     }
 
     private func loadActivity() async {
-        guard let userId = currentUserId else { return }
         var items: [ActivityItem] = []
 
         await withTaskGroup(of: (String, [APIGroupTransaction], [APISettlement], [APIGroupMember]).self) { taskGroup in
@@ -121,8 +118,10 @@ final class GroupsListViewModel {
                 for tx in transactions {
                     items.append(.transaction(tx, groupName: groupName))
                 }
-                for settlement in settlements where settlement.from_user == userId || settlement.to_user == userId {
-                    items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
+                if let userId = currentUserId {
+                    for settlement in settlements where settlement.fromUser == userId || settlement.toUser == userId {
+                        items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
+                    }
                 }
             }
         }
@@ -135,8 +134,8 @@ final class GroupsListViewModel {
         let newGroup = APIGroupWithDetails(
             id: created.id,
             name: created.name,
-            created_by: created.created_by,
-            created_at: created.created_at,
+            createdBy: created.createdBy,
+            createdAt: created.createdAt,
             members: [],
             balances: []
         )
@@ -148,8 +147,8 @@ final class GroupsListViewModel {
 
     func userBalance(for group: APIGroupWithDetails) -> Double {
         guard let userId = currentUserId else { return 0 }
-        let balance = group.balances.first(where: { $0.user_id == userId })
-        return Double(balance?.amount ?? "0") ?? 0
+        let balance = group.balances.first(where: { $0.userId == userId })
+        return balance?.amount ?? 0
     }
 
     func displayName(for member: APIGroupMember) -> String {

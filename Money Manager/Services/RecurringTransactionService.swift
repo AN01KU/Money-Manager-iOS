@@ -10,6 +10,7 @@ struct RecurringTransactionService {
         var generated = 0
 
         for recurring in allRecurring {
+            guard !recurring.isSoftDeleted else { continue }
             guard recurring.isActive else { continue }
             guard let nextDate = recurring.nextOccurrence else { continue }
 

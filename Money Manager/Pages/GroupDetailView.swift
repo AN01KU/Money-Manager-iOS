@@ -10,8 +10,8 @@ struct GroupDetailView: View {
     @State private var selectedTransaction: APIGroupTransaction?
     @State private var transactionToEdit: APIGroupTransaction?
 
-    init(group: APIGroupWithDetails) {
-        _viewModel = State(wrappedValue: GroupDetailViewModel(group: group))
+    init(group: APIGroupWithDetails, currentUserId: UUID?) {
+        _viewModel = State(wrappedValue: GroupDetailViewModel(group: group, currentUserId: currentUserId))
     }
 
     var body: some View {
@@ -45,10 +45,12 @@ struct GroupDetailView: View {
             AddTransactionView(
                 mode: .shared(
                     group: viewModel.group,
-                    members: viewModel.members
+                    members: viewModel.members,
+                    currentUserId: viewModel.currentUserId
                 ) { newExpense in
                     viewModel.transactionAdded(newExpense)
-                }
+                },
+                groupService: viewModel.groupService
             )
         }
         .sheet(isPresented: $viewModel.showSettlement) {
@@ -81,10 +83,10 @@ struct GroupDetailView: View {
                 transaction: transaction,
                 members: viewModel.members,
                 currentUserId: viewModel.currentUserId,
-                onDelete: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                onDelete: viewModel.currentUserId == transaction.paidByUserId ? {
                     viewModel.deleteTransaction(transaction)
                 } : nil,
-                onEdit: viewModel.currentUserId == transaction.paid_by_user_id ? {
+                onEdit: viewModel.currentUserId == transaction.paidByUserId ? {
                     transactionToEdit = transaction
                 } : nil
             )
@@ -94,10 +96,12 @@ struct GroupDetailView: View {
                 mode: .shared(
                     group: viewModel.group,
                     members: viewModel.members,
+                    currentUserId: viewModel.currentUserId,
                     editing: transaction
                 ) { updated in
                     viewModel.transactionEdited(replacing: transaction, with: updated)
-                }
+                },
+                groupService: viewModel.groupService
             )
         }
         .task {
@@ -152,7 +156,7 @@ struct GroupDetailView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                            if transaction.paid_by_user_id == viewModel.currentUserId {
+                                            if transaction.paidByUserId == viewModel.currentUserId {
                                                 Button(role: .destructive) {
                                                     viewModel.deleteTransaction(transaction)
                                                 } label: {
@@ -288,7 +292,7 @@ struct GroupDetailView: View {
                         ForEach(Array(viewModel.members.enumerated()), id: \.element.id) { index, member in
                             GroupMemberRow(
                                 member: member,
-                                isAdmin: member.id == viewModel.group.created_by,
+                                isAdmin: member.id == viewModel.group.createdBy,
                                 isPending: viewModel.isPending(member)
                             )
                             if index < viewModel.members.count - 1 {
@@ -313,12 +317,12 @@ struct GroupDetailView: View {
     let group = APIGroupWithDetails(
         id: UUID(),
         name: "Weekend Trip",
-        created_by: UUID(),
-        created_at: Date(),
+        createdBy: UUID(),
+        createdAt: Date(),
         members: [],
         balances: []
     )
     NavigationStack {
-        GroupDetailView(group: group)
+        GroupDetailView(group: group, currentUserId: nil)
     }
 }

@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct GroupsListView: View {
+    @Environment(\.authService) private var authService
     @State private var viewModel = GroupsListViewModel()
     @State private var showCreateGroup = false
     @State private var navigationPath: [APIGroupWithDetails] = []
@@ -31,7 +32,7 @@ struct GroupsListView: View {
                 prompt: viewModel.selectedTab == .groups ? "Search groups" : "Search activity"
             )
             .navigationDestination(for: APIGroupWithDetails.self) { group in
-                GroupDetailView(group: group)
+                GroupDetailView(group: group, currentUserId: authService.currentUser?.id)
             }
             .sheet(isPresented: $showCreateGroup) {
                 CreateGroupSheet(groupService: viewModel.groupService) { newGroup in
@@ -39,6 +40,7 @@ struct GroupsListView: View {
                 }
             }
             .task {
+                viewModel.setCurrentUser(authService.currentUser?.id)
                 await viewModel.load()
                 handlePendingRoute()
             }
@@ -124,6 +126,7 @@ struct GroupsListView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("groups.group-row")
 
                         if group.id != viewModel.filteredGroups.last?.id {
                             Divider()

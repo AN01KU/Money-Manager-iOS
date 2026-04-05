@@ -26,12 +26,7 @@ final class APIClient {
         config.timeoutIntervalForResource = AppConstants.API.defaultTimeout
         self.session = URLSession(configuration: config)
         
-        #if DEBUG
-        self.baseURL = "http://localhost:8080"
-        #else
         self.baseURL = "https://moneymanager.ankushganesh.cloud"
-        #endif
-
         
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .custom { decoder in
@@ -210,7 +205,7 @@ final class APIClient {
     }
 }
 
-private struct EmptyResponse: Decodable {}
+struct EmptyResponse: Decodable {}
 
 private struct HealthResponse: Decodable {
     let status: String

@@ -10,7 +10,7 @@ import SwiftUI
 struct CurrencyPickerView: View {
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var searchText = ""
-    @State private var selectionToggled = false
+    @State private var selectionToggled = 0
     
     private var filteredCurrencies: [(code: String, name: String, symbol: String)] {
         if searchText.isEmpty {
@@ -28,7 +28,7 @@ struct CurrencyPickerView: View {
         List {
             ForEach(filteredCurrencies, id: \.code) { currency in
                 Button {
-                    selectionToggled = true
+                    selectionToggled += 1
                     selectedCurrency = currency.code
                 } label: {
                     HStack(spacing: 14) {
@@ -63,9 +63,6 @@ struct CurrencyPickerView: View {
                     }
                 }
                 .sensoryFeedback(.selection, trigger: selectionToggled)
-                .onChange(of: selectionToggled) { _, newValue in
-                    if newValue { selectionToggled = false }
-                }
             }
         }
         .searchable(text: $searchText, prompt: "Search currencies")

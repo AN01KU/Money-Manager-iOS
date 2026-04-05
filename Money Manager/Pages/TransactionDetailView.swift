@@ -7,8 +7,8 @@ struct TransactionDetailView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let transaction: Transaction
     @State private var viewModel: TransactionDetailViewModel
-    @State private var editTapped = false
-    @State private var deleteTapped = false
+    @State private var editTapped = 0
+    @State private var deleteTapped = 0
     @State private var deleteSuccess = false
 
     init(transaction: Transaction) {
@@ -23,9 +23,15 @@ struct TransactionDetailView: View {
                     // Hero
                     heroSection
 
+                    // Settlement banner
+                    if viewModel.isSettlementTransaction {
+                        SettlementTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId, onDismiss: { dismiss() })
+                            .padding(.horizontal)
+                    }
+
                     // Group banner (single, no duplication)
                     if viewModel.isGroupTransaction {
-                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupTransactionId)
+                        GroupTransactionContent(groupName: transaction.groupName, groupId: transaction.groupId, onDismiss: { dismiss() })
                             .padding(.horizontal)
                     }
 
@@ -83,9 +89,9 @@ struct TransactionDetailView: View {
                 .font(AppTypography.heroCategory)
                 .foregroundStyle(.secondary)
 
-            Text((transaction.type == "income" ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
+            Text((transaction.type == .income ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
                 .font(AppTypography.amountHero)
-                .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
+                .foregroundStyle(transaction.type == .income ? AppColors.positive : AppColors.expense)
 
             Text(viewModel.formatDateAndTime(transaction.date, time: transaction.time))
                 .font(AppTypography.heroDate)
@@ -111,8 +117,8 @@ struct TransactionDetailView: View {
 
             InfoRow(
                 label: "Type",
-                value: transaction.type == "income" ? "Income" : "Expense",
-                valueColor: transaction.type == "income" ? AppColors.positive : AppColors.expense
+                value: transaction.type == .income ? "Income" : "Expense",
+                valueColor: transaction.type == .income ? AppColors.positive : AppColors.expense
             )
             Divider().padding(.leading, 16)
 
@@ -155,7 +161,7 @@ struct TransactionDetailView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             Button {
-                editTapped = true
+                editTapped += 1
                 viewModel.showEditSheet = true
             } label: {
                 Label("Edit", systemImage: "pencil")
@@ -167,10 +173,9 @@ struct TransactionDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
-            .onChange(of: editTapped) { _, v in if v { editTapped = false } }
 
             Button {
-                deleteTapped = true
+                deleteTapped += 1
                 viewModel.showDeleteAlert = true
             } label: {
                 Label("Delete", systemImage: "trash")
@@ -182,7 +187,6 @@ struct TransactionDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .sensoryFeedback(.warning, trigger: deleteTapped)
-            .onChange(of: deleteTapped) { _, v in if v { deleteTapped = false } }
         }
         .padding(.horizontal)
     }

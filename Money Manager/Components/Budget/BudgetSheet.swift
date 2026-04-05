@@ -18,8 +18,8 @@ struct BudgetSheet: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var errorTriggered = false
-    @State private var successTriggered = false
+    @State private var errorTriggered = 0
+    @State private var successTriggered = 0
     @FocusState private var isAmountFocused: Bool
     
     var body: some View {
@@ -81,12 +81,9 @@ struct BudgetSheet: View {
                 Text(errorMessage)
             }
             .onChange(of: showError) { _, show in
-                if show { errorTriggered = true }
+                if show { errorTriggered += 1 }
             }
             .sensoryFeedback(.error, trigger: errorTriggered)
-            .onChange(of: errorTriggered) { _, newValue in
-                if newValue { errorTriggered = false }
-            }
             .sensoryFeedback(.success, trigger: successTriggered)
             .onAppear {
                 loadExistingBudget()
@@ -153,10 +150,9 @@ struct BudgetSheet: View {
         do {
             try modelContext.save()
             
-            let limitString = amount.formatted(.number.precision(.fractionLength(2)))
             let payload: Data? = action == "create"
-                ? try? APIClient.apiEncoder.encode(APICreateBudgetRequest(id: budgetID, year: year, month: month, limit: limitString))
-                : try? APIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: limitString))
+                ? try? APIClient.apiEncoder.encode(APICreateBudgetRequest(id: budgetID, year: year, month: month, limit: amount))
+                : try? APIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: amount))
             changeQueueManager.enqueue(
                 entityType: "budget",
                 entityID: budgetID,
@@ -180,7 +176,7 @@ struct BudgetSheet: View {
         }
         
         isSaving = false
-        successTriggered = true
+        successTriggered += 1
         dismiss()
     }
     

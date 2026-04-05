@@ -16,8 +16,8 @@ struct TransactionList: View {
     let transactions: [Transaction]
     @State private var selectedTransaction: Transaction?
     @State private var swipedTransactionID: PersistentIdentifier?
-    @State private var rowTapped = false
-    @State private var deleteTriggered = false
+    @State private var rowTapped = 0
+    @State private var deleteTriggered = false  // Used as binding for swipe UI
     var onDelete: ((Transaction) -> Void)?
 
     private var groupedTransactions: [TransactionGroup] {
@@ -61,7 +61,7 @@ struct TransactionList: View {
                                     }
                                 ),
                                 onTap: {
-                                    rowTapped = true
+                                    rowTapped += 1
                                     selectedTransaction = transaction
                                 },
                                 onDelete: {
@@ -84,7 +84,6 @@ struct TransactionList: View {
             }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-        .onChange(of: rowTapped) { _, newValue in if newValue { rowTapped = false } }
         .sheet(item: $selectedTransaction) { transaction in
             TransactionDetailView(transaction: transaction)
         }
@@ -145,13 +144,15 @@ private struct SwipeToDeleteRow<Content: View>: View {
                             }
                         }
                 )
-                .onTapGesture {
-                    if isRevealed {
-                        resetSwipe()
-                    } else {
-                        onTap()
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        if isRevealed {
+                            resetSwipe()
+                        } else {
+                            onTap()
+                        }
                     }
-                }
+                )
         }
         .onChange(of: isRevealed) { _, newValue in
             if !newValue && offset != 0 {

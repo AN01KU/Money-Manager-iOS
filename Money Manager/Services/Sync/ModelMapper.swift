@@ -9,21 +9,21 @@ extension Transaction {
     func toCreateRequest() -> APICreateTransactionRequest {
         APICreateTransactionRequest(
             id: id,
-            type: type,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            type: type.rawValue,
+            amount: amount,
             category: category,
             date: date,
             time: time,
             description: transactionDescription,
             notes: notes,
-            recurring_expense_id: recurringExpenseId
+            recurringExpenseId: recurringExpenseId
         )
     }
 
     func toUpdateRequest() -> APIUpdateTransactionRequest {
         APIUpdateTransactionRequest(
-            type: type,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            type: type.rawValue,
+            amount: amount,
             category: category,
             date: date,
             time: time,
@@ -33,19 +33,20 @@ extension Transaction {
     }
 
     func applyRemote(_ api: APITransaction) {
-        self.type = api.type
-        self.amount = Double(api.amount) ?? self.amount
+        self.type = TransactionKind(rawValue: api.type) ?? self.type
+        self.amount = api.amount
         self.category = api.category
         self.date = api.date
         self.time = api.time
         self.transactionDescription = api.description
         self.notes = api.notes
-        self.isDeleted = api.is_deleted
-        self.recurringExpenseId = api.recurring_expense_id
-        self.groupTransactionId = api.group_transaction_id
-        self.groupName = api.group_name
-        self.settlementId = api.settlement_id
-        self.updatedAt = api.updated_at
+        self.isSoftDeleted = api.isDeleted
+        self.recurringExpenseId = api.recurringExpenseId
+        self.groupTransactionId = api.groupTransactionId
+        self.groupId = api.groupId
+        self.groupName = api.groupName
+        self.settlementId = api.settlementId
+        self.updatedAt = api.updatedAt
     }
 }
 
@@ -54,49 +55,51 @@ extension RecurringTransaction {
         APICreateRecurringTransactionRequest(
             id: id,
             name: name,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            amount: amount,
             category: category,
-            frequency: frequency,
-            day_of_month: dayOfMonth,
-            days_of_week: daysOfWeek,
-            start_date: startDate,
-            end_date: endDate,
-            is_active: isActive,
+            frequency: frequency.rawValue,
+            dayOfMonth: dayOfMonth,
+            daysOfWeek: daysOfWeek,
+            startDate: startDate,
+            endDate: endDate,
+            isActive: isActive,
             notes: notes,
-            type: type
+            type: type.rawValue
         )
     }
 
     func toUpdateRequest() -> APIUpdateRecurringTransactionRequest {
         APIUpdateRecurringTransactionRequest(
             name: name,
-            amount: amount.formatted(.number.precision(.fractionLength(2)).grouping(.never)),
+            amount: amount,
             category: category,
-            frequency: frequency,
-            day_of_month: dayOfMonth,
-            days_of_week: daysOfWeek,
-            start_date: startDate,
-            end_date: endDate,
-            is_active: isActive,
+            frequency: frequency.rawValue,
+            dayOfMonth: dayOfMonth,
+            daysOfWeek: daysOfWeek,
+            startDate: startDate,
+            endDate: endDate,
+            isActive: isActive,
             notes: notes,
-            type: type
+            type: type.rawValue
         )
     }
 
     func applyRemote(_ api: APIRecurringTransaction) {
         self.name = api.name
-        self.amount = Double(api.amount) ?? self.amount
+        self.amount = api.amount
         self.category = api.category
-        self.frequency = api.frequency
-        self.dayOfMonth = api.day_of_month
-        self.daysOfWeek = api.days_of_week
-        self.startDate = api.start_date
-        self.endDate = api.end_date
-        self.isActive = api.is_active
-        self.lastAddedDate = api.last_added_date
+        self.frequency = RecurringFrequency(rawValue: api.frequency) ?? self.frequency
+        self.dayOfMonth = api.dayOfMonth
+        self.daysOfWeek = api.daysOfWeek
+        self.startDate = api.startDate
+        self.endDate = api.endDate
+        self.isActive = api.isActive
+        self.lastAddedDate = api.lastAddedDate
         self.notes = api.notes
-        self.type = api.type ?? self.type
-        self.updatedAt = api.updated_at
+        if let apiType = api.type, let kind = TransactionKind(rawValue: apiType) {
+            self.type = kind
+        }
+        self.updatedAt = api.updatedAt
     }
 }
 
@@ -106,23 +109,23 @@ extension MonthlyBudget {
             id: id,
             year: year,
             month: month,
-            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+            limit: limit
         )
     }
-    
+
     func toUpdateRequest() -> APIUpdateBudgetRequest {
         APIUpdateBudgetRequest(
             year: year,
             month: month,
-            limit: limit.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+            limit: limit
         )
     }
-    
+
     func applyRemote(_ api: APIMonthlyBudget) {
         self.year = api.year
         self.month = api.month
-        self.limit = Double(api.limit) ?? self.limit
-        self.updatedAt = api.updated_at
+        self.limit = api.limit
+        self.updatedAt = api.updatedAt
     }
 }
 
@@ -141,7 +144,7 @@ extension CustomCategory {
             name: name,
             icon: icon,
             color: color,
-            is_hidden: isHidden
+            is_hidden: isHidden  // is_hidden intentionally left as-is per refactor rules
         )
     }
     
@@ -149,9 +152,9 @@ extension CustomCategory {
         self.name = api.name
         self.icon = api.icon
         self.color = api.color
-        self.isHidden = api.is_hidden
-        self.isPredefined = api.is_predefined
-        self.predefinedKey = api.predefined_key
-        self.updatedAt = api.updated_at
+        self.isHidden = api.isHidden
+        self.isPredefined = api.isPredefined
+        self.predefinedKey = api.predefinedKey
+        self.updatedAt = api.updatedAt
     }
 }

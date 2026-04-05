@@ -15,7 +15,7 @@ struct TransactionRow: View {
     }
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, customCategories: customCategories)
+        CategoryResolver.resolve(transaction.category, lookup: CategoryResolver.makeLookup(from: customCategories))
     }
 
     private var resolvedIcon: String { resolved.icon }
@@ -42,7 +42,7 @@ struct TransactionRow: View {
 
                 if transaction.settlementId != nil, let groupName = transaction.groupName {
                     SettlementBadge(groupName: groupName)
-                } else if let groupID = transaction.groupTransactionId {
+                } else if transaction.groupTransactionId != nil, let groupID = transaction.groupId {
                     GroupBadge(
                         groupName: transaction.groupName ?? "Group",
                         groupID: groupID
@@ -53,9 +53,9 @@ struct TransactionRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text((transaction.type == "income" ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
+                Text((transaction.type == .income ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
                     .font(AppTypography.amount)
-                    .foregroundStyle(transaction.type == "income" ? AppColors.positive : AppColors.expense)
+                    .foregroundStyle(transaction.type == .income ? AppColors.positive : AppColors.expense)
 
                 if let time = transaction.time {
                     Text(formatTime(time))
@@ -79,6 +79,7 @@ struct TransactionRow: View {
 // MARK: - Settlement Badge
 
 private struct SettlementBadge: View {
+    @Environment(\.authService) private var authService
     let groupName: String
 
     var body: some View {
@@ -87,14 +88,17 @@ private struct SettlementBadge: View {
                 .font(AppTypography.rowMeta)
             Text(groupName)
                 .font(AppTypography.rowMeta)
+            Image(systemName: authService.isAuthenticated ? "chevron.right" : "lock.fill")
+                .font(AppTypography.badgeIcon)
         }
-        .foregroundStyle(AppColors.warning)
+        .foregroundStyle(authService.isAuthenticated ? AppColors.warning : .secondary)
     }
 }
 
 // MARK: - Group Badge
 
 private struct GroupBadge: View {
+    @Environment(\.authService) private var authService
     let groupName: String
     let groupID: UUID
 

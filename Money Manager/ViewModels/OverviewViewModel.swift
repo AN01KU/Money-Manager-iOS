@@ -10,13 +10,13 @@ enum TransactionTypeFilter: String, CaseIterable {
 @MainActor
 @Observable class OverviewViewModel {
     var selectedView: ViewType = .daily
-    var selectedDate: Date = Date() { didSet { recalculate() } }
-    var filterMode: FilterMode = .monthly { didSet { recalculate() } }
+    var selectedDate: Date = Date() { didSet { if oldValue != selectedDate { recalculate() } } }
+    var filterMode: FilterMode = .monthly { didSet { if oldValue != filterMode { recalculate() } } }
     var showAddTransaction = false
     var showBudgetSheet = false
-    var searchText = "" { didSet { recalculate() } }
-    var selectedCategoryFilter: String? { didSet { recalculate() } }
-    var transactionTypeFilter: TransactionTypeFilter = .all { didSet { recalculate() } }
+    var searchText = "" { didSet { if oldValue != searchText { recalculate() } } }
+    var selectedCategoryFilter: String? { didSet { if oldValue != selectedCategoryFilter { recalculate() } } }
+    var transactionTypeFilter: TransactionTypeFilter = .all { didSet { if oldValue != transactionTypeFilter { recalculate() } } }
 
     var filteredTransactions: [Transaction] = []
     var currentBudget: MonthlyBudget?
@@ -31,19 +31,22 @@ enum TransactionTypeFilter: String, CaseIterable {
     private var allTransactions: [Transaction] = []
     private var budgets: [MonthlyBudget] = []
     private var customCategories: [CustomCategory] = []
-    var modelContext: ModelContext?
-    private let changeQueue: ChangeQueueManagerProtocol
-    private let auth: AuthServiceProtocol
+    private var categoryLookup: [String: CustomCategory] = [:]
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
+    let persistence: PersistenceService
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager, auth: AuthServiceProtocol = authService) {
-        self.changeQueue = changeQueue
-        self.auth = auth
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
     }
 
     func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
         self.allTransactions = allTransactions
         self.budgets = budgets
         self.customCategories = customCategories
+        self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
     }
 
@@ -59,7 +62,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             }
 
             dateFiltered = allTransactions.filter { transaction in
-                !transaction.isDeleted &&
+                !transaction.isSoftDeleted &&
                 transaction.date >= startOfDay &&
                 transaction.date <= endOfDay
             }
@@ -73,7 +76,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             }
 
             dateFiltered = allTransactions.filter { transaction in
-                !transaction.isDeleted &&
+                !transaction.isSoftDeleted &&
                 transaction.date >= startOfMonth &&
                 transaction.date < firstDayNextMonth
             }
@@ -94,13 +97,13 @@ enum TransactionTypeFilter: String, CaseIterable {
         }
 
         // Compute totals before applying type filter (so budget card is always accurate)
-        totalSpent = result.filter { $0.type == "expense" }.reduce(0) { $0 + $1.amount }
-        totalIncome = result.filter { $0.type == "income" }.reduce(0) { $0 + $1.amount }
+        totalSpent = result.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
+        totalIncome = result.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
 
         switch transactionTypeFilter {
         case .all:      break
-        case .expenses: result = result.filter { $0.type == "expense" }
-        case .income:   result = result.filter { $0.type == "income" }
+        case .expenses: result = result.filter { $0.type == .expense }
+        case .income:   result = result.filter { $0.type == .income }
         }
 
         filteredTransactions = result
@@ -123,7 +126,7 @@ enum TransactionTypeFilter: String, CaseIterable {
             categoryBase = result  // already income-only at this point
             categoryTotal = totalIncome
         } else {
-            categoryBase = result.filter { $0.type == "expense" }
+            categoryBase = result.filter { $0.type == .expense }
             categoryTotal = totalSpent
         }
 
@@ -174,32 +177,14 @@ enum TransactionTypeFilter: String, CaseIterable {
     func confirmDeleteTransaction() {
         guard let transaction = transactionToDelete else { return }
 
-        transaction.isDeleted = true
+        transaction.isSoftDeleted = true
         transaction.updatedAt = Date()
         transactionToDelete = nil
 
-        if let modelContext = modelContext {
-            do {
-                try modelContext.save()
-
-                changeQueue.enqueue(
-                    entityType: "transaction",
-                    entityID: transaction.id,
-                    action: "delete",
-                    endpoint: "/transactions",
-                    httpMethod: "DELETE",
-                    payload: nil,
-                    context: modelContext
-                )
-
-                if NetworkMonitor.shared.isConnected {
-                    Task {
-                        await changeQueue.replayAll(context: modelContext, isAuthenticated: auth.isAuthenticated)
-                    }
-                }
-            } catch {
-                AppLogger.data.error("Error deleting transaction: \(error)")
-            }
+        do {
+            try persistence.saveTransaction(transaction, action: "delete")
+        } catch {
+            AppLogger.data.error("Error deleting transaction: \(error)")
         }
 
         recalculate()
@@ -210,6 +195,6 @@ enum TransactionTypeFilter: String, CaseIterable {
     }
 
     func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
-        CategoryResolver.resolve(categoryName, customCategories: customCategories)
+        CategoryResolver.resolve(categoryName, lookup: categoryLookup)
     }
 }

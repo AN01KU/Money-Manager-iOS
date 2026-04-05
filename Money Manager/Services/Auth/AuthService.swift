@@ -72,10 +72,17 @@ final class AuthService: AuthServiceProtocol {
         isLoading = true
         errorMessage = nil
 
+        // If a different user was previously logged in, wipe their local data first
+        let normalizedEmail = email.lowercased()
+        if let lastEmail = session.getLastLoggedInEmail(), lastEmail != normalizedEmail {
+            SyncService.shared.clearAllUserData()
+        }
+
         do {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
             session.saveToken(response.token)
+            session.saveLastLoggedInEmail(normalizedEmail)
             authState = .authenticated(response.user)
             isLoading = false
         } catch {
@@ -86,14 +93,15 @@ final class AuthService: AuthServiceProtocol {
     }
 
     @MainActor
-    func signup(email: String, username: String, password: String) async throws {
+    func signup(email: String, username: String, password: String, inviteCode: String) async throws {
         isLoading = true
         errorMessage = nil
 
         do {
-            let request = APISignupRequest(email: email, username: username, password: password)
+            let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
+            session.saveLastLoggedInEmail(email.lowercased())
             authState = .authenticated(response.user)
             isLoading = false
         } catch {

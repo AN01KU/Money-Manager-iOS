@@ -26,6 +26,26 @@ make clean                          # Clean build artifacts
 
 When fixing or adding tests, always use `make test-one TEST=<TestClass>` to run only what you touched.
 
+### Screenshots
+
+Screenshots in `Screenshots/` are generated from the live test account via `ScreenshotGenerator`.
+
+```bash
+make screenshots                    # Capture all screens → copies PNGs to Screenshots/
+make screenshot-one TAG=overview    # Capture a single screen by tag
+```
+
+**Run `make screenshots` before committing any UI change** so the screenshots stay current.
+
+The generator lives in `Money ManagerUITests/Screenshots/ScreenshotGenerator.swift`.
+Tags are defined in `Money ManagerUITests/Screenshots/ScreenshotTag.swift`.
+
+To add a new screen:
+1. Add a `case` to `ScreenshotTag`
+2. Add a `captureXxx()` method in `ScreenshotGenerator` and call it from `captureAll()`
+
+Requires the backend to be reachable and the test account (`ankush@gmail.com`) to exist.
+
 ### Test Output Handling
 
 **IMPORTANT**: Never use `head`, `grep`, or `tail` to filter test output. The test result file is located at:

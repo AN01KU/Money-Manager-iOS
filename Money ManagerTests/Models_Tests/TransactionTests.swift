@@ -22,20 +22,20 @@ struct TransactionModelTests {
     @Test
     func testTransactionCanBeMarkedAsDeleted() {
         let expense = Transaction(amount: 100, category: "Other", date: Date())
-        #expect(expense.isDeleted == false)
-        expense.isDeleted = true
-        #expect(expense.isDeleted == true)
+        #expect(expense.isSoftDeleted == false)
+        expense.isSoftDeleted = true
+        #expect(expense.isSoftDeleted == true)
     }
 
     @Test
     func testTransactionDefaultTypeIsExpense() {
         let expense = Transaction(amount: 100, category: "Food & Dining", date: Date())
-        #expect(expense.type == "expense")
+        #expect(expense.type == .expense)
     }
 
     @Test
     func testIncomeType() {
-        let income = Transaction(type: "income", amount: 5000, category: "Work & Professional", date: Date())
-        #expect(income.type == "income")
+        let income = Transaction(type: .income, amount: 5000, category: "Work & Professional", date: Date())
+        #expect(income.type == .income)
     }
 }

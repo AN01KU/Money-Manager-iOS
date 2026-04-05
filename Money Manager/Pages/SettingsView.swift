@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
+    @Environment(\.authService) private var authService
+    @Environment(\.syncService) private var syncService
+    @Environment(\.changeQueueManager) private var changeQueueManager
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
@@ -128,18 +131,21 @@ struct SettingsView: View {
             } label: {
                 Label("Budgets", systemImage: "chart.bar.fill")
             }
+            .accessibilityIdentifier("settings.budgets-row")
 
             NavigationLink {
                 RecurringTransactionsView()
             } label: {
                 Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
             }
+            .accessibilityIdentifier("settings.recurring-row")
 
             NavigationLink {
                 ManageCategoriesView()
             } label: {
                 Label("Categories", systemImage: "square.grid.2x2.fill")
             }
+            .accessibilityIdentifier("settings.categories-row")
         }
     }
 
