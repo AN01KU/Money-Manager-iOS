@@ -106,10 +106,7 @@ private struct TransactionsBody: View {
         .background(Color(.systemGroupedBackground))
         .searchable(text: $viewModel.searchText, prompt: "Search transactions")
         .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
-        .alert("Delete Transaction?", isPresented: Binding(
-            get: { viewModel.transactionToDelete != nil },
-            set: { if !$0 { viewModel.cancelDeleteTransaction() } }
-        )) {
+        .alert("Delete Transaction?", isPresented: $viewModel.isConfirmingDelete) {
             Button("Cancel", role: .cancel) { viewModel.cancelDeleteTransaction() }
             Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }
         } message: {
