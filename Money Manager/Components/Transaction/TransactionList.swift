@@ -14,12 +14,17 @@ private let sectionDateFormatter: DateFormatter = {
 
 struct TransactionList: View {
     let transactions: [Transaction]
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     @State private var selectedTransaction: Transaction?
     @State private var swipedTransactionID: PersistentIdentifier?
     @State private var rowTapped = 0
     @State private var deleteTriggered = false  // Used as binding for swipe UI
     var onDelete: ((Transaction) -> Void)?
     var onGroupTapped: ((UUID) -> Void)?
+
+    private var categoryLookup: [String: CustomCategory] {
+        CategoryResolver.makeLookup(from: customCategories)
+    }
 
     private var groupedTransactions: [TransactionGroup] {
         let calendar = Calendar.current
@@ -70,7 +75,7 @@ struct TransactionList: View {
                                     onDelete?(transaction)
                                 }
                             ) {
-                                TransactionRow(transaction: transaction, onGroupTapped: onGroupTapped)
+                                TransactionRow(transaction: transaction, categoryLookup: categoryLookup, onGroupTapped: onGroupTapped)
                             }
 
                             if transaction.persistentModelID != section.transactions.last?.persistentModelID {

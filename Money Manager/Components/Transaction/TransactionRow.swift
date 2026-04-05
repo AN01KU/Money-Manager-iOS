@@ -9,15 +9,11 @@ private let timeFormatter: DateFormatter = {
 
 struct TransactionRow: View {
     let transaction: Transaction
+    let categoryLookup: [String: CustomCategory]
     var onGroupTapped: ((UUID) -> Void)?
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    init(transaction: Transaction, onGroupTapped: ((UUID) -> Void)? = nil) {
-        self.transaction = transaction
-        self.onGroupTapped = onGroupTapped
-    }
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, lookup: CategoryResolver.makeLookup(from: customCategories))
+        CategoryResolver.resolve(transaction.category, lookup: categoryLookup)
     }
 
     private var resolvedIcon: String { resolved.icon }
@@ -133,8 +129,8 @@ private struct GroupBadge: View {
             date: Date(),
             time: Date(),
             transactionDescription: "Lunch at cafe"
-        )
+        ),
+        categoryLookup: [:]
     )
     .padding()
-    .modelContainer(for: [CustomCategory.self], inMemory: true)
 }
