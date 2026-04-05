@@ -1,6 +1,17 @@
 import SwiftUI
 import SwiftData
 
+private enum SettingsRoute: Hashable {
+    case budgets
+    case recurring
+    case categories
+    case currency
+    case backup
+    #if DEBUG
+    case syncDebug
+    #endif
+}
+
 struct SettingsView: View {
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
@@ -34,6 +45,18 @@ struct SettingsView: View {
                 aboutSection
             }
             .navigationTitle("Settings")
+            .navigationDestination(for: SettingsRoute.self) { route in
+                switch route {
+                case .budgets:    BudgetsView()
+                case .recurring:  RecurringTransactionsView()
+                case .categories: ManageCategoriesView()
+                case .currency:   CurrencyPickerView()
+                case .backup:     ExportDataView()
+                #if DEBUG
+                case .syncDebug:  SyncDebugView()
+                #endif
+                }
+            }
             .sheet(isPresented: $showLoginSheet) {
                 LoginView(isDismissable: true)
             }
@@ -126,23 +149,17 @@ struct SettingsView: View {
 
     private var financeSection: some View {
         Section("Finance") {
-            NavigationLink {
-                BudgetsView()
-            } label: {
+            NavigationLink(value: SettingsRoute.budgets) {
                 Label("Budgets", systemImage: "chart.bar.fill")
             }
             .accessibilityIdentifier("settings.budgets-row")
 
-            NavigationLink {
-                RecurringTransactionsView()
-            } label: {
+            NavigationLink(value: SettingsRoute.recurring) {
                 Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
             }
             .accessibilityIdentifier("settings.recurring-row")
 
-            NavigationLink {
-                ManageCategoriesView()
-            } label: {
+            NavigationLink(value: SettingsRoute.categories) {
                 Label("Categories", systemImage: "square.grid.2x2.fill")
             }
             .accessibilityIdentifier("settings.categories-row")
@@ -153,9 +170,7 @@ struct SettingsView: View {
 
     private var preferencesSection: some View {
         Section("Preferences") {
-            NavigationLink {
-                CurrencyPickerView()
-            } label: {
+            NavigationLink(value: SettingsRoute.currency) {
                 HStack {
                     Label("Currency", systemImage: "coloncurrencysign.circle")
                     Spacer()
@@ -164,9 +179,7 @@ struct SettingsView: View {
                 }
             }
 
-            NavigationLink {
-                ExportDataView()
-            } label: {
+            NavigationLink(value: SettingsRoute.backup) {
                 Label("Backup", systemImage: "archivebox.fill")
             }
         }
@@ -234,9 +247,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var debugSection: some View {
         Section {
-            NavigationLink {
-                SyncDebugView()
-            } label: {
+            NavigationLink(value: SettingsRoute.syncDebug) {
                 Label("Sync Debug", systemImage: "antenna.radiowaves.left.and.right")
             }
         } header: {
