@@ -33,9 +33,11 @@ import SwiftData
             .sorted { ($0.nextOccurrence ?? .distantFuture) < ($1.nextOccurrence ?? .distantFuture) }
     }
 
-    /// Sum of amounts for all upcoming transactions this month.
+    /// Net amount for upcoming transactions this month (income - expense).
     var upcomingTotalThisMonth: Double {
-        upcomingThisMonth.reduce(0) { $0 + $1.amount }
+        upcomingThisMonth.reduce(0) { total, item in
+            item.type == .income ? total + item.amount : total - item.amount
+        }
     }
 
     var modelContext: ModelContext? {
@@ -114,6 +116,7 @@ import SwiftData
     var name: String = ""
     var amount: String = ""
     var selectedCategory: String = ""
+    var transactionType: TransactionKind = .expense
     var frequency: RecurringFrequency = .monthly
     var startDate: Date = Date()
     var hasEndDate: Bool = false
@@ -144,9 +147,10 @@ import SwiftData
         return !name.trimmingCharacters(in: .whitespaces).isEmpty && !selectedCategory.isEmpty
     }
 
-    func prefill(amount: String, category: String) {
+    func prefill(amount: String, category: String, type: TransactionKind = .expense) {
         self.amount = amount
         self.selectedCategory = category
+        self.transactionType = type
     }
 
     func save() -> Bool {
@@ -182,7 +186,8 @@ import SwiftData
             startDate: startDate,
             endDate: hasEndDate ? endDate : nil,
             notes: notes.isEmpty ? nil : notes,
-            categoryId: resolvedCategoryId
+            categoryId: resolvedCategoryId,
+            type: transactionType
         )
 
         modelContext.insert(recurringTransaction)

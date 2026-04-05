@@ -17,7 +17,7 @@ struct RecurringTransactionsView: View {
                 EmptyStateView(
                     icon: "arrow.clockwise.circle.fill",
                     title: "No recurring transactions",
-                    message: "Add subscriptions and regular bills to track them automatically"
+                    message: "Add recurring incomes and expenses to track them automatically"
                 )
             } else {
                 List {
@@ -34,9 +34,9 @@ struct RecurringTransactionsView: View {
                             HStack {
                                 Text("Upcoming This Month")
                                 Spacer()
-                                Text(CurrencyFormatter.format(viewModel.upcomingTotalThisMonth))
+                                Text(CurrencyFormatter.format(abs(viewModel.upcomingTotalThisMonth)))
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(AppColors.expense)
+                                    .foregroundStyle(viewModel.upcomingTotalThisMonth >= 0 ? AppColors.income : AppColors.expense)
                             }
                         }
                     }

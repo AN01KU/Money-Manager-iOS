@@ -155,6 +155,81 @@ struct RecurringTransactionsViewModelTests {
 
         #expect(paused.isSoftDeleted == true)
     }
+
+    // MARK: - upcomingTotalThisMonth
+
+    // nextOccurrence for daily items with yesterday as startDate lands on tomorrow,
+    // which is within the current month (unless today is the last day of the month).
+    @Test
+    func testUpcomingTotalThisMonthIsNegativeForExpenses() {
+        let viewModel = RecurringTransactionsViewModel()
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+
+        let expense = RecurringTransaction(
+            name: "Rent",
+            amount: 10000,
+            category: "Housing",
+            frequency: .daily,
+            startDate: yesterday,
+            isActive: true,
+            type: .expense
+        )
+        viewModel.update(recurring: [expense])
+
+        #expect(viewModel.upcomingTotalThisMonth <= 0)
+    }
+
+    @Test
+    func testUpcomingTotalThisMonthIsPositiveForIncome() {
+        let viewModel = RecurringTransactionsViewModel()
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+
+        let income = RecurringTransaction(
+            name: "Salary",
+            amount: 50000,
+            category: "Income",
+            frequency: .daily,
+            startDate: yesterday,
+            isActive: true,
+            type: .income
+        )
+        viewModel.update(recurring: [income])
+
+        #expect(viewModel.upcomingTotalThisMonth >= 0)
+    }
+
+    @Test
+    func testUpcomingTotalThisMonthIsNetOfIncomeAndExpense() {
+        let viewModel = RecurringTransactionsViewModel()
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+
+        let income = RecurringTransaction(
+            name: "Salary",
+            amount: 50000,
+            category: "Income",
+            frequency: .daily,
+            startDate: yesterday,
+            isActive: true,
+            type: .income
+        )
+        let expense = RecurringTransaction(
+            name: "Rent",
+            amount: 20000,
+            category: "Housing",
+            frequency: .daily,
+            startDate: yesterday,
+            isActive: true,
+            type: .expense
+        )
+        viewModel.update(recurring: [income, expense])
+
+        // Net = income - expense = 50000 - 20000 = 30000
+        // Both items' nextOccurrence is tomorrow (in the current month)
+        #expect(viewModel.upcomingTotalThisMonth == 30000)
+    }
 }
 
 @MainActor
@@ -434,5 +509,59 @@ struct AddRecurringTransactionViewModelTests {
         let items = (try? context.fetch(descriptor)) ?? []
 
         #expect(items.first?.notes == nil)
+    }
+
+    // MARK: - Transaction type
+
+    @Test
+    func testDefaultTransactionTypeIsExpense() {
+        let viewModel = AddRecurringTransactionViewModel()
+        #expect(viewModel.transactionType == .expense)
+    }
+
+    @Test
+    func testPrefillSetsTransactionType() {
+        let viewModel = AddRecurringTransactionViewModel()
+        viewModel.prefill(amount: "5000", category: "Salary", type: .income)
+        #expect(viewModel.transactionType == .income)
+    }
+
+    @Test
+    func testPrefillDefaultsToExpenseWhenTypeOmitted() {
+        let viewModel = AddRecurringTransactionViewModel()
+        viewModel.prefill(amount: "500", category: "Food")
+        #expect(viewModel.transactionType == .expense)
+    }
+
+    @Test
+    func testSavePersistsIncomeType() {
+        let viewModel = AddRecurringTransactionViewModel()
+        viewModel.name = "Salary"
+        viewModel.amount = "50000"
+        viewModel.selectedCategory = "Income"
+        viewModel.transactionType = .income
+
+        let context = ModelContext(makeTestContainer())
+        viewModel.modelContext = context
+        _ = viewModel.save()
+
+        let items = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
+        #expect(items.first?.type == .income)
+    }
+
+    @Test
+    func testSavePersistsExpenseType() {
+        let viewModel = AddRecurringTransactionViewModel()
+        viewModel.name = "Netflix"
+        viewModel.amount = "649"
+        viewModel.selectedCategory = "Entertainment"
+        viewModel.transactionType = .expense
+
+        let context = ModelContext(makeTestContainer())
+        viewModel.modelContext = context
+        _ = viewModel.save()
+
+        let items = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
+        #expect(items.first?.type == .expense)
     }
 }

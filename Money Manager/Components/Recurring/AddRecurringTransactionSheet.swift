@@ -8,10 +8,12 @@ struct AddRecurringTransactionSheet: View {
 
     private let prefillAmount: String
     private let prefillCategory: String
+    private let prefillType: TransactionKind
 
-    init(prefillAmount: String = "", prefillCategory: String = "") {
+    init(prefillAmount: String = "", prefillCategory: String = "", prefillType: TransactionKind = .expense) {
         self.prefillAmount = prefillAmount
         self.prefillCategory = prefillCategory
+        self.prefillType = prefillType
     }
 
     @State private var viewModel = AddRecurringTransactionViewModel()
@@ -97,6 +99,15 @@ struct AddRecurringTransactionSheet: View {
                 }
                 
                 Section {
+                    Picker("Type", selection: $viewModel.transactionType) {
+                        ForEach(TransactionKind.allCases, id: \.self) { kind in
+                            Text(kind.rawValue.capitalized).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Frequency")
                             .font(.subheadline)
@@ -168,7 +179,7 @@ struct AddRecurringTransactionSheet: View {
             .task {
                 viewModel.modelContext = modelContext
                 viewModel.customCategories = customCategories
-                viewModel.prefill(amount: prefillAmount, category: prefillCategory)
+                viewModel.prefill(amount: prefillAmount, category: prefillCategory, type: prefillType)
             }
             .onChange(of: customCategories) { _, newValue in
                 viewModel.customCategories = newValue

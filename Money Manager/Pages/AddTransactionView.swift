@@ -40,14 +40,12 @@ struct AddTransactionView: View {
                     transactionTypeSection
                     dateTimeSection
                     detailsSection
-                    if viewModel.transactionType == .expense {
-                        Section {
-                            Button {
-                                viewModel.showRecurringSheet = true
-                            } label: {
-                                Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
-                                    .foregroundStyle(AppColors.accent)
-                            }
+                    Section {
+                        Button {
+                            viewModel.showRecurringSheet = true
+                        } label: {
+                            Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
+                                .foregroundStyle(AppColors.accent)
                         }
                     }
                 }
@@ -77,7 +75,7 @@ struct AddTransactionView: View {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
             .sheet(isPresented: $viewModel.showRecurringSheet) {
-                AddRecurringTransactionSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
+                AddRecurringTransactionSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory, prefillType: viewModel.transactionType.kind)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}

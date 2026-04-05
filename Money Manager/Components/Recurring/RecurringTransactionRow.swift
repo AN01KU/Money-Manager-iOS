@@ -68,7 +68,7 @@ struct RecurringTransactionRow: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(CurrencyFormatter.format(recurring.amount))
                         .font(.body)
-                        .foregroundStyle(recurring.isActive ? AppColors.expense : .secondary)
+                        .foregroundStyle(recurring.isActive ? (recurring.type == .income ? AppColors.income : AppColors.expense) : .secondary)
 
                     Toggle("", isOn: Binding(
                         get: { recurring.isActive },

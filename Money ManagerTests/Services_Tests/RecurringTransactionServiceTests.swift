@@ -332,4 +332,56 @@ struct RecurringTransactionServiceTests {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         #expect(transactions.count == 3)
     }
+
+    // MARK: - Transaction type propagation
+
+    @Test("Generated transaction inherits income type from recurring record")
+    func testGeneratedTransactionInheritsIncomeType() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        let recurring = RecurringTransaction(
+            name: "Salary",
+            amount: 50000,
+            category: "Income",
+            frequency: .monthly,
+            startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
+            isActive: true,
+            type: .income
+        )
+
+        let context = ModelContext(makeTestContainer())
+        context.insert(recurring)
+        try? context.save()
+
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        #expect(transactions.first?.type == .income)
+    }
+
+    @Test("Generated transaction inherits expense type from recurring record")
+    func testGeneratedTransactionInheritsExpenseType() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        let recurring = RecurringTransaction(
+            name: "Netflix",
+            amount: 649,
+            category: "Entertainment",
+            frequency: .monthly,
+            startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
+            isActive: true,
+            type: .expense
+        )
+
+        let context = ModelContext(makeTestContainer())
+        context.insert(recurring)
+        try? context.save()
+
+        RecurringTransactionService.generatePendingTransactions(context: context)
+
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        #expect(transactions.first?.type == .expense)
+    }
 }
