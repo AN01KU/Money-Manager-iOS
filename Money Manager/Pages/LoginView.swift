@@ -55,7 +55,10 @@ struct LoginView: View {
             }) {
                 SignupView()
             }
-            .alert("Login Error", isPresented: .constant(errorMessage != nil)) {
+            .alert("Login Error", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
                 Button("OK") { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
