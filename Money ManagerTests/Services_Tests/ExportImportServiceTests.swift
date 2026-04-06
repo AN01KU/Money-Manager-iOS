@@ -5,6 +5,7 @@ import Testing
 
 // MARK: - ExportService Tests
 
+@MainActor
 struct ExportServiceTests {
     private let service = ExportService()
 
