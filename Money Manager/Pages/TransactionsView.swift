@@ -19,11 +19,8 @@ struct TransactionsView: View {
             viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
-        .onChange(of: allTransactions) { _, newValue in
-            viewModel.update(allTransactions: newValue, customCategories: customCategories)
-        }
-        .onChange(of: customCategories) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, customCategories: newValue)
+        .onChange(of: TransactionsQuerySnapshot(transactions: allTransactions, categories: customCategories)) {
+            viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
         .onChange(of: categoryFilter?.wrappedValue) { _, newValue in
             guard let category = newValue else { return }
@@ -211,4 +208,11 @@ private struct TransactionsFilterBar: View {
         }
         .sensoryFeedback(.selection, trigger: selectionChanged)
     }
+}
+
+// MARK: - Helpers
+
+private struct TransactionsQuerySnapshot: Equatable {
+    let transactions: [Transaction]
+    let categories: [CustomCategory]
 }
