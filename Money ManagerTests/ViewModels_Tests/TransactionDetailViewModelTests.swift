@@ -204,10 +204,7 @@ struct TransactionDetailViewModelTests {
 
         let result = viewModel.formatDateAndTime(date, time: nil)
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .none
-        let expectedDateOnly = dateFormatter.string(from: date)
+        let expectedDateOnly = date.formatted(date: .abbreviated, time: .omitted)
 
         #expect(result == expectedDateOnly)
     }
