@@ -8,15 +8,6 @@
 import SwiftUI
 import Charts
 
-struct OnboardingPage: Identifiable {
-    let id = UUID()
-    let icon: String
-    let title: String
-    let description: String
-    let color: Color
-    var features: [String] = []
-}
-
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var currentPage = 0
