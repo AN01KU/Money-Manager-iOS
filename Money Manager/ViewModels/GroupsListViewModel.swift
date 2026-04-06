@@ -5,6 +5,12 @@
 
 import SwiftUI
 
+private let activitySectionDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "MMMM dd"
+    return f
+}()
+
 enum GroupsTab {
     case groups
     case activities
@@ -84,6 +90,27 @@ final class GroupsListViewModel {
             }
             return false
         }
+    }
+
+    var groupedActivity: [ActivitySection] {
+        let calendar = Calendar.current
+        var grouped: [String: [ActivityItem]] = [:]
+
+        for item in filteredActivity {
+            let day = calendar.startOfDay(for: item.date)
+            let key = calendar.isDateInToday(day)
+                ? "TODAY"
+                : activitySectionDateFormatter.string(from: day).uppercased()
+            grouped[key, default: []].append(item)
+        }
+
+        return grouped
+            .map { ActivitySection(id: $0.key, label: $0.key, items: $0.value) }
+            .sorted { a, b in
+                if a.id == "TODAY" { return true }
+                if b.id == "TODAY" { return false }
+                return a.id > b.id
+            }
     }
 
     // MARK: - Actions

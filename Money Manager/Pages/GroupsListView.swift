@@ -5,12 +5,6 @@
 
 import SwiftUI
 
-private let activitySectionDateFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "MMMM dd"
-    return f
-}()
-
 struct GroupsListView: View {
     @Environment(\.authService) private var authService
     @State private var viewModel = GroupsListViewModel()
@@ -158,7 +152,7 @@ struct GroupsListView: View {
                 .padding(.top, 32)
             } else {
                 VStack(alignment: .leading, spacing: 20) {
-                    ForEach(groupedActivity) { section in
+                    ForEach(viewModel.groupedActivity) { section in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(section.label)
                                 .font(AppTypography.sectionHeader)
@@ -185,32 +179,6 @@ struct GroupsListView: View {
         }
     }
 
-    private struct ActivitySection: Identifiable {
-        let id: String
-        let label: String
-        let items: [ActivityItem]
-    }
-
-    private var groupedActivity: [ActivitySection] {
-        let calendar = Calendar.current
-        var grouped: [String: [ActivityItem]] = [:]
-
-        for item in viewModel.filteredActivity {
-            let day = calendar.startOfDay(for: item.date)
-            let key = calendar.isDateInToday(day)
-                ? "TODAY"
-                : activitySectionDateFormatter.string(from: day).uppercased()
-            grouped[key, default: []].append(item)
-        }
-
-        return grouped
-            .map { ActivitySection(id: $0.key, label: $0.key, items: $0.value) }
-            .sorted { a, b in
-                if a.id == "TODAY" { return true }
-                if b.id == "TODAY" { return false }
-                return a.id > b.id
-            }
-    }
 }
 
 #Preview("Groups List") {
