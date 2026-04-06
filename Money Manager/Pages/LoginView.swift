@@ -18,18 +18,18 @@ struct LoginView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showDataWipeAlert = false
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 32) {
-                    headerSection
+                    LoginHeaderSection()
 
-                    formSection
+                    LoginFormSection(email: $email, password: $password)
 
-                    loginButton
+                    LoginButton(isLoading: isLoading, isFormValid: isFormValid, onTap: login)
 
-                    signupLink
+                    LoginSignupLink(onSignUp: { showSignup = true })
 
                     if let onSkip {
                         Button("Continue without account") {
@@ -73,84 +73,11 @@ struct LoginView: View {
             }
         }
     }
-    
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "indianrupeesign.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(AppColors.accent)
-            
-            Text("Money Manager")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            Text("Sign in to continue")
-                .font(.body)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.top, 40)
-    }
-    
-    private var formSection: some View {
-        VStack(spacing: 16) {
-            TextField("Email", text: $email)
-                .textFieldStyle(.plain)
-                .keyboardType(.emailAddress)
-                .textContentType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-            SecureField("Password", text: $password)
-                .textFieldStyle(.plain)
-                .textContentType(.password)
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-    
-    private var loginButton: some View {
-        Button {
-            login()
-        } label: {
-            Group {
-                if isLoading {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Text("Sign In")
-                        .fontWeight(.semibold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(isFormValid ? AppColors.accent : Color.gray)
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .disabled(!isFormValid || isLoading)
-    }
-    
-    private var signupLink: some View {
-        HStack {
-            Text("Don't have an account?")
-                .foregroundStyle(.secondary)
-            
-            Button("Sign Up") {
-                showSignup = true
-            }
-            .fontWeight(.semibold)
-            .foregroundStyle(AppColors.accent)
-        }
-        .font(.subheadline)
-    }
-    
+
     private var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && email.contains("@")
     }
-    
+
     private func login() {
         let normalizedEmail = email.lowercased()
         if let lastEmail = SessionStore.shared.getLastLoggedInEmail(), lastEmail != normalizedEmail {
@@ -174,6 +101,96 @@ struct LoginView: View {
             }
             isLoading = false
         }
+    }
+}
+
+private struct LoginHeaderSection: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "indianrupeesign.circle.fill")
+                .font(.system(size: 80))
+                .foregroundStyle(AppColors.accent)
+
+            Text("Money Manager")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            Text("Sign in to continue")
+                .font(.body)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 40)
+    }
+}
+
+private struct LoginFormSection: View {
+    @Binding var email: String
+    @Binding var password: String
+
+    var body: some View {
+        VStack(spacing: 16) {
+            TextField("Email", text: $email)
+                .textFieldStyle(.plain)
+                .keyboardType(.emailAddress)
+                .textContentType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .padding()
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            SecureField("Password", text: $password)
+                .textFieldStyle(.plain)
+                .textContentType(.password)
+                .padding()
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+private struct LoginButton: View {
+    let isLoading: Bool
+    let isFormValid: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            Group {
+                if isLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Text("Sign In")
+                        .fontWeight(.semibold)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(isFormValid ? AppColors.accent : Color.gray)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .disabled(!isFormValid || isLoading)
+    }
+}
+
+private struct LoginSignupLink: View {
+    let onSignUp: () -> Void
+
+    var body: some View {
+        HStack {
+            Text("Don't have an account?")
+                .foregroundStyle(.secondary)
+
+            Button("Sign Up") {
+                onSignUp()
+            }
+            .fontWeight(.semibold)
+            .foregroundStyle(AppColors.accent)
+        }
+        .font(.subheadline)
     }
 }
 

@@ -7,11 +7,6 @@ struct AddTransactionView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @State private var viewModel: AddTransactionViewModel
-    @State private var amount100Tapped = 0
-    @State private var amount500Tapped = 0
-    @State private var amount1000Tapped = 0
-    @State private var categoryTapped = 0
-    @State private var todayTapped = 0
     @State private var saveSuccess = false
     @State private var errorTriggered = 0
 
@@ -26,20 +21,20 @@ struct AddTransactionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                amountSection
+                AddTransactionAmountSection(viewModel: viewModel, customCategories: customCategories)
 
                 if viewModel.isShared {
-                    sharedDescriptionSection
-                    paidBySection
-                    splitSection
-                    splitMembersSection
+                    AddTransactionSharedDescriptionSection(viewModel: viewModel)
+                    AddTransactionPaidBySection(viewModel: viewModel)
+                    AddTransactionSplitSection(viewModel: viewModel)
+                    AddTransactionSplitMembersSection(viewModel: viewModel)
                     if viewModel.splitType == .custom && !viewModel.selectedMembers.isEmpty {
-                        splitSummarySection
+                        AddTransactionSplitSummarySection(viewModel: viewModel)
                     }
                 } else {
-                    transactionTypeSection
-                    dateTimeSection
-                    detailsSection
+                    AddTransactionTypeSection(viewModel: viewModel)
+                    AddTransactionDateTimeSection(viewModel: viewModel)
+                    AddTransactionDetailsSection(viewModel: viewModel)
                     Section {
                         Button {
                             viewModel.showRecurringSheet = true
@@ -95,10 +90,20 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Amount + Category (same as personal)
+// MARK: - Shared: Amount + Category (same as personal)
 
-    private var amountSection: some View {
+private struct AddTransactionAmountSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+    let customCategories: [CustomCategory]
+
+    @State private var amount100Tapped = 0
+    @State private var amount500Tapped = 0
+    @State private var amount1000Tapped = 0
+    @State private var categoryTapped = 0
+
+    var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Amount *")
@@ -155,10 +160,14 @@ struct AddTransactionView: View {
             .padding(.vertical, 8)
         }
     }
+}
 
-    // MARK: - Personal: Transaction Type
+// MARK: - Personal: Transaction Type
 
-    private var transactionTypeSection: some View {
+private struct AddTransactionTypeSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section {
             Picker("Type", selection: $viewModel.transactionType) {
                 ForEach(TransactionType.allCases, id: \.self) { type in
@@ -168,10 +177,16 @@ struct AddTransactionView: View {
             .pickerStyle(.segmented)
         }
     }
+}
 
-    // MARK: - Personal: Date + Time
+// MARK: - Personal: Date + Time
 
-    private var dateTimeSection: some View {
+private struct AddTransactionDateTimeSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    @State private var todayTapped = 0
+
+    var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Date *")
@@ -203,10 +218,14 @@ struct AddTransactionView: View {
             .padding(.vertical, 8)
         }
     }
+}
 
-    // MARK: - Personal: Details
+// MARK: - Personal: Details
 
-    private var detailsSection: some View {
+private struct AddTransactionDetailsSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Details") {
             TextField("Description (e.g., Lunch at cafe)", text: $viewModel.description)
                 .textInputAutocapitalization(.sentences)
@@ -216,10 +235,14 @@ struct AddTransactionView: View {
                 .textInputAutocapitalization(.sentences)
         }
     }
+}
 
-    // MARK: - Shared: Description (required)
+// MARK: - Shared: Description (required)
 
-    private var sharedDescriptionSection: some View {
+private struct AddTransactionSharedDescriptionSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Details") {
             TextField("Description * (e.g., Dinner, Cab)", text: $viewModel.description)
                 .textInputAutocapitalization(.sentences)
@@ -228,10 +251,14 @@ struct AddTransactionView: View {
                 .textInputAutocapitalization(.sentences)
         }
     }
+}
 
-    // MARK: - Shared: Paid By
+// MARK: - Shared: Paid By
 
-    private var paidBySection: some View {
+private struct AddTransactionPaidBySection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Paid By") {
             if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
@@ -260,10 +287,14 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Split Type
+// MARK: - Shared: Split Type
 
-    private var splitSection: some View {
+private struct AddTransactionSplitSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Split") {
             Picker("Split Type", selection: $viewModel.splitType) {
                 ForEach(SplitType.allCases, id: \.self) { type in
@@ -285,10 +316,14 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Member Selection + Custom Amounts
+// MARK: - Shared: Member Selection + Custom Amounts
 
-    private var splitMembersSection: some View {
+private struct AddTransactionSplitMembersSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Split Between") {
             if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
@@ -333,10 +368,14 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Custom Split Summary
+// MARK: - Shared: Custom Split Summary
 
-    private var splitSummarySection: some View {
+private struct AddTransactionSplitSummarySection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section {
             HStack {
                 Text("Total assigned")
