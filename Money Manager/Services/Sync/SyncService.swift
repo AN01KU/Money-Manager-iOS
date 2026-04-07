@@ -6,6 +6,12 @@
 import Foundation
 import SwiftData
 
+enum PreflightOutcome {
+    case valid
+    case invalid(reason: String)
+    case skipped   // no session ID — offline queue was created before any login
+}
+
 @Observable
 final class SyncService: SyncServiceProtocol {
     static let shared = SyncService()
@@ -95,7 +101,15 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Sync on launch started")
         let context = ModelContext(container)
-        await changeQueueManager.replayAll(context: context, isAuthenticated: true)
+
+        let preflight = await runPreflight()
+        switch preflight {
+        case .valid, .skipped:
+            await changeQueueManager.replayAll(context: context, isAuthenticated: true)
+        case .invalid(let reason):
+            AppLogger.sync.warning("Preflight failed on launch: \(reason) — skipping queue replay")
+        }
+
         await pullFromServer(context: context)
         AppLogger.sync.info("Sync on launch complete")
     }
@@ -109,9 +123,41 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Sync on reconnect started")
         let context = ModelContext(container)
-        await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+
+        let preflight = await runPreflight()
+        switch preflight {
+        case .valid, .skipped:
+            await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+        case .invalid(let reason):
+            AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — skipping queue replay")
+        }
+
         await pullFromServer(context: context)
         AppLogger.sync.info("Sync on reconnect complete")
+    }
+
+    /// Calls POST /sync/preflight to verify the stored sync session is still valid.
+    /// Returns `.skipped` when no session ID is stored (nothing queued offline yet).
+    private func runPreflight() async -> PreflightOutcome {
+        guard let sessionID = SessionStore.shared.getSyncSessionID() else {
+            return .skipped
+        }
+
+        do {
+            let body = APISyncPreflightRequest(syncSessionId: sessionID)
+            let response: APISyncPreflightResponse = try await apiClient.post("/sync/preflight", body: body)
+            return response.valid ? .valid : .invalid(reason: response.reason ?? "UNKNOWN")
+        } catch let error as APIError {
+            if case .syncSessionInvalid(let reason) = error {
+                return .invalid(reason: reason)
+            }
+            // Network or server error — treat as skipped so we don't block the queue unnecessarily
+            AppLogger.sync.warning("Preflight request failed: \(error) — proceeding with sync")
+            return .skipped
+        } catch {
+            AppLogger.sync.warning("Preflight request failed: \(error) — proceeding with sync")
+            return .skipped
+        }
     }
 
     func fullSync() async {

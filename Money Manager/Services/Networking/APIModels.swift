@@ -205,6 +205,19 @@ struct APILogoutRequest: Codable {
     }
 }
 
+struct APISyncPreflightRequest: Codable, Sendable {
+    let syncSessionId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case syncSessionId = "sync_session_id"
+    }
+}
+
+struct APISyncPreflightResponse: Codable, Sendable {
+    let valid: Bool
+    let reason: String?
+}
+
 struct APICreateTransactionRequest: Codable {
     let id: UUID?
     let type: String          // "expense" or "income"
