@@ -13,10 +13,16 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     /// Base delay in seconds — actual delay is `baseRetryDelay * 2^retryCount + jitter`
     private static let baseRetryDelay: TimeInterval = 2.0
 
-    private let apiClient = APIClient.shared
+    private var apiClient: APIClient = APIClient.shared
     private var modelContainer: ModelContainer?
 
     init() {}
+
+    #if DEBUG
+    func setAPIClientForTesting(_ client: APIClient) {
+        apiClient = client
+    }
+    #endif
 
     func configure(container: ModelContainer) {
         self.modelContainer = container
@@ -122,6 +128,12 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             } catch {
                 if case APIError.unauthorized = error {
                     NotificationCenter.default.post(name: .authSessionExpired, object: nil)
+                    return
+                }
+
+                if case APIError.syncSessionInvalid = error {
+                    orphanAll(context: context)
+                    NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
                     return
                 }
 
