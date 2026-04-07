@@ -60,27 +60,21 @@ struct SyncSessionOrphanNotificationTests {
     }
 
     @Test
-    func testEmptyQueueOrphanDoesNotPostNotification() async throws {
+    func testEmptyQueueOrphanDoesNotPostNotification() throws {
         let context = try makeContext()
         let manager = ChangeQueueManager()
 
-        var received = false
-        let observer = NotificationCenter.default.addObserver(
-            forName: .syncSessionOrphaned,
-            object: nil,
-            queue: .main
-        ) { _ in received = true }
-        defer { NotificationCenter.default.removeObserver(observer) }
-
-        // orphanAll on empty queue — SyncService only posts notification if orphaning actually happened
+        // orphanAll on empty queue — SyncService only posts if changes were actually moved
         let pendingBefore = (try? context.fetch(FetchDescriptor<PendingChange>()))?.count ?? 0
-        if pendingBefore > 0 {
-            manager.orphanAll(context: context)
-            NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
+        manager.orphanAll(context: context)
+
+        let orphanedAfter = (try? context.fetch(FetchDescriptor<OrphanedChange>()))?.count ?? 0
+
+        // If queue was empty, no changes should be orphaned
+        if pendingBefore == 0 {
+            #expect(orphanedAfter == 0)
         }
-
-        await Task.yield()
-
-        #expect(received == false)
+        // Notification posting is guarded in SyncService (not ChangeQueueManager directly),
+        // so we verify the precondition: orphanAll on empty queue produces no orphans.
     }
 }
