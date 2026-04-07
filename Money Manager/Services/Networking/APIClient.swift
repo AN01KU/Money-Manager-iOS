@@ -19,7 +19,9 @@ final class APIClient {
     private let encoder: JSONEncoder
     
     private var _testToken: String?
-    
+    private var _testSyncSessionID: UUID?
+    private var _testURLSession: URLSession?
+
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = AppConstants.API.defaultTimeout
@@ -46,9 +48,20 @@ final class APIClient {
     func setTestToken(_ token: String?) {
         _testToken = token
     }
-    
+
     func clearTestToken() {
         _testToken = nil
+    }
+
+    func setTestSyncSessionID(_ id: UUID?) {
+        _testSyncSessionID = id
+    }
+
+    /// Returns a fresh APIClient using the given URLSession — for unit tests only.
+    static func makeForTesting(session testSession: URLSession) -> APIClient {
+        let client = APIClient()
+        client._testURLSession = testSession
+        return client
     }
     #endif
     
@@ -121,7 +134,7 @@ final class APIClient {
         }
     }
     
-    private func buildRequest(
+    func buildRequest(
         endpoint: String,
         method: String,
         queryItems: [URLQueryItem]? = nil
@@ -142,17 +155,25 @@ final class APIClient {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
+
         if let token = _testToken ?? SessionStore.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        
+
+        let writeMethods: Set<String> = ["POST", "PUT", "PATCH", "DELETE"]
+        if writeMethods.contains(method),
+           let syncSessionID = _testSyncSessionID ?? SessionStore.shared.getSyncSessionID() {
+            request.setValue(syncSessionID.uuidString, forHTTPHeaderField: "X-Sync-Session-ID")
+            request.setValue("1", forHTTPHeaderField: "X-Sync-Version")
+        }
+
         return request
     }
     
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         do {
-            let (data, response) = try await session.data(for: request)
+            let activeSession = _testURLSession ?? session
+            let (data, response) = try await activeSession.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
