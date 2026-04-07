@@ -5,6 +5,7 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showSessionExpiredAlert = false
     @State private var showLoginSheet = false
+    @State private var showOrphanedRecordsAlert = false
 
     var body: some View {
         Group {
@@ -20,6 +21,11 @@ struct ContentView: View {
         } message: {
             Text("Your session has expired. Please log in again to continue syncing.")
         }
+        .alert("Records Not Synced", isPresented: $showOrphanedRecordsAlert) {
+            Button("Dismiss", role: .cancel) {}
+        } message: {
+            Text("Some records from a previous session couldn't be synced and have been set aside. They will be removed after 7 days.")
+        }
         .sheet(isPresented: $showLoginSheet) {
             LoginView(isDismissable: true)
         }
@@ -27,6 +33,9 @@ struct ContentView: View {
             if case .expired = newState {
                 showSessionExpiredAlert = true
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .syncSessionOrphaned)) { _ in
+            showOrphanedRecordsAlert = true
         }
     }
 }
