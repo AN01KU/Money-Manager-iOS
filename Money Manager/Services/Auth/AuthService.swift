@@ -82,6 +82,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
             session.saveToken(response.token)
+            session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
             authState = .authenticated(response.user)
             isLoading = false
@@ -101,6 +102,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
+            session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(email.lowercased())
             authState = .authenticated(response.user)
             isLoading = false
@@ -113,9 +115,17 @@ final class AuthService: AuthServiceProtocol {
 
     @MainActor
     func logout() {
+        let syncSessionID = session.getSyncSessionID()
         session.clearSession()
         UserDefaults.standard.removeObject(forKey: "last_sync_at")
         NotificationCenter.default.post(name: .userDidLogout, object: nil)
         authState = .guest
+
+        if let id = syncSessionID {
+            Task {
+                let body = APILogoutRequest(syncSessionId: id)
+                try? await apiClient.post("/auth/logout", body: body) as EmptyResponse
+            }
+        }
     }
 }

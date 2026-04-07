@@ -42,6 +42,24 @@ final class SessionStore {
         guard let context = modelContainer?.mainContext else { return }
         deleteAllTokens(in: context)
         try? context.save()
+        clearSyncSessionID()
+    }
+
+    // MARK: - Sync Session ID
+
+    private let syncSessionIDKey = "sync_session_id"
+
+    func saveSyncSessionID(_ id: UUID) {
+        UserDefaults.standard.set(id.uuidString, forKey: syncSessionIDKey)
+    }
+
+    func getSyncSessionID() -> UUID? {
+        guard let raw = UserDefaults.standard.string(forKey: syncSessionIDKey) else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    private func clearSyncSessionID() {
+        UserDefaults.standard.removeObject(forKey: syncSessionIDKey)
     }
 
     // MARK: - Last Logged In Email

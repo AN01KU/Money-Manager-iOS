@@ -14,6 +14,49 @@ struct SessionStoreTests {
         return store
     }
 
+    // MARK: - Sync Session ID
+
+    @Test
+    func testGetSyncSessionIDReturnsNilWhenNotSet() throws {
+        let store = try makeStore()
+        UserDefaults.standard.removeObject(forKey: "sync_session_id")
+
+        #expect(store.getSyncSessionID() == nil)
+    }
+
+    @Test
+    func testSaveSyncSessionIDPersistsAndRetrievesValue() throws {
+        let store = try makeStore()
+        let id = UUID()
+        store.saveSyncSessionID(id)
+        defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
+
+        #expect(store.getSyncSessionID() == id)
+    }
+
+    @Test
+    func testSaveSyncSessionIDOverwritesPreviousValue() throws {
+        let store = try makeStore()
+        let first = UUID()
+        let second = UUID()
+        store.saveSyncSessionID(first)
+        store.saveSyncSessionID(second)
+        defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
+
+        #expect(store.getSyncSessionID() == second)
+    }
+
+    @Test
+    func testClearSessionAlsoClearsSyncSessionID() throws {
+        let store = try makeStore()
+        store.saveToken("tok")
+        store.saveSyncSessionID(UUID())
+        store.clearSession()
+        defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
+
+        #expect(store.getSyncSessionID() == nil)
+    }
+
     // MARK: - isLoggedIn
 
     @Test

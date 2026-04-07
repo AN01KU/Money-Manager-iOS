@@ -149,7 +149,14 @@ struct APIUser: Codable {
 
 struct APIAuthResponse: Codable {
     let token: String
+    let syncSessionId: UUID
     let user: APIUser
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case syncSessionId = "sync_session_id"
+        case user
+    }
 }
 
 struct APIPaginatedResponse<T: Codable>: Codable {
@@ -188,6 +195,14 @@ struct APISignupRequest: Codable {
 struct APILoginRequest: Codable {
     let email: String
     let password: String
+}
+
+struct APILogoutRequest: Codable {
+    let syncSessionId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case syncSessionId = "sync_session_id"
+    }
 }
 
 struct APICreateTransactionRequest: Codable {
