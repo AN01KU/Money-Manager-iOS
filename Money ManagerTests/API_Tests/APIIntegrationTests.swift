@@ -9,9 +9,13 @@ struct APIIntegrationTests {
     private let testPassword: String = "Test123!"
     private static var authEmail: String = ""
     private static var authToken: String = ""
+    private static var authSyncSessionID: UUID? = nil
 
     init() {
         APIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken)
+        if let sid = Self.authSyncSessionID {
+            APIClient.shared.setTestSyncSessionID(sid)
+        }
     }
 
     private func delay(_ ms: Int = 100) async {
@@ -33,10 +37,15 @@ struct APIIntegrationTests {
             let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
 
             Self.authToken = signupResponse.token
+            Self.authSyncSessionID = signupResponse.syncSessionId
             Self.authEmail = email
             APIClient.shared.setTestToken(Self.authToken)
+            APIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
         } else {
             APIClient.shared.setTestToken(Self.authToken)
+            if let sid = Self.authSyncSessionID {
+                APIClient.shared.setTestSyncSessionID(sid)
+            }
         }
     }
 
@@ -52,10 +61,30 @@ struct APIIntegrationTests {
 
         #expect(!response.token.isEmpty)
         #expect(response.user.email == email)
+        #expect(response.syncSessionId != UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))
 
         Self.authToken = response.token
+        Self.authSyncSessionID = response.syncSessionId
         Self.authEmail = email
         APIClient.shared.setTestToken(response.token)
+        APIClient.shared.setTestSyncSessionID(response.syncSessionId)
+    }
+
+    @Test("Preflight returns valid for fresh sync session")
+    mutating func testSyncPreflightValidForFreshSession() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        guard let sessionID = Self.authSyncSessionID else {
+            Issue.record("No sync session ID available — ensure testAuthSignup ran first")
+            return
+        }
+
+        let body = APISyncPreflightRequest(syncSessionId: sessionID)
+        let response: APISyncPreflightResponse = try await APIClient.shared.post("/sync/preflight", body: body)
+
+        #expect(response.valid == true)
+        #expect(response.reason == nil)
     }
 
     // MARK: - Category Tests
