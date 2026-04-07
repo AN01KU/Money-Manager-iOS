@@ -28,7 +28,11 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     ) {}
     
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {}
-    
+
     func clearAll(context: ModelContext) {}
+
+    func orphanAll(context: ModelContext) {}
+
+    func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {}
 }
 #endif

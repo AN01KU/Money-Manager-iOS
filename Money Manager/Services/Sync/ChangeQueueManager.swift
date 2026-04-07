@@ -225,5 +225,37 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             try? context.save()
         }
     }
+
+    func orphanAll(context: ModelContext) {
+        let descriptor = FetchDescriptor<PendingChange>()
+        guard let changes = try? context.fetch(descriptor), !changes.isEmpty else { return }
+
+        for change in changes {
+            let orphan = OrphanedChange(
+                entityType: change.entityType,
+                entityID: change.entityID,
+                action: change.action,
+                endpoint: change.endpoint,
+                httpMethod: change.httpMethod,
+                payload: change.payload,
+                createdAt: change.createdAt
+            )
+            context.insert(orphan)
+            context.delete(change)
+        }
+        try? context.save()
+    }
+
+    func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {
+        let cutoff = Date(timeIntervalSinceNow: -Double(days) * 86400)
+        let descriptor = FetchDescriptor<OrphanedChange>(
+            predicate: #Predicate { $0.orphanedAt < cutoff }
+        )
+        guard let expired = try? context.fetch(descriptor), !expired.isEmpty else { return }
+        for orphan in expired {
+            context.delete(orphan)
+        }
+        try? context.save()
+    }
 }
 

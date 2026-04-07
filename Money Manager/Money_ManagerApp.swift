@@ -40,6 +40,7 @@ struct Money_ManagerApp: App {
             MonthlyBudget.self,
             PendingChange.self,
             FailedChange.self,
+            OrphanedChange.self,
             AuthToken.self,
             SplitGroupModel.self,
             GroupMemberModel.self,

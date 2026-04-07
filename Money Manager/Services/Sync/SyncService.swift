@@ -87,6 +87,7 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: MonthlyBudget.self)
         try? context.delete(model: CustomCategory.self)
         try? context.delete(model: PendingChange.self)
+        try? context.delete(model: OrphanedChange.self)
         try? context.delete(model: SplitGroupModel.self)
         try? context.delete(model: GroupMemberModel.self)
         try? context.delete(model: GroupTransactionModel.self)
@@ -102,12 +103,16 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.info("Sync on launch started")
         let context = ModelContext(container)
 
+        changeQueueManager.purgeExpiredOrphans(olderThan: 7, context: context)
+
         let preflight = await runPreflight()
         switch preflight {
         case .valid, .skipped:
             await changeQueueManager.replayAll(context: context, isAuthenticated: true)
         case .invalid(let reason):
-            AppLogger.sync.warning("Preflight failed on launch: \(reason) — skipping queue replay")
+            AppLogger.sync.warning("Preflight failed on launch: \(reason) — orphaning queue")
+            changeQueueManager.orphanAll(context: context)
+            NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
 
         await pullFromServer(context: context)
@@ -129,7 +134,9 @@ final class SyncService: SyncServiceProtocol {
         case .valid, .skipped:
             await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
         case .invalid(let reason):
-            AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — skipping queue replay")
+            AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — orphaning queue")
+            changeQueueManager.orphanAll(context: context)
+            NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
 
         await pullFromServer(context: context)

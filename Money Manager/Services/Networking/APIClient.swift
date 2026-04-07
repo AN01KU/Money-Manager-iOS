@@ -8,6 +8,7 @@ import Foundation
 extension Notification.Name {
     static let authSessionExpired = Notification.Name("authSessionExpired")
     static let userDidLogout = Notification.Name("userDidLogout")
+    static let syncSessionOrphaned = Notification.Name("syncSessionOrphaned")
 }
 
 final class APIClient {
