@@ -107,16 +107,31 @@ struct ChangeQueueManagerSyncRejectionTests {
         client.setTestToken("tok")
         manager.setAPIClientForTesting(client)
 
-        var notificationReceived = false
-        let observer = NotificationCenter.default.addObserver(
-            forName: .syncSessionOrphaned,
-            object: nil,
-            queue: .main
-        ) { _ in notificationReceived = true }
-        defer { NotificationCenter.default.removeObserver(observer) }
+        // Use a continuation to await the notification rather than relying on Task.yield(),
+        // which is not guaranteed to drain the main run-loop queue before the assertion fires.
+        let notificationReceived: Bool = await withCheckedContinuation { continuation in
+            var resumed = false
+            let observer = NotificationCenter.default.addObserver(
+                forName: .syncSessionOrphaned,
+                object: nil,
+                queue: nil  // nil = posted on the same thread that calls post(), no dispatch hop
+            ) { _ in
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: true)
+            }
 
-        await manager.replayAll(context: context, isAuthenticated: true)
-        await Task.yield()
+            Task { @MainActor in
+                await manager.replayAll(context: context, isAuthenticated: true)
+                NotificationCenter.default.removeObserver(observer)
+                // If replayAll returned without posting the notification, resume with false
+                // so the test fails rather than hanging.
+                if !resumed {
+                    resumed = true
+                    continuation.resume(returning: false)
+                }
+            }
+        }
 
         #expect(notificationReceived == true)
     }
