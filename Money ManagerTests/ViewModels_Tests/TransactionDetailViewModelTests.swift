@@ -10,14 +10,44 @@ struct TransactionDetailViewModelTests {
     // MARK: - Initial State
 
     @Test
-    func testInitialState() {
+    func testInitialStateSheetsAreDismissed() {
         let transaction = Transaction(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
+        // Sheets must start closed — opening one before the view has appeared would
+        // present immediately and skip the transition animation.
         #expect(viewModel.showEditSheet == false)
         #expect(viewModel.showDeleteAlert == false)
         #expect(viewModel.customCategories.isEmpty)
-        #expect(viewModel.transaction.amount == 100)
+    }
+
+    // MARK: - isSettlementTransaction
+
+    @Test
+    func testIsSettlementTransactionWhenSettlementIdPresent() {
+        let transaction = Transaction(amount: 50, category: "Food", date: Date(), settlementId: UUID())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isSettlementTransaction == true)
+    }
+
+    @Test
+    func testIsSettlementTransactionWhenSettlementIdNil() {
+        let transaction = Transaction(amount: 50, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isSettlementTransaction == false)
+    }
+
+    @Test
+    func testIsSettlementTransactionIsIndependentOfGroupTransactionId() {
+        // A group transaction (split expense) is not the same as a settlement.
+        // Having a groupTransactionId must not make isSettlementTransaction true.
+        let transaction = Transaction(amount: 100, category: "Food", date: Date(), groupTransactionId: UUID())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isGroupTransaction == true)
+        #expect(viewModel.isSettlementTransaction == false)
     }
 
     // MARK: - isGroupTransaction
@@ -212,10 +242,14 @@ struct TransactionDetailViewModelTests {
     // MARK: - formatFullDate
 
     @Test
-    func testFormatFullDateReturnsFormattedString() {
+    func testFormatFullDateMatchesAbbreviatedDateAndShortenedTime() {
         let viewModel = TransactionDetailViewModel(transaction: Transaction(amount: 0, category: "Food", date: Date()))
+        let calendar = Calendar.current
+        let date = calendar.date(from: DateComponents(year: 2026, month: 4, day: 8, hour: 9, minute: 15))!
 
-        let result = viewModel.formatFullDate(Date())
-        #expect(!result.isEmpty)
+        let result = viewModel.formatFullDate(date)
+        let expected = date.formatted(date: .abbreviated, time: .shortened)
+
+        #expect(result == expected)
     }
 }
