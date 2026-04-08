@@ -599,10 +599,10 @@ struct BackupViewModelTests {
 @MainActor
 struct BackupViewModelExportTests {
     
-    private func createTestContext() -> ModelContext {
-        ModelContext(makeTestContainer())
+    private func createTestContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
-    
+
     // MARK: - Export Expenses Tests
     
     @Test
@@ -1009,16 +1009,16 @@ struct BackupViewModelExportTests {
 @MainActor
 struct BackupViewModelImportTests {
     
-    private func createTestContext() -> ModelContext {
-        ModelContext(makeTestContainer())
+    private func createTestContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
-    
+
     // MARK: - JSON Import Tests
     
     @Test
     func testImportTransactionsFromJSON() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
@@ -1066,7 +1066,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportBudgetsFromJSON() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
@@ -1102,7 +1102,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportCategoriesFromJSON() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
@@ -1146,7 +1146,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportRecurringTransactionsFromJSON() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
@@ -1197,7 +1197,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportAllDataFromJSON() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let recId = UUID().uuidString
         let exportData = ExportData(
@@ -1250,7 +1250,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportEmptyDataShowsNoDataMessage() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let exportData = ExportData(
             exportDate: Date(),
@@ -1277,9 +1277,9 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportInvalidJSONShowsError() async {
+    func testImportInvalidJSONShowsError() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_invalid.json")
         try! "{ invalid json }".write(to: tempURL, atomically: true, encoding: .utf8)
@@ -1298,7 +1298,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportTransactionsFromCSV() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let csv = """
         id,amount,category,date,time,description,notes,recurring expense id,group id,group name
@@ -1324,7 +1324,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportBudgetsFromCSV() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let csv = """
         id,year,month,limit
@@ -1349,7 +1349,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportCategoriesFromCSV() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let csv = """
         id,name,icon,color,is hidden,is predefined,predefined key
@@ -1374,7 +1374,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportSectionBasedCSV() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let csv = """
         # TRANSACTIONS
@@ -1411,7 +1411,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportCSVWithEmptyFileDoesNotCrash() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let csv = "id,amount,category,date\n"
         
@@ -1426,9 +1426,9 @@ struct BackupViewModelImportTests {
     }
     
     @Test
-    func testImportResetsImportingFlag() async {
+    func testImportResetsImportingFlag() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_nonexistent.json")
         
@@ -1441,7 +1441,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportPredefinedCategoryUpdatesExisting() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         // Insert existing predefined category
         let existing = CustomCategory(
@@ -1498,7 +1498,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportTransactionWithRecurringTransactionIdMapping() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let recId = UUID().uuidString
         let exportData = ExportData(
@@ -1548,7 +1548,7 @@ struct BackupViewModelImportTests {
     @Test
     func testImportTransactionWithGroupFields() async throws {
         let viewModel = BackupViewModel()
-        let context = createTestContext()
+        let context = try createTestContext()
         
         let groupTransactionId = UUID().uuidString
         let exportData = ExportData(

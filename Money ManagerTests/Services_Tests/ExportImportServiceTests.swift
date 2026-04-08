@@ -225,7 +225,7 @@ struct ImportServiceTests {
     // MARK: JSON import round-trip
 
     @Test func importJSON_roundTrip_transactions() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         // Export
@@ -247,7 +247,7 @@ struct ImportServiceTests {
     }
 
     @Test func importJSON_roundTrip_budgets() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let budget = MonthlyBudget(year: 2026, month: 4, limit: 7000)
@@ -266,7 +266,7 @@ struct ImportServiceTests {
     }
 
     @Test func importJSON_roundTrip_categories() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let cat = CustomCategory(name: "Health", icon: "heart.fill", color: "#FF0000")
@@ -284,7 +284,7 @@ struct ImportServiceTests {
     }
 
     @Test func importJSON_roundTrip_allData() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let tx = Transaction(amount: 100, category: "Food", date: Date())
@@ -303,7 +303,7 @@ struct ImportServiceTests {
     // MARK: CSV import round-trip
 
     @Test func importCSV_roundTrip_transactions() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let tx = Transaction(amount: 150, category: "Food", date: Date(), transactionDescription: "Breakfast")
@@ -321,7 +321,7 @@ struct ImportServiceTests {
     }
 
     @Test func importCSV_roundTrip_budgets() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let budget = MonthlyBudget(year: 2026, month: 6, limit: 4000)
@@ -333,7 +333,7 @@ struct ImportServiceTests {
     }
 
     @Test func importCSV_roundTrip_allSections() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let tx = Transaction(amount: 200, category: "Transport", date: Date())
@@ -352,7 +352,7 @@ struct ImportServiceTests {
     // MARK: Malformed input
 
     @Test func importCSV_emptyFile_returnsNoDataMessage() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("empty.csv")
@@ -363,7 +363,7 @@ struct ImportServiceTests {
     }
 
     @Test func importCSV_headerOnlyNoRows_returnsNoDataMessage() throws {
-        let container = makeTestContainer()
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("header_only.csv")
@@ -373,8 +373,8 @@ struct ImportServiceTests {
         #expect(result.message.contains("No data found"))
     }
 
-    @Test func importJSON_malformedJSON_throws() {
-        let container = makeTestContainer()
+    @Test func importJSON_malformedJSON_throws() throws {
+        let container = try makeTestContainer()
         let context = ModelContext(container)
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("bad.json")

@@ -6,8 +6,8 @@ import Testing
 @MainActor
 struct AddTransactionViewModelTests {
 
-    private func makeContext() -> ModelContext {
-        ModelContext(makeTestContainer())
+    private func makeContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
 
     // MARK: - Validation
@@ -132,7 +132,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveCreatesNewTransaction() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
 
@@ -160,7 +160,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveCreatesIncomeTransaction() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
         vm.transactionType = .income
@@ -176,7 +176,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveWithoutTimeSetTimeToNil() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
 
@@ -192,7 +192,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveWithEmptyDescriptionAndNotesSetsNil() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
 
@@ -212,7 +212,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveUpdatesExistingTransaction() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let existing = Transaction(
             amount: 100,
             category: "Food",
@@ -247,8 +247,8 @@ struct AddTransactionViewModelTests {
     // MARK: - Save: validation failures
 
     @Test
-    func testSaveFailsWithZeroAmount() {
-        let context = makeContext()
+    func testSaveFailsWithZeroAmount() throws {
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
         vm.amount = "0"
@@ -264,8 +264,8 @@ struct AddTransactionViewModelTests {
     }
 
     @Test
-    func testSaveFailsWithNonNumericAmount() {
-        let context = makeContext()
+    func testSaveFailsWithNonNumericAmount() throws {
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
         vm.amount = "abc"
@@ -295,7 +295,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveSetsCorrectDateWithTime() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
 
@@ -322,7 +322,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSaveSetsStartOfDayWhenNoTime() throws {
-        let context = makeContext()
+        let context = try makeContext()
         let vm = AddTransactionViewModel(mode: .personal())
         vm.modelContext = context
 

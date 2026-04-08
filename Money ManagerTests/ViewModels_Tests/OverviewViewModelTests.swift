@@ -552,7 +552,7 @@ struct OverviewViewModelTests {
     // MARK: - Ensure Budget Exists Tests
     
     @Test
-    func testEnsureBudgetExistsDoesNothingWhenBudgetExists() {
+    func testEnsureBudgetExistsDoesNothingWhenBudgetExists() throws {
         let viewModel = OverviewViewModel()
         
         let calendar = Calendar.current
@@ -562,7 +562,7 @@ struct OverviewViewModelTests {
         
         viewModel.update(allTransactions: [], budgets: [existingBudget], customCategories: [])
         
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         
         viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
         
@@ -570,14 +570,14 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() {
+    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() throws {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
         
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         
         #expect(viewModel.currentBudget == nil)
         
@@ -589,14 +589,14 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testEnsureBudgetExistsDoesNothingWhenLimitIsZero() {
+    func testEnsureBudgetExistsDoesNothingWhenLimitIsZero() throws {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
         
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         
         viewModel.ensureBudgetExists(defaultBudgetLimit: 0, modelContext: context)
         

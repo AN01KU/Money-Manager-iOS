@@ -8,9 +8,9 @@ import Testing
 @MainActor
 struct ManageCategoriesViewModelTests {
 
-    private func makeContext() -> ModelContext {
+    private func makeContext() throws -> ModelContext {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(
+        let container = try ModelContainer(
             for: Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self]),
             configurations: config
         )
@@ -33,8 +33,8 @@ struct ManageCategoriesViewModelTests {
     }
 
     @Test
-    func testHideCategoryUpdatesOverrideRow() {
-        let context = makeContext()
+    func testHideCategoryUpdatesOverrideRow() throws {
+        let context = try makeContext()
         let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
         context.insert(row)
 
@@ -53,8 +53,8 @@ struct ManageCategoriesViewModelTests {
     }
 
     @Test
-    func testRestoreCategoryUpdatesOverrideRow() {
-        let context = makeContext()
+    func testRestoreCategoryUpdatesOverrideRow() throws {
+        let context = try makeContext()
         let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
         row.isHidden = true
         context.insert(row)
@@ -108,7 +108,7 @@ struct ManageCategoriesViewModelTests {
 
     @Test
     func testConfirmDeleteReassignsTransactionsAndRemovesRow() throws {
-        let context = makeContext()
+        let context = try makeContext()
 
         let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
         let foodExpense = Transaction(amount: 100, category: "Food", date: Date(), categoryId: row.id)
@@ -151,7 +151,7 @@ struct ManageCategoriesViewModelTests {
 
     @Test
     func testRestoreDefaultsDeletesOverrideRows() throws {
-        let context = makeContext()
+        let context = try makeContext()
 
         let override = CustomCategory(
             name: "RENAMED",
@@ -184,7 +184,7 @@ struct ManageCategoriesViewModelTests {
 
     @Test
     func testResetAllDeletesAllCategoryRows() throws {
-        let context = makeContext()
+        let context = try makeContext()
 
         let custom = CustomCategory(name: "My Custom", icon: "star", color: "#FF0000")
         let override = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "foodDining")
@@ -213,8 +213,8 @@ struct ManageCategoriesViewModelTests {
 @MainActor
 struct AddCategoryViewModelTests {
 
-    private func makeContext() -> ModelContext {
-        ModelContext(makeTestContainer())
+    private func makeContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
 
     @Test
@@ -229,7 +229,7 @@ struct AddCategoryViewModelTests {
 
     @Test
     func testSaveCreatesCategory() async throws {
-        let context = makeContext()
+        let context = try makeContext()
         let viewModel = AddCategoryViewModel()
         viewModel.modelContext = context
         viewModel.name = "  Groceries  "
@@ -270,8 +270,8 @@ struct AddCategoryViewModelTests {
     }
 
     @Test
-    func testSaveBlockedByColorConflict() async {
-        let context = makeContext()
+    func testSaveBlockedByColorConflict() async throws {
+        let context = try makeContext()
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
 
         let viewModel = AddCategoryViewModel()
@@ -288,7 +288,7 @@ struct AddCategoryViewModelTests {
 
     @Test
     func testSaveSucceedsAfterColorWarningConfirmed() async throws {
-        let context = makeContext()
+        let context = try makeContext()
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
 
         let viewModel = AddCategoryViewModel()
@@ -309,8 +309,8 @@ struct AddCategoryViewModelTests {
     }
 
     @Test
-    func testSaveBlockedByDuplicatePredefinedName() async {
-        let context = makeContext()
+    func testSaveBlockedByDuplicatePredefinedName() async throws {
+        let context = try makeContext()
         let viewModel = AddCategoryViewModel()
         viewModel.modelContext = context
         viewModel.name = "Food & Dining"  // matches PredefinedCategory.foodDining.rawValue
@@ -327,8 +327,8 @@ struct AddCategoryViewModelTests {
 @MainActor
 struct EditCategoryViewModelTests {
 
-    private func makeContext() -> ModelContext {
-        ModelContext(makeTestContainer())
+    private func makeContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
 
     private func makeTransactionCategory(from row: CustomCategory) -> TransactionCategory {
@@ -368,8 +368,8 @@ struct EditCategoryViewModelTests {
     }
 
     @Test
-    func testSaveUpdatesOverrideRow() {
-        let context = makeContext()
+    func testSaveUpdatesOverrideRow() throws {
+        let context = try makeContext()
         let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
         context.insert(row)
 
@@ -434,8 +434,8 @@ struct EditCategoryViewModelTests {
     }
 
     @Test
-    func testSaveSucceedsAfterColorWarningConfirmed() {
-        let context = makeContext()
+    func testSaveSucceedsAfterColorWarningConfirmed() throws {
+        let context = try makeContext()
         let row1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
         let row2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#00FF00")
         context.insert(row1)
@@ -456,7 +456,7 @@ struct EditCategoryViewModelTests {
 
     @Test
     func testEditPredefinedCreatesOverrideRow() throws {
-        let context = makeContext()
+        let context = try makeContext()
 
         // Predefined with no override row yet
         let predefined = PredefinedCategory.foodDining

@@ -124,7 +124,7 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testConfigureWithSwiftDataContext() throws {
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         let transaction = Transaction(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)

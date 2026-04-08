@@ -372,7 +372,7 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveWithModelContextPersistsRecurringTransaction() {
+    func testSaveWithModelContextPersistsRecurringTransaction() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "649"
@@ -380,7 +380,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
 
@@ -396,7 +396,7 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveSetsDayOfMonthOnlyForMonthly() {
+    func testSaveSetsDayOfMonthOnlyForMonthly() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Test"
         viewModel.amount = "100"
@@ -404,7 +404,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -416,14 +416,14 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveDoesNotSetDayOfMonthForNonMonthly() {
+    func testSaveDoesNotSetDayOfMonthForNonMonthly() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.frequency = .weekly
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -435,7 +435,7 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveWithEndDatePersistsEndDate() {
+    func testSaveWithEndDatePersistsEndDate() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Subscription"
         viewModel.amount = "100"
@@ -443,7 +443,7 @@ struct AddRecurringTransactionViewModelTests {
         viewModel.hasEndDate = true
         viewModel.endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -455,14 +455,14 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveWithoutEndDateSetsNilEndDate() {
+    func testSaveWithoutEndDateSetsNilEndDate() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Subscription"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = false
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -474,14 +474,14 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveWithNotesPersistsNotes() {
+    func testSaveWithNotesPersistsNotes() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.notes = "Test notes"
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -493,14 +493,14 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveWithEmptyNotesSetsNil() {
+    func testSaveWithEmptyNotesSetsNil() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.notes = ""
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         viewModel.modelContext = context
         _ = viewModel.save()
@@ -534,14 +534,14 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSavePersistsIncomeType() {
+    func testSavePersistsIncomeType() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Salary"
         viewModel.amount = "50000"
         viewModel.selectedCategory = "Income"
         viewModel.transactionType = .income
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         viewModel.modelContext = context
         _ = viewModel.save()
 
@@ -550,14 +550,14 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSavePersistsExpenseType() {
+    func testSavePersistsExpenseType() throws {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
         viewModel.transactionType = .expense
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         viewModel.modelContext = context
         _ = viewModel.save()
 

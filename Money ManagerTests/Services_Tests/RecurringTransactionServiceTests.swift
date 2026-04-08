@@ -7,7 +7,7 @@ import Testing
 struct RecurringTransactionServiceTests {
 
     @Test
-    func testGeneratePendingTransactionsSkipsInactive() {
+    func testGeneratePendingTransactionsSkipsInactive() throws {
         let inactive = RecurringTransaction(
             name: "Old",
             amount: 100,
@@ -17,7 +17,7 @@ struct RecurringTransactionServiceTests {
             isActive: false
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(inactive)
         try? context.save()
@@ -31,7 +31,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsCreatesTransactionForActive() {
+    func testGeneratePendingTransactionsCreatesTransactionForActive() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -44,7 +44,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -61,7 +61,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsUpdatesLastAddedDate() {
+    func testGeneratePendingTransactionsUpdatesLastAddedDate() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -74,7 +74,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -87,7 +87,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsDoesNotDuplicateOnSameDay() {
+    func testGeneratePendingTransactionsDoesNotDuplicateOnSameDay() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let nextMonth = calendar.date(byAdding: .month, value: 1, to: today)!
@@ -102,7 +102,7 @@ struct RecurringTransactionServiceTests {
             lastAddedDate: nextMonth
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -116,7 +116,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsSetsRecurringTransactionId() {
+    func testGeneratePendingTransactionsSetsRecurringTransactionId() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -129,7 +129,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -145,7 +145,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsSetsDescriptionFromName() {
+    func testGeneratePendingTransactionsSetsDescriptionFromName() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -158,7 +158,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -172,7 +172,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsCopiesNotes() {
+    func testGeneratePendingTransactionsCopiesNotes() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -186,7 +186,7 @@ struct RecurringTransactionServiceTests {
             notes: "Monthly subscription"
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -200,7 +200,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test
-    func testGeneratePendingTransactionsCalledTwiceDoesNotCreateDuplicates() {
+    func testGeneratePendingTransactionsCalledTwiceDoesNotCreateDuplicates() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -213,7 +213,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         context.insert(recurring)
         try? context.save()
@@ -228,7 +228,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test("Skips soft-deleted recurring items")
-    func testSkipsSoftDeletedItems() {
+    func testSkipsSoftDeletedItems() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -242,7 +242,7 @@ struct RecurringTransactionServiceTests {
             isSoftDeleted: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         context.insert(recurring)
 
         RecurringTransactionService.generatePendingTransactions(context: context)
@@ -252,7 +252,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test("Does not generate a transaction past the end date")
-    func testSkipsItemsPastEndDate() {
+    func testSkipsItemsPastEndDate() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -268,7 +268,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         context.insert(recurring)
 
         RecurringTransactionService.generatePendingTransactions(context: context)
@@ -278,7 +278,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test("lastAddedDate is set to nextOccurrence after offline generation, preventing future duplicates")
-    func testLastAddedDatePreventsSecondGeneration() {
+    func testLastAddedDatePreventsSecondGeneration() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -293,7 +293,7 @@ struct RecurringTransactionServiceTests {
             isActive: true
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         context.insert(recurring)
 
         RecurringTransactionService.generatePendingTransactions(context: context)
@@ -309,11 +309,11 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test("Generates transactions for multiple due items in one pass")
-    func testGeneratesForMultipleDueItems() {
+    func testGeneratesForMultipleDueItems() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
 
         for i in 1...3 {
             let recurring = RecurringTransaction(
@@ -336,7 +336,7 @@ struct RecurringTransactionServiceTests {
     // MARK: - Transaction type propagation
 
     @Test("Generated transaction inherits income type from recurring record")
-    func testGeneratedTransactionInheritsIncomeType() {
+    func testGeneratedTransactionInheritsIncomeType() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -350,7 +350,7 @@ struct RecurringTransactionServiceTests {
             type: .income
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         context.insert(recurring)
         try? context.save()
 
@@ -361,7 +361,7 @@ struct RecurringTransactionServiceTests {
     }
 
     @Test("Generated transaction inherits expense type from recurring record")
-    func testGeneratedTransactionInheritsExpenseType() {
+    func testGeneratedTransactionInheritsExpenseType() throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -375,7 +375,7 @@ struct RecurringTransactionServiceTests {
             type: .expense
         )
 
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         context.insert(recurring)
         try? context.save()
 
