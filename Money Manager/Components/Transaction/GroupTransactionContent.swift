@@ -35,7 +35,8 @@ private struct GroupBannerContent: View {
             guard authService.isAuthenticated, let groupId else { return }
             onDismiss?()
             let route = AppRoute.group(groupId)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            Task {
+                try? await Task.sleep(for: .milliseconds(350))
                 NotificationCenter.default.post(name: .appRouteReceived, object: route)
             }
         } label: {
