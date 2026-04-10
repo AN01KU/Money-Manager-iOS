@@ -4,34 +4,59 @@
 //
 
 import Foundation
-import SwiftData
+import Security
 
-/// Manages the persisted auth session (JWT token) using SwiftData.
-/// Must be configured with a ModelContainer before use.
+/// Manages the persisted auth session (JWT token) using the iOS Keychain.
 @MainActor
 final class SessionStore {
     static let shared = SessionStore()
 
-    private var modelContainer: ModelContainer?
+    private let service = "com.moneymanager.authtoken"
+    private let account = "jwt"
 
     init() {}
 
-    func configure(container: ModelContainer) {
-        modelContainer = container
-    }
+    // MARK: - Configure (no-op; kept for call-site compatibility)
+
+    func configure(container: Any) {}
 
     // MARK: - Token
 
     func saveToken(_ token: String) {
-        guard let context = modelContainer?.mainContext else { return }
-        deleteAllTokens(in: context)
-        context.insert(AuthToken(token: token))
-        try? context.save()
+        guard let data = token.data(using: .utf8) else { return }
+
+        // Delete any existing token first
+        let deleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        let addQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecValueData: data,
+            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        SecItemAdd(addQuery as CFDictionary, nil)
     }
 
     func getToken() -> String? {
-        guard let context = modelContainer?.mainContext else { return nil }
-        return try? context.fetch(FetchDescriptor<AuthToken>()).first?.token
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecReturnData: true,
+            kSecMatchLimit: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let token = String(data: data, encoding: .utf8) else { return nil }
+        return token
     }
 
     var isLoggedIn: Bool {
@@ -39,9 +64,12 @@ final class SessionStore {
     }
 
     func clearSession() {
-        guard let context = modelContainer?.mainContext else { return }
-        deleteAllTokens(in: context)
-        try? context.save()
+        let deleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
         clearSyncSessionID()
     }
 
@@ -72,12 +100,5 @@ final class SessionStore {
 
     func getLastLoggedInEmail() -> String? {
         UserDefaults.standard.string(forKey: lastEmailKey)
-    }
-
-    // MARK: - Private
-
-    private func deleteAllTokens(in context: ModelContext) {
-        let tokens = (try? context.fetch(FetchDescriptor<AuthToken>())) ?? []
-        tokens.forEach { context.delete($0) }
     }
 }

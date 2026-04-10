@@ -13,6 +13,7 @@ enum PreflightOutcome {
 }
 
 @Observable
+@MainActor
 final class SyncService: SyncServiceProtocol {
     static let shared = SyncService()
     
@@ -618,13 +619,13 @@ final class SyncService: SyncServiceProtocol {
     private func pullGroups(context: ModelContext) async {
         do {
             let groups = try await groupService.fetchGroups()
-            upsertGroups(groups, context: context)
+            await upsertGroups(groups, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull groups: \(error)")
         }
     }
 
-    private func upsertGroups(_ apiGroups: [APIGroupWithDetails], context: ModelContext) {
+    private func upsertGroups(_ apiGroups: [APIGroupWithDetails], context: ModelContext) async {
         // Fetch all existing local models
         let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
         let localGroupsByID = Dictionary(uniqueKeysWithValues: localGroups.map { ($0.id, $0) })
@@ -682,12 +683,8 @@ final class SyncService: SyncServiceProtocol {
         try? context.save()
 
         // Sync group transactions separately (not included in list response)
-        Task {
-            guard let container = modelContainer else { return }
-            let txContext = ModelContext(container)
-            for remote in apiGroups {
-                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: txContext)
-            }
+        for remote in apiGroups {
+            await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: context)
         }
     }
 

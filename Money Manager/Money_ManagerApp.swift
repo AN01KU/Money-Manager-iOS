@@ -41,7 +41,6 @@ struct Money_ManagerApp: App {
             PendingChange.self,
             FailedChange.self,
             OrphanedChange.self,
-            AuthToken.self,
             SplitGroupModel.self,
             GroupMemberModel.self,
             GroupTransactionModel.self,
