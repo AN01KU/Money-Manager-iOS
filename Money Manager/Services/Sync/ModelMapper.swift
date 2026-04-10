@@ -136,6 +136,7 @@ extension CustomCategory {
             name: name,
             icon: icon,
             color: color,
+            isHidden: isHidden ? true : nil,
             isPredefined: isPredefined ? true : nil,
             predefinedKey: predefinedKey
         )

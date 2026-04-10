@@ -224,7 +224,13 @@ final class APIClient {
     }
 }
 
-struct EmptyResponse: Decodable {}
+/// Decodes successfully regardless of the response body shape.
+/// Used by the change queue replay where we only care that the request succeeded (2xx),
+/// not the response payload — avoids decode failures on endpoints that return a body (e.g. POST /categories).
+struct EmptyResponse: Decodable {
+    init() {}
+    init(from decoder: Decoder) throws {}
+}
 
 private struct HealthResponse: Decodable {
     let status: String

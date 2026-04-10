@@ -328,6 +328,7 @@ struct APICreateCategoryRequest: Codable {
     let name: String
     let icon: String
     let color: String
+    let isHidden: Bool?
     let isPredefined: Bool?
     let predefinedKey: String?
 
@@ -336,6 +337,7 @@ struct APICreateCategoryRequest: Codable {
         case name
         case icon
         case color
+        case isHidden = "is_hidden"
         case isPredefined = "is_predefined"
         case predefinedKey = "predefined_key"
     }
