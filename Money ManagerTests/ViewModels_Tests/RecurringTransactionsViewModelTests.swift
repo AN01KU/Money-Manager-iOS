@@ -66,7 +66,7 @@ struct RecurringTransactionsViewModelTests {
 
         #expect(viewModel.activeRecurring.count == 1)
 
-        viewModel.toggle(at: 0)
+        viewModel.toggle(active)
 
         #expect(active.isActive == false)
     }
@@ -81,7 +81,7 @@ struct RecurringTransactionsViewModelTests {
 
         #expect(viewModel.pausedRecurring.count == 1)
 
-        viewModel.toggle(at: 0)
+        viewModel.toggle(inactive)
 
         #expect(inactive.isActive == true)
     }
@@ -96,20 +96,22 @@ struct RecurringTransactionsViewModelTests {
 
         #expect(viewModel.activeRecurring.count == 1)
 
-        viewModel.deactivate(at: 0)
+        viewModel.toggle(active)
 
         #expect(active.isActive == false)
     }
 
     @Test
-    func testDeactivateDoesNothingForInvalidIndex() {
+    func testDeactivateDoesNothingForUnrelatedItem() {
         let viewModel = RecurringTransactionsViewModel()
 
         let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
+        let other = RecurringTransaction(name: "Other", amount: 100, category: "Other", frequency: .monthly, isActive: true)
 
         viewModel.update(recurring: [active])
 
-        viewModel.deactivate(at: 5)
+        // toggling an item not in the list should not affect active
+        viewModel.toggle(other)
 
         #expect(active.isActive == true)
     }
@@ -125,21 +127,22 @@ struct RecurringTransactionsViewModelTests {
 
         #expect(viewModel.activeRecurring.count == 2)
 
-        viewModel.deactivate(at: 0)
+        viewModel.toggle(active1)
 
         #expect(viewModel.activeRecurring.count == 1)
         #expect(viewModel.activeRecurring.first?.name == "Gym")
     }
 
     @Test
-    func testDeleteDoesNothingForInvalidIndex() {
+    func testDeleteDoesNothingForUnrelatedItem() {
         let viewModel = RecurringTransactionsViewModel()
 
         let paused = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
+        let other = RecurringTransaction(name: "Other", amount: 50, category: "Other", frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [paused])
 
-        viewModel.delete(at: 5)
+        viewModel.deleteItem(other)
 
         #expect(viewModel.pausedRecurring.count == 1)
     }
@@ -151,7 +154,7 @@ struct RecurringTransactionsViewModelTests {
         let viewModel = RecurringTransactionsViewModel()
         viewModel.update(recurring: [paused])
 
-        viewModel.delete(at: 0)
+        viewModel.deleteItem(paused)
 
         #expect(paused.isSoftDeleted == true)
     }

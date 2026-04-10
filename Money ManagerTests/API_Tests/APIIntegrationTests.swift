@@ -98,7 +98,10 @@ struct APIIntegrationTests {
             id: nil,
             name: "Test Cat \(UUID().uuidString.prefix(8))",
             icon: "star.circle.fill",
-            color: "#FF5733"
+            color: "#FF5733",
+            isHidden: nil,
+            isPredefined: nil,
+            predefinedKey: nil
         )
         let response: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
 
@@ -169,7 +172,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let name = "ListTest \(UUID().uuidString.prefix(8))"
-        let request = APICreateCategoryRequest(id: nil, name: name, icon: "star.circle.fill", color: "#4ECDC4")
+        let request = APICreateCategoryRequest(id: nil, name: name, icon: "star.circle.fill", color: "#4ECDC4", isHidden: nil, isPredefined: nil, predefinedKey: nil)
         let _: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
 
         await delay(200)
@@ -188,7 +191,10 @@ struct APIIntegrationTests {
             id: nil,
             name: "Shape Test \(UUID().uuidString.prefix(8))",
             icon: "tag.circle.fill",
-            color: "#8E44AD"
+            color: "#8E44AD",
+            isHidden: nil,
+            isPredefined: nil,
+            predefinedKey: nil
         )
         let created: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
 
@@ -212,7 +218,10 @@ struct APIIntegrationTests {
             id: nil,
             name: "Update Test \(UUID().uuidString.prefix(8))",
             icon: "star.fill",
-            color: "#FF5733"
+            color: "#FF5733",
+            isHidden: nil,
+            isPredefined: nil,
+            predefinedKey: nil
         )
         let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
 
@@ -235,7 +244,10 @@ struct APIIntegrationTests {
             id: nil,
             name: "Hide Test \(UUID().uuidString.prefix(8))",
             icon: "eye.fill",
-            color: "#45B7D1"
+            color: "#45B7D1",
+            isHidden: nil,
+            isPredefined: nil,
+            predefinedKey: nil
         )
         let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
 
@@ -263,7 +275,10 @@ struct APIIntegrationTests {
             id: nil,
             name: "Delete Me \(UUID().uuidString.prefix(8))",
             icon: "trash.fill",
-            color: "#FF5733"
+            color: "#FF5733",
+            isHidden: nil,
+            isPredefined: nil,
+            predefinedKey: nil
         )
         let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
 
