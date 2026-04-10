@@ -27,6 +27,8 @@ struct RecurringTransactionsView: View {
                                 RecurringTransactionRow(recurring: item, onTap: {
                                     rowTapped += 1
                                     viewModel.editingRecurring = item
+                                }, onToggle: {
+                                    viewModel.toggle(item)
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -49,6 +51,8 @@ struct RecurringTransactionsView: View {
                             RecurringTransactionRow(recurring: item, onTap: {
                                 rowTapped += 1
                                 viewModel.editingRecurring = item
+                            }, onToggle: {
+                                viewModel.toggle(item)
                             })
                             .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {

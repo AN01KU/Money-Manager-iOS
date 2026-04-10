@@ -2,9 +2,10 @@ import SwiftUI
 import SwiftData
 
 struct RecurringTransactionRow: View {
-    @Bindable var recurring: RecurringTransaction
+    let recurring: RecurringTransaction
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     let onTap: () -> Void
+    let onToggle: () -> Void
 
     private var displayName: String {
         recurring.name
@@ -72,10 +73,7 @@ struct RecurringTransactionRow: View {
 
                     Toggle("", isOn: Binding(
                         get: { recurring.isActive },
-                        set: { newValue in
-                            recurring.isActive = newValue
-                            recurring.updatedAt = Date()
-                        }
+                        set: { _ in onToggle() }
                     ))
                     .labelsHidden()
                     .tint(AppColors.accent)
