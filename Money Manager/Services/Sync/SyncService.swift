@@ -561,8 +561,9 @@ final class SyncService: SyncServiceProtocol {
                remote.icon == defaults.icon,
                remote.color == defaults.defaultColorHex,
                !remote.isHidden {
-                // Plain default — remove any stale local row that was previously seeded
-                if let staleLocal = localByPredefinedKey[key] {
+                // Plain default — remove any stale local row that was previously seeded,
+                // but only if there's no pending change waiting to be pushed for it.
+                if let staleLocal = localByPredefinedKey[key], !pendingIDs.contains(staleLocal.id) {
                     context.delete(staleLocal)
                 }
                 AppLogger.sync.debug("[UpsertCategories] skipped (identical to enum default): \(remote.name)")
