@@ -126,6 +126,7 @@ struct RecordSettlementView: View {
                         .font(AppTypography.rowPrimary)
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Record Settlement")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

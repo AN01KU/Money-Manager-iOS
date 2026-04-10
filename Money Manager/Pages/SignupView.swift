@@ -42,6 +42,7 @@ struct SignupView: View {
                 }
                 .padding(24)
             }
+            .dismissKeyboardOnScroll()
             .background(Color(.systemBackground))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

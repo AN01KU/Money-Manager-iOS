@@ -50,6 +50,7 @@ struct LoginView: View {
                 }
                 .padding(24)
             }
+            .dismissKeyboardOnScroll()
             .background(Color(.systemBackground))
             .toolbar(isDismissable ? .visible : .hidden, for: .navigationBar)
             .toolbar {

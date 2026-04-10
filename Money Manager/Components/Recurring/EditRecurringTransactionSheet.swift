@@ -139,6 +139,7 @@ struct EditRecurringTransactionSheet: View {
                         .textInputAutocapitalization(.sentences)
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Edit Recurring")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

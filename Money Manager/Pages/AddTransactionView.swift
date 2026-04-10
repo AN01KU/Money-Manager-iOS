@@ -38,6 +38,7 @@ struct AddTransactionView: View {
                     AddTransactionRecurringSection(viewModel: viewModel)
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier(viewModel.navigationTitleIdentifier)

@@ -147,6 +147,7 @@ struct AddRecurringTransactionSheet: View {
                         .textInputAutocapitalization(.sentences)
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Add Recurring")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -55,6 +55,7 @@ struct BudgetSheet: View {
                     }
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Set Budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
