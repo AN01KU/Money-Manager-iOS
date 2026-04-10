@@ -21,10 +21,10 @@ import SwiftData
 
     func hideCategory(_ category: TransactionCategory) {
         if category.isPredefined {
-            // Predefined hides are local-only — no backend sync
             if let row = category.overrideRow {
                 row.isHidden = true
                 row.updatedAt = Date()
+                try? persistence.saveCategory(row, action: "update")
             } else if let predefined = predefinedCase(for: category),
                       let context = modelContext {
                 let row = CustomCategory(
@@ -36,10 +36,9 @@ import SwiftData
                 )
                 row.isHidden = true
                 context.insert(row)
+                try? persistence.saveCategory(row, action: "create")
             }
-            try? persistence.save()
         } else if let row = category.overrideRow {
-            // Custom category hide — sync to backend
             row.isHidden = true
             row.updatedAt = Date()
             try? persistence.saveCategory(row, action: "update")
@@ -51,11 +50,7 @@ import SwiftData
         guard let row = category.overrideRow else { return }
         row.isHidden = false
         row.updatedAt = Date()
-        if category.isPredefined {
-            try? persistence.save()
-        } else {
-            try? persistence.saveCategory(row, action: "update")
-        }
+        try? persistence.saveCategory(row, action: "update")
         AppLogger.data.info("Category restored: \(category.name)")
     }
 
@@ -119,8 +114,18 @@ import SwiftData
             predicate: #Predicate { $0.isPredefined == true }
         )
         guard let rows = try? context.fetch(descriptor) else { return }
-        for row in rows { context.delete(row) }
-        try? context.save()
+        for row in rows {
+            let rowID = row.id
+            context.delete(row)
+            try? persistence.saveAndSync(
+                entityType: "category",
+                entityID: rowID,
+                action: "delete",
+                endpoint: "/categories",
+                httpMethod: "DELETE",
+                payload: nil
+            )
+        }
         AppLogger.data.info("Default categories restored")
         resetTrigger += 1
     }
@@ -131,8 +136,22 @@ import SwiftData
     /// After this, the PredefinedCategory enum is the sole source of truth.
     func resetAll(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
-        try? context.delete(model: CustomCategory.self)
-        try? context.save()
+        persistence.modelContext = context
+
+        let descriptor = FetchDescriptor<CustomCategory>()
+        guard let rows = try? context.fetch(descriptor) else { return }
+        for row in rows {
+            let rowID = row.id
+            context.delete(row)
+            try? persistence.saveAndSync(
+                entityType: "category",
+                entityID: rowID,
+                action: "delete",
+                endpoint: "/categories",
+                httpMethod: "DELETE",
+                payload: nil
+            )
+        }
         resetTrigger += 1
     }
 

@@ -232,9 +232,8 @@ final class SyncService: SyncServiceProtocol {
         }
 
         let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
-        let customOnly = categories.filter { !$0.isPredefined }
-        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count) enqueuing custom-only=\(customOnly.count)")
-        for category in customOnly {
+        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count)")
+        for category in categories {
             AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
             let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
             changeQueueManager.enqueue(

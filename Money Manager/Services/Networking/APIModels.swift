@@ -328,6 +328,17 @@ struct APICreateCategoryRequest: Codable {
     let name: String
     let icon: String
     let color: String
+    let isPredefined: Bool?
+    let predefinedKey: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case icon
+        case color
+        case isPredefined = "is_predefined"
+        case predefinedKey = "predefined_key"
+    }
 }
 
 struct APIUpdateCategoryRequest: Codable {
