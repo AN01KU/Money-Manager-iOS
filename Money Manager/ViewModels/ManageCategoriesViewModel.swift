@@ -20,28 +20,23 @@ import SwiftData
     }
 
     func hideCategory(_ category: TransactionCategory) {
-        if category.isPredefined {
-            if let row = category.overrideRow {
-                row.isHidden = true
-                row.updatedAt = Date()
-                try? persistence.saveCategory(row, action: "update")
-            } else if let predefined = predefinedCase(for: category),
-                      let context = modelContext {
-                let row = CustomCategory(
-                    name: predefined.rawValue,
-                    icon: predefined.icon,
-                    color: predefined.defaultColorHex,
-                    isPredefined: true,
-                    predefinedKey: predefined.key
-                )
-                row.isHidden = true
-                context.insert(row)
-                try? persistence.saveCategory(row, action: "create")
-            }
-        } else if let row = category.overrideRow {
+        if let row = category.overrideRow {
             row.isHidden = true
             row.updatedAt = Date()
             try? persistence.saveCategory(row, action: "update")
+        } else if category.isPredefined,
+                  let predefined = predefinedCase(for: category),
+                  let context = modelContext {
+            let row = CustomCategory(
+                name: predefined.rawValue,
+                icon: predefined.icon,
+                color: predefined.defaultColorHex,
+                isPredefined: true,
+                predefinedKey: predefined.key
+            )
+            row.isHidden = true
+            context.insert(row)
+            try? persistence.saveCategory(row, action: "create")
         }
         AppLogger.data.info("Category hidden: \(category.name)")
     }
@@ -109,23 +104,8 @@ import SwiftData
     func restoreDefaults(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
         persistence.modelContext = context
-
-        let descriptor = FetchDescriptor<CustomCategory>(
-            predicate: #Predicate { $0.isPredefined == true }
-        )
-        guard let rows = try? context.fetch(descriptor) else { return }
-        for row in rows {
-            let rowID = row.id
-            context.delete(row)
-            try? persistence.saveAndSync(
-                entityType: "category",
-                entityID: rowID,
-                action: "delete",
-                endpoint: "/categories",
-                httpMethod: "DELETE",
-                payload: nil
-            )
-        }
+        let descriptor = FetchDescriptor<CustomCategory>(predicate: #Predicate { $0.isPredefined == true })
+        deleteAndSync(rows: (try? context.fetch(descriptor)) ?? [], context: context)
         AppLogger.data.info("Default categories restored")
         resetTrigger += 1
     }
@@ -137,9 +117,11 @@ import SwiftData
     func resetAll(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
         persistence.modelContext = context
+        deleteAndSync(rows: (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? [], context: context)
+        resetTrigger += 1
+    }
 
-        let descriptor = FetchDescriptor<CustomCategory>()
-        guard let rows = try? context.fetch(descriptor) else { return }
+    private func deleteAndSync(rows: [CustomCategory], context: ModelContext) {
         for row in rows {
             let rowID = row.id
             context.delete(row)
@@ -152,7 +134,6 @@ import SwiftData
                 payload: nil
             )
         }
-        resetTrigger += 1
     }
 
     // MARK: - Helpers
