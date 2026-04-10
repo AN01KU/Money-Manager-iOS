@@ -15,6 +15,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
 
     private var apiClient: APIClient = APIClient.shared
     private var modelContainer: ModelContainer?
+    private var isReplaying = false
 
     init() {}
 
@@ -103,6 +104,12 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
 
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {
         guard isAuthenticated else { return }
+        guard !isReplaying else {
+            AppLogger.sync.info("replayAll: already in progress — skipping concurrent call")
+            return
+        }
+        isReplaying = true
+        defer { isReplaying = false }
 
         let descriptor = FetchDescriptor<PendingChange>(
             sortBy: [SortDescriptor(\.createdAt)]
