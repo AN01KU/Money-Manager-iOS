@@ -56,14 +56,11 @@ final class AuthService: AuthServiceProtocol {
             authState = .expired
             session.clearSession()
         } catch {
-            // Server unreachable — keep authenticated state if token exists
-            // We don't have the user object, so stay unknown until next successful check
-            if session.isLoggedIn, case .authenticated = authState {
-                AppLogger.auth.warning("checkAuthState: network error, keeping existing authenticated state — \(error.localizedDescription)")
-            } else if session.isLoggedIn {
-                // token exists but no user yet — treat as guest until server responds
-                AppLogger.auth.warning("checkAuthState: network error with token but no prior auth state — falling back to guest — \(error.localizedDescription)")
-                authState = .guest
+            // Server unreachable — never degrade an existing token to guest.
+            // Leave authState as-is (.unknown or .authenticated) so the UI can
+            // show an offline/loading state rather than kicking the user to login.
+            if session.isLoggedIn {
+                AppLogger.auth.warning("checkAuthState: network error with valid token — keeping \(String(describing: self.authState)) — \(error.localizedDescription)")
             } else {
                 authState = .guest
             }
