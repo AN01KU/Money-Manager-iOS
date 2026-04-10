@@ -19,8 +19,9 @@ let changeQueueManager = serviceFactory.changeQueueManager
 @main
 struct Money_ManagerApp: App {
     let container: ModelContainer
+    let storeRecoveryFailed: Bool
     @Environment(\.scenePhase) private var scenePhase
-    
+
     init() {
         #if DEBUG
         if skipOnboarding || isScreenshotMode {
@@ -32,7 +33,7 @@ struct Money_ManagerApp: App {
             UserDefaults.standard.set(false, forKey: "hasSeenLogin")
         }
         #endif
-        
+
         let schema = Schema([
             Transaction.self,
             RecurringTransaction.self,
@@ -46,33 +47,63 @@ struct Money_ManagerApp: App {
             GroupTransactionModel.self,
             GroupBalanceModel.self
         ])
-        
-        let modelConfiguration = ModelConfiguration(schema: schema)
+
+        let resolvedContainer: ModelContainer
+        if let recovered = Self.makeContainer(schema: schema) {
+            resolvedContainer = recovered
+            storeRecoveryFailed = false
+        } else {
+            // Both normal init and store recovery failed — use an in-memory store
+            // so the app doesn't crash. The alert will be shown in body.
+            resolvedContainer = try! ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
+            storeRecoveryFailed = true
+        }
+        container = resolvedContainer
+
+        SessionStore.shared.configure(container: container)
+
+        // Only generate recurring transactions locally when not logged in.
+        // When authenticated, the backend generates them on GET /transactions.
+        if !SessionStore.shared.isLoggedIn {
+            RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
+        }
+
+        #if DEBUG
+        if useTestData {
+            Self.injectTestData(context: container.mainContext)
+        }
+        #endif
+
+        NetworkMonitor.shared.startMonitoring()
+
+        syncService.configure(container: container, authService: authService)
+    }
+
+    /// Attempts to create the ModelContainer, recovering by deleting the on-disk store on failure.
+    /// Returns nil only if both attempts fail.
+    private static func makeContainer(schema: Schema) -> ModelContainer? {
+        let config = ModelConfiguration(schema: schema)
+        do {
+            return try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            AppLogger.sync.error("ModelContainer init failed: \(error) — attempting store recovery")
+        }
+
+        // Delete the store file and retry once
+        let storeURL = config.url
+        let related = [storeURL,
+                       storeURL.appendingPathExtension("shm"),
+                       storeURL.appendingPathExtension("wal")]
+        for url in related {
+            try? FileManager.default.removeItem(at: url)
+        }
 
         do {
-            container = try ModelContainer(for: schema, configurations: [modelConfiguration])
-
-            SessionStore.shared.configure(container: container)
-
-            // Only generate recurring transactions locally when not logged in.
-            // When authenticated, the backend generates them on GET /transactions.
-            if !SessionStore.shared.isLoggedIn {
-                RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
-            }
-            
-            #if DEBUG
-            if useTestData {
-                Self.injectTestData(context: container.mainContext)
-            }
-            #endif
-            
+            return try ModelContainer(for: schema, configurations: [config])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            AppLogger.sync.error("ModelContainer recovery also failed: \(error)")
+            return nil
         }
-        
-        NetworkMonitor.shared.startMonitoring()
-        
-        syncService.configure(container: container, authService: authService)
     }
     
     #if DEBUG
@@ -101,6 +132,11 @@ struct Money_ManagerApp: App {
                 .environment(\.authService, authService)
                 .environment(\.syncService, syncService)
                 .environment(\.changeQueueManager, changeQueueManager)
+                .alert("Storage Error", isPresented: .constant(storeRecoveryFailed)) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text("The app's local database could not be opened or recovered. Your data may not be available. Please restart the app or contact support if this persists.")
+                }
                 .onAppear {
                     Task {
                         #if DEBUG
