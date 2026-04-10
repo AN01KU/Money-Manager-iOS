@@ -30,7 +30,11 @@ struct SettingsView: View {
             List {
                 if authService.isAuthenticated {
                     if let user = authService.currentUser {
-                        ProfileSection(username: user.username, email: user.email)
+                        ProfileSection(
+                            username: user.username,
+                            email: user.email,
+                            onLogOut: { showLogoutConfirmation = true }
+                        )
                     }
                 } else {
                     LoginPromptSection(
@@ -57,7 +61,6 @@ struct SettingsView: View {
                             }
                         }
                     )
-                    AccountSection(onLogOut: { showLogoutConfirmation = true })
                 }
                 #if DEBUG
                 DebugSection()
@@ -83,7 +86,7 @@ struct SettingsView: View {
             .sheet(isPresented: $showSignupSheet) {
                 SignupView()
             }
-            .confirmationDialog("Log Out", isPresented: $showLogoutConfirmation, titleVisibility: .visible) {
+            .alert("Log Out", isPresented: $showLogoutConfirmation) {
                 Button("Log Out", role: .destructive) {
                     authService.logout()
                 }
@@ -144,6 +147,7 @@ private struct LoginPromptSection: View {
 private struct ProfileSection: View {
     let username: String
     let email: String
+    let onLogOut: () -> Void
 
     var body: some View {
         Section {
@@ -170,6 +174,12 @@ private struct ProfileSection: View {
                 }
             }
             .padding(.vertical, 4)
+
+            Button(role: .destructive) {
+                onLogOut()
+            } label: {
+                Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+            }
         }
     }
 }
@@ -265,22 +275,6 @@ private struct SyncSection: View {
                 }
             }
             .disabled(isSyncing || !isNetworkConnected)
-        }
-    }
-}
-
-// MARK: - Account
-
-private struct AccountSection: View {
-    let onLogOut: () -> Void
-
-    var body: some View {
-        Section {
-            Button(role: .destructive) {
-                onLogOut()
-            } label: {
-                Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
-            }
         }
     }
 }
