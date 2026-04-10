@@ -5,6 +5,7 @@
 
 import Foundation
 import Security
+import OSLog
 
 /// Manages the persisted auth session (JWT token) using the iOS Keychain.
 @MainActor
@@ -40,7 +41,10 @@ final class SessionStore {
             kSecValueData: data,
             kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        if status != errSecSuccess {
+            AppLogger.auth.error("Keychain saveToken failed: OSStatus \(status)")
+        }
     }
 
     func getToken() -> String? {
@@ -53,6 +57,9 @@ final class SessionStore {
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            AppLogger.auth.error("Keychain getToken failed: OSStatus \(status)")
+        }
         guard status == errSecSuccess,
               let data = result as? Data,
               let token = String(data: data, encoding: .utf8) else { return nil }

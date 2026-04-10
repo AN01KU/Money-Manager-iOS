@@ -42,23 +42,27 @@ final class AuthService: AuthServiceProtocol {
     @MainActor
     func checkAuthState() async {
         guard session.isLoggedIn else {
+            AppLogger.auth.info("checkAuthState: no token — setting guest")
             authState = .guest
             hasCheckedAuth = true
             return
         }
         do {
             let user: APIUser = try await apiClient.get("/me")
+            AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
+            AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
             authState = .expired
             session.clearSession()
         } catch {
             // Server unreachable — keep authenticated state if token exists
             // We don't have the user object, so stay unknown until next successful check
             if session.isLoggedIn, case .authenticated = authState {
-                // already authenticated from a previous session, keep it
+                AppLogger.auth.warning("checkAuthState: network error, keeping existing authenticated state — \(error.localizedDescription)")
             } else if session.isLoggedIn {
                 // token exists but no user yet — treat as guest until server responds
+                AppLogger.auth.warning("checkAuthState: network error with token but no prior auth state — falling back to guest — \(error.localizedDescription)")
                 authState = .guest
             } else {
                 authState = .guest

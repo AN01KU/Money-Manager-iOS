@@ -26,7 +26,10 @@ final class NetworkMonitor {
                 let wasConnected = self?.isConnected ?? false
                 self?.isConnected = isNowConnected
                 if !wasConnected && isNowConnected {
+                    AppLogger.sync.info("Network became available — triggering reconnect sync")
                     NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
+                } else if wasConnected && !isNowConnected {
+                    AppLogger.sync.info("Network lost")
                 }
             }
         }

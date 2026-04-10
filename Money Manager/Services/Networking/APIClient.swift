@@ -198,6 +198,7 @@ final class APIClient {
         }
     }
 
+    #if DEBUG
     private static func logDecodingError<T>(_ error: Error, type: T.Type, endpoint: String, data: Data) {
         let typeName = String(describing: T.self)
         let preview = String(data: data.prefix(1024), encoding: .utf8) ?? "<binary>"
@@ -222,6 +223,12 @@ final class APIClient {
 
         AppLogger.network.debug("Response body preview for \(endpoint): \(preview)")
     }
+    #else
+    private static func logDecodingError<T>(_ error: Error, type: T.Type, endpoint: String, data: Data) {
+        let typeName = String(describing: T.self)
+        AppLogger.network.error("Decoding \(typeName) from \(endpoint) failed: \(error.localizedDescription)")
+    }
+    #endif
 }
 
 /// Decodes successfully regardless of the response body shape.

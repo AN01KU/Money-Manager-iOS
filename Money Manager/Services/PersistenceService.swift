@@ -26,7 +26,10 @@ final class PersistenceService {
         httpMethod: String,
         payload: Data?
     ) throws {
-        guard let modelContext else { return }
+        guard let modelContext else {
+            AppLogger.data.error("saveAndSync: modelContext not set for \(entityType) \(action)")
+            return
+        }
         try modelContext.save()
 
         changeQueue.enqueue(
