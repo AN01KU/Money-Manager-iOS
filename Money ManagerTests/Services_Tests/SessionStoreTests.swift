@@ -1,32 +1,29 @@
 import Foundation
-import SwiftData
 import Testing
 @testable import Money_Manager
 
 @MainActor
 struct SessionStoreTests {
 
-    private func makeStore() throws -> SessionStore {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: AuthToken.self, configurations: config)
+    private func makeStore() -> SessionStore {
         let store = SessionStore()
-        store.configure(container: container)
+        store.clearSession()
         return store
     }
 
     // MARK: - Sync Session ID
 
     @Test
-    func testGetSyncSessionIDReturnsNilWhenNotSet() throws {
-        let store = try makeStore()
+    func testGetSyncSessionIDReturnsNilWhenNotSet() {
+        let store = makeStore()
         UserDefaults.standard.removeObject(forKey: "sync_session_id")
 
         #expect(store.getSyncSessionID() == nil)
     }
 
     @Test
-    func testSaveSyncSessionIDPersistsAndRetrievesValue() throws {
-        let store = try makeStore()
+    func testSaveSyncSessionIDPersistsAndRetrievesValue() {
+        let store = makeStore()
         let id = UUID()
         store.saveSyncSessionID(id)
         defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
@@ -35,8 +32,8 @@ struct SessionStoreTests {
     }
 
     @Test
-    func testSaveSyncSessionIDOverwritesPreviousValue() throws {
-        let store = try makeStore()
+    func testSaveSyncSessionIDOverwritesPreviousValue() {
+        let store = makeStore()
         let first = UUID()
         let second = UUID()
         store.saveSyncSessionID(first)
@@ -47,8 +44,8 @@ struct SessionStoreTests {
     }
 
     @Test
-    func testClearSessionAlsoClearsSyncSessionID() throws {
-        let store = try makeStore()
+    func testClearSessionAlsoClearsSyncSessionID() {
+        let store = makeStore()
         store.saveToken("tok")
         store.saveSyncSessionID(UUID())
         store.clearSession()
@@ -60,15 +57,16 @@ struct SessionStoreTests {
     // MARK: - isLoggedIn
 
     @Test
-    func testIsLoggedInReturnsFalseWhenNoTokenSaved() throws {
-        let store = try makeStore()
+    func testIsLoggedInReturnsFalseWhenNoTokenSaved() {
+        let store = makeStore()
 
         #expect(store.isLoggedIn == false)
     }
 
     @Test
-    func testIsLoggedInReturnsTrueAfterSavingToken() throws {
-        let store = try makeStore()
+    func testIsLoggedInReturnsTrueAfterSavingToken() {
+        let store = makeStore()
+        defer { store.clearSession() }
         store.saveToken("my-jwt-token")
 
         #expect(store.isLoggedIn == true)
@@ -77,23 +75,25 @@ struct SessionStoreTests {
     // MARK: - saveToken / getToken
 
     @Test
-    func testGetTokenReturnsNilWhenNoTokenSaved() throws {
-        let store = try makeStore()
+    func testGetTokenReturnsNilWhenNoTokenSaved() {
+        let store = makeStore()
 
         #expect(store.getToken() == nil)
     }
 
     @Test
-    func testGetTokenReturnsTokenAfterSave() throws {
-        let store = try makeStore()
+    func testGetTokenReturnsTokenAfterSave() {
+        let store = makeStore()
+        defer { store.clearSession() }
         store.saveToken("abc123")
 
         #expect(store.getToken() == "abc123")
     }
 
     @Test
-    func testSaveTokenReplacesExistingToken() throws {
-        let store = try makeStore()
+    func testSaveTokenReplacesExistingToken() {
+        let store = makeStore()
+        defer { store.clearSession() }
         store.saveToken("first-token")
         store.saveToken("second-token")
 
@@ -101,27 +101,22 @@ struct SessionStoreTests {
     }
 
     @Test
-    func testSaveTokenMultipleTimesNoDuplicatesExist() throws {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: AuthToken.self, configurations: config)
-        let store = SessionStore()
-        store.configure(container: container)
-
+    func testSaveTokenMultipleTimesOnlyLastTokenIsStored() {
+        let store = makeStore()
+        defer { store.clearSession() }
         store.saveToken("token-a")
         store.saveToken("token-b")
         store.saveToken("token-c")
 
-        let context = container.mainContext
-        let all = try context.fetch(FetchDescriptor<AuthToken>())
-        #expect(all.count == 1)
-        #expect(all.first?.token == "token-c")
+        // Only the last token should be retrievable — no duplicates in Keychain
+        #expect(store.getToken() == "token-c")
     }
 
     // MARK: - clearSession
 
     @Test
-    func testClearSessionRemovesToken() throws {
-        let store = try makeStore()
+    func testClearSessionRemovesToken() {
+        let store = makeStore()
         store.saveToken("token-to-delete")
         store.clearSession()
 
@@ -130,30 +125,11 @@ struct SessionStoreTests {
     }
 
     @Test
-    func testClearSessionWhenNoTokenDoesNotCrash() throws {
-        let store = try makeStore()
+    func testClearSessionWhenNoTokenDoesNotCrash() {
+        let store = makeStore()
 
         store.clearSession()
 
         #expect(store.isLoggedIn == false)
-    }
-
-    // MARK: - Unconfigured store (no container set)
-
-    @Test
-    func testGetTokenReturnsNilWhenNotConfigured() {
-        let store = SessionStore()
-
-        #expect(store.getToken() == nil)
-        #expect(store.isLoggedIn == false)
-    }
-
-    @Test
-    func testSaveTokenDoesNotCrashWhenNotConfigured() {
-        let store = SessionStore()
-
-        store.saveToken("some-token")
-
-        #expect(store.getToken() == nil)
     }
 }
