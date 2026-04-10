@@ -55,7 +55,11 @@ struct Money_ManagerApp: App {
 
             SessionStore.shared.configure(container: container)
 
-            RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
+            // Only generate recurring transactions locally when not logged in.
+            // When authenticated, the backend generates them on GET /transactions.
+            if !SessionStore.shared.isLoggedIn {
+                RecurringTransactionService.generatePendingTransactions(context: container.mainContext)
+            }
             
             #if DEBUG
             if useTestData {

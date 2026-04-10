@@ -137,6 +137,15 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     return
                 }
 
+                // A 404 on a delete means the entity never reached the server — treat as success
+                if case APIError.notFound = error, change.action == "delete" {
+                    AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
+                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
                 change.retryCount += 1
 
                 if change.retryCount >= ChangeQueueManager.maxRetryCount {
@@ -186,6 +195,8 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             return
         }
 
+        AppLogger.sync.debug("[ReplayDebug] replayChange: entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) method=\(change.httpMethod) endpoint=\(endpoint)")
+
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
@@ -193,11 +204,17 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         case "PUT":
             guard let payload = change.payload else { return }
             let _: EmptyResponse = try await apiClient.put(endpoint, rawBody: payload)
+        case "PATCH":
+            guard let payload = change.payload else { return }
+            let _: EmptyResponse = try await apiClient.patch(endpoint, rawBody: payload)
         case "DELETE":
             let _: APIMessageResponse = try await apiClient.deleteMessage(endpoint)
         default:
+            AppLogger.sync.warning("[ReplayDebug] unhandled httpMethod=\(change.httpMethod) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action)")
             return
         }
+
+        AppLogger.sync.debug("[ReplayDebug] replayChange succeeded: entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action)")
 
         if change.action == "delete" {
             hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
@@ -221,6 +238,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                 predicate: #Predicate { $0.id == entityID }
             )
             if let record = try? context.fetch(descriptor), let item = record.first {
+                AppLogger.sync.debug("[TxnDebug] hardDeleteEntity: hard-deleting txn=\(entityID) category=\(item.category) amount=\(item.amount)")
                 context.delete(item)
             }
         default:

@@ -93,6 +93,9 @@ struct TransactionList: View {
         .sheet(item: $selectedTransaction) { transaction in
             TransactionDetailView(transaction: transaction)
         }
+        .onChange(of: transactions.map(\.persistentModelID)) { _, _ in
+            swipedTransactionID = nil
+        }
     }
 }
 

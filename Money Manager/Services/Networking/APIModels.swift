@@ -39,7 +39,7 @@ struct APITransaction: Codable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case isDeleted = "is_deleted"
-        case recurringExpenseId = "recurring_expense_id"
+        case recurringExpenseId = "recurring_transaction_id"
         case groupTransactionId = "group_transaction_id"
         case groupId = "group_id"
         case groupName = "group_name"
@@ -238,7 +238,7 @@ struct APICreateTransactionRequest: Codable {
         case time
         case description
         case notes
-        case recurringExpenseId = "recurring_expense_id"
+        case recurringExpenseId = "recurring_transaction_id"
     }
 }
 

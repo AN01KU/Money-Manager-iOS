@@ -22,7 +22,7 @@ struct AddRecurringTransactionSheet: View {
     @State private var amount1000Tapped = 0
     @State private var categoryTapped = 0
     @State private var saveSuccess = 0
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -31,35 +31,35 @@ struct AddRecurringTransactionSheet: View {
                         Text("Name *")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         TextField("e.g., Netflix, Rent", text: $viewModel.name)
                             .textInputAutocapitalization(.sentences)
                     }
                     .padding(.vertical, 8)
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Amount *")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         TextField("0.00", text: $viewModel.amount)
                             .keyboardType(.decimalPad)
                             .font(.title2)
                             .fontWeight(.semibold)
-                        
+
                         HStack(spacing: 12) {
                             QuickAmountButton(amount: 100) {
                                 amount100Tapped += 1
                                 viewModel.amount = "100"
                             }
                             .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
-                            
+
                             QuickAmountButton(amount: 500) {
                                 amount500Tapped += 1
                                 viewModel.amount = "500"
                             }
                             .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
-                            
+
                             QuickAmountButton(amount: 1000) {
                                 amount1000Tapped += 1
                                 viewModel.amount = "1000"
@@ -68,12 +68,12 @@ struct AddRecurringTransactionSheet: View {
                         }
                     }
                     .padding(.vertical, 8)
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Category *")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         Button(action: {
                             categoryTapped += 1
                             viewModel.showCategoryPicker = true
@@ -97,7 +97,7 @@ struct AddRecurringTransactionSheet: View {
                     }
                     .padding(.vertical, 8)
                 }
-                
+
                 Section {
                     Picker("Type", selection: $viewModel.transactionType) {
                         ForEach(TransactionKind.allCases, id: \.self) { kind in
@@ -112,7 +112,7 @@ struct AddRecurringTransactionSheet: View {
                         Text("Frequency")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         Picker("Frequency", selection: $viewModel.frequency) {
                             ForEach(viewModel.frequencies, id: \.self) { freq in
                                 Text(freq.rawValue.capitalized).tag(freq)
@@ -129,18 +129,18 @@ struct AddRecurringTransactionSheet: View {
                             }
                         }
                     }
-                    
+
                     DatePicker("Start Date", selection: $viewModel.startDate, displayedComponents: .date)
                         .datePickerStyle(.compact)
-                    
+
                     Toggle("Set End Date", isOn: $viewModel.hasEndDate)
-                    
+
                     if viewModel.hasEndDate {
                         DatePicker("End Date", selection: $viewModel.endDate, in: viewModel.startDate..., displayedComponents: .date)
                             .datePickerStyle(.compact)
                     }
                 }
-                
+
                 Section("Details") {
                     TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                         .lineLimit(3...6)
@@ -155,7 +155,7 @@ struct AddRecurringTransactionSheet: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         if viewModel.save() {

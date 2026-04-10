@@ -175,6 +175,17 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Full sync started")
         let context = ModelContext(container)
+
+        let localTxns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        let pending = (try? context.fetch(FetchDescriptor<PendingChange>())) ?? []
+        AppLogger.sync.debug("[FullSyncDebug] local transactions=\(localTxns.count) pendingChanges=\(pending.count)")
+        for t in localTxns {
+            AppLogger.sync.debug("[FullSyncDebug] local txn=\(t.id) date=\(t.date) category=\(t.category) isSoftDeleted=\(t.isSoftDeleted)")
+        }
+        for p in pending {
+            AppLogger.sync.debug("[FullSyncDebug] pending entityType=\(p.entityType) entityID=\(p.entityID) action=\(p.action) method=\(p.httpMethod)")
+        }
+
         await pullAllFromServer(context: context)
         updateLastSyncTime()
         syncSuccessCount += 1
@@ -221,7 +232,10 @@ final class SyncService: SyncServiceProtocol {
         }
 
         let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
-        for category in categories where !category.isPredefined {
+        let customOnly = categories.filter { !$0.isPredefined }
+        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count) enqueuing custom-only=\(customOnly.count)")
+        for category in customOnly {
+            AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
             let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
             changeQueueManager.enqueue(
                 entityType: "category",
@@ -336,6 +350,10 @@ final class SyncService: SyncServiceProtocol {
             for t in groupTxns {
                 AppLogger.sync.debug("[GroupDebug] txn id=\(t.id) group_transaction_id=\(t.groupTransactionId?.uuidString ?? "nil") group_id=\(t.groupId?.uuidString ?? "nil") group_name=\(t.groupName ?? "nil") settlement_id=\(t.settlementId?.uuidString ?? "nil")")
             }
+            AppLogger.sync.debug("[TxnDebug] pullTransactions: fetched \(allTransactions.count) transactions from server (is_deleted=false filter applied)")
+            for t in allTransactions {
+                AppLogger.sync.debug("[TxnDebug] server txn=\(t.id) date=\(t.date) updatedAt=\(t.updatedAt) isDeleted=\(t.isDeleted) category=\(t.category)")
+            }
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -370,7 +388,9 @@ final class SyncService: SyncServiceProtocol {
                     if pendingIDs.contains(remote.id) {
                         AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — local pending change will be overwritten")
                     }
+                    AppLogger.sync.debug("[TxnDebug] applyRemote txn=\(remote.id) remote.isDeleted=\(remote.isDeleted) local.isSoftDeleted=\(local.isSoftDeleted) remote.updatedAt=\(remote.updatedAt) local.updatedAt=\(local.updatedAt)")
                     local.applyRemote(remote)
+                    AppLogger.sync.debug("[TxnDebug] after applyRemote txn=\(remote.id) local.isSoftDeleted=\(local.isSoftDeleted)")
                 }
             } else {
                 let tx = Transaction(
@@ -393,6 +413,19 @@ final class SyncService: SyncServiceProtocol {
                 }
                 context.insert(tx)
             }
+        }
+
+        // Remove locally-generated recurring transactions that the server doesn't know about.
+        // These are orphans created by the iOS RecurringTransactionService before the
+        // "only generate when not logged in" guard was in place.
+        let serverIDs = Set(apiTransactions.map { $0.id })
+        for local in localTransactions {
+            guard let _ = local.recurringExpenseId else { continue }   // only recurring-generated
+            guard !local.isSoftDeleted else { continue }
+            guard !serverIDs.contains(local.id) else { continue }      // not on server
+            guard !pendingIDs.contains(local.id) else { continue }     // no pending upload
+            AppLogger.sync.info("[TxnDebug] purging locally-generated recurring txn not on server: \(local.id)")
+            context.delete(local)
         }
 
         try? context.save()
@@ -514,8 +547,11 @@ final class SyncService: SyncServiceProtocol {
         // Build a lookup of predefined defaults for comparison
         let predefinedDefaults = Dictionary(uniqueKeysWithValues: PredefinedCategory.allCases.map { ($0.key, $0) })
 
+        AppLogger.sync.debug("[UpsertCategories] server returned \(apiCategories.count) categories")
         for remote in apiCategories {
             guard isValid(remote) else { continue }
+
+            AppLogger.sync.debug("[UpsertCategories] remote id=\(remote.id) name=\(remote.name) isPredefined=\(remote.isPredefined) predefinedKey=\(remote.predefinedKey ?? "nil") isHidden=\(remote.isHidden)")
 
             // Skip predefined rows that are identical to the enum default —
             // the client derives these from PredefinedCategory and doesn't store them locally.
@@ -530,6 +566,7 @@ final class SyncService: SyncServiceProtocol {
                 if let staleLocal = localByPredefinedKey[key] {
                     context.delete(staleLocal)
                 }
+                AppLogger.sync.debug("[UpsertCategories] skipped (identical to enum default): \(remote.name)")
                 continue
             }
 
@@ -538,6 +575,7 @@ final class SyncService: SyncServiceProtocol {
                     if pendingIDs.contains(remote.id) {
                         AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — local pending change will be overwritten")
                     }
+                    AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remote.isHidden) predefinedKey=\(remote.predefinedKey ?? "nil")")
                     local.name = remote.name
                     local.icon = remote.icon
                     local.color = remote.color
@@ -548,6 +586,7 @@ final class SyncService: SyncServiceProtocol {
                 }
             } else if let key = remote.predefinedKey,
                       let local = localByPredefinedKey[key] {
+                AppLogger.sync.debug("[UpsertCategories] updating by predefinedKey=\(key): \(remote.name) isHidden=\(remote.isHidden)")
                 local.id = remote.id
                 local.name = remote.name
                 local.icon = remote.icon
@@ -557,6 +596,7 @@ final class SyncService: SyncServiceProtocol {
                 local.predefinedKey = remote.predefinedKey
                 local.updatedAt = remote.updatedAt
             } else {
+                AppLogger.sync.debug("[UpsertCategories] inserting new row: \(remote.name) isPredefined=\(remote.isPredefined) predefinedKey=\(remote.predefinedKey ?? "nil") isHidden=\(remote.isHidden)")
                 let category = CustomCategory(
                     id: remote.id,
                     name: remote.name,

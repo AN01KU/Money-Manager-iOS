@@ -29,6 +29,15 @@ struct LoginView: View {
 
                     LoginButton(isLoading: isLoading, isFormValid: isFormValid, onTap: login)
 
+                    #if DEBUG
+                    Button("Fill Test Credentials") {
+                        email = "test@gmail.com"
+                        password = "12345678"
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    #endif
+
                     LoginSignupLink(onSignUp: { showSignup = true })
 
                     if let onSkip {

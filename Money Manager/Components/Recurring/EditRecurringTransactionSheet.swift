@@ -172,7 +172,7 @@ struct EditRecurringTransactionSheet: View {
 
     private func loadData() {
         name = recurring.name
-        amount = recurring.amount.formatted(.number.precision(.fractionLength(2)))
+        amount = recurring.amount.editableString
         selectedCategory = recurring.category
         transactionType = recurring.type
         frequency = recurring.frequency

@@ -83,7 +83,11 @@ extension APIError {
 
         switch httpResponse.statusCode {
         case 401:
-            self = .unauthorized
+            if let message, !message.isEmpty {
+                self = .httpError(statusCode: 401, message: message)
+            } else {
+                self = .unauthorized
+            }
         case 404:
             self = .notFound
         case 409:

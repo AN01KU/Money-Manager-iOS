@@ -134,7 +134,7 @@ private struct TransactionsMonthSelector: View {
                     .foregroundStyle(AppColors.accent)
                     .padding(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Button {
                 showDatePicker = true
@@ -143,7 +143,7 @@ private struct TransactionsMonthSelector: View {
                     .font(AppTypography.chipSelected)
                     .foregroundStyle(.primary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Button {
                 if let next = Calendar.current.date(byAdding: .month, value: 1, to: viewModel.selectedDate) {
@@ -156,7 +156,7 @@ private struct TransactionsMonthSelector: View {
                     .foregroundStyle(AppColors.accent)
                     .padding(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Spacer()
         }

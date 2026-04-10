@@ -26,6 +26,18 @@ struct SignupView: View {
                     
                     formSection
                     
+                    #if DEBUG
+                    Button("Fill Test Credentials") {
+                        email = "test@gmail.com"
+                        username = "Test"
+                        password = "12345678"
+                        confirmPassword = "12345678"
+                        inviteCode = "ankush@money.manager"
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    #endif
+
                     signupButton
                 }
                 .padding(24)
@@ -116,8 +128,11 @@ struct SignupView: View {
     
     private var signupButton: some View {
         Button {
-            inviteCode = ""
-            showingInviteCodeAlert = true
+            if inviteCode.isEmpty {
+                showingInviteCodeAlert = true
+            } else {
+                signup()
+            }
         } label: {
             Group {
                 if isLoading {

@@ -157,7 +157,8 @@ final class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        if let token = _testToken ?? SessionStore.shared.getToken() {
+        let isAuthEndpoint = endpoint.hasPrefix("/auth/")
+        if !isAuthEndpoint, let token = _testToken ?? SessionStore.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
@@ -178,10 +179,6 @@ final class APIClient {
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
-            }
-            
-            if httpResponse.statusCode == 401 {
-                throw APIError.unauthorized
             }
             
             if !(200...299).contains(httpResponse.statusCode) {

@@ -8,9 +8,6 @@ struct ManageCategoriesView: View {
 
     @State private var viewModel = ManageCategoriesViewModel()
     @State private var rowTapped = 0
-    @State private var deleteTriggered = 0
-    @State private var hideTriggered = 0
-    @State private var restoreTriggered = 0
     @State private var addTriggered = 0
     @State private var showResetMenu = 0
 
@@ -45,30 +42,18 @@ struct ManageCategoriesView: View {
                         })
                         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if category.isDeletable {
-                                Button(role: .destructive) {
-                                    deleteTriggered += 1
-                                    viewModel.deleteCategory(category)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                .tint(.red)
-                                .sensoryFeedback(.warning, trigger: deleteTriggered)
-                            }
                             Button {
-                                hideTriggered += 1
                                 viewModel.hideCategory(category)
                             } label: {
                                 Label("Hide", systemImage: "eye.slash")
                             }
                             .tint(.orange)
-                            .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
                         }
                     }
                 } header: {
                     Text("Default Categories")
                 } footer: {
-                    Text("Tap to edit icon, color, or name. Swipe left to hide or delete.")
+                    Text("Tap to edit icon, color, or name. Swipe left to hide.")
                 }
             }
 
@@ -82,45 +67,34 @@ struct ManageCategoriesView: View {
                         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
-                                deleteTriggered += 1
                                 viewModel.deleteCategory(category)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
-                            .tint(.red)
-                            .sensoryFeedback(.warning, trigger: deleteTriggered)
-
                             Button {
-                                hideTriggered += 1
                                 viewModel.hideCategory(category)
                             } label: {
                                 Label("Hide", systemImage: "eye.slash")
                             }
                             .tint(.orange)
-                            .sensoryFeedback(.impact(weight: .light), trigger: hideTriggered)
                         }
                     }
                 }
             }
 
             if !hiddenCategories.isEmpty {
-                Section("Hidden Categories") {
+                Section("Hidden") {
                     ForEach(hiddenCategories) { category in
                         HiddenCategoryRow(category: category) {
-                            restoreTriggered += 1
                             viewModel.restoreCategory(category)
                         }
-                        .sensoryFeedback(.success, trigger: restoreTriggered)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if category.isDeletable {
+                            if !category.isPredefined {
                                 Button(role: .destructive) {
-                                    deleteTriggered += 1
                                     viewModel.deleteCategory(category)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
-                                .tint(.red)
-                                .sensoryFeedback(.warning, trigger: deleteTriggered)
                             }
                         }
                     }

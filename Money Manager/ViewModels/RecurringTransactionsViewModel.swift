@@ -54,20 +54,9 @@ import SwiftData
         self.recurring = recurring
     }
 
-    func deactivate(at index: Int) {
-        guard index < activeRecurring.count else { return }
-        let item = activeRecurring[index]
-        item.isActive = false
-        item.updatedAt = Date()
-        try? persistence.save()
-    }
-
-    func toggle(at index: Int) {
-        guard index < allRecurring.count else { return }
-        let item = allRecurring[index]
+    func toggle(_ item: RecurringTransaction) {
         item.isActive.toggle()
         item.updatedAt = Date()
-
         do {
             try persistence.saveRecurring(item, action: "update")
             AppLogger.data.info("Recurring transaction toggled: \(item.id) isActive=\(item.isActive)")
@@ -76,22 +65,17 @@ import SwiftData
         }
     }
 
-    func delete(at index: Int) {
-        guard index < pausedRecurring.count else { return }
-        let recurring = pausedRecurring[index]
-        let recurringId = recurring.id
-
-        recurring.isSoftDeleted = true
-        recurring.updatedAt = Date()
+    func deleteItem(_ item: RecurringTransaction) {
+        let recurringId = item.id
+        item.isSoftDeleted = true
+        item.updatedAt = Date()
 
         if let modelContext {
             let descriptor = FetchDescriptor<Transaction>(
                 predicate: #Predicate { $0.recurringExpenseId == recurringId }
             )
             if let linked = try? modelContext.fetch(descriptor) {
-                for linked in linked {
-                    linked.recurringExpenseId = nil
-                }
+                for tx in linked { tx.recurringExpenseId = nil }
             }
         }
 
@@ -129,15 +113,16 @@ import SwiftData
 
     let frequencies = RecurringFrequency.allCases
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
     var customCategories: [CustomCategory] = []
     let persistence: PersistenceService
 
     init(persistence: PersistenceService = PersistenceService()) {
         self.persistence = persistence
+    }
+
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
     }
 
     var isValid: Bool {

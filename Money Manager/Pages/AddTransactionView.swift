@@ -35,14 +35,7 @@ struct AddTransactionView: View {
                     AddTransactionTypeSection(viewModel: viewModel)
                     AddTransactionDateTimeSection(viewModel: viewModel)
                     AddTransactionDetailsSection(viewModel: viewModel)
-                    Section {
-                        Button {
-                            viewModel.showRecurringSheet = true
-                        } label: {
-                            Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
-                                .foregroundStyle(AppColors.accent)
-                        }
-                    }
+                    AddTransactionRecurringSection(viewModel: viewModel)
                 }
             }
             .navigationTitle(viewModel.navigationTitle)
@@ -69,8 +62,18 @@ struct AddTransactionView: View {
             .sheet(isPresented: $viewModel.showCategoryPicker) {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
-            .sheet(isPresented: $viewModel.showRecurringSheet) {
-                AddRecurringTransactionSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory, prefillType: viewModel.transactionType.kind)
+            .alert("Update Recurring Transaction?", isPresented: $viewModel.showRecurringAmountAlert) {
+                Button("Update Recurring Too") {
+                    viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() }
+                }
+                Button("Just This Transaction") {
+                    viewModel.saveThisTransactionOnly()
+                    saveSuccess = true
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You changed the amount. Do you want to update the recurring transaction template as well?")
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -189,13 +192,15 @@ private struct AddTransactionDateTimeSection: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Date *")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                DatePicker("Select Date", selection: $viewModel.selectedDate, displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
+                HStack {
+                    Text(viewModel.isRecurring ? "Start Date *" : "Date *")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    DatePicker("", selection: $viewModel.selectedDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
 
                 HStack(spacing: 12) {
                     QuickDateButton(label: "Today") { todayTapped += 1; viewModel.selectedDate = Date() }
@@ -207,15 +212,17 @@ private struct AddTransactionDateTimeSection: View {
             }
             .padding(.vertical, 8)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Include Time", isOn: $viewModel.hasTime)
-                if viewModel.hasTime {
-                    DatePicker("Select Time", selection: $viewModel.selectedTime, displayedComponents: .hourAndMinute)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
+            if !viewModel.isRecurring {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("Include Time", isOn: $viewModel.hasTime)
+                    if viewModel.hasTime {
+                        DatePicker("Select Time", selection: $viewModel.selectedTime, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.compact)
+                            .labelsHidden()
+                    }
                 }
+                .padding(.vertical, 8)
             }
-            .padding(.vertical, 8)
         }
     }
 }
@@ -226,13 +233,53 @@ private struct AddTransactionDetailsSection: View {
     @Bindable var viewModel: AddTransactionViewModel
 
     var body: some View {
-        Section("Details") {
-            TextField("Description (e.g., Lunch at cafe)", text: $viewModel.description)
-                .textInputAutocapitalization(.sentences)
-                .accessibilityIdentifier("description-field")
+        Section(viewModel.isRecurring ? "Details" : "Details") {
+            TextField(
+                viewModel.isRecurring ? "Name * (e.g., Rent, Netflix)" : "Description (e.g., Lunch at cafe)",
+                text: $viewModel.description
+            )
+            .textInputAutocapitalization(.sentences)
+            .accessibilityIdentifier("description-field")
             TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                 .lineLimit(3...6)
                 .textInputAutocapitalization(.sentences)
+        }
+    }
+}
+
+// MARK: - Personal: Recurring
+
+private struct AddTransactionRecurringSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.isRecurring) {
+                Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
+                    .foregroundStyle(AppColors.accent)
+            }
+
+            if viewModel.isRecurring {
+                Picker("Frequency", selection: $viewModel.recurringFrequency) {
+                    ForEach(RecurringFrequency.allCases, id: \.self) { freq in
+                        Text(freq.rawValue.capitalized).tag(freq)
+                    }
+                }
+
+                if viewModel.recurringFrequency == .monthly {
+                    Picker("Day of Month", selection: $viewModel.recurringDayOfMonth) {
+                        ForEach(1...28, id: \.self) { day in
+                            Text("\(day)").tag(day)
+                        }
+                    }
+                }
+
+                Toggle("Set End Date", isOn: $viewModel.recurringHasEndDate)
+
+                if viewModel.recurringHasEndDate {
+                    DatePicker("End Date", selection: $viewModel.recurringEndDate, in: viewModel.selectedDate..., displayedComponents: .date)
+                }
+            }
         }
     }
 }

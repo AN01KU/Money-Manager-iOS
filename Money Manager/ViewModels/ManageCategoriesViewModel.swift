@@ -20,24 +20,29 @@ import SwiftData
     }
 
     func hideCategory(_ category: TransactionCategory) {
-        if let row = category.overrideRow {
+        if category.isPredefined {
+            // Predefined hides are local-only — no backend sync
+            if let row = category.overrideRow {
+                row.isHidden = true
+                row.updatedAt = Date()
+            } else if let predefined = predefinedCase(for: category),
+                      let context = modelContext {
+                let row = CustomCategory(
+                    name: predefined.rawValue,
+                    icon: predefined.icon,
+                    color: predefined.defaultColorHex,
+                    isPredefined: true,
+                    predefinedKey: predefined.key
+                )
+                row.isHidden = true
+                context.insert(row)
+            }
+            try? persistence.save()
+        } else if let row = category.overrideRow {
+            // Custom category hide — sync to backend
             row.isHidden = true
             row.updatedAt = Date()
             try? persistence.saveCategory(row, action: "update")
-        } else if category.isPredefined,
-                  let predefined = predefinedCase(for: category),
-                  let context = modelContext {
-            // No override row yet — create one just to record the hidden state
-            let row = CustomCategory(
-                name: predefined.rawValue,
-                icon: predefined.icon,
-                color: predefined.defaultColorHex,
-                isPredefined: true,
-                predefinedKey: predefined.key
-            )
-            row.isHidden = true
-            context.insert(row)
-            try? persistence.saveCategory(row, action: "create")
         }
         AppLogger.data.info("Category hidden: \(category.name)")
     }
@@ -46,7 +51,11 @@ import SwiftData
         guard let row = category.overrideRow else { return }
         row.isHidden = false
         row.updatedAt = Date()
-        try? persistence.saveCategory(row, action: "update")
+        if category.isPredefined {
+            try? persistence.save()
+        } else {
+            try? persistence.saveCategory(row, action: "update")
+        }
         AppLogger.data.info("Category restored: \(category.name)")
     }
 
