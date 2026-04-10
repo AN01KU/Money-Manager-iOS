@@ -220,60 +220,76 @@ final class SyncService: SyncServiceProtocol {
     private func enqueueLocalData(context: ModelContext) {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for transaction in transactions where !transaction.isSoftDeleted {
-            let payload = try? APIClient.apiEncoder.encode(transaction.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "transaction",
-                entityID: transaction.id,
-                action: "create",
-                endpoint: "/transactions",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(transaction.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "transaction",
+                    entityID: transaction.id,
+                    action: "create",
+                    endpoint: "/transactions",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode transaction \(transaction.id): \(error) — skipping")
+            }
         }
 
         let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
         AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count)")
         for category in categories {
             AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
-            let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "category",
-                entityID: category.id,
-                action: "create",
-                endpoint: "/categories",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(category.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "category",
+                    entityID: category.id,
+                    action: "create",
+                    endpoint: "/categories",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode category \(category.id): \(error) — skipping")
+            }
         }
 
         let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
         for budget in budgets {
-            let payload = try? APIClient.apiEncoder.encode(budget.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "budget",
-                entityID: budget.id,
-                action: "create",
-                endpoint: "/budgets",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(budget.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "budget",
+                    entityID: budget.id,
+                    action: "create",
+                    endpoint: "/budgets",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode budget \(budget.id): \(error) — skipping")
+            }
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
-            let payload = try? APIClient.apiEncoder.encode(item.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "recurring",
-                entityID: item.id,
-                action: "create",
-                endpoint: "/recurring-transactions",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(item.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "recurring",
+                    entityID: item.id,
+                    action: "create",
+                    endpoint: "/recurring-transactions",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode recurring \(item.id): \(error) — skipping")
+            }
         }
     }
     
