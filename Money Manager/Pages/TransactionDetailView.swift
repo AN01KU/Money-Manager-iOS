@@ -92,6 +92,7 @@ struct TransactionDetailView: View {
             Text((transaction.type == .income ? "+" : "-") + CurrencyFormatter.format(transaction.amount))
                 .font(AppTypography.amountHero)
                 .foregroundStyle(transaction.type == .income ? AppColors.positive : AppColors.expense)
+                .accessibilityIdentifier("transaction-detail.amount")
 
             Text(viewModel.formatDateAndTime(transaction.date, time: transaction.time))
                 .font(AppTypography.heroDate)
@@ -173,6 +174,7 @@ struct TransactionDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
+            .accessibilityIdentifier("transaction-detail.edit-button")
 
             Button {
                 deleteTapped += 1
@@ -187,6 +189,7 @@ struct TransactionDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .sensoryFeedback(.warning, trigger: deleteTapped)
+            .accessibilityIdentifier("transaction-detail.delete-button")
         }
         .padding(.horizontal)
     }

@@ -70,6 +70,7 @@ struct TransactionRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(transaction.transactionDescription ?? transaction.category), \(transaction.category), \(CurrencyFormatter.format(transaction.amount))")
+        .accessibilityIdentifier("transaction.row")
     }
 
     private func formatTime(_ date: Date) -> String {
