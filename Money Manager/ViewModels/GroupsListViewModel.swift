@@ -129,18 +129,21 @@ final class GroupsListViewModel {
 
     private func loadActivity() async {
         var items: [ActivityItem] = []
+        let concurrencyLimit = 4
+        typealias GroupResult = (String, [APIGroupTransaction], [APISettlement], [APIGroupMember])
 
-        await withTaskGroup(of: (String, [APIGroupTransaction], [APISettlement], [APIGroupMember]).self) { taskGroup in
-            for group in groups {
-                taskGroup.addTask {
-                    let transactions = (try? await self.groupService.fetchGroupTransactions(groupId: group.id)) ?? []
-                    let details = try? await self.groupService.fetchGroupDetails(groupId: group.id)
-                    let settlements = details?.group.settlements ?? []
-                    let members = details?.group.members ?? group.members
-                    return (group.name, transactions, settlements, members)
-                }
+        await withTaskGroup(of: GroupResult.self) { taskGroup in
+            var iterator = groups.makeIterator()
+
+            // Seed the group with up to `concurrencyLimit` tasks
+            for _ in 0..<min(concurrencyLimit, groups.count) {
+                guard let group = iterator.next() else { break }
+                taskGroup.addTask { await self.fetchActivity(for: group) }
             }
-            for await (groupName, transactions, settlements, members) in taskGroup {
+
+            // As each task finishes, collect its result and add the next group
+            for await result in taskGroup {
+                let (groupName, transactions, settlements, members) = result
                 let memberMap = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0.username) })
                 for tx in transactions {
                     items.append(.transaction(tx, groupName: groupName))
@@ -150,9 +153,21 @@ final class GroupsListViewModel {
                         items.append(.settlement(settlement, groupName: groupName, memberMap: memberMap))
                     }
                 }
+
+                if let next = iterator.next() {
+                    taskGroup.addTask { await self.fetchActivity(for: next) }
+                }
             }
         }
         recentActivity = items.sorted { $0.date > $1.date }
+    }
+
+    private func fetchActivity(for group: APIGroupWithDetails) async -> (String, [APIGroupTransaction], [APISettlement], [APIGroupMember]) {
+        let transactions = (try? await groupService.fetchGroupTransactions(groupId: group.id)) ?? []
+        let details = try? await groupService.fetchGroupDetails(groupId: group.id)
+        let settlements = details?.group.settlements ?? []
+        let members = details?.group.members ?? group.members
+        return (group.name, transactions, settlements, members)
     }
 
     func createGroup(name: String) async throws -> APIGroupWithDetails {
