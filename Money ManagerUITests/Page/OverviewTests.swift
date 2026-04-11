@@ -35,9 +35,9 @@ final class OverviewTests: XCTestCase {
     func testEmptyStateDisplaysWhenNoTransactions() throws {
         app.tabBars.buttons["Overview"].tap()
 
-        let emptyStateText = app.staticTexts["No expenses yet"]
-        if emptyStateText.waitForExistence(timeout: 2) {
-            XCTAssertTrue(emptyStateText.exists)
+        let emptyState = app.otherElements["overview.empty-state"]
+        if emptyState.waitForExistence(timeout: 2) {
+            XCTAssertTrue(emptyState.exists)
         }
     }
 
@@ -46,18 +46,18 @@ final class OverviewTests: XCTestCase {
     func testBudgetCardDisplaysWhenBudgetExists() throws {
         app.tabBars.buttons["Overview"].tap()
 
-        let budgetTitle = app.staticTexts["Budget"]
-        if budgetTitle.waitForExistence(timeout: 3) {
-            XCTAssertTrue(budgetTitle.exists)
+        let budgetCard = app.buttons["overview.budget-card"]
+        if budgetCard.waitForExistence(timeout: 3) {
+            XCTAssertTrue(budgetCard.exists)
         }
     }
 
     func testNoBudgetCardDisplaysWhenNoBudget() throws {
         app.tabBars.buttons["Overview"].tap()
 
-        let noBudgetText = app.staticTexts["No Budget Set"]
-        if noBudgetText.waitForExistence(timeout: 3) {
-            XCTAssertTrue(noBudgetText.exists)
+        let noBudgetCard = app.buttons["overview.no-budget-card"]
+        if noBudgetCard.waitForExistence(timeout: 3) {
+            XCTAssertTrue(noBudgetCard.exists)
         }
     }
 
@@ -66,9 +66,7 @@ final class OverviewTests: XCTestCase {
     func testDateFilterSelectorExists() throws {
         app.tabBars.buttons["Overview"].tap()
 
-        // Check for month/year button in the header card
-        let dateFilter = app.buttons.matching(NSPredicate(format: "label CONTAINS '2026' OR label CONTAINS '2025'")).firstMatch
-
+        let dateFilter = app.buttons["overview.date-filter-button"]
         XCTAssertTrue(dateFilter.waitForExistence(timeout: 3), "Date filter should exist")
     }
 }

@@ -96,6 +96,7 @@ private struct OverviewScrollContent: View {
                     title: "No expenses yet",
                     message: "Tap + to add your first transaction"
                 )
+                .accessibilityIdentifier("overview.empty-state")
                 .padding(.horizontal)
             }
         }
@@ -150,6 +151,7 @@ private struct OverviewHeaderCard: View {
                             .foregroundStyle(.primary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("overview.date-filter-button")
 
                     Button {
                         let step = viewModel.filterMode == .daily ? Calendar.Component.day : .month
@@ -237,6 +239,7 @@ private struct OverviewHeaderCard: View {
                     color: budgetColor,
                     onTap: { viewModel.showBudgetSheet = true }
                 )
+                .accessibilityIdentifier("overview.budget-card")
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             } else {
@@ -256,6 +259,7 @@ private struct OverviewHeaderCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("overview.no-budget-card")
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
