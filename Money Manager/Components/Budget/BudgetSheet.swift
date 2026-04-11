@@ -35,6 +35,7 @@ struct BudgetSheet: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                             .focused($isAmountFocused)
+                            .accessibilityIdentifier("budget.amount-field")
                     }
                 } header: {
                     Text("Monthly Budget Amount")
@@ -63,6 +64,7 @@ struct BudgetSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("budget.cancel-button")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if isSaving {
@@ -73,6 +75,7 @@ struct BudgetSheet: View {
                         }
                         .fontWeight(.semibold)
                         .disabled(budgetAmount.isEmpty || (Double(budgetAmount) ?? 0) <= 0)
+                        .accessibilityIdentifier("budget.save-button")
                     }
                 }
             }

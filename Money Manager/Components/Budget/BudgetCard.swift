@@ -42,6 +42,7 @@ struct BudgetCard: View {
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: editTapped)
                 .accessibilityLabel("Edit budget")
+                .accessibilityIdentifier("budget.edit-button")
             }
             
             Divider()
@@ -112,6 +113,7 @@ struct BudgetCard: View {
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Monthly budget \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used, \(CurrencyFormatter.format(remaining)) remaining")
+        .accessibilityIdentifier("budget.card")
     }
 }
 

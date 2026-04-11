@@ -31,6 +31,7 @@ struct MonthSelector: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .sensoryFeedback(.impact(weight: .light), trigger: buttonTapped)
+        .accessibilityIdentifier("budget.month-selector")
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
                 VStack {
