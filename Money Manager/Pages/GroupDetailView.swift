@@ -5,6 +5,7 @@
 
 import SwiftUI
 
+
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
     @State private var selectedTransaction: APIGroupTransaction?
@@ -171,7 +172,7 @@ struct GroupDetailView: View {
                                     }
                                 }
                                 .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .clipShape(.rect(cornerRadius: 14))
                             }
                         }
                     }
@@ -191,15 +192,13 @@ struct GroupDetailView: View {
 
     private var groupedTransactions: [GroupTransactionSection] {
         let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM dd"
         var grouped: [String: [APIGroupTransaction]] = [:]
 
         for tx in viewModel.transactions {
             let day = calendar.startOfDay(for: tx.date)
             let key = calendar.isDateInToday(day)
                 ? "TODAY"
-                : formatter.string(from: day).uppercased()
+                : day.formatted(.dateTime.month(.wide).day()).uppercased()
             grouped[key, default: []].append(tx)
         }
 
@@ -245,7 +244,7 @@ struct GroupDetailView: View {
                                 }
                             }
                             .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .clipShape(.rect(cornerRadius: 14))
                         }
 
                         // Settlement history
@@ -269,7 +268,7 @@ struct GroupDetailView: View {
                                     }
                                 }
                                 .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .clipShape(.rect(cornerRadius: 14))
                             }
                         }
                     }
@@ -301,7 +300,7 @@ struct GroupDetailView: View {
                         }
                     }
                     .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(.rect(cornerRadius: 14))
                     .padding(.horizontal)
                     .padding(.vertical, 12)
                     .padding(.bottom, 80)

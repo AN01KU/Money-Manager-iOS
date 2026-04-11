@@ -9,13 +9,11 @@ private let timeFormatter: DateFormatter = {
 
 struct TransactionRow: View {
     let transaction: Transaction
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
-    init(transaction: Transaction) {
-        self.transaction = transaction
-    }
+    let categoryLookup: [String: CustomCategory]
+    var onGroupTapped: ((UUID) -> Void)?
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, lookup: CategoryResolver.makeLookup(from: customCategories))
+        CategoryResolver.resolve(transaction.category, lookup: categoryLookup)
     }
 
     private var resolvedIcon: String { resolved.icon }
@@ -45,7 +43,8 @@ struct TransactionRow: View {
                 } else if transaction.groupTransactionId != nil, let groupID = transaction.groupId {
                     GroupBadge(
                         groupName: transaction.groupName ?? "Group",
-                        groupID: groupID
+                        groupID: groupID,
+                        onGroupTapped: onGroupTapped
                     )
                 }
             }
@@ -101,14 +100,12 @@ private struct GroupBadge: View {
     @Environment(\.authService) private var authService
     let groupName: String
     let groupID: UUID
+    var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
         Button {
             guard authService.isAuthenticated else { return }
-            NotificationCenter.default.post(
-                name: .appRouteReceived,
-                object: AppRoute.group(groupID)
-            )
+            onGroupTapped?(groupID)
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: "person.2.fill")
@@ -132,8 +129,8 @@ private struct GroupBadge: View {
             date: Date(),
             time: Date(),
             transactionDescription: "Lunch at cafe"
-        )
+        ),
+        categoryLookup: [:]
     )
     .padding()
-    .modelContainer(for: [CustomCategory.self], inMemory: true)
 }

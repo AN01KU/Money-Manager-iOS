@@ -8,6 +8,7 @@ import Foundation
 extension Notification.Name {
     static let authSessionExpired = Notification.Name("authSessionExpired")
     static let userDidLogout = Notification.Name("userDidLogout")
+    static let syncSessionOrphaned = Notification.Name("syncSessionOrphaned")
 }
 
 final class APIClient {
@@ -19,7 +20,9 @@ final class APIClient {
     private let encoder: JSONEncoder
     
     private var _testToken: String?
-    
+    private var _testSyncSessionID: UUID?
+    private var _testURLSession: URLSession?
+
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = AppConstants.API.defaultTimeout
@@ -46,20 +49,31 @@ final class APIClient {
     func setTestToken(_ token: String?) {
         _testToken = token
     }
-    
+
     func clearTestToken() {
         _testToken = nil
     }
+
+    func setTestSyncSessionID(_ id: UUID?) {
+        _testSyncSessionID = id
+    }
+
+    /// Returns a fresh APIClient using the given URLSession — for unit tests only.
+    static func makeForTesting(session testSession: URLSession) -> APIClient {
+        let client = APIClient()
+        client._testURLSession = testSession
+        return client
+    }
     #endif
     
-    static var apiEncoder: JSONEncoder {
+    static let apiEncoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
             try container.encode(Int64(date.timeIntervalSince1970 * 1000))
         }
         return encoder
-    }
+    }()
     
     func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]? = nil) async throws -> T {
         let request = try buildRequest(endpoint: endpoint, method: "GET", queryItems: queryItems)
@@ -121,7 +135,7 @@ final class APIClient {
         }
     }
     
-    private func buildRequest(
+    func buildRequest(
         endpoint: String,
         method: String,
         queryItems: [URLQueryItem]? = nil
@@ -142,24 +156,29 @@ final class APIClient {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        if let token = _testToken ?? SessionStore.shared.getToken() {
+
+        let isAuthEndpoint = endpoint.hasPrefix("/auth/")
+        if !isAuthEndpoint, let token = _testToken ?? SessionStore.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        
+
+        let writeMethods: Set<String> = ["POST", "PUT", "PATCH", "DELETE"]
+        if writeMethods.contains(method),
+           let syncSessionID = _testSyncSessionID ?? SessionStore.shared.getSyncSessionID() {
+            request.setValue(syncSessionID.uuidString, forHTTPHeaderField: "X-Sync-Session-ID")
+            request.setValue("1", forHTTPHeaderField: "X-Sync-Version")
+        }
+
         return request
     }
     
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         do {
-            let (data, response) = try await session.data(for: request)
+            let activeSession = _testURLSession ?? session
+            let (data, response) = try await activeSession.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
-            }
-            
-            if httpResponse.statusCode == 401 {
-                throw APIError.unauthorized
             }
             
             if !(200...299).contains(httpResponse.statusCode) {
@@ -179,6 +198,7 @@ final class APIClient {
         }
     }
 
+    #if DEBUG
     private static func logDecodingError<T>(_ error: Error, type: T.Type, endpoint: String, data: Data) {
         let typeName = String(describing: T.self)
         let preview = String(data: data.prefix(1024), encoding: .utf8) ?? "<binary>"
@@ -203,9 +223,21 @@ final class APIClient {
 
         AppLogger.network.debug("Response body preview for \(endpoint): \(preview)")
     }
+    #else
+    private static func logDecodingError<T>(_ error: Error, type: T.Type, endpoint: String, data: Data) {
+        let typeName = String(describing: T.self)
+        AppLogger.network.error("Decoding \(typeName) from \(endpoint) failed: \(error.localizedDescription)")
+    }
+    #endif
 }
 
-struct EmptyResponse: Decodable {}
+/// Decodes successfully regardless of the response body shape.
+/// Used by the change queue replay where we only care that the request succeeded (2xx),
+/// not the response payload — avoids decode failures on endpoints that return a body (e.g. POST /categories).
+struct EmptyResponse: Decodable {
+    init() {}
+    init(from decoder: Decoder) throws {}
+}
 
 private struct HealthResponse: Decodable {
     let status: String

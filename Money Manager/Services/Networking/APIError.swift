@@ -15,6 +15,7 @@ enum APIError: Error, LocalizedError, Equatable {
     case unauthorized
     case notFound
     case conflict
+    case syncSessionInvalid(reason: String)
     case serverError
     case unknown
     case missingTestData(String)
@@ -39,6 +40,8 @@ enum APIError: Error, LocalizedError, Equatable {
             return "Resource not found"
         case .conflict:
             return "Conflict detected. Data will be synced."
+        case .syncSessionInvalid(let reason):
+            return "Sync session rejected: \(reason)"
         case .serverError:
             return "Server error. Please try again later."
         case .unknown:
@@ -66,6 +69,8 @@ enum APIError: Error, LocalizedError, Equatable {
             return true
         case let (.missingTestData(lCtx), .missingTestData(rCtx)):
             return lCtx == rCtx
+        case let (.syncSessionInvalid(lReason), .syncSessionInvalid(rReason)):
+            return lReason == rReason
         default:
             return false
         }
@@ -78,11 +83,19 @@ extension APIError {
 
         switch httpResponse.statusCode {
         case 401:
-            self = .unauthorized
+            if let message, !message.isEmpty {
+                self = .httpError(statusCode: 401, message: message)
+            } else {
+                self = .unauthorized
+            }
         case 404:
             self = .notFound
         case 409:
-            self = .conflict
+            if let reason = Self.parseSyncSessionReason(from: data) {
+                self = .syncSessionInvalid(reason: reason)
+            } else {
+                self = .conflict
+            }
         case 500...599:
             self = .serverError
         default:
@@ -95,5 +108,20 @@ extension APIError {
             return nil
         }
         return json["error"] as? String ?? json["message"] as? String
+    }
+
+    private static let syncSessionReasons: Set<String> = [
+        "SYNC_SESSION_MISMATCH",
+        "SYNC_SESSION_EXPIRED",
+        "SYNC_SESSION_NOT_FOUND"
+    ]
+
+    private static func parseSyncSessionReason(from data: Data?) -> String? {
+        guard let data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let reason = json["reason"] as? String,
+              syncSessionReasons.contains(reason)
+        else { return nil }
+        return reason
     }
 }

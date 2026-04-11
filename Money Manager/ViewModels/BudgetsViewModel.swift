@@ -14,14 +14,14 @@ import SwiftData
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
         else { return [] }
 
         return allTransactions.filter { transaction in
             !transaction.isSoftDeleted &&
             transaction.type == .expense &&
             transaction.date >= startOfMonth &&
-            transaction.date <= endOfMonth
+            transaction.date < firstDayNextMonth
         }
     }
 
@@ -51,12 +51,13 @@ import SwiftData
         let today = Date()
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
+            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
         else { return 0 }
 
         if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
             let startOfToday = calendar.startOfDay(for: today)
-            let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: endOfMonth).day ?? 0
+            // Distance from start of today to start of next month gives full remaining days
+            let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: firstDayNextMonth).day ?? 0
             return max(0, daysLeft)
         }
         return 0

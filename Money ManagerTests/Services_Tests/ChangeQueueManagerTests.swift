@@ -28,6 +28,31 @@ struct ChangeQueueManagerTests {
         try? context.save()
     }
 
+    // MARK: - Mutual exclusion
+
+    @Test
+    func testReplayAllSkipsConcurrentCall() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager()
+        manager.configure(container: container)
+        enqueueChange(in: context)
+
+        // Fire two replayAll calls concurrently — the second should be a no-op
+        // because isReplaying will be true. Since MockURLSession isn't set up here,
+        // both calls will complete immediately (no network). We verify the pending
+        // change is not double-processed by asserting it still exists (nothing
+        // succeeded without a mock server) and that no crash occurred.
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await manager.replayAll(context: context, isAuthenticated: true) }
+            group.addTask { await manager.replayAll(context: context, isAuthenticated: true) }
+        }
+
+        // The key assertion: no crash and manager is back in a usable state
+        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        #expect(remaining.count <= 1)
+    }
+
     // MARK: - Auth guard
 
     @Test

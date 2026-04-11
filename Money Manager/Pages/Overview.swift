@@ -33,11 +33,10 @@ struct Overview: View {
             navigationPath = [route]
             pendingRoute?.wrappedValue = nil
         }
-        .task {
+        .onChange(of: queryData, initial: true) {
             viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
         }
-        .onChange(of: queryData) { viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories) }
     }
 }
 
@@ -67,7 +66,7 @@ private struct OverviewBody: View {
     @ToolbarContentBuilder
     private var overviewToolbar: some ToolbarContent {
         if authService.isAuthenticated {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 SyncStatusView()
             }
         }
@@ -144,7 +143,9 @@ private struct OverviewHeaderCard: View {
                     Button {
                         showDatePicker = true
                     } label: {
-                        Text(formattedPeriod)
+                        Text(viewModel.selectedDate, format: viewModel.filterMode == .daily
+                            ? .dateTime.day().month(.abbreviated).year()
+                            : .dateTime.month(.wide).year())
                             .font(AppTypography.cardValue)
                             .foregroundStyle(.primary)
                     }
@@ -260,7 +261,7 @@ private struct OverviewHeaderCard: View {
             }
         }
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(.rect(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 1)
@@ -286,11 +287,6 @@ private struct OverviewHeaderCard: View {
         }
     }
 
-    private var formattedPeriod: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = viewModel.filterMode == .daily ? "MMM d, yyyy" : "MMMM yyyy"
-        return formatter.string(from: viewModel.selectedDate)
-    }
 }
 
 private struct SummaryStatView: View {

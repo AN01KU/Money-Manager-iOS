@@ -552,7 +552,7 @@ struct OverviewViewModelTests {
     // MARK: - Ensure Budget Exists Tests
     
     @Test
-    func testEnsureBudgetExistsDoesNothingWhenBudgetExists() {
+    func testEnsureBudgetExistsDoesNothingWhenBudgetExists() throws {
         let viewModel = OverviewViewModel()
         
         let calendar = Calendar.current
@@ -562,7 +562,7 @@ struct OverviewViewModelTests {
         
         viewModel.update(allTransactions: [], budgets: [existingBudget], customCategories: [])
         
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         
         viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
         
@@ -570,14 +570,14 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() {
+    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() throws {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
         
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         
         #expect(viewModel.currentBudget == nil)
         
@@ -589,14 +589,14 @@ struct OverviewViewModelTests {
     }
     
     @Test
-    func testEnsureBudgetExistsDoesNothingWhenLimitIsZero() {
+    func testEnsureBudgetExistsDoesNothingWhenLimitIsZero() throws {
         let viewModel = OverviewViewModel()
         viewModel.filterMode = .monthly
         viewModel.selectedDate = Date()
         
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
         
-        let context = ModelContext(makeTestContainer())
+        let context = ModelContext(try makeTestContainer())
         
         viewModel.ensureBudgetExists(defaultBudgetLimit: 0, modelContext: context)
         
@@ -924,5 +924,168 @@ struct OverviewViewModelTests {
         viewModel.update(allTransactions: [expense], budgets: [], customCategories: [])
 
         #expect(viewModel.filteredTransactions.count == 1)
+    }
+
+    // MARK: - Transaction Type Filter
+
+    @Test
+    func testTypeFilterAllShowsExpensesAndIncome() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 100, category: "Food", date: Date())
+        let income  = Transaction(type: .income,  amount: 500, category: "Work & Professional", date: Date())
+
+        viewModel.transactionTypeFilter = .all
+        viewModel.update(allTransactions: [expense, income], budgets: [], customCategories: [])
+
+        #expect(viewModel.filteredTransactions.count == 2)
+    }
+
+    @Test
+    func testTypeFilterExpensesHidesIncomeTransactions() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 100, category: "Food", date: Date())
+        let income  = Transaction(type: .income,  amount: 500, category: "Work & Professional", date: Date())
+
+        viewModel.transactionTypeFilter = .expenses
+        viewModel.update(allTransactions: [expense, income], budgets: [], customCategories: [])
+
+        #expect(viewModel.filteredTransactions.count == 1)
+        #expect(viewModel.filteredTransactions.first?.type == .expense)
+    }
+
+    @Test
+    func testTypeFilterIncomeHidesExpenseTransactions() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 100, category: "Food", date: Date())
+        let income  = Transaction(type: .income,  amount: 500, category: "Work & Professional", date: Date())
+
+        viewModel.transactionTypeFilter = .income
+        viewModel.update(allTransactions: [expense, income], budgets: [], customCategories: [])
+
+        #expect(viewModel.filteredTransactions.count == 1)
+        #expect(viewModel.filteredTransactions.first?.type == .income)
+    }
+
+    @Test
+    func testTypeFilterExpensesWithNoExpensesReturnsEmpty() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let income = Transaction(type: .income, amount: 500, category: "Work & Professional", date: Date())
+
+        viewModel.transactionTypeFilter = .expenses
+        viewModel.update(allTransactions: [income], budgets: [], customCategories: [])
+
+        #expect(viewModel.filteredTransactions.isEmpty)
+    }
+
+    @Test
+    func testTypeFilterIncomeWithNoIncomeReturnsEmpty() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 100, category: "Food", date: Date())
+
+        viewModel.transactionTypeFilter = .income
+        viewModel.update(allTransactions: [expense], budgets: [], customCategories: [])
+
+        #expect(viewModel.filteredTransactions.isEmpty)
+    }
+
+    // MARK: - totalIncome and totalSpent are independent of type filter
+
+    @Test
+    func testTotalIncomeAndTotalSpentAreComputedBeforeTypeFilter() {
+        // totalSpent and totalIncome must reflect ALL matching transactions
+        // regardless of which type filter is active, so the budget card is always accurate.
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 200, category: "Food", date: Date())
+        let income  = Transaction(type: .income,  amount: 800, category: "Work & Professional", date: Date())
+
+        viewModel.transactionTypeFilter = .expenses  // only expenses visible in list
+        viewModel.update(allTransactions: [expense, income], budgets: [], customCategories: [])
+
+        // Despite the filter showing only expenses, both totals must be populated
+        #expect(viewModel.totalSpent  == 200)
+        #expect(viewModel.totalIncome == 800)
+    }
+
+    @Test
+    func testTotalIncomeIsZeroWhenNoIncomeTransactions() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 150, category: "Food", date: Date())
+        viewModel.update(allTransactions: [expense], budgets: [], customCategories: [])
+
+        #expect(viewModel.totalIncome == 0)
+    }
+
+    @Test
+    func testTotalIncomeSumsAllIncomeTransactions() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let salary  = Transaction(type: .income, amount: 5000, category: "Work & Professional", date: Date())
+        let bonus   = Transaction(type: .income, amount: 1000, category: "Work & Professional", date: Date())
+        let expense = Transaction(type: .expense, amount: 200, category: "Food", date: Date())
+
+        viewModel.update(allTransactions: [salary, bonus, expense], budgets: [], customCategories: [])
+
+        #expect(viewModel.totalIncome == 6000)
+        #expect(viewModel.totalSpent  == 200)
+    }
+
+    // MARK: - netBalance
+
+    @Test
+    func testNetBalanceIsIncomeMinusSpent() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let income  = Transaction(type: .income,  amount: 3000, category: "Work & Professional", date: Date())
+        let expense = Transaction(type: .expense, amount: 1200, category: "Food", date: Date())
+
+        viewModel.update(allTransactions: [income, expense], budgets: [], customCategories: [])
+
+        #expect(viewModel.netBalance == 1800)
+    }
+
+    @Test
+    func testNetBalanceIsNegativeWhenSpentExceedsIncome() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+
+        let expense = Transaction(type: .expense, amount: 500, category: "Food", date: Date())
+
+        viewModel.update(allTransactions: [expense], budgets: [], customCategories: [])
+
+        #expect(viewModel.netBalance == -500)
+    }
+
+    @Test
+    func testNetBalanceIsZeroWithNoTransactions() {
+        let viewModel = OverviewViewModel()
+        viewModel.update(allTransactions: [], budgets: [], customCategories: [])
+
+        #expect(viewModel.netBalance == 0)
     }
 }

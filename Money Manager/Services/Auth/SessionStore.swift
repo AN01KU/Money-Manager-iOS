@@ -4,34 +4,96 @@
 //
 
 import Foundation
-import SwiftData
+import Security
+import OSLog
 
-/// Manages the persisted auth session (JWT token) using SwiftData.
-/// Must be configured with a ModelContainer before use.
+// MARK: - Token Storage
+
+protocol TokenStorage {
+    func save(_ token: String)
+    func load() -> String?
+    func delete()
+}
+
+final class KeychainTokenStorage: TokenStorage {
+    private let service = "com.moneymanager.authtoken"
+    private let account = "jwt"
+
+    func save(_ token: String) {
+        guard let data = token.data(using: .utf8) else { return }
+        let deleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        let addQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecValueData: data,
+            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        if status != errSecSuccess {
+            AppLogger.auth.error("Keychain saveToken failed: OSStatus \(status)")
+        }
+    }
+
+    func load() -> String? {
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecReturnData: true,
+            kSecMatchLimit: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            AppLogger.auth.error("Keychain getToken failed: OSStatus \(status)")
+        }
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let token = String(data: data, encoding: .utf8) else { return nil }
+        return token
+    }
+
+    func delete() {
+        let deleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+    }
+}
+
+/// Manages the persisted auth session (JWT token) using the iOS Keychain.
 @MainActor
 final class SessionStore {
     static let shared = SessionStore()
 
-    private var modelContainer: ModelContainer?
+    private let service = "com.moneymanager.authtoken"
+    private let account = "jwt"
+
+    /// Overridable token storage — defaults to Keychain, swappable in tests.
+    var tokenStorage: TokenStorage = KeychainTokenStorage()
 
     init() {}
 
-    func configure(container: ModelContainer) {
-        modelContainer = container
-    }
+    // MARK: - Configure (no-op; kept for call-site compatibility)
+
+    func configure(container: Any) {}
 
     // MARK: - Token
 
     func saveToken(_ token: String) {
-        guard let context = modelContainer?.mainContext else { return }
-        deleteAllTokens(in: context)
-        context.insert(AuthToken(token: token))
-        try? context.save()
+        tokenStorage.save(token)
     }
 
     func getToken() -> String? {
-        guard let context = modelContainer?.mainContext else { return nil }
-        return try? context.fetch(FetchDescriptor<AuthToken>()).first?.token
+        tokenStorage.load()
     }
 
     var isLoggedIn: Bool {
@@ -39,9 +101,25 @@ final class SessionStore {
     }
 
     func clearSession() {
-        guard let context = modelContainer?.mainContext else { return }
-        deleteAllTokens(in: context)
-        try? context.save()
+        tokenStorage.delete()
+        clearSyncSessionID()
+    }
+
+    // MARK: - Sync Session ID
+
+    private let syncSessionIDKey = "sync_session_id"
+
+    func saveSyncSessionID(_ id: UUID) {
+        UserDefaults.standard.set(id.uuidString, forKey: syncSessionIDKey)
+    }
+
+    func getSyncSessionID() -> UUID? {
+        guard let raw = UserDefaults.standard.string(forKey: syncSessionIDKey) else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    private func clearSyncSessionID() {
+        UserDefaults.standard.removeObject(forKey: syncSessionIDKey)
     }
 
     // MARK: - Last Logged In Email
@@ -54,12 +132,5 @@ final class SessionStore {
 
     func getLastLoggedInEmail() -> String? {
         UserDefaults.standard.string(forKey: lastEmailKey)
-    }
-
-    // MARK: - Private
-
-    private func deleteAllTokens(in context: ModelContext) {
-        let tokens = (try? context.fetch(FetchDescriptor<AuthToken>())) ?? []
-        tokens.forEach { context.delete($0) }
     }
 }

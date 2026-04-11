@@ -31,6 +31,7 @@ struct CreateGroupSheet: View {
                     Text("Create a group to start tracking shared transactions with friends.")
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("New Group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

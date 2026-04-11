@@ -8,21 +8,16 @@ struct TransactionsView: View {
 
     @State private var viewModel = TransactionsViewModel()
     var categoryFilter: Binding<String?>?
+    var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
         NavigationStack {
-            TransactionsBody(viewModel: viewModel)
+            TransactionsBody(viewModel: viewModel, onGroupTapped: onGroupTapped)
                 .navigationTitle("Transactions")
         }
-        .task {
+        .onChange(of: TransactionsQuerySnapshot(transactions: allTransactions, categories: customCategories), initial: true) {
             viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
-        }
-        .onChange(of: allTransactions) { _, newValue in
-            viewModel.update(allTransactions: newValue, customCategories: customCategories)
-        }
-        .onChange(of: customCategories) { _, newValue in
-            viewModel.update(allTransactions: allTransactions, customCategories: newValue)
         }
         .onChange(of: categoryFilter?.wrappedValue) { _, newValue in
             guard let category = newValue else { return }
@@ -39,6 +34,7 @@ struct TransactionsView: View {
 
 private struct TransactionsBody: View {
     @Bindable var viewModel: TransactionsViewModel
+    var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -83,9 +79,11 @@ private struct TransactionsBody: View {
                         .padding(.horizontal)
                         .padding(.top, 40)
                     } else {
-                        TransactionList(transactions: viewModel.filteredTransactions) { transaction in
-                            viewModel.deleteTransaction(transaction)
-                        }
+                        TransactionList(
+                            transactions: viewModel.filteredTransactions,
+                            onDelete: { transaction in viewModel.deleteTransaction(transaction) },
+                            onGroupTapped: onGroupTapped
+                        )
                         .padding(.horizontal)
                     }
                 }
@@ -102,10 +100,7 @@ private struct TransactionsBody: View {
         .background(Color(.systemGroupedBackground))
         .searchable(text: $viewModel.searchText, prompt: "Search transactions")
         .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
-        .alert("Delete Transaction?", isPresented: Binding(
-            get: { viewModel.transactionToDelete != nil },
-            set: { if !$0 { viewModel.cancelDeleteTransaction() } }
-        )) {
+        .alert("Delete Transaction?", isPresented: $viewModel.isConfirmingDelete) {
             Button("Cancel", role: .cancel) { viewModel.cancelDeleteTransaction() }
             Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }
         } message: {
@@ -123,12 +118,6 @@ private struct TransactionsMonthSelector: View {
     @State private var showDatePicker = false
     @State private var tapped = 0
 
-    private var formattedMonth: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: viewModel.selectedDate)
-    }
-
     var body: some View {
         HStack(spacing: 8) {
             Button {
@@ -142,16 +131,16 @@ private struct TransactionsMonthSelector: View {
                     .foregroundStyle(AppColors.accent)
                     .padding(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Button {
                 showDatePicker = true
             } label: {
-                Text(formattedMonth)
+                Text(viewModel.selectedDate, format: .dateTime.month(.wide).year())
                     .font(AppTypography.chipSelected)
                     .foregroundStyle(.primary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Button {
                 if let next = Calendar.current.date(byAdding: .month, value: 1, to: viewModel.selectedDate) {
@@ -164,7 +153,7 @@ private struct TransactionsMonthSelector: View {
                     .foregroundStyle(AppColors.accent)
                     .padding(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Spacer()
         }
@@ -216,4 +205,11 @@ private struct TransactionsFilterBar: View {
         }
         .sensoryFeedback(.selection, trigger: selectionChanged)
     }
+}
+
+// MARK: - Helpers
+
+private struct TransactionsQuerySnapshot: Equatable {
+    let transactions: [Transaction]
+    let categories: [CustomCategory]
 }

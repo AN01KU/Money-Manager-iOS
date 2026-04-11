@@ -6,7 +6,14 @@
 import Foundation
 import SwiftData
 
+enum PreflightOutcome {
+    case valid
+    case invalid(reason: String)
+    case skipped   // no session ID — offline queue was created before any login
+}
+
 @Observable
+@MainActor
 final class SyncService: SyncServiceProtocol {
     static let shared = SyncService()
     
@@ -81,6 +88,7 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: MonthlyBudget.self)
         try? context.delete(model: CustomCategory.self)
         try? context.delete(model: PendingChange.self)
+        try? context.delete(model: OrphanedChange.self)
         try? context.delete(model: SplitGroupModel.self)
         try? context.delete(model: GroupMemberModel.self)
         try? context.delete(model: GroupTransactionModel.self)
@@ -95,7 +103,19 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Sync on launch started")
         let context = ModelContext(container)
-        await changeQueueManager.replayAll(context: context, isAuthenticated: true)
+
+        changeQueueManager.purgeExpiredOrphans(olderThan: 7, context: context)
+
+        let preflight = await runPreflight()
+        switch preflight {
+        case .valid, .skipped:
+            await changeQueueManager.replayAll(context: context, isAuthenticated: true)
+        case .invalid(let reason):
+            AppLogger.sync.warning("Preflight failed on launch: \(reason) — orphaning queue")
+            changeQueueManager.orphanAll(context: context)
+            NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
+        }
+
         await pullFromServer(context: context)
         AppLogger.sync.info("Sync on launch complete")
     }
@@ -109,9 +129,43 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Sync on reconnect started")
         let context = ModelContext(container)
-        await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+
+        let preflight = await runPreflight()
+        switch preflight {
+        case .valid, .skipped:
+            await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+        case .invalid(let reason):
+            AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — orphaning queue")
+            changeQueueManager.orphanAll(context: context)
+            NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
+        }
+
         await pullFromServer(context: context)
         AppLogger.sync.info("Sync on reconnect complete")
+    }
+
+    /// Calls POST /sync/preflight to verify the stored sync session is still valid.
+    /// Returns `.skipped` when no session ID is stored (nothing queued offline yet).
+    private func runPreflight() async -> PreflightOutcome {
+        guard let sessionID = SessionStore.shared.getSyncSessionID() else {
+            return .skipped
+        }
+
+        do {
+            let body = APISyncPreflightRequest(syncSessionId: sessionID)
+            let response: APISyncPreflightResponse = try await apiClient.post("/sync/preflight", body: body)
+            return response.valid ? .valid : .invalid(reason: response.reason ?? "UNKNOWN")
+        } catch let error as APIError {
+            if case .syncSessionInvalid(let reason) = error {
+                return .invalid(reason: reason)
+            }
+            // Network or server error — treat as skipped so we don't block the queue unnecessarily
+            AppLogger.sync.warning("Preflight request failed: \(error) — proceeding with sync")
+            return .skipped
+        } catch {
+            AppLogger.sync.warning("Preflight request failed: \(error) — proceeding with sync")
+            return .skipped
+        }
     }
 
     func fullSync() async {
@@ -122,7 +176,8 @@ final class SyncService: SyncServiceProtocol {
 
         AppLogger.sync.info("Full sync started")
         let context = ModelContext(container)
-        await pullAllFromServer(context: context)
+
+        await pullFromServer(context: context)
         updateLastSyncTime()
         syncSuccessCount += 1
         AppLogger.sync.info("Full sync complete")
@@ -137,7 +192,7 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.info("Bootstrap after signup started")
         let context = ModelContext(container)
 
-        // 1. Pull server-seeded categories (reconciles predefined by key)
+        // 1. Pull any existing category overrides/custom categories from server
         await pullCategories(context: context)
 
         // 2. Enqueue all local user data as creates
@@ -155,58 +210,76 @@ final class SyncService: SyncServiceProtocol {
     private func enqueueLocalData(context: ModelContext) {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for transaction in transactions where !transaction.isSoftDeleted {
-            let payload = try? APIClient.apiEncoder.encode(transaction.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "transaction",
-                entityID: transaction.id,
-                action: "create",
-                endpoint: "/transactions",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(transaction.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "transaction",
+                    entityID: transaction.id,
+                    action: "create",
+                    endpoint: "/transactions",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode transaction \(transaction.id): \(error) — skipping")
+            }
         }
 
         let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
-        for category in categories where !category.isPredefined {
-            let payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "category",
-                entityID: category.id,
-                action: "create",
-                endpoint: "/categories",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count)")
+        for category in categories {
+            AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
+            do {
+                let payload = try APIClient.apiEncoder.encode(category.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "category",
+                    entityID: category.id,
+                    action: "create",
+                    endpoint: "/categories",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode category \(category.id): \(error) — skipping")
+            }
         }
 
         let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
         for budget in budgets {
-            let payload = try? APIClient.apiEncoder.encode(budget.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "budget",
-                entityID: budget.id,
-                action: "create",
-                endpoint: "/budgets",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(budget.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "budget",
+                    entityID: budget.id,
+                    action: "create",
+                    endpoint: "/budgets",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode budget \(budget.id): \(error) — skipping")
+            }
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
-            let payload = try? APIClient.apiEncoder.encode(item.toCreateRequest())
-            changeQueueManager.enqueue(
-                entityType: "recurring",
-                entityID: item.id,
-                action: "create",
-                endpoint: "/recurring-transactions",
-                httpMethod: "POST",
-                payload: payload,
-                context: context
-            )
+            do {
+                let payload = try APIClient.apiEncoder.encode(item.toCreateRequest())
+                changeQueueManager.enqueue(
+                    entityType: "recurring",
+                    entityID: item.id,
+                    action: "create",
+                    endpoint: "/recurring-transactions",
+                    httpMethod: "POST",
+                    payload: payload,
+                    context: context
+                )
+            } catch {
+                AppLogger.sync.error("[EnqueueLocalData] failed to encode recurring \(item.id): \(error) — skipping")
+            }
         }
     }
     
@@ -220,10 +293,6 @@ final class SyncService: SyncServiceProtocol {
         await pullTransactions(context: context)
 
         updateLastSyncTime()
-    }
-    
-    private func pullAllFromServer(context: ModelContext) async {
-        await pullFromServer(context: context)
     }
     
     private func pullCategories(context: ModelContext) async {
@@ -278,11 +347,7 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
-            let groupTxns = allTransactions.filter { $0.groupTransactionId != nil || $0.groupId != nil }
-            AppLogger.sync.debug("[GroupDebug] pullTransactions: total=\(allTransactions.count) with_group_data=\(groupTxns.count)")
-            for t in groupTxns {
-                AppLogger.sync.debug("[GroupDebug] txn id=\(t.id) group_transaction_id=\(t.groupTransactionId?.uuidString ?? "nil") group_id=\(t.groupId?.uuidString ?? "nil") group_name=\(t.groupName ?? "nil") settlement_id=\(t.settlementId?.uuidString ?? "nil")")
-            }
+            AppLogger.sync.debug("pullTransactions: fetched \(allTransactions.count) transactions from server")
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -296,6 +361,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<Transaction>()
         let localTransactions = (try? context.fetch(descriptor)) ?? []
@@ -310,12 +376,10 @@ final class SyncService: SyncServiceProtocol {
                 if local.groupId == nil, let id = remote.groupId {
                     local.groupId = id
                 }
-                if remote.groupTransactionId != nil {
-                    AppLogger.sync.debug("[GroupDebug] upsert existing txn=\(remote.id) local.groupTransactionId=\(local.groupTransactionId?.uuidString ?? "nil") local.groupId=\(local.groupId?.uuidString ?? "nil") remote.group_id=\(remote.groupId?.uuidString ?? "nil")")
-                }
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     local.applyRemote(remote)
                 }
@@ -335,11 +399,21 @@ final class SyncService: SyncServiceProtocol {
                 )
                 tx.groupId = remote.groupId
                 tx.groupName = remote.groupName
-                if remote.groupTransactionId != nil {
-                    AppLogger.sync.debug("[GroupDebug] insert new txn=\(remote.id) group_transaction_id=\(remote.groupTransactionId?.uuidString ?? "nil") group_id=\(remote.groupId?.uuidString ?? "nil") group_name=\(remote.groupName ?? "nil")")
-                }
                 context.insert(tx)
             }
+        }
+
+        // Remove locally-generated recurring transactions that the server doesn't know about.
+        // These are orphans created by the iOS RecurringTransactionService before the
+        // "only generate when not logged in" guard was in place.
+        let serverIDs = Set(apiTransactions.map { $0.id })
+        for local in localTransactions {
+            guard let _ = local.recurringExpenseId else { continue }   // only recurring-generated
+            guard !local.isSoftDeleted else { continue }
+            guard !serverIDs.contains(local.id) else { continue }      // not on server
+            guard !pendingIDs.contains(local.id) else { continue }     // no pending upload
+            AppLogger.sync.debug("Purging locally-generated recurring txn not on server: \(local.id)")
+            context.delete(local)
         }
 
         try? context.save()
@@ -352,6 +426,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let localRecurring = (try? context.fetch(descriptor)) ?? []
@@ -362,8 +437,9 @@ final class SyncService: SyncServiceProtocol {
             if let local = localByID[remote.id] {
                 if local.isSoftDeleted { continue }
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     local.name = remote.name
                     local.amount = remote.amount
@@ -411,6 +487,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<MonthlyBudget>()
         let localBudgets = (try? context.fetch(descriptor)) ?? []
@@ -420,8 +497,9 @@ final class SyncService: SyncServiceProtocol {
             guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for budget \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for budget \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     local.year = remote.year
                     local.month = remote.month
@@ -449,6 +527,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<CustomCategory>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
@@ -458,13 +537,40 @@ final class SyncService: SyncServiceProtocol {
             return (key, cat)
         })
 
+        // Build a lookup of predefined defaults for comparison
+        let predefinedDefaults = Dictionary(uniqueKeysWithValues: PredefinedCategory.allCases.map { ($0.key, $0) })
+
+        AppLogger.sync.debug("[UpsertCategories] server returned \(apiCategories.count) categories")
         for remote in apiCategories {
             guard isValid(remote) else { continue }
+
+            AppLogger.sync.debug("[UpsertCategories] remote id=\(remote.id) name=\(remote.name) isPredefined=\(remote.isPredefined) predefinedKey=\(remote.predefinedKey ?? "nil") isHidden=\(remote.isHidden)")
+
+            // Skip predefined rows that are identical to the enum default —
+            // the client derives these from PredefinedCategory and doesn't store them locally.
+            if remote.isPredefined,
+               let key = remote.predefinedKey,
+               let defaults = predefinedDefaults[key],
+               remote.name == defaults.rawValue,
+               remote.icon == defaults.icon,
+               remote.color == defaults.defaultColorHex,
+               !remote.isHidden {
+                // Plain default — remove any stale local row that was previously seeded,
+                // but only if there's no pending change waiting to be pushed for it.
+                if let staleLocal = localByPredefinedKey[key], !pendingIDs.contains(staleLocal.id) {
+                    context.delete(staleLocal)
+                }
+                AppLogger.sync.debug("[UpsertCategories] skipped (identical to enum default): \(remote.name)")
+                continue
+            }
+
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
+                    AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remote.isHidden) predefinedKey=\(remote.predefinedKey ?? "nil")")
                     local.name = remote.name
                     local.icon = remote.icon
                     local.color = remote.color
@@ -475,6 +581,11 @@ final class SyncService: SyncServiceProtocol {
                 }
             } else if let key = remote.predefinedKey,
                       let local = localByPredefinedKey[key] {
+                AppLogger.sync.debug("[UpsertCategories] updating by predefinedKey=\(key): \(remote.name) isHidden=\(remote.isHidden)")
+                if let stale = pendingByID[local.id] {
+                    AppLogger.sync.warning("Conflict: server wins for category (predefinedKey=\(key)) — deleting stale pending change")
+                    context.delete(stale)
+                }
                 local.id = remote.id
                 local.name = remote.name
                 local.icon = remote.icon
@@ -484,6 +595,7 @@ final class SyncService: SyncServiceProtocol {
                 local.predefinedKey = remote.predefinedKey
                 local.updatedAt = remote.updatedAt
             } else {
+                AppLogger.sync.debug("[UpsertCategories] inserting new row: \(remote.name) isPredefined=\(remote.isPredefined) predefinedKey=\(remote.predefinedKey ?? "nil") isHidden=\(remote.isHidden)")
                 let category = CustomCategory(
                     id: remote.id,
                     name: remote.name,
@@ -505,13 +617,13 @@ final class SyncService: SyncServiceProtocol {
     private func pullGroups(context: ModelContext) async {
         do {
             let groups = try await groupService.fetchGroups()
-            upsertGroups(groups, context: context)
+            await upsertGroups(groups, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull groups: \(error)")
         }
     }
 
-    private func upsertGroups(_ apiGroups: [APIGroupWithDetails], context: ModelContext) {
+    private func upsertGroups(_ apiGroups: [APIGroupWithDetails], context: ModelContext) async {
         // Fetch all existing local models
         let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
         let localGroupsByID = Dictionary(uniqueKeysWithValues: localGroups.map { ($0.id, $0) })
@@ -569,12 +681,8 @@ final class SyncService: SyncServiceProtocol {
         try? context.save()
 
         // Sync group transactions separately (not included in list response)
-        Task {
-            guard let container = modelContainer else { return }
-            let txContext = ModelContext(container)
-            for remote in apiGroups {
-                await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: txContext)
-            }
+        for remote in apiGroups {
+            await pullGroupTransactions(groupId: remote.id, dbGroupId: remote.id, localGroupTransactionsByID: localGroupTransactionsByID, context: context)
         }
     }
 
@@ -586,11 +694,11 @@ final class SyncService: SyncServiceProtocol {
     ) async {
         do {
             let remote = try await groupService.fetchGroupTransactions(groupId: groupId)
-            AppLogger.sync.debug("[GroupDebug] pullGroupTransactions: group=\(groupId) fetched \(remote.count) transactions")
+            AppLogger.sync.debug("pullGroupTransactions: group=\(groupId) fetched \(remote.count) transactions")
 
             let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
             guard let dbGroup = localGroups.first(where: { $0.id == dbGroupId }) else {
-                AppLogger.sync.warning("[GroupDebug] pullGroupTransactions: SplitGroupModel not found for id=\(dbGroupId)")
+                AppLogger.sync.warning("pullGroupTransactions: SplitGroupModel not found for id=\(dbGroupId)")
                 return
             }
 
@@ -598,7 +706,6 @@ final class SyncService: SyncServiceProtocol {
                 if let existing = localGroupTransactionsByID[gt.id] {
                     existing.transactionDescription = gt.description ?? ""
                     existing.totalAmount = gt.totalAmount
-                    AppLogger.sync.debug("[GroupDebug] Updated GroupTransactionModel id=\(gt.id) description='\(gt.description ?? "nil")'")
                 } else {
                     let newGT = GroupTransactionModel(
                         id: gt.id,
@@ -609,13 +716,12 @@ final class SyncService: SyncServiceProtocol {
                     )
                     newGT.group = dbGroup
                     context.insert(newGT)
-                    AppLogger.sync.debug("[GroupDebug] Inserted GroupTransactionModel id=\(gt.id) group='\(dbGroup.name)'")
                 }
             }
 
             try? context.save()
         } catch {
-            AppLogger.sync.error("[GroupDebug] pullGroupTransactions failed for group=\(groupId): \(error)")
+            AppLogger.sync.error("pullGroupTransactions failed for group=\(groupId): \(error)")
         }
     }
 

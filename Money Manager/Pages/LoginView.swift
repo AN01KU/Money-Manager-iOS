@@ -17,18 +17,28 @@ struct LoginView: View {
     @State private var showSignup = false
     @State private var isLoading = false
     @State private var errorMessage: String?
-    
+    @State private var showDataWipeAlert = false
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 32) {
-                    headerSection
+                    LoginHeaderSection()
 
-                    formSection
+                    LoginFormSection(email: $email, password: $password)
 
-                    loginButton
+                    LoginButton(isLoading: isLoading, isFormValid: isFormValid, onTap: login)
 
-                    signupLink
+                    #if DEBUG
+                    Button("Fill Test Credentials") {
+                        email = "test@gmail.com"
+                        password = "12345678"
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    #endif
+
+                    LoginSignupLink(onSignUp: { showSignup = true })
 
                     if let onSkip {
                         Button("Continue without account") {
@@ -40,6 +50,7 @@ struct LoginView: View {
                 }
                 .padding(24)
             }
+            .dismissKeyboardOnScroll()
             .background(Color(.systemBackground))
             .toolbar(isDismissable ? .visible : .hidden, for: .navigationBar)
             .toolbar {
@@ -54,32 +65,79 @@ struct LoginView: View {
             }) {
                 SignupView()
             }
-            .alert("Login Error", isPresented: .constant(errorMessage != nil)) {
+            .alert("Login Error", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
                 Button("OK") { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
             }
+            .alert("Switch Account?", isPresented: $showDataWipeAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Continue", role: .destructive) {
+                    performLogin()
+                }
+            } message: {
+                Text("You were previously signed in with a different account. All local data will be cleared before signing in.")
+            }
         }
     }
-    
-    private var headerSection: some View {
+
+    private var isFormValid: Bool {
+        !email.isEmpty && !password.isEmpty && email.isValidEmail
+    }
+
+    private func login() {
+        let normalizedEmail = email.lowercased()
+        if let lastEmail = SessionStore.shared.getLastLoggedInEmail(), lastEmail != normalizedEmail {
+            showDataWipeAlert = true
+            return
+        }
+        performLogin()
+    }
+
+    private func performLogin() {
+        isLoading = true
+        errorMessage = nil
+
+        Task {
+            do {
+                try await authService.login(email: email, password: password)
+                await syncService.fullSync()
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isLoading = false
+        }
+    }
+}
+
+private struct LoginHeaderSection: View {
+    var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "indianrupeesign.circle.fill")
                 .font(.system(size: 80))
                 .foregroundStyle(AppColors.accent)
-            
+
             Text("Money Manager")
                 .font(.largeTitle)
                 .fontWeight(.bold)
-            
+
             Text("Sign in to continue")
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
         .padding(.top, 40)
     }
-    
-    private var formSection: some View {
+}
+
+private struct LoginFormSection: View {
+    @Binding var email: String
+    @Binding var password: String
+
+    var body: some View {
         VStack(spacing: 16) {
             TextField("Email", text: $email)
                 .textFieldStyle(.plain)
@@ -89,7 +147,7 @@ struct LoginView: View {
                 .padding()
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                
+
             SecureField("Password", text: $password)
                 .textFieldStyle(.plain)
                 .textContentType(.password)
@@ -98,10 +156,16 @@ struct LoginView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
-    
-    private var loginButton: some View {
+}
+
+private struct LoginButton: View {
+    let isLoading: Bool
+    let isFormValid: Bool
+    let onTap: () -> Void
+
+    var body: some View {
         Button {
-            login()
+            onTap()
         } label: {
             Group {
                 if isLoading {
@@ -120,39 +184,23 @@ struct LoginView: View {
         }
         .disabled(!isFormValid || isLoading)
     }
-    
-    private var signupLink: some View {
+}
+
+private struct LoginSignupLink: View {
+    let onSignUp: () -> Void
+
+    var body: some View {
         HStack {
             Text("Don't have an account?")
                 .foregroundStyle(.secondary)
-            
+
             Button("Sign Up") {
-                showSignup = true
+                onSignUp()
             }
             .fontWeight(.semibold)
             .foregroundStyle(AppColors.accent)
         }
         .font(.subheadline)
-    }
-    
-    private var isFormValid: Bool {
-        !email.isEmpty && !password.isEmpty && email.contains("@")
-    }
-    
-    private func login() {
-        isLoading = true
-        errorMessage = nil
-        
-        Task {
-            do {
-                try await authService.login(email: email, password: password)
-                await syncService.fullSync()
-                dismiss()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-            isLoading = false
-        }
     }
 }
 

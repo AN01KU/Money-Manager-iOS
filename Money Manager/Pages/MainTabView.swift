@@ -24,7 +24,11 @@ struct MainTabView: View {
             }
 
             Tab("Transactions", systemImage: "list.bullet", value: .transactions) {
-                TransactionsView(categoryFilter: $pendingCategoryFilter)
+                TransactionsView(categoryFilter: $pendingCategoryFilter, onGroupTapped: { groupID in
+                    guard authService.isAuthenticated else { return }
+                    selectedTab = .groups
+                    pendingRoute = .group(groupID)
+                })
             }
 
             if authService.isAuthenticated {

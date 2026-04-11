@@ -141,18 +141,18 @@ struct AddCategorySwiftDataTests {
         
         let viewModel = AddCategoryViewModel()
         viewModel.modelContext = context
-        viewModel.name = "  Travel  "
+        viewModel.name = "  My Hobby  "
         viewModel.selectedIcon = "star.circle.fill"
         viewModel.selectedColor = "#3498DB"
-        
+
         let result = await viewModel.save()
-        
+
         #expect(result == true)
-        
+
         let descriptor = FetchDescriptor<CustomCategory>()
         let saved = try context.fetch(descriptor)
-        
-        #expect(saved.first?.name == "Travel")
+
+        #expect(saved.first?.name == "My Hobby")
     }
     
     @Test
@@ -201,64 +201,94 @@ struct ManageCategoriesSwiftDataTests {
     func testHideCategoryPersistsToSwiftData() throws {
         let container = try makeContainer()
         let context = container.mainContext
-        
-        let category = CustomCategory(name: "Food", icon: "star", color: "#FF0000")
-        context.insert(category)
+
+        let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
+        context.insert(row)
         try context.save()
-        
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name,
+            icon: row.icon,
+            colorHex: row.color,
+            isHidden: row.isHidden,
+            isPredefined: false,
+            isDeletable: true,
+            overrideRow: row
+        )
+
         let viewModel = ManageCategoriesViewModel()
-        viewModel.configure(customCategories: [category], modelContext: context)
-        
-        viewModel.hideCategory(at: 0)
-        
+        viewModel.modelContext = context
+
+        viewModel.hideCategory(category)
+
         let descriptor = FetchDescriptor<CustomCategory>()
         let fetched = try context.fetch(descriptor)
-        
         #expect(fetched.first?.isHidden == true)
     }
-    
+
     @Test
     func testRestoreCategoryPersistsToSwiftData() throws {
         let container = try makeContainer()
         let context = container.mainContext
-        
-        let category = CustomCategory(name: "Food", icon: "star", color: "#FF0000")
-        category.isHidden = true
-        context.insert(category)
+
+        let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
+        row.isHidden = true
+        context.insert(row)
         try context.save()
-        
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name,
+            icon: row.icon,
+            colorHex: row.color,
+            isHidden: row.isHidden,
+            isPredefined: false,
+            isDeletable: true,
+            overrideRow: row
+        )
+
         let viewModel = ManageCategoriesViewModel()
-        viewModel.configure(customCategories: [category], modelContext: context)
-        
+        viewModel.modelContext = context
+
         viewModel.restoreCategory(category)
-        
+
         let descriptor = FetchDescriptor<CustomCategory>()
         let fetched = try context.fetch(descriptor)
-        
         #expect(fetched.first?.isHidden == false)
     }
-    
+
     @Test
     func testHideThenRestoreRoundTrip() throws {
         let container = try makeContainer()
         let context = container.mainContext
-        
-        let category = CustomCategory(name: "Travel", icon: "star", color: "#00FF00")
-        context.insert(category)
+
+        let row = CustomCategory(name: "Travel", icon: "star", color: "#00FF00")
+        context.insert(row)
         try context.save()
-        
+
         let viewModel = ManageCategoriesViewModel()
-        viewModel.configure(customCategories: [category], modelContext: context)
-        
-        viewModel.hideCategory(at: 0)
-        #expect(category.isHidden == true)
-        
+        viewModel.modelContext = context
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name,
+            icon: row.icon,
+            colorHex: row.color,
+            isHidden: row.isHidden,
+            isPredefined: false,
+            isDeletable: true,
+            overrideRow: row
+        )
+
+        viewModel.hideCategory(category)
+        #expect(row.isHidden == true)
+
         viewModel.restoreCategory(category)
-        #expect(category.isHidden == false)
-        
+        #expect(row.isHidden == false)
+
         let descriptor = FetchDescriptor<CustomCategory>()
         let fetched = try context.fetch(descriptor)
-        
         #expect(fetched.first?.isHidden == false)
     }
 }

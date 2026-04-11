@@ -15,7 +15,7 @@ struct GroupsListView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack(alignment: .bottomTrailing) {
-                content
+                GroupsListContent(viewModel: viewModel, onCreateGroup: { showCreateGroup = true })
                     .background(Color(.systemGroupedBackground))
 
                 if !viewModel.groups.isEmpty {
@@ -61,9 +61,14 @@ struct GroupsListView: View {
         navigationPath = [group]
         pendingRoute?.wrappedValue = nil
     }
+}
+
+private struct GroupsListContent: View {
+    @Bindable var viewModel: GroupsListViewModel
+    let onCreateGroup: () -> Void
 
     @ViewBuilder
-    private var content: some View {
+    var body: some View {
         if viewModel.isLoading && viewModel.groups.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -74,7 +79,7 @@ struct GroupsListView: View {
                 message: "Create a group to start splitting transactions with others.",
                 actionTitle: "Create Group"
             ) {
-                showCreateGroup = true
+                onCreateGroup()
             }
         } else {
             ScrollView {
@@ -87,17 +92,22 @@ struct GroupsListView: View {
                     .padding(.horizontal)
 
                     if viewModel.selectedTab == .groups {
-                        groupsContent
+                        GroupsGroupsContent(viewModel: viewModel, onCreateGroup: onCreateGroup)
                     } else {
-                        activitiesContent
+                        GroupsActivitiesContent(viewModel: viewModel)
                     }
                 }
                 .padding(.vertical)
             }
         }
     }
+}
 
-    private var groupsContent: some View {
+private struct GroupsGroupsContent: View {
+    @Bindable var viewModel: GroupsListViewModel
+    let onCreateGroup: () -> Void
+
+    var body: some View {
         VStack(spacing: 16) {
             NetBalanceCard(netBalance: viewModel.netBalance, groupCount: viewModel.groups.count)
                 .padding(.horizontal)
@@ -140,8 +150,12 @@ struct GroupsListView: View {
             }
         }
     }
+}
 
-    private var activitiesContent: some View {
+private struct GroupsActivitiesContent: View {
+    @Bindable var viewModel: GroupsListViewModel
+
+    var body: some View {
         Group {
             if viewModel.filteredActivity.isEmpty {
                 EmptyStateView(
@@ -152,7 +166,7 @@ struct GroupsListView: View {
                 .padding(.top, 32)
             } else {
                 VStack(alignment: .leading, spacing: 20) {
-                    ForEach(groupedActivity) { section in
+                    ForEach(viewModel.groupedActivity) { section in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(section.label)
                                 .font(AppTypography.sectionHeader)
@@ -177,35 +191,6 @@ struct GroupsListView: View {
                 }
             }
         }
-    }
-
-    private struct ActivitySection: Identifiable {
-        let id: String
-        let label: String
-        let items: [ActivityItem]
-    }
-
-    private var groupedActivity: [ActivitySection] {
-        let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM dd"
-        var grouped: [String: [ActivityItem]] = [:]
-
-        for item in viewModel.filteredActivity {
-            let day = calendar.startOfDay(for: item.date)
-            let key = calendar.isDateInToday(day)
-                ? "TODAY"
-                : formatter.string(from: day).uppercased()
-            grouped[key, default: []].append(item)
-        }
-
-        return grouped
-            .map { ActivitySection(id: $0.key, label: $0.key, items: $0.value) }
-            .sorted { a, b in
-                if a.id == "TODAY" { return true }
-                if b.id == "TODAY" { return false }
-                return a.id > b.id
-            }
     }
 }
 

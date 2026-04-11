@@ -1,6 +1,17 @@
 import SwiftUI
 import SwiftData
 
+private enum SettingsRoute: Hashable {
+    case budgets
+    case recurring
+    case categories
+    case currency
+    case backup
+    #if DEBUG
+    case syncDebug
+    #endif
+}
+
 struct SettingsView: View {
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
@@ -18,29 +29,64 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 if authService.isAuthenticated {
-                    profileSection
+                    if let user = authService.currentUser {
+                        ProfileSection(
+                            username: user.username,
+                            email: user.email,
+                            onLogOut: { showLogoutConfirmation = true }
+                        )
+                    }
                 } else {
-                    loginPromptSection
+                    LoginPromptSection(
+                        onSignIn: { showLoginSheet = true },
+                        onCreateAccount: { showSignupSheet = true }
+                    )
                 }
-                financeSection
-                preferencesSection
+                FinanceSection()
+                PreferencesSection(
+                    selectedCurrency: selectedCurrency,
+                    currencySymbol: CurrencyFormatter.currentSymbol
+                )
                 if authService.isAuthenticated {
-                    syncSection
-                    accountSection
+                    SyncSection(
+                        pendingCount: changeQueueManager.pendingCount,
+                        failedCount: changeQueueManager.failedCount,
+                        isSyncing: isSyncingManually || syncService.isSyncing,
+                        isNetworkConnected: NetworkMonitor.shared.isConnected,
+                        onSyncNow: {
+                            isSyncingManually = true
+                            Task {
+                                await syncService.fullSync()
+                                isSyncingManually = false
+                            }
+                        }
+                    )
                 }
                 #if DEBUG
-                debugSection
+                DebugSection()
                 #endif
-                aboutSection
+                AboutSection()
             }
             .navigationTitle("Settings")
+            .navigationDestination(for: SettingsRoute.self) { route in
+                switch route {
+                case .budgets:    BudgetsView()
+                case .recurring:  RecurringTransactionsView()
+                case .categories: ManageCategoriesView()
+                case .currency:   CurrencyPickerView()
+                case .backup:     ExportDataView()
+                #if DEBUG
+                case .syncDebug:  SyncDebugView()
+                #endif
+                }
+            }
             .sheet(isPresented: $showLoginSheet) {
                 LoginView(isDismissable: true)
             }
             .sheet(isPresented: $showSignupSheet) {
                 SignupView()
             }
-            .confirmationDialog("Log Out", isPresented: $showLogoutConfirmation, titleVisibility: .visible) {
+            .alert("Log Out", isPresented: $showLogoutConfirmation) {
                 Button("Log Out", role: .destructive) {
                     authService.logout()
                 }
@@ -50,10 +96,15 @@ struct SettingsView: View {
             }
         }
     }
+}
 
-    // MARK: - Login Prompt
+// MARK: - Login Prompt
 
-    private var loginPromptSection: some View {
+private struct LoginPromptSection: View {
+    let onSignIn: () -> Void
+    let onCreateAccount: () -> Void
+
+    var body: some View {
         Section {
             HStack(spacing: 14) {
                 ZStack {
@@ -79,175 +130,175 @@ struct SettingsView: View {
             .padding(.vertical, 4)
 
             Button("Sign In") {
-                showLoginSheet = true
+                onSignIn()
             }
             .foregroundStyle(AppColors.accent)
 
             Button("Create Account") {
-                showSignupSheet = true
+                onCreateAccount()
             }
             .foregroundStyle(AppColors.accent)
         }
     }
+}
 
-    // MARK: - Profile
+// MARK: - Profile
 
-    private var profileSection: some View {
+private struct ProfileSection: View {
+    let username: String
+    let email: String
+    let onLogOut: () -> Void
+
+    var body: some View {
         Section {
-            if let user = authService.currentUser {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.accent.opacity(0.12))
-                            .frame(width: 56, height: 56)
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(AppColors.accent.opacity(0.12))
+                        .frame(width: 56, height: 56)
 
-                        Text(String(user.username.prefix(1)).uppercased())
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppColors.accent)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(user.username)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-
-                        Text(user.email)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(String(username.prefix(1)).uppercased())
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppColors.accent)
                 }
-                .padding(.vertical, 4)
-            }
-        }
-    }
 
-    // MARK: - Finance
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(username)
+                        .font(.title3)
+                        .fontWeight(.semibold)
 
-    private var financeSection: some View {
-        Section("Finance") {
-            NavigationLink {
-                BudgetsView()
-            } label: {
-                Label("Budgets", systemImage: "chart.bar.fill")
-            }
-            .accessibilityIdentifier("settings.budgets-row")
-
-            NavigationLink {
-                RecurringTransactionsView()
-            } label: {
-                Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
-            }
-            .accessibilityIdentifier("settings.recurring-row")
-
-            NavigationLink {
-                ManageCategoriesView()
-            } label: {
-                Label("Categories", systemImage: "square.grid.2x2.fill")
-            }
-            .accessibilityIdentifier("settings.categories-row")
-        }
-    }
-
-    // MARK: - Preferences
-
-    private var preferencesSection: some View {
-        Section("Preferences") {
-            NavigationLink {
-                CurrencyPickerView()
-            } label: {
-                HStack {
-                    Label("Currency", systemImage: "coloncurrencysign.circle")
-                    Spacer()
-                    Text("\(selectedCurrency) (\(CurrencyFormatter.currentSymbol))")
+                    Text(email)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
+            .padding(.vertical, 4)
 
-            NavigationLink {
-                ExportDataView()
-            } label: {
-                Label("Backup", systemImage: "archivebox.fill")
-            }
-        }
-    }
-
-    // MARK: - Sync
-
-    private var syncSection: some View {
-        Section("Sync") {
-            SyncStatusView()
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if changeQueueManager.pendingCount > 0 {
-                HStack {
-                    Text("Pending changes")
-                    Spacer()
-                    Text("\(changeQueueManager.pendingCount)")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if changeQueueManager.failedCount > 0 {
-                HStack {
-                    Text("Failed changes")
-                    Spacer()
-                    Text("\(changeQueueManager.failedCount)")
-                        .foregroundStyle(.red)
-                }
-            }
-
-            Button {
-                isSyncingManually = true
-                Task {
-                    await syncService.fullSync()
-                    isSyncingManually = false
-                }
-            } label: {
-                HStack {
-                    Label("Sync Now", systemImage: "arrow.clockwise.icloud")
-                    if isSyncingManually || syncService.isSyncing {
-                        Spacer()
-                        ProgressView()
-                    }
-                }
-            }
-            .disabled(isSyncingManually || syncService.isSyncing || !NetworkMonitor.shared.isConnected)
-        }
-    }
-
-    // MARK: - Account
-
-    private var accountSection: some View {
-        Section {
             Button(role: .destructive) {
-                showLogoutConfirmation = true
+                onLogOut()
             } label: {
                 Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
             }
         }
     }
+}
 
-    // MARK: - Debug (DEBUG builds only)
+// MARK: - Finance
 
-    #if DEBUG
-    @ViewBuilder
-    private var debugSection: some View {
-        Section {
-            NavigationLink {
-                SyncDebugView()
+private struct FinanceSection: View {
+    var body: some View {
+        Section("Finance") {
+            NavigationLink(value: SettingsRoute.budgets) {
+                Label("Budgets", systemImage: "chart.bar.fill")
+            }
+            .accessibilityIdentifier("settings.budgets-row")
+
+            NavigationLink(value: SettingsRoute.recurring) {
+                Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
+            }
+            .accessibilityIdentifier("settings.recurring-row")
+
+            NavigationLink(value: SettingsRoute.categories) {
+                Label("Categories", systemImage: "square.grid.2x2.fill")
+            }
+            .accessibilityIdentifier("settings.categories-row")
+        }
+    }
+}
+
+// MARK: - Preferences
+
+private struct PreferencesSection: View {
+    let selectedCurrency: String
+    let currencySymbol: String
+
+    var body: some View {
+        Section("Preferences") {
+            NavigationLink(value: SettingsRoute.currency) {
+                HStack {
+                    Label("Currency", systemImage: "coloncurrencysign.circle")
+                    Spacer()
+                    Text("\(selectedCurrency) (\(currencySymbol))")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            NavigationLink(value: SettingsRoute.backup) {
+                Label("Backup", systemImage: "archivebox.fill")
+            }
+        }
+    }
+}
+
+// MARK: - Sync
+
+private struct SyncSection: View {
+    let pendingCount: Int
+    let failedCount: Int
+    let isSyncing: Bool
+    let isNetworkConnected: Bool
+    let onSyncNow: () -> Void
+
+    var body: some View {
+        Section("Sync") {
+            SyncStatusView()
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if pendingCount > 0 {
+                HStack {
+                    Text("Pending changes")
+                    Spacer()
+                    Text("\(pendingCount)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if failedCount > 0 {
+                HStack {
+                    Text("Failed changes")
+                    Spacer()
+                    Text("\(failedCount)")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Button {
+                onSyncNow()
             } label: {
+                HStack {
+                    Label("Sync Now", systemImage: "arrow.clockwise.icloud")
+                    if isSyncing {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isSyncing || !isNetworkConnected)
+        }
+    }
+}
+
+// MARK: - Debug (DEBUG builds only)
+
+#if DEBUG
+private struct DebugSection: View {
+    var body: some View {
+        Section {
+            NavigationLink(value: SettingsRoute.syncDebug) {
                 Label("Sync Debug", systemImage: "antenna.radiowaves.left.and.right")
             }
         } header: {
             Text("Debug")
         }
     }
-    #endif
+}
+#endif
 
-    // MARK: - About
+// MARK: - About
 
-    private var aboutSection: some View {
+private struct AboutSection: View {
+    var body: some View {
         Section {
             HStack {
                 Text("Version")

@@ -13,10 +13,17 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     /// Base delay in seconds — actual delay is `baseRetryDelay * 2^retryCount + jitter`
     private static let baseRetryDelay: TimeInterval = 2.0
 
-    private let apiClient = APIClient.shared
+    private var apiClient: APIClient = APIClient.shared
     private var modelContainer: ModelContainer?
+    private var isReplaying = false
 
     init() {}
+
+    #if DEBUG
+    func setAPIClientForTesting(_ client: APIClient) {
+        apiClient = client
+    }
+    #endif
 
     func configure(container: ModelContainer) {
         self.modelContainer = container
@@ -97,6 +104,14 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
 
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {
         guard isAuthenticated else { return }
+        guard !isReplaying else {
+            AppLogger.sync.info("replayAll: already in progress — skipping concurrent call")
+            return
+        }
+        isReplaying = true
+        defer { isReplaying = false }
+
+        purgeExpiredFailedChanges(context: context)
 
         let descriptor = FetchDescriptor<PendingChange>(
             sortBy: [SortDescriptor(\.createdAt)]
@@ -125,6 +140,21 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     return
                 }
 
+                if case APIError.syncSessionInvalid = error {
+                    orphanAll(context: context)
+                    NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
+                    return
+                }
+
+                // A 404 on a delete means the entity never reached the server — treat as success
+                if case APIError.notFound = error, change.action == "delete" {
+                    AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
+                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
                 change.retryCount += 1
 
                 if change.retryCount >= ChangeQueueManager.maxRetryCount {
@@ -144,6 +174,18 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         let base = baseRetryDelay * pow(2.0, Double(exponent))
         let jitter = Double.random(in: 0..<base * 0.2)
         return Date(timeIntervalSinceNow: base + jitter)
+    }
+
+    private func purgeExpiredFailedChanges(context: ModelContext) {
+        let ttl: TimeInterval = 30 * 24 * 60 * 60 // 30 days
+        let cutoff = Date(timeIntervalSinceNow: -ttl)
+        let descriptor = FetchDescriptor<FailedChange>(
+            predicate: #Predicate { $0.failedAt < cutoff }
+        )
+        guard let expired = try? context.fetch(descriptor), !expired.isEmpty else { return }
+        AppLogger.sync.info("Purging \(expired.count) FailedChange records older than 30 days")
+        expired.forEach { context.delete($0) }
+        try? context.save()
     }
 
     private func moveToDeadLetter(_ change: PendingChange, lastError: String, context: ModelContext) {
@@ -174,6 +216,8 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             return
         }
 
+        AppLogger.sync.debug("[ReplayDebug] replayChange: entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) method=\(change.httpMethod) endpoint=\(endpoint)")
+
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
@@ -181,11 +225,17 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         case "PUT":
             guard let payload = change.payload else { return }
             let _: EmptyResponse = try await apiClient.put(endpoint, rawBody: payload)
+        case "PATCH":
+            guard let payload = change.payload else { return }
+            let _: EmptyResponse = try await apiClient.patch(endpoint, rawBody: payload)
         case "DELETE":
             let _: APIMessageResponse = try await apiClient.deleteMessage(endpoint)
         default:
+            AppLogger.sync.warning("[ReplayDebug] unhandled httpMethod=\(change.httpMethod) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action)")
             return
         }
+
+        AppLogger.sync.debug("[ReplayDebug] replayChange succeeded: entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action)")
 
         if change.action == "delete" {
             hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
@@ -209,6 +259,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                 predicate: #Predicate { $0.id == entityID }
             )
             if let record = try? context.fetch(descriptor), let item = record.first {
+                AppLogger.sync.debug("[TxnDebug] hardDeleteEntity: hard-deleting txn=\(entityID) category=\(item.category) amount=\(item.amount)")
                 context.delete(item)
             }
         default:
@@ -224,6 +275,38 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             }
             try? context.save()
         }
+    }
+
+    func orphanAll(context: ModelContext) {
+        let descriptor = FetchDescriptor<PendingChange>()
+        guard let changes = try? context.fetch(descriptor), !changes.isEmpty else { return }
+
+        for change in changes {
+            let orphan = OrphanedChange(
+                entityType: change.entityType,
+                entityID: change.entityID,
+                action: change.action,
+                endpoint: change.endpoint,
+                httpMethod: change.httpMethod,
+                payload: change.payload,
+                createdAt: change.createdAt
+            )
+            context.insert(orphan)
+            context.delete(change)
+        }
+        try? context.save()
+    }
+
+    func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {
+        let cutoff = Date(timeIntervalSinceNow: -Double(days) * 86400)
+        let descriptor = FetchDescriptor<OrphanedChange>(
+            predicate: #Predicate { $0.orphanedAt < cutoff }
+        )
+        guard let expired = try? context.fetch(descriptor), !expired.isEmpty else { return }
+        for orphan in expired {
+            context.delete(orphan)
+        }
+        try? context.save()
     }
 }
 

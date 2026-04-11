@@ -8,6 +8,7 @@ import SwiftData
     var selectedCategoryFilter: String? { didSet { recalculate() } }
     var transactionTypeFilter: TransactionTypeFilter = .all { didSet { recalculate() } }
     var showAddTransaction = false
+    var isConfirmingDelete = false
 
     var filteredTransactions: [Transaction] = []
     var transactionToDelete: Transaction?
@@ -70,6 +71,7 @@ import SwiftData
 
     func deleteTransaction(_ transaction: Transaction) {
         transactionToDelete = transaction
+        isConfirmingDelete = true
     }
 
     func confirmDeleteTransaction() {
@@ -77,6 +79,7 @@ import SwiftData
         transaction.isSoftDeleted = true
         transaction.updatedAt = Date()
         transactionToDelete = nil
+        isConfirmingDelete = false
         do {
             try persistence.saveTransaction(transaction, action: "delete")
         } catch {
@@ -87,5 +90,6 @@ import SwiftData
 
     func cancelDeleteTransaction() {
         transactionToDelete = nil
+        isConfirmingDelete = false
     }
 }

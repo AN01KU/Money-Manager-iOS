@@ -41,6 +41,7 @@ struct AddMemberSheet: View {
                     }
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Invite Member")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

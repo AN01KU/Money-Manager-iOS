@@ -39,7 +39,7 @@ struct APITransaction: Codable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case isDeleted = "is_deleted"
-        case recurringExpenseId = "recurring_expense_id"
+        case recurringExpenseId = "recurring_transaction_id"
         case groupTransactionId = "group_transaction_id"
         case groupId = "group_id"
         case groupName = "group_name"
@@ -149,7 +149,14 @@ struct APIUser: Codable {
 
 struct APIAuthResponse: Codable {
     let token: String
+    let syncSessionId: UUID
     let user: APIUser
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case syncSessionId = "sync_session_id"
+        case user
+    }
 }
 
 struct APIPaginatedResponse<T: Codable>: Codable {
@@ -190,6 +197,27 @@ struct APILoginRequest: Codable {
     let password: String
 }
 
+struct APILogoutRequest: Codable {
+    let syncSessionId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case syncSessionId = "sync_session_id"
+    }
+}
+
+struct APISyncPreflightRequest: Codable, Sendable {
+    let syncSessionId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case syncSessionId = "sync_session_id"
+    }
+}
+
+struct APISyncPreflightResponse: Codable, Sendable {
+    let valid: Bool
+    let reason: String?
+}
+
 struct APICreateTransactionRequest: Codable {
     let id: UUID?
     let type: String          // "expense" or "income"
@@ -210,7 +238,7 @@ struct APICreateTransactionRequest: Codable {
         case time
         case description
         case notes
-        case recurringExpenseId = "recurring_expense_id"
+        case recurringExpenseId = "recurring_transaction_id"
     }
 }
 
@@ -300,6 +328,19 @@ struct APICreateCategoryRequest: Codable {
     let name: String
     let icon: String
     let color: String
+    let isHidden: Bool?
+    let isPredefined: Bool?
+    let predefinedKey: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case icon
+        case color
+        case isHidden = "is_hidden"
+        case isPredefined = "is_predefined"
+        case predefinedKey = "predefined_key"
+    }
 }
 
 struct APIUpdateCategoryRequest: Codable {

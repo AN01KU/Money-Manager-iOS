@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CategoryRow: View {
-    let category: CustomCategory
+    let category: TransactionCategory
     var usageCount: Int = 0
     let onTap: () -> Void
 
@@ -9,7 +9,7 @@ struct CategoryRow: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 Image(systemName: category.icon)
-                    .foregroundStyle(Color(hex: category.color))
+                    .foregroundStyle(category.color)
                     .frame(width: 28)
 
                 Text(category.name)

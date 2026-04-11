@@ -8,8 +8,8 @@ struct RecurringTransactionsView: View {
 
     @State private var viewModel = RecurringTransactionsViewModel()
     @State private var rowTapped = 0
-    @State private var deleteTriggered = 0
     @State private var addTriggered = 0
+    @State private var itemToDelete: RecurringTransaction?
 
     var body: some View {
         Group {
@@ -17,7 +17,7 @@ struct RecurringTransactionsView: View {
                 EmptyStateView(
                     icon: "arrow.clockwise.circle.fill",
                     title: "No recurring transactions",
-                    message: "Add subscriptions and regular bills to track them automatically"
+                    message: "Add recurring incomes and expenses to track them automatically"
                 )
             } else {
                 List {
@@ -27,58 +27,36 @@ struct RecurringTransactionsView: View {
                                 RecurringTransactionRow(recurring: item, onTap: {
                                     rowTapped += 1
                                     viewModel.editingRecurring = item
+                                }, onToggle: {
+                                    viewModel.toggle(item)
                                 })
                                 .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    deleteButton(for: item)
+                                }
                             }
                         } header: {
                             HStack {
                                 Text("Upcoming This Month")
                                 Spacer()
-                                Text(CurrencyFormatter.format(viewModel.upcomingTotalThisMonth))
+                                Text(CurrencyFormatter.format(abs(viewModel.upcomingTotalThisMonth)))
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(AppColors.expense)
+                                    .foregroundStyle(viewModel.upcomingTotalThisMonth >= 0 ? AppColors.income : AppColors.expense)
                             }
                         }
                     }
 
-                    if !viewModel.activeRecurring.isEmpty {
-                        Section("Active") {
-                            ForEach(viewModel.activeRecurring) { item in
-                                RecurringTransactionRow(recurring: item, onTap: {
-                                    rowTapped += 1
-                                    viewModel.editingRecurring = item
-                                })
-                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                            }
-                            .onDelete { indexSet in
-                                deleteTriggered += 1
-                                for index in indexSet {
-                                    viewModel.deactivate(at: index)
-                                }
-                            }
-                            .sensoryFeedback(.warning, trigger: deleteTriggered)
-                        }
-                    }
-
-                    if !viewModel.pausedRecurring.isEmpty {
-                        Section("Paused") {
-                            ForEach(viewModel.pausedRecurring) { item in
-                                RecurringTransactionRow(recurring: item, onTap: {
-                                    rowTapped += 1
-                                    viewModel.editingRecurring = item
-                                })
-                                .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        deleteTriggered += 1
-                                        if let index = viewModel.pausedRecurring.firstIndex(where: { $0.id == item.id }) {
-                                            viewModel.delete(at: index)
-                                        }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                    .tint(.red)
-                                }
+                    Section("All") {
+                        ForEach(viewModel.allRecurring) { item in
+                            RecurringTransactionRow(recurring: item, onTap: {
+                                rowTapped += 1
+                                viewModel.editingRecurring = item
+                            }, onToggle: {
+                                viewModel.toggle(item)
+                            })
+                            .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                deleteButton(for: item)
                             }
                         }
                     }
@@ -105,12 +83,34 @@ struct RecurringTransactionsView: View {
         .sheet(item: $viewModel.editingRecurring) { item in
             EditRecurringTransactionSheet(recurring: item)
         }
+        .alert("Delete Recurring?", isPresented: Binding(
+            get: { itemToDelete != nil },
+            set: { if !$0 { itemToDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { itemToDelete = nil }
+            Button("Delete", role: .destructive) {
+                if let item = itemToDelete {
+                    viewModel.deleteItem(item)
+                }
+                itemToDelete = nil
+            }
+        } message: {
+            Text("This will permanently delete \"\(itemToDelete?.name ?? "")\". Future transactions will no longer be generated.")
+        }
         .task {
             viewModel.modelContext = modelContext
             viewModel.update(recurring: recurringTransactions)
         }
         .onChange(of: recurringTransactions) { _, newValue in
             viewModel.update(recurring: newValue)
+        }
+    }
+
+    private func deleteButton(for item: RecurringTransaction) -> some View {
+        Button(role: .destructive) {
+            itemToDelete = item
+        } label: {
+            Label("Delete", systemImage: "trash")
         }
     }
 }

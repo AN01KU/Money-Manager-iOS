@@ -18,7 +18,7 @@ struct MonthSelector: View {
             showDatePicker = true
         }) {
             HStack {
-                Text(formatMonth(selectedMonth))
+                Text(selectedMonth, format: .dateTime.month(.wide).year())
                     .font(.body)
                     .foregroundStyle(.primary)
                 Image(systemName: "chevron.down")
@@ -56,11 +56,6 @@ struct MonthSelector: View {
         }
     }
     
-    private func formatMonth(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
-    }
 }
 
 #Preview {

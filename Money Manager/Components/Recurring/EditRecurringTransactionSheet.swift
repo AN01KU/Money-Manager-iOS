@@ -13,6 +13,7 @@ struct EditRecurringTransactionSheet: View {
     @State private var name: String = ""
     @State private var amount: String = ""
     @State private var selectedCategory: String = ""
+    @State private var transactionType: TransactionKind = .expense
     @State private var frequency: RecurringFrequency = .monthly
     @State private var startDate: Date = Date()
     @State private var hasEndDate: Bool = false
@@ -90,6 +91,15 @@ struct EditRecurringTransactionSheet: View {
                 }
 
                 Section {
+                    Picker("Type", selection: $transactionType) {
+                        ForEach(TransactionKind.allCases, id: \.self) { kind in
+                            Text(kind.rawValue.capitalized).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Frequency")
                             .font(.subheadline)
@@ -129,6 +139,7 @@ struct EditRecurringTransactionSheet: View {
                         .textInputAutocapitalization(.sentences)
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Edit Recurring")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -162,8 +173,9 @@ struct EditRecurringTransactionSheet: View {
 
     private func loadData() {
         name = recurring.name
-        amount = recurring.amount.formatted(.number.precision(.fractionLength(2)))
+        amount = recurring.amount.editableString
         selectedCategory = recurring.category
+        transactionType = recurring.type
         frequency = recurring.frequency
         startDate = recurring.startDate
         hasEndDate = recurring.endDate != nil
@@ -195,6 +207,7 @@ struct EditRecurringTransactionSheet: View {
         recurring.amount = amountValue
         recurring.category = selectedCategory
         recurring.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+        recurring.type = transactionType
         recurring.frequency = frequency
         recurring.startDate = startDate
         recurring.dayOfMonth = frequency == .monthly ? dayOfMonth : nil

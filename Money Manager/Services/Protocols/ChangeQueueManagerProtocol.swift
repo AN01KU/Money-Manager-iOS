@@ -22,4 +22,8 @@ protocol ChangeQueueManagerProtocol: AnyObject {
     )
     func replayAll(context: ModelContext, isAuthenticated: Bool) async
     func clearAll(context: ModelContext)
+    /// Moves all pending changes to the orphaned store (soft-discard).
+    func orphanAll(context: ModelContext)
+    /// Deletes orphaned records older than the given number of days.
+    func purgeExpiredOrphans(olderThan days: Int, context: ModelContext)
 }

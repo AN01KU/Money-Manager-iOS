@@ -7,11 +7,6 @@ struct AddTransactionView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @State private var viewModel: AddTransactionViewModel
-    @State private var amount100Tapped = 0
-    @State private var amount500Tapped = 0
-    @State private var amount1000Tapped = 0
-    @State private var categoryTapped = 0
-    @State private var todayTapped = 0
     @State private var saveSuccess = false
     @State private var errorTriggered = 0
 
@@ -26,32 +21,24 @@ struct AddTransactionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                amountSection
+                AddTransactionAmountSection(viewModel: viewModel, customCategories: customCategories)
 
                 if viewModel.isShared {
-                    sharedDescriptionSection
-                    paidBySection
-                    splitSection
-                    splitMembersSection
+                    AddTransactionSharedDescriptionSection(viewModel: viewModel)
+                    AddTransactionPaidBySection(viewModel: viewModel)
+                    AddTransactionSplitSection(viewModel: viewModel)
+                    AddTransactionSplitMembersSection(viewModel: viewModel)
                     if viewModel.splitType == .custom && !viewModel.selectedMembers.isEmpty {
-                        splitSummarySection
+                        AddTransactionSplitSummarySection(viewModel: viewModel)
                     }
                 } else {
-                    transactionTypeSection
-                    dateTimeSection
-                    detailsSection
-                    if viewModel.transactionType == .expense {
-                        Section {
-                            Button {
-                                viewModel.showRecurringSheet = true
-                            } label: {
-                                Label("Set Up as Recurring", systemImage: "arrow.clockwise.circle.fill")
-                                    .foregroundStyle(AppColors.accent)
-                            }
-                        }
-                    }
+                    AddTransactionTypeSection(viewModel: viewModel)
+                    AddTransactionDateTimeSection(viewModel: viewModel)
+                    AddTransactionDetailsSection(viewModel: viewModel)
+                    AddTransactionRecurringSection(viewModel: viewModel)
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier(viewModel.navigationTitleIdentifier)
@@ -76,8 +63,18 @@ struct AddTransactionView: View {
             .sheet(isPresented: $viewModel.showCategoryPicker) {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
-            .sheet(isPresented: $viewModel.showRecurringSheet) {
-                AddRecurringTransactionSheet(prefillAmount: viewModel.amount, prefillCategory: viewModel.selectedCategory)
+            .alert("Update Recurring Transaction?", isPresented: $viewModel.showRecurringAmountAlert) {
+                Button("Update Recurring Too") {
+                    viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() }
+                }
+                Button("Just This Transaction") {
+                    viewModel.saveThisTransactionOnly()
+                    saveSuccess = true
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You changed the amount. Do you want to update the recurring transaction template as well?")
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -97,10 +94,20 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Amount + Category (same as personal)
+// MARK: - Shared: Amount + Category (same as personal)
 
-    private var amountSection: some View {
+private struct AddTransactionAmountSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+    let customCategories: [CustomCategory]
+
+    @State private var amount100Tapped = 0
+    @State private var amount500Tapped = 0
+    @State private var amount1000Tapped = 0
+    @State private var categoryTapped = 0
+
+    var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Amount *")
@@ -157,10 +164,14 @@ struct AddTransactionView: View {
             .padding(.vertical, 8)
         }
     }
+}
 
-    // MARK: - Personal: Transaction Type
+// MARK: - Personal: Transaction Type
 
-    private var transactionTypeSection: some View {
+private struct AddTransactionTypeSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section {
             Picker("Type", selection: $viewModel.transactionType) {
                 ForEach(TransactionType.allCases, id: \.self) { type in
@@ -170,19 +181,27 @@ struct AddTransactionView: View {
             .pickerStyle(.segmented)
         }
     }
+}
 
-    // MARK: - Personal: Date + Time
+// MARK: - Personal: Date + Time
 
-    private var dateTimeSection: some View {
+private struct AddTransactionDateTimeSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    @State private var todayTapped = 0
+
+    var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Date *")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                DatePicker("Select Date", selection: $viewModel.selectedDate, displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
+                HStack {
+                    Text(viewModel.isRecurring ? "Start Date *" : "Date *")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    DatePicker("", selection: $viewModel.selectedDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
 
                 HStack(spacing: 12) {
                     QuickDateButton(label: "Today") { todayTapped += 1; viewModel.selectedDate = Date() }
@@ -194,34 +213,84 @@ struct AddTransactionView: View {
             }
             .padding(.vertical, 8)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Include Time", isOn: $viewModel.hasTime)
-                if viewModel.hasTime {
-                    DatePicker("Select Time", selection: $viewModel.selectedTime, displayedComponents: .hourAndMinute)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
+            if !viewModel.isRecurring {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("Include Time", isOn: $viewModel.hasTime)
+                    if viewModel.hasTime {
+                        DatePicker("Select Time", selection: $viewModel.selectedTime, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.compact)
+                            .labelsHidden()
+                    }
                 }
+                .padding(.vertical, 8)
             }
-            .padding(.vertical, 8)
         }
     }
+}
 
-    // MARK: - Personal: Details
+// MARK: - Personal: Details
 
-    private var detailsSection: some View {
-        Section("Details") {
-            TextField("Description (e.g., Lunch at cafe)", text: $viewModel.description)
-                .textInputAutocapitalization(.sentences)
-                .accessibilityIdentifier("description-field")
+private struct AddTransactionDetailsSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
+        Section(viewModel.isRecurring ? "Details" : "Details") {
+            TextField(
+                viewModel.isRecurring ? "Name * (e.g., Rent, Netflix)" : "Description (e.g., Lunch at cafe)",
+                text: $viewModel.description
+            )
+            .textInputAutocapitalization(.sentences)
+            .accessibilityIdentifier("description-field")
             TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                 .lineLimit(3...6)
                 .textInputAutocapitalization(.sentences)
         }
     }
+}
 
-    // MARK: - Shared: Description (required)
+// MARK: - Personal: Recurring
 
-    private var sharedDescriptionSection: some View {
+private struct AddTransactionRecurringSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.isRecurring) {
+                Label("Recurring", systemImage: "arrow.clockwise.circle.fill")
+                    .foregroundStyle(AppColors.accent)
+            }
+
+            if viewModel.isRecurring {
+                Picker("Frequency", selection: $viewModel.recurringFrequency) {
+                    ForEach(RecurringFrequency.allCases, id: \.self) { freq in
+                        Text(freq.rawValue.capitalized).tag(freq)
+                    }
+                }
+
+                if viewModel.recurringFrequency == .monthly {
+                    Picker("Day of Month", selection: $viewModel.recurringDayOfMonth) {
+                        ForEach(1...28, id: \.self) { day in
+                            Text("\(day)").tag(day)
+                        }
+                    }
+                }
+
+                Toggle("Set End Date", isOn: $viewModel.recurringHasEndDate)
+
+                if viewModel.recurringHasEndDate {
+                    DatePicker("End Date", selection: $viewModel.recurringEndDate, in: viewModel.selectedDate..., displayedComponents: .date)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Shared: Description (required)
+
+private struct AddTransactionSharedDescriptionSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Details") {
             TextField("Description * (e.g., Dinner, Cab)", text: $viewModel.description)
                 .textInputAutocapitalization(.sentences)
@@ -230,10 +299,14 @@ struct AddTransactionView: View {
                 .textInputAutocapitalization(.sentences)
         }
     }
+}
 
-    // MARK: - Shared: Paid By
+// MARK: - Shared: Paid By
 
-    private var paidBySection: some View {
+private struct AddTransactionPaidBySection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Paid By") {
             if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
@@ -262,10 +335,14 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Split Type
+// MARK: - Shared: Split Type
 
-    private var splitSection: some View {
+private struct AddTransactionSplitSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Split") {
             Picker("Split Type", selection: $viewModel.splitType) {
                 ForEach(SplitType.allCases, id: \.self) { type in
@@ -287,10 +364,14 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Member Selection + Custom Amounts
+// MARK: - Shared: Member Selection + Custom Amounts
 
-    private var splitMembersSection: some View {
+private struct AddTransactionSplitMembersSection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section("Split Between") {
             if case .shared(_, let members, _, _, _) = viewModel.mode {
                 ForEach(members) { member in
@@ -335,10 +416,14 @@ struct AddTransactionView: View {
             }
         }
     }
+}
 
-    // MARK: - Shared: Custom Split Summary
+// MARK: - Shared: Custom Split Summary
 
-    private var splitSummarySection: some View {
+private struct AddTransactionSplitSummarySection: View {
+    @Bindable var viewModel: AddTransactionViewModel
+
+    var body: some View {
         Section {
             HStack {
                 Text("Total assigned")

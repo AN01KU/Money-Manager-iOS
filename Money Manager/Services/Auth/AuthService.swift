@@ -42,24 +42,25 @@ final class AuthService: AuthServiceProtocol {
     @MainActor
     func checkAuthState() async {
         guard session.isLoggedIn else {
+            AppLogger.auth.info("checkAuthState: no token — setting guest")
             authState = .guest
             hasCheckedAuth = true
             return
         }
         do {
             let user: APIUser = try await apiClient.get("/me")
+            AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
+            AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
             authState = .expired
             session.clearSession()
         } catch {
-            // Server unreachable — keep authenticated state if token exists
-            // We don't have the user object, so stay unknown until next successful check
-            if session.isLoggedIn, case .authenticated = authState {
-                // already authenticated from a previous session, keep it
-            } else if session.isLoggedIn {
-                // token exists but no user yet — treat as guest until server responds
-                authState = .guest
+            // Server unreachable — never degrade an existing token to guest.
+            // Leave authState as-is (.unknown or .authenticated) so the UI can
+            // show an offline/loading state rather than kicking the user to login.
+            if session.isLoggedIn {
+                AppLogger.auth.warning("checkAuthState: network error with valid token — keeping \(String(describing: self.authState)) — \(error.localizedDescription)")
             } else {
                 authState = .guest
             }
@@ -82,6 +83,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
             session.saveToken(response.token)
+            session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
             authState = .authenticated(response.user)
             isLoading = false
@@ -101,6 +103,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
             session.saveToken(response.token)
+            session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(email.lowercased())
             authState = .authenticated(response.user)
             isLoading = false
@@ -113,9 +116,17 @@ final class AuthService: AuthServiceProtocol {
 
     @MainActor
     func logout() {
+        let syncSessionID = session.getSyncSessionID()
         session.clearSession()
         UserDefaults.standard.removeObject(forKey: "last_sync_at")
         NotificationCenter.default.post(name: .userDidLogout, object: nil)
         authState = .guest
+
+        if let id = syncSessionID {
+            Task {
+                let body = APILogoutRequest(syncSessionId: id)
+                try? await apiClient.post("/auth/logout", body: body) as EmptyResponse
+            }
+        }
     }
 }

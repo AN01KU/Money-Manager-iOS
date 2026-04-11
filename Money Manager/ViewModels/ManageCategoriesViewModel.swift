@@ -4,10 +4,10 @@ import SwiftData
 @MainActor
 @Observable class ManageCategoriesViewModel {
     var showAddCategory = false
-    var categoryToEdit: CustomCategory?
-    var categoryToDelete: CustomCategory?
+    var categoryToEdit: TransactionCategory?
+    var categoryToDelete: TransactionCategory?
     var showDeleteConfirmation = false
-    
+
     let persistence: PersistenceService
 
     var modelContext: ModelContext? {
@@ -19,86 +19,69 @@ import SwiftData
         self.persistence = persistence
     }
 
-    var customCategories: [CustomCategory] = []
-    
-    var visibleCategories: [CustomCategory] {
-        customCategories.filter { !$0.isHidden }
-    }
-    
-    var hiddenCategories: [CustomCategory] {
-        customCategories.filter { $0.isHidden }
-    }
-    
-    func configure(customCategories: [CustomCategory], modelContext: ModelContext?) {
-        self.customCategories = customCategories
-        self.modelContext = modelContext
-    }
-    
-    func hideCategory(_ category: CustomCategory) {
-        category.isHidden = true
-        category.updatedAt = Date()
-        
-        do {
-            try persistence.saveCategory(category, action: "update")
-            AppLogger.data.info("Category hidden: \(category.name)")
-        } catch {
-            AppLogger.data.error("Error hiding category: \(error)")
+    func hideCategory(_ category: TransactionCategory) {
+        if let row = category.overrideRow {
+            row.isHidden = true
+            row.updatedAt = Date()
+            try? persistence.saveCategory(row, action: "update")
+        } else if category.isPredefined,
+                  let predefined = predefinedCase(for: category),
+                  let context = modelContext {
+            let row = CustomCategory(
+                name: predefined.rawValue,
+                icon: predefined.icon,
+                color: predefined.defaultColorHex,
+                isPredefined: true,
+                predefinedKey: predefined.key
+            )
+            row.isHidden = true
+            context.insert(row)
+            try? persistence.saveCategory(row, action: "create")
         }
+        AppLogger.data.info("Category hidden: \(category.name)")
     }
-    
-    func hideCategory(at index: Int) {
-        let visible = customCategories.filter { !$0.isHidden && !$0.isPredefined }
-        guard index < visible.count else { return }
-        hideCategory(visible[index])
+
+    func restoreCategory(_ category: TransactionCategory) {
+        guard let row = category.overrideRow else { return }
+        row.isHidden = false
+        row.updatedAt = Date()
+        try? persistence.saveCategory(row, action: "update")
+        AppLogger.data.info("Category restored: \(category.name)")
     }
-    
-    func restoreCategory(_ category: CustomCategory) {
-        category.isHidden = false
-        category.updatedAt = Date()
-        
-        do {
-            try persistence.saveCategory(category, action: "update")
-            AppLogger.data.info("Category restored: \(category.name)")
-        } catch {
-            AppLogger.data.error("Error restoring category: \(error)")
-        }
-    }
-    
-    func deleteCategory(_ category: CustomCategory) {
+
+    func deleteCategory(_ category: TransactionCategory) {
         guard category.isDeletable else { return }
         categoryToDelete = category
         showDeleteConfirmation = true
     }
-    
+
     func confirmDelete() {
-        guard let category = categoryToDelete, let modelContext = modelContext else { return }
-        let categoryName = category.name
-        let categoryId = category.id
+        guard let category = categoryToDelete, let context = modelContext else { return }
 
-        let transactionDescriptor = FetchDescriptor<Transaction>()
-        if let transactions = try? modelContext.fetch(transactionDescriptor) {
-            for transaction in transactions where transaction.categoryId == categoryId {
-                transaction.category = "Other"
-                transaction.categoryId = nil
-                transaction.updatedAt = Date()
+        if let row = category.overrideRow {
+            let categoryName = row.name
+            let categoryId = row.id
+
+            let txDescriptor = FetchDescriptor<Transaction>()
+            if let transactions = try? context.fetch(txDescriptor) {
+                for tx in transactions where tx.categoryId == categoryId {
+                    tx.category = "Other"
+                    tx.categoryId = nil
+                    tx.updatedAt = Date()
+                }
             }
-        }
 
-        let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
-        if let recurrings = try? modelContext.fetch(recurringDescriptor) {
-            for recurring in recurrings where recurring.categoryId == categoryId {
-                recurring.category = "Other"
-                recurring.categoryId = nil
-                recurring.updatedAt = Date()
+            let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
+            if let recurrings = try? context.fetch(recurringDescriptor) {
+                for r in recurrings where r.categoryId == categoryId {
+                    r.category = "Other"
+                    r.categoryId = nil
+                    r.updatedAt = Date()
+                }
             }
-        }
 
-        categoryToDelete = nil
-        showDeleteConfirmation = false
-        modelContext.delete(category)
-        
-        do {
-            try persistence.saveAndSync(
+            context.delete(row)
+            try? persistence.saveAndSync(
                 entityType: "category",
                 entityID: categoryId,
                 action: "delete",
@@ -107,69 +90,59 @@ import SwiftData
                 payload: nil
             )
             AppLogger.data.info("Category deleted: \(categoryName)")
-        } catch {
-            AppLogger.data.error("Error deleting category: \(error)")
         }
-        
+        // A predefined with no override row has nothing to delete locally
+
+        categoryToDelete = nil
+        showDeleteConfirmation = false
         deleteConfirmedTrigger += 1
     }
-    
+
     var deleteConfirmedTrigger: Int = 0
-    
+
+    /// Resets predefined overrides to enum defaults by deleting the override rows.
     func restoreDefaults(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
         persistence.modelContext = context
-        
-        let descriptor = FetchDescriptor<CustomCategory>(
-            predicate: #Predicate { $0.isPredefined == true }
-        )
-        guard let categories = try? context.fetch(descriptor) else { return }
-        
-        for category in categories {
-            if let key = category.predefinedKey,
-               let predefined = PredefinedCategory.allCases.first(where: { $0.key == key }) {
-                category.isHidden = false
-                category.name = predefined.rawValue
-                category.icon = predefined.icon
-                category.color = predefined.defaultColorHex
-                category.updatedAt = Date()
-                
-                do {
-                    try persistence.saveCategory(category, action: "update")
-                } catch {
-                    AppLogger.data.error("Error restoring category \(category.name): \(error)")
-                }
-            }
-        }
-        
+        let descriptor = FetchDescriptor<CustomCategory>(predicate: #Predicate { $0.isPredefined == true })
+        deleteAndSync(rows: (try? context.fetch(descriptor)) ?? [], context: context)
         AppLogger.data.info("Default categories restored")
         resetTrigger += 1
     }
-    
+
     var resetTrigger: Int = 0
-    
+
+    /// Deletes all CustomCategory rows — custom categories and predefined overrides.
+    /// After this, the PredefinedCategory enum is the sole source of truth.
     func resetAll(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
-        
-        let allDescriptor = FetchDescriptor<CustomCategory>()
-        guard let allCategories = try? context.fetch(allDescriptor) else { return }
-        
-        for category in allCategories {
-            context.delete(category)
-        }
-        
-        for predefined in PredefinedCategory.allCases {
-            let category = CustomCategory(
-                name: predefined.rawValue,
-                icon: predefined.icon,
-                color: predefined.defaultColorHex,
-                isPredefined: true,
-                predefinedKey: predefined.key
-            )
-            context.insert(category)
-        }
-        
-        try? context.save()
+        persistence.modelContext = context
+        deleteAndSync(rows: (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? [], context: context)
         resetTrigger += 1
+    }
+
+    private func deleteAndSync(rows: [CustomCategory], context: ModelContext) {
+        for row in rows {
+            let rowID = row.id
+            context.delete(row)
+            try? persistence.saveAndSync(
+                entityType: "category",
+                entityID: rowID,
+                action: "delete",
+                endpoint: "/categories",
+                httpMethod: "DELETE",
+                payload: nil
+            )
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func predefinedCase(for category: TransactionCategory) -> PredefinedCategory? {
+        // id format: "predefined:<key>"
+        let prefix = "predefined:"
+        guard category.id.hasPrefix(prefix) else { return nil }
+        let key = String(category.id.dropFirst(prefix.count))
+        return PredefinedCategory.allCases.first { $0.key == key }
     }
 }

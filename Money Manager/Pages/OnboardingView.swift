@@ -8,22 +8,10 @@
 import SwiftUI
 import Charts
 
-struct OnboardingPage: Identifiable {
-    let id = UUID()
-    let icon: String
-    let title: String
-    let description: String
-    let color: Color
-    var features: [String] = []
-}
-
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var currentPage = 0
-    @State private var getStartedTapped = 0
-    @State private var skipTapped = 0
-    @State private var nextTapped = 0
-    
+
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             icon: "indianrupeesign.circle.fill",
@@ -92,7 +80,7 @@ struct OnboardingView: View {
             ]
         )
     ]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             TabView(selection: $currentPage) {
@@ -103,31 +91,47 @@ struct OnboardingView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentPage)
-            
-            bottomSection
+
+            OnboardingBottomSection(
+                currentPage: currentPage,
+                pageCount: pages.count,
+                onGetStarted: { hasCompletedOnboarding = true },
+                onSkip: { hasCompletedOnboarding = true },
+                onNext: { withAnimation { currentPage += 1 } }
+            )
         }
         .background(Color(.systemBackground))
     }
-    
-    // MARK: - Bottom Section
-    
-    private var bottomSection: some View {
+}
+
+private struct OnboardingBottomSection: View {
+    let currentPage: Int
+    let pageCount: Int
+    let onGetStarted: () -> Void
+    let onSkip: () -> Void
+    let onNext: () -> Void
+
+    @State private var getStartedTapped = 0
+    @State private var skipTapped = 0
+    @State private var nextTapped = 0
+
+    var body: some View {
         VStack(spacing: 20) {
             // Page indicators
             HStack(spacing: 8) {
-                ForEach(0..<pages.count, id: \.self) { index in
+                ForEach(0..<pageCount, id: \.self) { index in
                     Capsule()
                         .fill(index == currentPage ? AppColors.accent : Color(.systemGray4))
                         .frame(width: index == currentPage ? 24 : 8, height: 8)
                         .animation(.easeInOut(duration: 0.2), value: currentPage)
                 }
             }
-            .accessibilityLabel("Page \(currentPage + 1) of \(pages.count)")
-            
-            if currentPage == pages.count - 1 {
+            .accessibilityLabel("Page \(currentPage + 1) of \(pageCount)")
+
+            if currentPage == pageCount - 1 {
                 Button {
                     getStartedTapped += 1
-                    hasCompletedOnboarding = true
+                    onGetStarted()
                 } label: {
                     Text("Get Started")
                         .font(.headline)
@@ -143,7 +147,7 @@ struct OnboardingView: View {
                 HStack {
                     Button {
                         skipTapped += 1
-                        hasCompletedOnboarding = true
+                        onSkip()
                     } label: {
                         Text("Skip")
                             .font(.body)
@@ -151,14 +155,12 @@ struct OnboardingView: View {
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: skipTapped)
                     .accessibilityLabel("Skip onboarding")
-                    
+
                     Spacer()
-                    
+
                     Button {
                         nextTapped += 1
-                        withAnimation {
-                            currentPage += 1
-                        }
+                        onNext()
                     } label: {
                         HStack(spacing: 4) {
                             Text("Next")

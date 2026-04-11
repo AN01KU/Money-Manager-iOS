@@ -54,23 +54,34 @@ import SwiftData
     ///   - name: The raw name input (will be trimmed).
     ///   - excludingId: Optional category ID to exclude from duplicate check (used by Edit).
     /// - Returns: The trimmed name on success, or `nil` if validation failed (sets `errorMessage`/`showError`).
+    /// The predefined category being edited, if any. Set this so its name is
+    /// excluded from the "already exists" check when the user keeps the same name.
+    var editingPredefinedKey: String?
+
     func validateName(_ name: String, excludingId: UUID? = nil) -> (trimmed: String, error: String?) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
-        
+
         guard !trimmed.isEmpty else {
             return (trimmed, "Category name cannot be empty")
         }
-        
-        let isDuplicate = allCategories.contains {
+
+        // Check against custom/override rows
+        let isDuplicateCustom = allCategories.contains {
             (excludingId == nil || $0.id != excludingId) &&
             $0.name.lowercased() == trimmed.lowercased() &&
             !$0.isHidden
         }
-        
-        if isDuplicate {
+
+        // Check against predefined enum names (skip the one being edited)
+        let isDuplicatePredefined = PredefinedCategory.allCases.contains {
+            $0.key != editingPredefinedKey &&
+            $0.rawValue.lowercased() == trimmed.lowercased()
+        }
+
+        if isDuplicateCustom || isDuplicatePredefined {
             return (trimmed, "\"\(trimmed)\" already exists")
         }
-        
+
         return (trimmed, nil)
     }
     
