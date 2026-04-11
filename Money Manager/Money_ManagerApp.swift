@@ -8,10 +8,12 @@ private let skipOnboarding = processInfo.skipOnboarding
 private let resetOnboarding = processInfo.resetOnboarding
 private let isScreenshotMode = processInfo.isScreenshotMode
 private let useMockServices = isScreenshotMode ? false : processInfo.useMockServices
+private var serviceFactory = ServiceFactory(useMockServices)
+#else
+private var serviceFactory = ServiceFactory()
 #endif
 
 // MARK:  GLOBAL Services
-private var serviceFactory = ServiceFactory(useMockServices)
 let authService: AuthServiceProtocol = serviceFactory.authService
 let syncService: SyncServiceProtocol = serviceFactory.syncService
 let changeQueueManager = serviceFactory.changeQueueManager
