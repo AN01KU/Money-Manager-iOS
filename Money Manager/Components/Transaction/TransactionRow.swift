@@ -46,6 +46,8 @@ struct TransactionRow: View {
                         groupID: groupID,
                         onGroupTapped: onGroupTapped
                     )
+                } else if transaction.recurringExpenseId != nil {
+                    RecurringBadge()
                 }
             }
 
@@ -72,6 +74,20 @@ struct TransactionRow: View {
 
     private func formatTime(_ date: Date) -> String {
         timeFormatter.string(from: date)
+    }
+}
+
+// MARK: - Recurring Badge
+
+private struct RecurringBadge: View {
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "repeat")
+                .font(AppTypography.rowMeta)
+            Text("Recurring")
+                .font(AppTypography.rowMeta)
+        }
+        .foregroundStyle(.secondary)
     }
 }
 
