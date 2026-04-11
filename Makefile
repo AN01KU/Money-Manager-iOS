@@ -47,7 +47,7 @@ test-one:
 coverage:
 	xcrun xccov view --report $(TEST_RESULTS) 2>/dev/null | head -10
 
-.PHONY: build test test-unit test-ui test-api test-one coverage clean screenshots screenshot-one _export-screenshots
+.PHONY: build test test-unit test-ui test-api test-one coverage clean ipa screenshots screenshot-one _export-screenshots
 
 # ── Screenshots ───────────────────────────────────────────────────────────────
 # Captures all app screens using a real test account (requires backend reachable).
@@ -95,6 +95,22 @@ _export-screenshots:
 		echo "⚠ Export failed — test results kept at $(TEST_RESULTS)"; \
 	fi; \
 	rm -rf "$$TMP"
+
+ipa:
+	@echo "▶ Archiving..."
+	xcodebuild archive \
+		-project "$(PROJECT)" \
+		-scheme "$(SCHEME)" \
+		-destination "generic/platform=iOS" \
+		-archivePath /tmp/MoneyManager.xcarchive \
+		-allowProvisioningUpdates
+	@echo "▶ Packaging IPA..."
+	@rm -rf /tmp/MoneyManagerPayload
+	@mkdir -p /tmp/MoneyManagerPayload/Payload
+	@cp -r "/tmp/MoneyManager.xcarchive/Products/Applications/Money Manager.app" /tmp/MoneyManagerPayload/Payload/
+	@cd /tmp/MoneyManagerPayload && zip -r "$(CURDIR)/MoneyManager.ipa" Payload/
+	@rm -rf /tmp/MoneyManagerPayload /tmp/MoneyManager.xcarchive
+	@echo "✓ IPA saved to MoneyManager.ipa"
 
 clean:
 	xcodebuild clean \
