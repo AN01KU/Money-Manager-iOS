@@ -22,9 +22,10 @@ final class NetworkMonitor {
     func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
             let isNowConnected = path.status == .satisfied
-            DispatchQueue.main.async {
-                let wasConnected = self?.isConnected ?? false
-                self?.isConnected = isNowConnected
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let wasConnected = self.isConnected
+                self.isConnected = isNowConnected
                 if !wasConnected && isNowConnected {
                     AppLogger.sync.info("Network became available — triggering reconnect sync")
                     NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
