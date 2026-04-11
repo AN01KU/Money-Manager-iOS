@@ -46,6 +46,7 @@ struct LoginView: View {
                         }
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("onboarding.skip-login-button")
                     }
                 }
                 .padding(24)

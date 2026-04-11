@@ -19,7 +19,7 @@ final class OnboardingTests: XCTestCase {
 
         // resetOnboarding also resets hasSeenLogin, so LoginView appears first.
         // Dismiss it to reach the onboarding screen.
-        let skipLogin = app.buttons["Continue without account"]
+        let skipLogin = app.buttons["onboarding.skip-login-button"]
         if skipLogin.waitForExistence(timeout: 3) {
             skipLogin.tap()
         }
@@ -39,11 +39,11 @@ final class OnboardingTests: XCTestCase {
     
     func testCanNavigateThroughOnboardingPages() throws {
         // Skip button should exist
-        let skipButton = app.buttons["Skip onboarding"]
+        let skipButton = app.buttons["onboarding.skip-button"]
         XCTAssertTrue(skipButton.waitForExistence(timeout: 3), "Skip button should exist")
-        
+
         // Get Started button should not exist on first page
-        let getStartedButton = app.buttons["Get started with Money Manager"]
+        let getStartedButton = app.buttons["onboarding.get-started-button"]
         XCTAssertFalse(getStartedButton.exists, "Get Started should not exist on first page")
         
         // Swipe left to go to next page
@@ -52,7 +52,7 @@ final class OnboardingTests: XCTestCase {
     
     func testGetStartedCompletesOnboarding() throws {
         // Navigate to last page (Get Started should be visible)
-        let getStartedButton = app.buttons["Get started with Money Manager"]
+        let getStartedButton = app.buttons["onboarding.get-started-button"]
 
         // Swipe through all 6 pages to get to the last one
         for _ in 0..<6 {
@@ -83,9 +83,9 @@ final class OnboardingTests: XCTestCase {
     }
     
     func testSkipButtonCompletesOnboarding() throws {
-        let skipButton = app.buttons["Skip onboarding"]
+        let skipButton = app.buttons["onboarding.skip-button"]
         XCTAssertTrue(skipButton.waitForExistence(timeout: 3), "Skip button should exist")
-        
+
         // Tap skip
         skipButton.tap()
         

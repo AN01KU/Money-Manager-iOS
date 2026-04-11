@@ -143,6 +143,7 @@ private struct OnboardingBottomSection: View {
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: getStartedTapped)
                 .accessibilityLabel("Get started with Money Manager")
+                .accessibilityIdentifier("onboarding.get-started-button")
             } else {
                 HStack {
                     Button {
@@ -155,6 +156,7 @@ private struct OnboardingBottomSection: View {
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: skipTapped)
                     .accessibilityLabel("Skip onboarding")
+                    .accessibilityIdentifier("onboarding.skip-button")
 
                     Spacer()
 
