@@ -183,6 +183,7 @@ final class AddTransactionTests: XCTestCase {
         let amountField = app.textFields.matching(identifier: "amount-field").firstMatch
         amountField.tap()
         amountField.typeText("750")
+        app.toolbars.buttons["Done"].firstMatch.tap()
 
         // Select category
         app.buttons.matching(identifier: "category-picker-button").firstMatch.tap()
