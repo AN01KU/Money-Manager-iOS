@@ -383,6 +383,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<Transaction>()
         let localTransactions = (try? context.fetch(descriptor)) ?? []
@@ -401,8 +402,9 @@ final class SyncService: SyncServiceProtocol {
                     AppLogger.sync.debug("[GroupDebug] upsert existing txn=\(remote.id) local.groupTransactionId=\(local.groupTransactionId?.uuidString ?? "nil") local.groupId=\(local.groupId?.uuidString ?? "nil") remote.group_id=\(remote.groupId?.uuidString ?? "nil")")
                 }
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     AppLogger.sync.debug("[TxnDebug] applyRemote txn=\(remote.id) remote.isDeleted=\(remote.isDeleted) local.isSoftDeleted=\(local.isSoftDeleted) remote.updatedAt=\(remote.updatedAt) local.updatedAt=\(local.updatedAt)")
                     local.applyRemote(remote)
@@ -454,6 +456,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let localRecurring = (try? context.fetch(descriptor)) ?? []
@@ -464,8 +467,9 @@ final class SyncService: SyncServiceProtocol {
             if let local = localByID[remote.id] {
                 if local.isSoftDeleted { continue }
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     local.name = remote.name
                     local.amount = remote.amount
@@ -513,6 +517,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<MonthlyBudget>()
         let localBudgets = (try? context.fetch(descriptor)) ?? []
@@ -522,8 +527,9 @@ final class SyncService: SyncServiceProtocol {
             guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for budget \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for budget \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     local.year = remote.year
                     local.month = remote.month
@@ -551,6 +557,7 @@ final class SyncService: SyncServiceProtocol {
         )
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
+        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
         let descriptor = FetchDescriptor<CustomCategory>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
@@ -589,8 +596,9 @@ final class SyncService: SyncServiceProtocol {
 
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
-                    if pendingIDs.contains(remote.id) {
-                        AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — local pending change will be overwritten")
+                    if let stale = pendingByID[remote.id] {
+                        AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — deleting stale pending change")
+                        context.delete(stale)
                     }
                     AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remote.isHidden) predefinedKey=\(remote.predefinedKey ?? "nil")")
                     local.name = remote.name
@@ -604,6 +612,10 @@ final class SyncService: SyncServiceProtocol {
             } else if let key = remote.predefinedKey,
                       let local = localByPredefinedKey[key] {
                 AppLogger.sync.debug("[UpsertCategories] updating by predefinedKey=\(key): \(remote.name) isHidden=\(remote.isHidden)")
+                if let stale = pendingByID[local.id] {
+                    AppLogger.sync.warning("Conflict: server wins for category (predefinedKey=\(key)) — deleting stale pending change")
+                    context.delete(stale)
+                }
                 local.id = remote.id
                 local.name = remote.name
                 local.icon = remote.icon
