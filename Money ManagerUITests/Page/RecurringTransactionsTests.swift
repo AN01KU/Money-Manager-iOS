@@ -130,7 +130,7 @@ final class RecurringTransactionsTests: XCTestCase {
         app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
-        let cancelButton = app.buttons["Cancel"]
+        let cancelButton = app.buttons["recurring.cancel-button"]
         XCTAssertTrue(cancelButton.waitForExistence(timeout: 2), "Cancel button should exist")
     }
     
@@ -140,7 +140,7 @@ final class RecurringTransactionsTests: XCTestCase {
         app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
-        let saveButton = app.buttons["Save"]
+        let saveButton = app.buttons["recurring.save-button"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 2), "Save button should exist")
     }
     
@@ -150,7 +150,7 @@ final class RecurringTransactionsTests: XCTestCase {
         app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
-        let saveButton = app.buttons["Save"]
+        let saveButton = app.buttons["recurring.save-button"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 2))
         XCTAssertFalse(saveButton.isEnabled, "Save should be disabled without required fields")
     }
@@ -161,8 +161,8 @@ final class RecurringTransactionsTests: XCTestCase {
         app.buttons["recurring.add-button"].tap()
         XCTAssertTrue(app.navigationBars["Add Recurring"].waitForExistence(timeout: 3))
         
-        app.buttons["Cancel"].tap()
-        
+        app.buttons["recurring.cancel-button"].tap()
+
         XCTAssertTrue(app.navigationBars["Recurring"].waitForExistence(timeout: 3), "Should return to Recurring screen")
     }
     
@@ -172,7 +172,7 @@ final class RecurringTransactionsTests: XCTestCase {
         app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
-        let nameField = app.textFields["e.g., Netflix, Rent"]
+        let nameField = app.textFields["recurring.name-field"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 2), "Name field should exist")
     }
     
@@ -182,7 +182,7 @@ final class RecurringTransactionsTests: XCTestCase {
         app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
-        let amountField = app.textFields["0.00"]
+        let amountField = app.textFields["recurring.amount-field"]
         XCTAssertTrue(amountField.waitForExistence(timeout: 2), "Amount field should exist")
     }
     
@@ -205,15 +205,14 @@ final class RecurringTransactionsTests: XCTestCase {
     func testTapTransactionOpensEditSheet() throws {
         navigateToRecurring()
         
-        // Tap on first recurring expense
-        let expenseRow = app.staticTexts.containing(NSPredicate(format:
-            "label CONTAINS 'Netflix' OR label CONTAINS 'Gym' OR label CONTAINS 'Insurance' OR label CONTAINS 'Internet'")).firstMatch
-        
+        // Tap on first recurring expense row
+        let expenseRow = app.buttons.matching(identifier: "recurring.row").firstMatch
+
         guard expenseRow.waitForExistence(timeout: 3) else {
             XCTSkip("No recurring expenses to tap")
             return
         }
-        
+
         expenseRow.tap()
         
         let editNavBar = app.navigationBars["Edit Recurring"]
@@ -223,23 +222,22 @@ final class RecurringTransactionsTests: XCTestCase {
     func testEditSheetHasPrefilledData() throws {
         navigateToRecurring()
         
-        let expenseRow = app.staticTexts.containing(NSPredicate(format:
-            "label CONTAINS 'Netflix' OR label CONTAINS 'Gym' OR label CONTAINS 'Insurance'")).firstMatch
-        
+        let expenseRow = app.buttons.matching(identifier: "recurring.row").firstMatch
+
         guard expenseRow.waitForExistence(timeout: 3) else {
             XCTSkip("No recurring expenses to edit")
             return
         }
-        
+
         expenseRow.tap()
-        
+
         guard app.navigationBars["Edit Recurring"].waitForExistence(timeout: 3) else {
             XCTSkip("Edit sheet did not open")
             return
         }
-        
+
         // Name field should be pre-filled (not placeholder)
-        let nameField = app.textFields["e.g., Netflix, Rent"]
+        let nameField = app.textFields["recurring.name-field"]
         if nameField.waitForExistence(timeout: 2) {
             let value = nameField.value as? String ?? ""
             XCTAssertFalse(value.isEmpty, "Name should be pre-filled")
@@ -249,14 +247,13 @@ final class RecurringTransactionsTests: XCTestCase {
     func testEditSheetCanBeCancelled() throws {
         navigateToRecurring()
         
-        let expenseRow = app.staticTexts.containing(NSPredicate(format:
-            "label CONTAINS 'Netflix' OR label CONTAINS 'Gym'")).firstMatch
-        
+        let expenseRow = app.buttons.matching(identifier: "recurring.row").firstMatch
+
         guard expenseRow.waitForExistence(timeout: 3) else {
             XCTSkip("No recurring expenses to edit")
             return
         }
-        
+
         expenseRow.tap()
         
         guard app.navigationBars["Edit Recurring"].waitForExistence(timeout: 3) else {
@@ -264,8 +261,8 @@ final class RecurringTransactionsTests: XCTestCase {
             return
         }
         
-        app.buttons["Cancel"].tap()
-        
+        app.buttons["recurring.cancel-button"].tap()
+
         XCTAssertTrue(app.navigationBars["Recurring"].waitForExistence(timeout: 3), "Should return to Recurring screen")
     }
     
@@ -290,7 +287,7 @@ final class RecurringTransactionsTests: XCTestCase {
         app.tabBars.buttons["Settings"].tap()
         _ = app.navigationBars["Settings"].waitForExistence(timeout: 3)
         
-        let recurringButton = app.buttons["Recurring"]
+        let recurringButton = app.buttons["settings.recurring-row"]
         XCTAssertTrue(recurringButton.waitForExistence(timeout: 3), "Recurring option should exist in Settings")
         recurringButton.tap()
         

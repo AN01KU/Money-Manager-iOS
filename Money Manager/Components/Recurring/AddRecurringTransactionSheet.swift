@@ -34,6 +34,7 @@ struct AddRecurringTransactionSheet: View {
 
                         TextField("e.g., Netflix, Rent", text: $viewModel.name)
                             .textInputAutocapitalization(.sentences)
+                            .accessibilityIdentifier("recurring.name-field")
                     }
                     .padding(.vertical, 8)
 
@@ -46,6 +47,7 @@ struct AddRecurringTransactionSheet: View {
                             .keyboardType(.decimalPad)
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .accessibilityIdentifier("recurring.amount-field")
 
                         HStack(spacing: 12) {
                             QuickAmountButton(amount: 100) {
@@ -155,6 +157,7 @@ struct AddRecurringTransactionSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("recurring.cancel-button")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -166,6 +169,7 @@ struct AddRecurringTransactionSheet: View {
                     }
                     .fontWeight(.semibold)
                     .disabled(!viewModel.isValid)
+                    .accessibilityIdentifier("recurring.save-button")
                 }
             }
             .sheet(isPresented: $viewModel.showCategoryPicker) {

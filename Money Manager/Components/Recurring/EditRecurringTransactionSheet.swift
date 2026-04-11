@@ -46,6 +46,7 @@ struct EditRecurringTransactionSheet: View {
 
                         TextField("e.g., Netflix, Rent", text: $name)
                             .textInputAutocapitalization(.sentences)
+                            .accessibilityIdentifier("recurring.name-field")
                     }
                     .padding(.vertical, 8)
 
@@ -58,6 +59,7 @@ struct EditRecurringTransactionSheet: View {
                             .keyboardType(.decimalPad)
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .accessibilityIdentifier("recurring.amount-field")
                     }
                     .padding(.vertical, 8)
 
@@ -147,6 +149,7 @@ struct EditRecurringTransactionSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("recurring.cancel-button")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -155,6 +158,7 @@ struct EditRecurringTransactionSheet: View {
                     }
                     .fontWeight(.semibold)
                     .disabled(!isValid)
+                    .accessibilityIdentifier("recurring.save-button")
                 }
             }
             .sheet(isPresented: $showCategoryPicker) {

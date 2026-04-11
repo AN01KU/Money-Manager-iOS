@@ -83,5 +83,6 @@ struct RecurringTransactionRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(displayName), \(CurrencyFormatter.format(recurring.amount)), \(recurring.isActive ? "Active" : "Paused")")
+        .accessibilityIdentifier("recurring.row")
     }
 }
