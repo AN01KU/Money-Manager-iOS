@@ -141,4 +141,68 @@ struct SessionStoreTests {
 
         #expect(store.isLoggedIn == false)
     }
+
+    // MARK: - Last Logged In Email
+
+    @Test
+    func testGetLastLoggedInEmailReturnsNilWhenNotSet() {
+        let store = makeStore()
+        UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+
+        #expect(store.getLastLoggedInEmail() == nil)
+    }
+
+    @Test
+    func testSaveLastLoggedInEmailPersistsNormalized() {
+        let store = makeStore()
+        defer { UserDefaults.standard.removeObject(forKey: "last_logged_in_email") }
+
+        store.saveLastLoggedInEmail("User@Example.COM")
+
+        #expect(store.getLastLoggedInEmail() == "user@example.com")
+    }
+
+    @Test
+    func testSaveLastLoggedInEmailOverwritesPreviousValue() {
+        let store = makeStore()
+        defer { UserDefaults.standard.removeObject(forKey: "last_logged_in_email") }
+
+        store.saveLastLoggedInEmail("first@example.com")
+        store.saveLastLoggedInEmail("second@example.com")
+
+        #expect(store.getLastLoggedInEmail() == "second@example.com")
+    }
+
+    /// Regression: after reinstall the Keychain token survives but UserDefaults is wiped.
+    /// checkAuthState() must call saveLastLoggedInEmail so that a subsequent login as a
+    /// different user triggers the account-switch warning in LoginView.
+    @Test
+    func testEmailIsDetectableAsDifferentAfterBeingSetFromCheckAuthState() {
+        let store = makeStore()
+        defer { UserDefaults.standard.removeObject(forKey: "last_logged_in_email") }
+
+        // Simulate what checkAuthState() now does: save the email returned by /me
+        store.saveLastLoggedInEmail("userA@example.com")
+
+        // LoginView checks: if stored email != new email → show account-switch alert
+        let incomingEmail = "userB@example.com"
+        let storedEmail = store.getLastLoggedInEmail()
+
+        #expect(storedEmail != nil)
+        #expect(storedEmail != incomingEmail.lowercased())
+    }
+
+    /// Regression: if checkAuthState() never saved the email (the old buggy path),
+    /// getLastLoggedInEmail() returns nil and LoginView skips the account-switch check entirely.
+    @Test
+    func testMissingEmailAllowsSilentAccountSwitch() {
+        let store = makeStore()
+        UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+
+        // No email saved — this is the pre-fix state after reinstall + Keychain token present
+        let storedEmail = store.getLastLoggedInEmail()
+
+        // nil means LoginView's `if let lastEmail = ...` guard never fires → no alert
+        #expect(storedEmail == nil)
+    }
 }

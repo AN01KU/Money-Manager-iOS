@@ -50,6 +50,7 @@ final class AuthService: AuthServiceProtocol {
         do {
             let user: APIUser = try await apiClient.get("/me")
             AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
+            session.saveLastLoggedInEmail(user.email.lowercased())
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
             AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
