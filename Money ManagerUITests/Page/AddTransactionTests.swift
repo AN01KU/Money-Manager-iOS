@@ -183,9 +183,8 @@ final class AddTransactionTests: XCTestCase {
         let amountField = app.textFields.matching(identifier: "amount-field").firstMatch
         amountField.tap()
         amountField.typeText("750")
-        app.toolbars.buttons["Done"].firstMatch.tap()
 
-        // Select category
+        // Select category — tapping the button naturally dismisses the decimal pad
         app.buttons.matching(identifier: "category-picker-button").firstMatch.tap()
 
         // Wait for category picker sheet
@@ -197,12 +196,15 @@ final class AddTransactionTests: XCTestCase {
         XCTAssertTrue(foodCell.waitForExistence(timeout: 5), "Food & Dining category should appear in picker")
         foodCell.tap()
 
-        // Add description
+        // Wait for picker sheet to fully dismiss before interacting with description field
+        XCTAssertTrue(pickerNav.waitForNonExistence(timeout: 5), "Category picker should dismiss")
+
+        // Add description — field may be below the fold, scroll to it first
         let descField = app.textFields.matching(identifier: "description-field").firstMatch
-        if descField.exists {
-            descField.tap()
-            descField.typeText("Test expense")
-        }
+        app.swipeUp()
+        XCTAssertTrue(descField.waitForExistence(timeout: 3), "Description field should exist")
+        descField.tap()
+        descField.typeText("Test expense")
 
         // Save
         app.buttons.matching(identifier: "save-button").firstMatch.tap()
