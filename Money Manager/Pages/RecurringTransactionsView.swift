@@ -75,6 +75,7 @@ struct RecurringTransactionsView: View {
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
                 .accessibilityLabel("Add recurring transaction")
+                .accessibilityIdentifier("recurring.add-button")
             }
         }
         .sheet(isPresented: $viewModel.showAddSheet) {

@@ -35,7 +35,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testRecurringHasPlusButton() throws {
         navigateToRecurring()
         
-        let plusButton = app.buttons["plus"]
+        let plusButton = app.buttons["recurring.add-button"]
         XCTAssertTrue(plusButton.waitForExistence(timeout: 3), "Plus button should exist in toolbar")
     }
     
@@ -116,10 +116,10 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringSheetOpens() throws {
         navigateToRecurring()
         
-        let plusButton = app.buttons["plus"]
+        let plusButton = app.buttons["recurring.add-button"]
         XCTAssertTrue(plusButton.waitForExistence(timeout: 3))
         plusButton.tap()
-        
+
         let navBar = app.navigationBars["Add Recurring"]
         XCTAssertTrue(navBar.waitForExistence(timeout: 3), "Add Recurring sheet should open")
     }
@@ -127,7 +127,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringSheetHasCancelButton() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
         let cancelButton = app.buttons["Cancel"]
@@ -137,7 +137,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringSheetHasSaveButton() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
         let saveButton = app.buttons["Save"]
@@ -147,7 +147,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringSaveDisabledInitially() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
         let saveButton = app.buttons["Save"]
@@ -158,7 +158,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringCancelDismissesSheet() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         XCTAssertTrue(app.navigationBars["Add Recurring"].waitForExistence(timeout: 3))
         
         app.buttons["Cancel"].tap()
@@ -169,7 +169,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringHasNameField() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
         let nameField = app.textFields["e.g., Netflix, Rent"]
@@ -179,7 +179,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringHasAmountField() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
         let amountField = app.textFields["0.00"]
@@ -189,7 +189,7 @@ final class RecurringTransactionsTests: XCTestCase {
     func testAddRecurringHasFrequencyPicker() throws {
         navigateToRecurring()
         
-        app.buttons["plus"].tap()
+        app.buttons["recurring.add-button"].tap()
         _ = app.navigationBars["Add Recurring"].waitForExistence(timeout: 3)
         
         // Segmented picker with frequency options
