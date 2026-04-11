@@ -7,41 +7,32 @@ import Foundation
 import Security
 import OSLog
 
-/// Manages the persisted auth session (JWT token) using the iOS Keychain.
-@MainActor
-final class SessionStore {
-    static let shared = SessionStore()
+// MARK: - Token Storage
 
+protocol TokenStorage {
+    func save(_ token: String)
+    func load() -> String?
+    func delete()
+}
+
+final class KeychainTokenStorage: TokenStorage {
     private let service = "com.moneymanager.authtoken"
     private let account = "jwt"
 
-    init() {}
-
-    // MARK: - Configure (no-op; kept for call-site compatibility)
-
-    func configure(container: Any) {}
-
-    // MARK: - Token
-
-    func saveToken(_ token: String) {
+    func save(_ token: String) {
         guard let data = token.data(using: .utf8) else { return }
-
-        // Delete any existing token first
         let deleteQuery: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
-            kSecAttrAccount: account,
-            kSecUseDataProtectionKeychain: false
+            kSecAttrAccount: account
         ]
         SecItemDelete(deleteQuery as CFDictionary)
-
         let addQuery: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
             kSecValueData: data,
-            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            kSecUseDataProtectionKeychain: false
+            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         if status != errSecSuccess {
@@ -49,14 +40,13 @@ final class SessionStore {
         }
     }
 
-    func getToken() -> String? {
+    func load() -> String? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
             kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne,
-            kSecUseDataProtectionKeychain: false
+            kSecMatchLimit: kSecMatchLimitOne
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -69,18 +59,49 @@ final class SessionStore {
         return token
     }
 
+    func delete() {
+        let deleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+    }
+}
+
+/// Manages the persisted auth session (JWT token) using the iOS Keychain.
+@MainActor
+final class SessionStore {
+    static let shared = SessionStore()
+
+    private let service = "com.moneymanager.authtoken"
+    private let account = "jwt"
+
+    /// Overridable token storage — defaults to Keychain, swappable in tests.
+    var tokenStorage: TokenStorage = KeychainTokenStorage()
+
+    init() {}
+
+    // MARK: - Configure (no-op; kept for call-site compatibility)
+
+    func configure(container: Any) {}
+
+    // MARK: - Token
+
+    func saveToken(_ token: String) {
+        tokenStorage.save(token)
+    }
+
+    func getToken() -> String? {
+        tokenStorage.load()
+    }
+
     var isLoggedIn: Bool {
         getToken() != nil
     }
 
     func clearSession() {
-        let deleteQuery: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-            kSecUseDataProtectionKeychain: false
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
+        tokenStorage.delete()
         clearSyncSessionID()
     }
 

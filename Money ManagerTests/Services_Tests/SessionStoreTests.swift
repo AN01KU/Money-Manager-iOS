@@ -2,11 +2,20 @@ import Foundation
 import Testing
 @testable import Money_Manager
 
+/// In-memory token storage for tests — no Keychain access required.
+final class InMemoryTokenStorage: TokenStorage {
+    private var token: String?
+    func save(_ t: String) { token = t }
+    func load() -> String? { token }
+    func delete() { token = nil }
+}
+
 @MainActor
 struct SessionStoreTests {
 
     private func makeStore() -> SessionStore {
         let store = SessionStore()
+        store.tokenStorage = InMemoryTokenStorage()
         store.clearSession()
         return store
     }
