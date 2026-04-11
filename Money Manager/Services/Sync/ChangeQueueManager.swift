@@ -111,6 +111,8 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         isReplaying = true
         defer { isReplaying = false }
 
+        purgeExpiredFailedChanges(context: context)
+
         let descriptor = FetchDescriptor<PendingChange>(
             sortBy: [SortDescriptor(\.createdAt)]
         )
@@ -172,6 +174,18 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         let base = baseRetryDelay * pow(2.0, Double(exponent))
         let jitter = Double.random(in: 0..<base * 0.2)
         return Date(timeIntervalSinceNow: base + jitter)
+    }
+
+    private func purgeExpiredFailedChanges(context: ModelContext) {
+        let ttl: TimeInterval = 30 * 24 * 60 * 60 // 30 days
+        let cutoff = Date(timeIntervalSinceNow: -ttl)
+        let descriptor = FetchDescriptor<FailedChange>(
+            predicate: #Predicate { $0.failedAt < cutoff }
+        )
+        guard let expired = try? context.fetch(descriptor), !expired.isEmpty else { return }
+        AppLogger.sync.info("Purging \(expired.count) FailedChange records older than 30 days")
+        expired.forEach { context.delete($0) }
+        try? context.save()
     }
 
     private func moveToDeadLetter(_ change: PendingChange, lastError: String, context: ModelContext) {

@@ -33,11 +33,10 @@ struct Overview: View {
             navigationPath = [route]
             pendingRoute?.wrappedValue = nil
         }
-        .task {
+        .onChange(of: queryData, initial: true) {
             viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
         }
-        .onChange(of: queryData) { viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories) }
     }
 }
 
@@ -262,7 +261,7 @@ private struct OverviewHeaderCard: View {
             }
         }
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(.rect(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 1)

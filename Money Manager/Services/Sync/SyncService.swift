@@ -177,17 +177,7 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.info("Full sync started")
         let context = ModelContext(container)
 
-        let localTxns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
-        let pending = (try? context.fetch(FetchDescriptor<PendingChange>())) ?? []
-        AppLogger.sync.debug("[FullSyncDebug] local transactions=\(localTxns.count) pendingChanges=\(pending.count)")
-        for t in localTxns {
-            AppLogger.sync.debug("[FullSyncDebug] local txn=\(t.id) date=\(t.date) category=\(t.category) isSoftDeleted=\(t.isSoftDeleted)")
-        }
-        for p in pending {
-            AppLogger.sync.debug("[FullSyncDebug] pending entityType=\(p.entityType) entityID=\(p.entityID) action=\(p.action) method=\(p.httpMethod)")
-        }
-
-        await pullAllFromServer(context: context)
+        await pullFromServer(context: context)
         updateLastSyncTime()
         syncSuccessCount += 1
         AppLogger.sync.info("Full sync complete")
@@ -305,10 +295,6 @@ final class SyncService: SyncServiceProtocol {
         updateLastSyncTime()
     }
     
-    private func pullAllFromServer(context: ModelContext) async {
-        await pullFromServer(context: context)
-    }
-    
     private func pullCategories(context: ModelContext) async {
         do {
             let response: APIListResponse<APICustomCategory> = try await apiClient.get("/categories")
@@ -361,15 +347,7 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
-            let groupTxns = allTransactions.filter { $0.groupTransactionId != nil || $0.groupId != nil }
-            AppLogger.sync.debug("[GroupDebug] pullTransactions: total=\(allTransactions.count) with_group_data=\(groupTxns.count)")
-            for t in groupTxns {
-                AppLogger.sync.debug("[GroupDebug] txn id=\(t.id) group_transaction_id=\(t.groupTransactionId?.uuidString ?? "nil") group_id=\(t.groupId?.uuidString ?? "nil") group_name=\(t.groupName ?? "nil") settlement_id=\(t.settlementId?.uuidString ?? "nil")")
-            }
-            AppLogger.sync.debug("[TxnDebug] pullTransactions: fetched \(allTransactions.count) transactions from server (is_deleted=false filter applied)")
-            for t in allTransactions {
-                AppLogger.sync.debug("[TxnDebug] server txn=\(t.id) date=\(t.date) updatedAt=\(t.updatedAt) isDeleted=\(t.isDeleted) category=\(t.category)")
-            }
+            AppLogger.sync.debug("pullTransactions: fetched \(allTransactions.count) transactions from server")
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -398,17 +376,12 @@ final class SyncService: SyncServiceProtocol {
                 if local.groupId == nil, let id = remote.groupId {
                     local.groupId = id
                 }
-                if remote.groupTransactionId != nil {
-                    AppLogger.sync.debug("[GroupDebug] upsert existing txn=\(remote.id) local.groupTransactionId=\(local.groupTransactionId?.uuidString ?? "nil") local.groupId=\(local.groupId?.uuidString ?? "nil") remote.group_id=\(remote.groupId?.uuidString ?? "nil")")
-                }
                 if remote.updatedAt > local.updatedAt {
                     if let stale = pendingByID[remote.id] {
                         AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — deleting stale pending change")
                         context.delete(stale)
                     }
-                    AppLogger.sync.debug("[TxnDebug] applyRemote txn=\(remote.id) remote.isDeleted=\(remote.isDeleted) local.isSoftDeleted=\(local.isSoftDeleted) remote.updatedAt=\(remote.updatedAt) local.updatedAt=\(local.updatedAt)")
                     local.applyRemote(remote)
-                    AppLogger.sync.debug("[TxnDebug] after applyRemote txn=\(remote.id) local.isSoftDeleted=\(local.isSoftDeleted)")
                 }
             } else {
                 let tx = Transaction(
@@ -426,9 +399,6 @@ final class SyncService: SyncServiceProtocol {
                 )
                 tx.groupId = remote.groupId
                 tx.groupName = remote.groupName
-                if remote.groupTransactionId != nil {
-                    AppLogger.sync.debug("[GroupDebug] insert new txn=\(remote.id) group_transaction_id=\(remote.groupTransactionId?.uuidString ?? "nil") group_id=\(remote.groupId?.uuidString ?? "nil") group_name=\(remote.groupName ?? "nil")")
-                }
                 context.insert(tx)
             }
         }
@@ -442,7 +412,7 @@ final class SyncService: SyncServiceProtocol {
             guard !local.isSoftDeleted else { continue }
             guard !serverIDs.contains(local.id) else { continue }      // not on server
             guard !pendingIDs.contains(local.id) else { continue }     // no pending upload
-            AppLogger.sync.info("[TxnDebug] purging locally-generated recurring txn not on server: \(local.id)")
+            AppLogger.sync.debug("Purging locally-generated recurring txn not on server: \(local.id)")
             context.delete(local)
         }
 
@@ -724,11 +694,11 @@ final class SyncService: SyncServiceProtocol {
     ) async {
         do {
             let remote = try await groupService.fetchGroupTransactions(groupId: groupId)
-            AppLogger.sync.debug("[GroupDebug] pullGroupTransactions: group=\(groupId) fetched \(remote.count) transactions")
+            AppLogger.sync.debug("pullGroupTransactions: group=\(groupId) fetched \(remote.count) transactions")
 
             let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
             guard let dbGroup = localGroups.first(where: { $0.id == dbGroupId }) else {
-                AppLogger.sync.warning("[GroupDebug] pullGroupTransactions: SplitGroupModel not found for id=\(dbGroupId)")
+                AppLogger.sync.warning("pullGroupTransactions: SplitGroupModel not found for id=\(dbGroupId)")
                 return
             }
 
@@ -736,7 +706,6 @@ final class SyncService: SyncServiceProtocol {
                 if let existing = localGroupTransactionsByID[gt.id] {
                     existing.transactionDescription = gt.description ?? ""
                     existing.totalAmount = gt.totalAmount
-                    AppLogger.sync.debug("[GroupDebug] Updated GroupTransactionModel id=\(gt.id) description='\(gt.description ?? "nil")'")
                 } else {
                     let newGT = GroupTransactionModel(
                         id: gt.id,
@@ -747,13 +716,12 @@ final class SyncService: SyncServiceProtocol {
                     )
                     newGT.group = dbGroup
                     context.insert(newGT)
-                    AppLogger.sync.debug("[GroupDebug] Inserted GroupTransactionModel id=\(gt.id) group='\(dbGroup.name)'")
                 }
             }
 
             try? context.save()
         } catch {
-            AppLogger.sync.error("[GroupDebug] pullGroupTransactions failed for group=\(groupId): \(error)")
+            AppLogger.sync.error("pullGroupTransactions failed for group=\(groupId): \(error)")
         }
     }
 

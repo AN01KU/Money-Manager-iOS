@@ -66,14 +66,14 @@ final class APIClient {
     }
     #endif
     
-    static var apiEncoder: JSONEncoder {
+    static let apiEncoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
             try container.encode(Int64(date.timeIntervalSince1970 * 1000))
         }
         return encoder
-    }
+    }()
     
     func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]? = nil) async throws -> T {
         let request = try buildRequest(endpoint: endpoint, method: "GET", queryItems: queryItems)

@@ -85,7 +85,7 @@ struct LoginView: View {
     }
 
     private var isFormValid: Bool {
-        !email.isEmpty && !password.isEmpty && email.contains("@")
+        !email.isEmpty && !password.isEmpty && email.isValidEmail
     }
 
     private func login() {

@@ -5,11 +5,6 @@
 
 import SwiftUI
 
-private let activitySectionDateFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "MMMM dd"
-    return f
-}()
 
 enum GroupsTab {
     case groups
@@ -100,7 +95,7 @@ final class GroupsListViewModel {
             let day = calendar.startOfDay(for: item.date)
             let key = calendar.isDateInToday(day)
                 ? "TODAY"
-                : activitySectionDateFormatter.string(from: day).uppercased()
+                : day.formatted(.dateTime.month(.wide).day()).uppercased()
             grouped[key, default: []].append(item)
         }
 

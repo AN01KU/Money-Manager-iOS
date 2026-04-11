@@ -15,11 +15,8 @@ struct TransactionsView: View {
             TransactionsBody(viewModel: viewModel, onGroupTapped: onGroupTapped)
                 .navigationTitle("Transactions")
         }
-        .task {
+        .onChange(of: TransactionsQuerySnapshot(transactions: allTransactions, categories: customCategories), initial: true) {
             viewModel.modelContext = modelContext
-            viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
-        }
-        .onChange(of: TransactionsQuerySnapshot(transactions: allTransactions, categories: customCategories)) {
             viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
         .onChange(of: categoryFilter?.wrappedValue) { _, newValue in

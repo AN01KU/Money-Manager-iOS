@@ -154,7 +154,7 @@ struct SignupView: View {
     }
     
     private var isFormValid: Bool {
-        !email.isEmpty && !username.isEmpty && !password.isEmpty && passwordsMatch && password.count >= 8
+        email.isValidEmail && !username.isEmpty && !password.isEmpty && passwordsMatch && password.count >= 8
     }
     
     private var passwordsMatch: Bool {

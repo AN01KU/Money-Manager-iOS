@@ -77,10 +77,7 @@ struct BudgetsView: View {
         .sheet(isPresented: $viewModel.showBudgetSheet) {
             BudgetSheet(selectedMonth: viewModel.selectedMonth)
         }
-        .task {
-            viewModel.configure(allTransactions: allTransactions, budgets: budgets, modelContext: modelContext)
-        }
-        .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, budgets: budgets)) {
+        .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, budgets: budgets), initial: true) {
             viewModel.configure(allTransactions: allTransactions, budgets: budgets, modelContext: modelContext)
         }
     }

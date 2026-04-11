@@ -5,11 +5,6 @@
 
 import SwiftUI
 
-private let groupSectionDateFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "MMMM dd"
-    return f
-}()
 
 struct GroupDetailView: View {
     @State private var viewModel: GroupDetailViewModel
@@ -177,7 +172,7 @@ struct GroupDetailView: View {
                                     }
                                 }
                                 .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .clipShape(.rect(cornerRadius: 14))
                             }
                         }
                     }
@@ -203,7 +198,7 @@ struct GroupDetailView: View {
             let day = calendar.startOfDay(for: tx.date)
             let key = calendar.isDateInToday(day)
                 ? "TODAY"
-                : groupSectionDateFormatter.string(from: day).uppercased()
+                : day.formatted(.dateTime.month(.wide).day()).uppercased()
             grouped[key, default: []].append(tx)
         }
 
@@ -249,7 +244,7 @@ struct GroupDetailView: View {
                                 }
                             }
                             .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .clipShape(.rect(cornerRadius: 14))
                         }
 
                         // Settlement history
@@ -273,7 +268,7 @@ struct GroupDetailView: View {
                                     }
                                 }
                                 .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .clipShape(.rect(cornerRadius: 14))
                             }
                         }
                     }
@@ -305,7 +300,7 @@ struct GroupDetailView: View {
                         }
                     }
                     .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(.rect(cornerRadius: 14))
                     .padding(.horizontal)
                     .padding(.vertical, 12)
                     .padding(.bottom, 80)
