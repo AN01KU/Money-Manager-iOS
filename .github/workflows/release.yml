@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Release
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    env:
+      MIN_XCODE_VERSION: '16.4'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Xcode version
+        run: |
+          XCODE_VERSION=$(xcodebuild -version | head -1 | awk '{print $2}')
+          echo "Xcode: $XCODE_VERSION (min: ${{ env.MIN_XCODE_VERSION }})"
+          if [ "$(printf '%s\n' "${{ env.MIN_XCODE_VERSION }}" "$XCODE_VERSION" | sort -V | head -1)" != "${{ env.MIN_XCODE_VERSION }}" ]; then
+            echo "::error::Xcode $XCODE_VERSION is below minimum ${{ env.MIN_XCODE_VERSION }}"
+            exit 1
+          fi
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Build Release
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+" | tail -1 | awk -F '[()]' '{print $2}')
+          xcodebuild build \
+            -project "Money Manager.xcodeproj" \
+            -scheme "Money Manager" \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Zip Simulator App
+        id: zip
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+" | tail -1 | awk -F '[()]' '{print $2}')
+          BUILD_DIR=$(xcodebuild build \
+            -project "Money Manager.xcodeproj" \
+            -scheme "Money Manager" \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            -showBuildSettings 2>/dev/null | grep ' BUILT_PRODUCTS_DIR' | awk '{print $3}')
+          ZIP_NAME="MoneyManager-${{ steps.version.outputs.VERSION }}-Simulator.zip"
+          cd "$BUILD_DIR"
+          zip -r "$GITHUB_WORKSPACE/$ZIP_NAME" "Money Manager.app"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT
+          echo "Zipped: $ZIP_NAME"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Money Manager ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Money Manager ${{ steps.version.outputs.VERSION }}
+
+            ### Installation (iOS Simulator)
+
+            Requires a Mac with Xcode installed.
+
+            ```bash
+            # 1. Unzip the app
+            unzip MoneyManager-${{ steps.version.outputs.VERSION }}-Simulator.zip
+
+            # 2. Boot a simulator (or open Simulator.app from Xcode first)
+            xcrun simctl boot "iPhone 16"
+            open /Applications/Xcode.app/Contents/Applications/Simulator.app
+
+            # 3. Install and launch
+            xcrun simctl install booted "Money Manager.app"
+            xcrun simctl launch booted com.ankush.money-manager
+            ```
+          files: ${{ steps.zip.outputs.ZIP_NAME }}
+          fail_on_unmatched_files: true
