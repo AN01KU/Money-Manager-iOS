@@ -14,6 +14,17 @@ XCODEBUILD_TEST = xcodebuild test \
 	$(COVERAGE) \
 	-resultBundlePath "$(TEST_RESULTS)"
 
+BUILD_DIR := $(shell xcodebuild build \
+	-project "$(PROJECT)" \
+	-scheme "$(SCHEME)" \
+	-destination "$(DESTINATION)" \
+	$(SIGNING) \
+	-showBuildSettings 2>/dev/null | grep ' BUILT_PRODUCTS_DIR' | awk '{print $$3}')
+APP_PATH = $(BUILD_DIR)/Money Manager.app
+VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
+
+.PHONY: build test test-unit test-ui coverage clean release
+
 build:
 	xcodebuild build \
 		-project "$(PROJECT)" \
@@ -47,7 +58,7 @@ test-one:
 coverage:
 	xcrun xccov view --report $(TEST_RESULTS) 2>/dev/null | head -10
 
-.PHONY: build test test-unit test-ui test-api test-one coverage clean ipa screenshots screenshot-one _export-screenshots
+.PHONY: build test test-unit test-ui test-api test-one coverage clean screenshots screenshot-one _export-screenshots
 
 # ── Screenshots ───────────────────────────────────────────────────────────────
 # Captures all app screens using a real test account (requires backend reachable).
@@ -96,21 +107,23 @@ _export-screenshots:
 	fi; \
 	rm -rf "$$TMP"
 
-ipa:
-	@echo "▶ Archiving..."
-	xcodebuild archive \
+release:
+	xcodebuild build \
 		-project "$(PROJECT)" \
 		-scheme "$(SCHEME)" \
-		-destination "generic/platform=iOS" \
-		-archivePath /tmp/MoneyManager.xcarchive \
-		-allowProvisioningUpdates
-	@echo "▶ Packaging IPA..."
-	@rm -rf /tmp/MoneyManagerPayload
-	@mkdir -p /tmp/MoneyManagerPayload/Payload
-	@cp -r "/tmp/MoneyManager.xcarchive/Products/Applications/Money Manager.app" /tmp/MoneyManagerPayload/Payload/
-	@cd /tmp/MoneyManagerPayload && zip -r "$(CURDIR)/MoneyManager.ipa" Payload/
-	@rm -rf /tmp/MoneyManagerPayload /tmp/MoneyManager.xcarchive
-	@echo "✓ IPA saved to MoneyManager.ipa"
+		-destination "$(DESTINATION)" \
+		-configuration Release \
+		$(SIGNING)
+	@APP=$$(xcodebuild build \
+		-project "$(PROJECT)" \
+		-scheme "$(SCHEME)" \
+		-destination "$(DESTINATION)" \
+		-configuration Release \
+		$(SIGNING) \
+		-showBuildSettings 2>/dev/null | grep ' BUILT_PRODUCTS_DIR' | awk '{print $$3}'); \
+	echo "Zipping $$APP/Money Manager.app ..."; \
+	cd "$$APP" && zip -r "$(CURDIR)/MoneyManager-$(VERSION)-Simulator.zip" "Money Manager.app"; \
+	echo "Created: $(CURDIR)/MoneyManager-$(VERSION)-Simulator.zip"
 
 clean:
 	xcodebuild clean \
@@ -118,3 +131,4 @@ clean:
 		-scheme "$(SCHEME)"
 	rm -rf ~/Library/Developer/Xcode/DerivedData
 	rm -rf $(TEST_RESULTS)
+	rm -f MoneyManager-*-Simulator.zip
