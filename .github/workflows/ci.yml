@@ -9,6 +9,7 @@ on:
       - 'Money ManagerTests/**'
       - 'Money ManagerUITests/**'
       - 'Money Manager.xcodeproj/**'
+      - 'Config/**'
       - '.github/workflows/ci.yml'
   pull_request:
     paths:
@@ -24,7 +25,7 @@ concurrency:
 
 permissions:
   checks: write
-  contents: read
+  contents: write
 
 jobs:
   build-and-test:
@@ -127,3 +128,38 @@ jobs:
           name: test-results
           path: test_results.xcresult
           retention-days: 30
+
+  release-ipa:
+    name: Release IPA
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build IPA
+        run: make ipa
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "Money Manager/Money-Manager-Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "Money Manager/Money-Manager-Info.plist" 2>/dev/null || echo "1")
+          echo "name=v${VERSION} (${GITHUB_SHA::7})" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          body: |
+            **Sideload with AltStore or Sideloadly** — re-sign with your own Apple ID.
+            > Note: provisioning expires after 7 days and requires re-sideloading.
+          files: MoneyManager.ipa
+          make_latest: true
+
+      - name: Clean up IPA
+        if: always()
+        run: rm -f MoneyManager.ipa
