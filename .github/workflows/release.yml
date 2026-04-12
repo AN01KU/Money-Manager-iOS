@@ -28,6 +28,10 @@ jobs:
             exit 1
           fi
 
+      - name: Create xcconfig files
+        run: |
+          echo "API_BASE_HOST = ${{ vars.API_BASE_HOST }}" > Config/Release.xcconfig
+
       - name: Get version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
