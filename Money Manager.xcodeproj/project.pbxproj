@@ -26,6 +26,8 @@
 /* Begin PBXFileReference section */
 		6B0D634C2F7C4E4000BE2D7E /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		6B62AB4D2F464BCD004EA7DF /* Money ManagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Money ManagerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B65A6FA2F8B321600144466 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		6B65A6FC2F8B321600144466 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		6B6A4C4E2EFD151B00B81C49 /* Money Manager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Money Manager.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B8D066B2F1672DA00C93A9B /* Money ManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Money ManagerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -109,9 +111,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6B65A6F92F8B31E400144466 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				6B65A6FA2F8B321600144466 /* Debug.xcconfig */,
+				6B65A6FC2F8B321600144466 /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		6B6A4C452EFD151B00B81C49 = {
 			isa = PBXGroup;
 			children = (
+				6B65A6F92F8B31E400144466 /* Config */,
 				6B0270A72F70625700D07E36 /* Shared */,
 				6B6A4C502EFD151B00B81C49 /* Money Manager */,
 				6B8D066C2F1672DA00C93A9B /* Money ManagerUITests */,

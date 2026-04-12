@@ -29,7 +29,8 @@ final class APIClient {
         config.timeoutIntervalForResource = AppConstants.API.defaultTimeout
         self.session = URLSession(configuration: config)
         
-        self.baseURL = "https://moneymanager.ankushganesh.cloud"
+        let host = Bundle.main.object(forInfoDictionaryKey: "API_BASE_HOST") as? String ?? ""
+        self.baseURL = "https://\(host)"
         
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .custom { decoder in

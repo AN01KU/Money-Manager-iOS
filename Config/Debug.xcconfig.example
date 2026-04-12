@@ -1,0 +1,5 @@
+API_BASE_HOST = your-api-host-here.com
+
+TEST_EMAIL = test@example.com
+TEST_PASSWORD = yourpassword
+TEST_INVITE_CODE = your-invite-code
