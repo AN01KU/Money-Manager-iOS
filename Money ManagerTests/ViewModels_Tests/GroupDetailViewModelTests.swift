@@ -1,311 +1,309 @@
-// MARK: - Commented out: GroupDetailViewModel removed in offline-v1
-/*
 import Foundation
 import Testing
 @testable import Money_Manager
 
 @MainActor
 struct GroupDetailViewModelTests {
-    
-    @Test
-    func testGroupTotalCalculatesCorrectly() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let expense1 = SharedExpense(id: UUID(), groupId: group.id, description: "Dinner", category: "Food", totalAmount: "100.00", paidBy: UUID(), createdAt: "2026-01-01", splits: nil)
-        let expense2 = SharedExpense(id: UUID(), groupId: group.id, description: "Lunch", category: "Food", totalAmount: "200.00", paidBy: UUID(), createdAt: "2026-01-01", splits: nil)
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense1, expense2])
-        
-        #expect(viewModel.groupTotal == 300.0)
-    }
-    
-    @Test
-    func testGroupTotalReturnsZeroForNoExpenses() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        
-        let viewModel = GroupDetailViewModel(group: group)
-        
-        #expect(viewModel.groupTotal == 0)
-    }
-    
-    @Test
-    func testHasUnsettledBalancesReturnsTrueWhenBalancesExist() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let balance = UserBalance(userId: UUID(), amount: "50.00")
-        
-        let viewModel = GroupDetailViewModel(group: group, balances: [balance])
-        
-        #expect(viewModel.hasUnsettledBalances == true)
-    }
-    
-    @Test
-    func testHasUnsettledBalancesReturnsFalseWhenAllSettled() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let balance = UserBalance(userId: UUID(), amount: "0.00")
-        
-        let viewModel = GroupDetailViewModel(group: group, balances: [balance])
-        
-        #expect(viewModel.hasUnsettledBalances == false)
-    }
-    
-    @Test
-    func testHasUnsettledBalancesReturnsFalseForNegativeBalance() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let balance = UserBalance(userId: UUID(), amount: "-25.00")
-        
-        let viewModel = GroupDetailViewModel(group: group, balances: [balance])
-        
-        #expect(viewModel.hasUnsettledBalances == true)
-    }
-    
-    @Test
-    func testRecalculateBalancesCalculatesCorrectly() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let member1 = APIUser(id: UUID(), email: "user1@test.com", username: "User1", createdAt: "2026-01-01")
-        let member2 = APIUser(id: UUID(), email: "user2@test.com", username: "User2", createdAt: "2026-01-01")
-        
-        let expense = SharedExpense(
-            id: UUID(),
-            groupId: group.id,
-            description: "Dinner",
-            category: "Food",
-            totalAmount: "100.00",
-            paidBy: member1.id,
-            createdAt: "2026-01-01",
-            splits: [
-                ExpenseSplit(userId: member1.id, amount: "50.00"),
-                ExpenseSplit(userId: member2.id, amount: "50.00")
-            ]
+
+    // MARK: - Helpers
+
+    private func makeGroup(id: UUID = UUID(), createdBy: UUID = UUID()) -> APIGroupWithDetails {
+        APIGroupWithDetails(
+            id: id,
+            name: "Test Group",
+            createdBy: createdBy,
+            createdAt: Date(),
+            members: [],
+            balances: []
         )
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense], members: [member1, member2])
-        
-        viewModel.recalculateBalances()
-        
-        #expect(viewModel.balances.count == 2)
     }
-    
-    @Test
-    func testRecalculateBalancesWithNoSplits() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let member1 = APIUser(id: UUID(), email: "user1@test.com", username: "User1", createdAt: "2026-01-01")
-        
-        let expense = SharedExpense(
-            id: UUID(),
-            groupId: group.id,
-            description: "Dinner",
-            category: "Food",
-            totalAmount: "100.00",
-            paidBy: member1.id,
-            createdAt: "2026-01-01",
-            splits: nil
+
+    private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> APIGroupMember {
+        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
+    }
+
+    private func makeTransaction(totalAmount: Double, paidBy: UUID = UUID()) -> APIGroupTransaction {
+        APIGroupTransaction(
+            id: UUID(), groupId: UUID(), paidByUserId: paidBy,
+            totalAmount: totalAmount, category: "Food", date: Date(),
+            description: "Test", notes: nil, isDeleted: false,
+            createdAt: Date(), updatedAt: Date(), splits: []
         )
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense], members: [member1])
-        
-        viewModel.recalculateBalances()
-        
-        #expect(viewModel.balances.count == 1)
     }
-    
-    @Test
-    func testAddExpenseInsertsAtBeginning() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let expense1 = SharedExpense(id: UUID(), groupId: group.id, description: "Old", category: "Food", totalAmount: "50.00", paidBy: UUID(), createdAt: "2026-01-01", splits: nil)
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense1])
-        
-        let newExpense = SharedExpense(id: UUID(), groupId: group.id, description: "New", category: "Food", totalAmount: "100.00", paidBy: UUID(), createdAt: "2026-01-02", splits: nil)
-        viewModel.addExpense(newExpense)
-        
-        #expect(viewModel.expenses.first?.description == "New")
+
+    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
+        APIGroupBalance(userId: userId, amount: amount)
     }
-    
-    @Test
-    func testAddExpenseRecalculatesBalances() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let member = APIUser(id: UUID(), email: "user@test.com", username: "User", createdAt: "2026-01-01")
-        
-        let expense = SharedExpense(id: UUID(), groupId: group.id, description: "Test", category: "Food", totalAmount: "100.00", paidBy: member.id, createdAt: "2026-01-01", splits: nil)
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [], members: [member])
-        
-        viewModel.addExpense(expense)
-        
-        #expect(!viewModel.balances.isEmpty)
-    }
-    
-    @Test
-    func testGroupSectionAllCases() {
-        #expect(GroupSection.allCases.count == 3)
-        #expect(GroupSection.allCases.contains(.expenses))
-        #expect(GroupSection.allCases.contains(.balances))
-        #expect(GroupSection.allCases.contains(.members))
-    }
-    
-    // MARK: - Add Member (Invitation) Tests
-    
-    @Test
-    func testAddMemberAppendsMemberToList() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group, members: [])
-        
-        viewModel.addMember(email: "new@test.com")
-        
-        #expect(viewModel.members.count == 1)
-        #expect(viewModel.members.first?.email == "new@test.com")
-    }
-    
-    @Test
-    func testAddMemberMarksAsPending() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group, members: [])
-        
-        viewModel.addMember(email: "pending@test.com")
-        
-        let addedMember = viewModel.members.first!
-        #expect(viewModel.pendingMemberIds.contains(addedMember.id))
-    }
-    
-    @Test
-    func testAddMemberDismissesSheet() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group)
-        viewModel.showAddMember = true
-        
-        viewModel.addMember(email: "user@test.com")
-        
-        #expect(viewModel.showAddMember == false)
-    }
-    
-    @Test
-    func testAddMemberPreservesExistingMembers() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let existing = APIUser(id: UUID(), email: "existing@test.com", username: "Existing", createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group, members: [existing])
-        
-        viewModel.addMember(email: "new@test.com")
-        
-        #expect(viewModel.members.count == 2)
-        #expect(viewModel.members.first?.email == "existing@test.com")
-        #expect(viewModel.members.last?.email == "new@test.com")
-    }
-    
-    @Test
-    func testAddMemberDoesNotMarkExistingAsPending() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let existing = APIUser(id: UUID(), email: "existing@test.com", username: "Existing", createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group, members: [existing])
-        
-        viewModel.addMember(email: "new@test.com")
-        
-        #expect(!viewModel.pendingMemberIds.contains(existing.id))
-    }
-    
-    @Test
-    func testAddMultipleMembersBothPending() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group, members: [])
-        
-        viewModel.addMember(email: "a@test.com")
-        viewModel.addMember(email: "b@test.com")
-        
-        #expect(viewModel.members.count == 2)
-        #expect(viewModel.pendingMemberIds.count == 2)
-    }
-    
-    @Test
-    func testPendingMemberIdsStartsEmpty() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupDetailViewModel(group: group)
-        
-        #expect(viewModel.pendingMemberIds.isEmpty)
-    }
-    
-    // MARK: - Recalculate Balances Correctness
-    
-    @Test
-    func testRecalculateBalancesPayerGetsPositiveBalance() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let payer = APIUser(id: UUID(), email: "payer@test.com", username: "Payer", createdAt: "2026-01-01")
-        let other = APIUser(id: UUID(), email: "other@test.com", username: "Other", createdAt: "2026-01-01")
-        
-        let expense = SharedExpense(
-            id: UUID(), groupId: group.id, description: "Dinner", category: "Food",
-            totalAmount: "200.00", paidBy: payer.id, createdAt: "2026-01-01",
-            splits: [
-                ExpenseSplit(userId: payer.id, amount: "100.00"),
-                ExpenseSplit(userId: other.id, amount: "100.00")
-            ]
+
+    private func makeDetails(
+        groupId: UUID,
+        members: [APIGroupMember] = [],
+        balances: [APIGroupBalance] = []
+    ) -> APIGroupDetails {
+        let body = APIGroupDetailsBody(
+            id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(),
+            members: members, balances: balances, settlements: []
         )
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense], members: [payer, other])
-        viewModel.recalculateBalances()
-        
-        let payerBalance = viewModel.balances.first(where: { $0.userId == payer.id })
-        let otherBalance = viewModel.balances.first(where: { $0.userId == other.id })
-        
-        #expect((Double(payerBalance?.amount ?? "0") ?? 0) == 100.0)
-        #expect((Double(otherBalance?.amount ?? "0") ?? 0) == -100.0)
+        return APIGroupDetails(group: body, isMember: true)
     }
-    
+
+    // MARK: - Initial state
+
     @Test
-    func testRecalculateBalancesMultipleExpensesNetCorrectly() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let user1 = APIUser(id: UUID(), email: "u1@test.com", username: "U1", createdAt: "2026-01-01")
-        let user2 = APIUser(id: UUID(), email: "u2@test.com", username: "U2", createdAt: "2026-01-01")
-        
-        let expense1 = SharedExpense(
-            id: UUID(), groupId: group.id, description: "Lunch", category: "Food",
-            totalAmount: "100.00", paidBy: user1.id, createdAt: "2026-01-01",
-            splits: [
-                ExpenseSplit(userId: user1.id, amount: "50.00"),
-                ExpenseSplit(userId: user2.id, amount: "50.00")
-            ]
+    func testInitSeedsMembersAndBalancesFromGroup() {
+        let alice = makeMember(email: "alice@example.com")
+        let group = APIGroupWithDetails(
+            id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
+            members: [alice],
+            balances: [makeBalance(userId: alice.id, amount: 50.00)]
         )
-        let expense2 = SharedExpense(
-            id: UUID(), groupId: group.id, description: "Coffee", category: "Food",
-            totalAmount: "60.00", paidBy: user2.id, createdAt: "2026-01-01",
-            splits: [
-                ExpenseSplit(userId: user1.id, amount: "30.00"),
-                ExpenseSplit(userId: user2.id, amount: "30.00")
-            ]
-        )
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense1, expense2], members: [user1, user2])
-        viewModel.recalculateBalances()
-        
-        let balance1 = Double(viewModel.balances.first(where: { $0.userId == user1.id })?.amount ?? "0") ?? 0
-        let balance2 = Double(viewModel.balances.first(where: { $0.userId == user2.id })?.amount ?? "0") ?? 0
-        
-        // user1 paid 100, owes 80 (50+30) → net +20
-        // user2 paid 60, owes 80 (50+30) → net -20
-        #expect(balance1 == 20.0)
-        #expect(balance2 == -20.0)
+        let vm = GroupDetailViewModel(group: group)
+        #expect(vm.members.count == 1)
+        #expect(vm.balances.count == 1)
+        #expect(vm.transactions.isEmpty)
     }
-    
+
+    // MARK: - loadData()
+
     @Test
-    func testRecalculateBalancesSortedByAbsoluteValue() {
-        let group = SplitGroup(id: UUID(), name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let user1 = APIUser(id: UUID(), email: "u1@test.com", username: "U1", createdAt: "2026-01-01")
-        let user2 = APIUser(id: UUID(), email: "u2@test.com", username: "U2", createdAt: "2026-01-01")
-        let user3 = APIUser(id: UUID(), email: "u3@test.com", username: "U3", createdAt: "2026-01-01")
-        
-        let expense = SharedExpense(
-            id: UUID(), groupId: group.id, description: "Trip", category: "Travel",
-            totalAmount: "300.00", paidBy: user1.id, createdAt: "2026-01-01",
-            splits: [
-                ExpenseSplit(userId: user1.id, amount: "100.00"),
-                ExpenseSplit(userId: user2.id, amount: "50.00"),
-                ExpenseSplit(userId: user3.id, amount: "150.00")
-            ]
+    func testLoadDataPopulatesTransactionsMembersBalances() async {
+        let groupId = UUID()
+        let mock = MockGroupService.fresh()
+        let alice = makeMember(email: "alice@example.com")
+        mock.stubbedGroupDetails = makeDetails(
+            groupId: groupId,
+            members: [alice],
+            balances: [makeBalance(userId: alice.id, amount: 30.00)]
         )
-        
-        let viewModel = GroupDetailViewModel(group: group, expenses: [expense], members: [user1, user2, user3])
-        viewModel.recalculateBalances()
-        
-        let amounts = viewModel.balances.map { abs(Double($0.amount) ?? 0) }
-        #expect(amounts == amounts.sorted(by: >))
+        mock.stubbedTransactions = [makeTransaction(totalAmount: 60.00)]
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        await vm.loadData()
+        #expect(vm.transactions.count == 1)
+        #expect(vm.members.count == 1)
+        #expect(vm.balances.count == 1)
+        #expect(vm.isLoading == false)
+    }
+
+    @Test
+    func testLoadDataKeepsInitialMembersWhenDetailsReturnEmpty() async {
+        let mock = MockGroupService.fresh()
+        let alice = makeMember(email: "alice@example.com")
+        let group = APIGroupWithDetails(
+            id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
+            members: [alice], balances: []
+        )
+        let vm = GroupDetailViewModel(group: group, groupService: mock)
+        await vm.loadData()
+        #expect(vm.isLoading == false)
+    }
+
+    // MARK: - groupTotal
+
+    @Test
+    func testGroupTotalSumsAllTransactions() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        vm.transactions = [
+            makeTransaction(totalAmount: 100.00),
+            makeTransaction(totalAmount: 50.50)
+        ]
+        #expect(vm.groupTotal == 150.5)
+    }
+
+    @Test
+    func testGroupTotalWithNoTransactionsIsZero() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        #expect(vm.groupTotal == 0)
+    }
+
+    // MARK: - hasUnsettledBalances
+
+    @Test
+    func testHasUnsettledBalancesWhenAllZeroReturnsFalse() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        vm.balances = [makeBalance(userId: UUID(), amount: 0.00)]
+        #expect(vm.hasUnsettledBalances == false)
+    }
+
+    @Test
+    func testHasUnsettledBalancesWhenSomeNonZeroReturnsTrue() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        vm.balances = [makeBalance(userId: UUID(), amount: 25.00)]
+        #expect(vm.hasUnsettledBalances == true)
+    }
+
+    @Test
+    func testHasUnsettledBalancesWhenNegativeBalanceReturnsTrue() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        vm.balances = [makeBalance(userId: UUID(), amount: -30.00)]
+        #expect(vm.hasUnsettledBalances == true)
+    }
+
+    // MARK: - expenseAdded (transactionAdded)
+
+    @Test
+    func testTransactionAddedInsertsAtTop() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        let first  = makeTransaction(totalAmount: 100)
+        let second = makeTransaction(totalAmount: 50)
+        vm.transactionAdded(first)
+        vm.transactionAdded(second)
+        #expect(vm.transactions.first?.totalAmount == 50)
+    }
+
+    @Test
+    func testTransactionAddedUpdatesGroupTotal() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        vm.transactionAdded(makeTransaction(totalAmount: 200))
+        #expect(vm.groupTotal == 200)
+    }
+
+    // MARK: - addMember optimistic state
+
+    @Test
+    func testAddMemberAddsToPendingEmailsImmediately() {
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        vm.addMember(email: "bob@example.com")
+        #expect(vm.pendingMemberEmails.contains("bob@example.com"))
+    }
+
+    @Test
+    func testAddMemberTrimsAndLowercasesEmail() {
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        vm.addMember(email: "  BOB@EXAMPLE.COM  ")
+        #expect(vm.pendingMemberEmails.contains("bob@example.com"))
+    }
+
+    @Test
+    func testAddMemberDoesNothingWhenEmailIsBlank() {
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        vm.addMember(email: "   ")
+        #expect(vm.pendingMemberEmails.isEmpty)
+    }
+
+    @Test
+    func testAddMemberDoesNothingWhenAlreadyAMember() {
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let alice = makeMember(email: "alice@example.com")
+        vm.members = [alice]
+        vm.addMember(email: "alice@example.com")
+        #expect(vm.pendingMemberEmails.isEmpty)
+    }
+
+    @Test
+    func testAddMemberDismissesSheetImmediately() {
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        vm.showAddMember = true
+        vm.addMember(email: "bob@example.com")
+        #expect(vm.showAddMember == false)
+    }
+
+    // MARK: - Invite flow (async, via mock)
+
+    @Test
+    func testAddMemberSuccessClearsPendingAndRefreshesMembers() async {
+        let mock = MockGroupService.fresh()
+        let bob = makeMember(email: "bob@example.com")
+        mock.stubbedMembers = [bob]
+
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        vm.addMember(email: "bob@example.com")
+
+        #expect(vm.pendingMemberEmails.contains("bob@example.com"))
+
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(vm.pendingMemberEmails.isEmpty)
+        #expect(vm.members.contains(where: { $0.email == "bob@example.com" }))
+        #expect(mock.addMemberCalls.count == 1)
+        #expect(mock.addMemberCalls.first?.email == "bob@example.com")
+    }
+
+    @Test
+    func testAddMemberFailureClearsPendingAndSetsError() async {
+        struct InviteError: Error, LocalizedError {
+            var errorDescription: String? { "user not found with this email" }
+        }
+        let mock = MockGroupService.fresh()
+        mock.addMemberError = InviteError()
+
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        vm.addMember(email: "ghost@example.com")
+
+        #expect(vm.pendingMemberEmails.contains("ghost@example.com"))
+
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(vm.pendingMemberEmails.isEmpty)
+        #expect(vm.addMemberError != nil)
+    }
+
+    @Test
+    func testAddMemberCallsServiceWithCorrectGroupId() async {
+        let mock = MockGroupService.fresh()
+        let groupId = UUID()
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        vm.addMember(email: "sam@example.com")
+
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(mock.addMemberCalls.first?.groupId == groupId)
+    }
+
+    // MARK: - isPending
+
+    @Test
+    func testIsPendingReturnsTrueForPendingMember() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        let bob = makeMember(email: "bob@example.com")
+        vm.pendingMemberEmails.insert("bob@example.com")
+        #expect(vm.isPending(bob) == true)
+    }
+
+    @Test
+    func testIsPendingReturnsFalseForConfirmedMember() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        let alice = makeMember(email: "alice@example.com")
+        #expect(vm.isPending(alice) == false)
+    }
+
+    // MARK: - settlementRecorded
+
+    @Test
+    func testSettlementRecordedInsertsSettlement() {
+        let alice = makeMember(email: "alice@example.com")
+        let bob   = makeMember(email: "bob@example.com")
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        vm.members = [alice, bob]
+        let settlement = APISettlement(
+            id: UUID(), groupId: vm.group.id,
+            fromUser: bob.id, toUser: alice.id,
+            amount: 50.00, notes: nil, createdAt: Date()
+        )
+        vm.settlementRecorded(settlement)
+        #expect(vm.settlements.count == 1)
+        #expect(vm.settlements.first?.id == settlement.id)
+    }
+
+    // MARK: - displayName
+
+    @Test
+    func testDisplayNameReturnsUsername() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        let member = makeMember(email: "charlie@example.com")
+        #expect(vm.displayName(for: member) == member.username)
+    }
+
+    @Test
+    func testDisplayNameForIdReturnsUnknownWhenNotFound() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        #expect(vm.displayName(forId: UUID()) == "Unknown")
+    }
+
+    @Test
+    func testDisplayNameForIdResolvesKnownMember() {
+        let vm = GroupDetailViewModel(group: makeGroup())
+        let alice = makeMember(email: "alice@example.com")
+        vm.members = [alice]
+        #expect(vm.displayName(forId: alice.id) == alice.username)
     }
 }
-
-*/

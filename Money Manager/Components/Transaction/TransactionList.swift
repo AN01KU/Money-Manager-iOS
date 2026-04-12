@@ -1,90 +1,100 @@
-//
-//  TransactionList.swift
-//  Money Manager
-//
-//  Created by Ankush Ganesh on 13/01/26.
-//
-
 import SwiftUI
 import SwiftData
 
+private struct TransactionGroup: Identifiable {
+    let id: String   // the display label, e.g. "TODAY" or "JANUARY 15"
+    let transactions: [Transaction]
+}
+
+private let sectionDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "MMMM dd"
+    return f
+}()
+
 struct TransactionList: View {
-    let expenses: [Expense]
-    @State private var selectedExpense: Expense?
-    @State private var swipedExpenseID: PersistentIdentifier?
-    @State private var rowTapped = false
-    @State private var deleteTriggered = false
-    var onDelete: ((Expense) -> Void)?
-    
-    var groupedExpenses: [(String, [Expense])] {
-        let calendar = Calendar.current
-        
-        var grouped: [String: [Expense]] = [:]
-        
-        for expense in expenses {
-            let expenseDate = calendar.startOfDay(for: expense.date)
-            let key: String
-            
-            if calendar.isDateInToday(expenseDate) {
-                key = "TODAY"
-            } else {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "MMMM dd"
-                key = formatter.string(from: expenseDate).uppercased()
-            }
-            
-            if grouped[key] == nil {
-                grouped[key] = []
-            }
-            grouped[key]?.append(expense)
-        }
-        
-        return grouped.sorted { first, second in
-            if first.key == "TODAY" { return true }
-            if second.key == "TODAY" { return false }
-            return first.key > second.key
-        }
+    let transactions: [Transaction]
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @State private var selectedTransaction: Transaction?
+    @State private var swipedTransactionID: PersistentIdentifier?
+    @State private var rowTapped = 0
+    @State private var deleteTriggered = false  // Used as binding for swipe UI
+    var onDelete: ((Transaction) -> Void)?
+    var onGroupTapped: ((UUID) -> Void)?
+
+    private var categoryLookup: [String: CustomCategory] {
+        CategoryResolver.makeLookup(from: customCategories)
     }
-    
+
+    private var groupedTransactions: [TransactionGroup] {
+        let calendar = Calendar.current
+        var grouped: [String: [Transaction]] = [:]
+
+        for transaction in transactions {
+            let transactionDate = calendar.startOfDay(for: transaction.date)
+            let key = calendar.isDateInToday(transactionDate)
+                ? "TODAY"
+                : sectionDateFormatter.string(from: transactionDate).uppercased()
+
+            grouped[key, default: []].append(transaction)
+        }
+
+        return grouped
+            .map { TransactionGroup(id: $0.key, transactions: $0.value) }
+            .sorted { first, second in
+                if first.id == "TODAY" { return true }
+                if second.id == "TODAY" { return false }
+                return first.id > second.id
+            }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ForEach(groupedExpenses, id: \.0) { section in
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(section.0)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: 20) {
+            ForEach(groupedTransactions) { section in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(section.id)
+                        .font(AppTypography.sectionHeader)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 4)
-                    
-                    ForEach(section.1) { expense in
-                        SwipeToDeleteRow(
-                            isRevealed: Binding(
-                                get: { swipedExpenseID == expense.persistentModelID },
-                                set: { revealed in
-                                    swipedExpenseID = revealed ? expense.persistentModelID : nil
+
+                    VStack(spacing: 0) {
+                        ForEach(section.transactions) { transaction in
+                            SwipeToDeleteRow(
+                                isRevealed: Binding(
+                                    get: { swipedTransactionID == transaction.persistentModelID },
+                                    set: { revealed in
+                                        swipedTransactionID = revealed ? transaction.persistentModelID : nil
+                                    }
+                                ),
+                                onTap: {
+                                    rowTapped += 1
+                                    selectedTransaction = transaction
+                                },
+                                onDelete: {
+                                    deleteTriggered = true
+                                    onDelete?(transaction)
                                 }
-                            ),
-                            onTap: {
-                                rowTapped = true
-                                selectedExpense = expense
-                            },
-                            onDelete: {
-                                deleteTriggered = true
-                                onDelete?(expense)
+                            ) {
+                                TransactionRow(transaction: transaction, categoryLookup: categoryLookup, onGroupTapped: onGroupTapped)
                             }
-                        ) {
-                            TransactionRow(expense: expense)
-                        }
-                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                        .onChange(of: rowTapped) { _, newValue in
-                            if newValue { rowTapped = false }
+
+                            if transaction.persistentModelID != section.transactions.last?.persistentModelID {
+                                Divider()
+                                    .padding(.leading, 58)
+                            }
                         }
                     }
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
             }
         }
-        .sheet(item: $selectedExpense) { expense in
-            TransactionDetailView(expense: expense)
+        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
+        .sheet(item: $selectedTransaction) { transaction in
+            TransactionDetailView(transaction: transaction)
+        }
+        .onChange(of: transactions.map(\.persistentModelID)) { _, _ in
+            swipedTransactionID = nil
         }
     }
 }
@@ -96,11 +106,11 @@ private struct SwipeToDeleteRow<Content: View>: View {
     let onTap: () -> Void
     let onDelete: () -> Void
     @ViewBuilder let content: () -> Content
-    
+
     @State private var offset: CGFloat = 0
-    
+
     private let buttonWidth: CGFloat = 80
-    
+
     var body: some View {
         ZStack(alignment: .trailing) {
             // Delete button behind
@@ -109,15 +119,15 @@ private struct SwipeToDeleteRow<Content: View>: View {
                 resetSwipe()
             } label: {
                 Image(systemName: "trash.fill")
-                    .font(.title3)
+                    .font(AppTypography.destructiveIcon)
                     .foregroundStyle(.white)
                     .frame(width: buttonWidth)
                     .frame(maxHeight: .infinity)
             }
             .background(AppColors.expense)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
             .opacity(offset < 0 ? 1 : 0)
-            
+
             // Content on top
             content()
                 .offset(x: offset)
@@ -143,15 +153,16 @@ private struct SwipeToDeleteRow<Content: View>: View {
                             }
                         }
                 )
-                .onTapGesture {
-                    if isRevealed {
-                        resetSwipe()
-                    } else {
-                        onTap()
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        if isRevealed {
+                            resetSwipe()
+                        } else {
+                            onTap()
+                        }
                     }
-                }
+                )
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
         .onChange(of: isRevealed) { _, newValue in
             if !newValue && offset != 0 {
                 withAnimation(.easeOut(duration: 0.2)) { offset = 0 }
@@ -161,12 +172,12 @@ private struct SwipeToDeleteRow<Content: View>: View {
             onDelete()
         }
     }
-    
+
     private func revealButton() {
         withAnimation(.easeOut(duration: 0.2)) { offset = -buttonWidth }
         isRevealed = true
     }
-    
+
     private func resetSwipe() {
         withAnimation(.easeOut(duration: 0.2)) { offset = 0 }
         isRevealed = false
@@ -174,9 +185,9 @@ private struct SwipeToDeleteRow<Content: View>: View {
 }
 
 #Preview {
-    TransactionList(expenses: [
-        Expense(amount: 450, category: "Food & Dining", date: Date(), expenseDescription: "Lunch"),
-        Expense(amount: 250, category: "Transport", date: Date(), expenseDescription: "Uber")
+    TransactionList(transactions: [
+        Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch"),
+        Transaction(amount: 250, category: "Transport", date: Date(), transactionDescription: "Uber")
     ]) { _ in }
     .padding()
 }

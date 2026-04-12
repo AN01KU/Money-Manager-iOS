@@ -14,13 +14,13 @@ enum ViewType: String, CaseIterable {
 
 struct ViewTypeSelector: View {
     @Binding var selectedView: ViewType
-    @State private var selectionChanged = false
+    @State private var selectionChanged = 0
     
     var body: some View {
         HStack(spacing: 12) {
             ForEach(ViewType.allCases, id: \.self) { viewType in
                 Button(action: {
-                    selectionChanged = true
+                    selectionChanged += 1
                     selectedView = viewType
                 }) {
                     Text(viewType.rawValue)
@@ -34,9 +34,6 @@ struct ViewTypeSelector: View {
                 }
                 .buttonStyle(.borderless)
                 .sensoryFeedback(.selection, trigger: selectionChanged)
-                .onChange(of: selectionChanged) { _, newValue in
-                    if newValue { selectionChanged = false }
-                }
             }
             Spacer()
         }

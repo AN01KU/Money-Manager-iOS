@@ -8,6 +8,7 @@ enum AppColors {
 
     // MARK: - Semantic
     static let expense = Color.red
+    static let income = Color.green
     static let positive = Color.green
     static let warning = Color.orange
     static let info = Color.blue

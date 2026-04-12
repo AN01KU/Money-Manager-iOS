@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct PredefinedCategoryTests {
     
     @Test
@@ -134,7 +135,7 @@ struct PredefinedCategoryTests {
     @Test
     func testAllCasesAreIdentifiable() {
         for category in PredefinedCategory.allCases {
-            #expect(category.id != nil)
+            #expect(!category.id.isEmpty)
         }
     }
     
@@ -168,6 +169,7 @@ struct PredefinedCategoryTests {
     }
 }
 
+@MainActor
 struct ColorHexExtensionTests {
     
     @Test

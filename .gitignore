@@ -18,3 +18,10 @@ Pods/
 
 # Test results
 test_results.xcresult/
+
+# IPA exports
+*.ipa
+
+# Local config (contains secrets — copy Config/*.xcconfig from a teammate or create manually)
+Config/Debug.xcconfig
+Config/Release.xcconfig

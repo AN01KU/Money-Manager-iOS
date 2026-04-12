@@ -26,6 +26,64 @@ make clean                          # Clean build artifacts
 
 When fixing or adding tests, always use `make test-one TEST=<TestClass>` to run only what you touched.
 
+### Screenshots
+
+Screenshots in `Screenshots/` are generated from the live test account via `ScreenshotGenerator`.
+
+```bash
+make screenshots                    # Capture all screens → copies PNGs to Screenshots/
+make screenshot-one TAG=overview    # Capture a single screen by tag
+```
+
+**Run `make screenshots` before committing any UI change** so the screenshots stay current.
+
+The generator lives in `Money ManagerUITests/Screenshots/ScreenshotGenerator.swift`.
+Tags are defined in `Money ManagerUITests/Screenshots/ScreenshotTag.swift`.
+
+To add a new screen:
+1. Add a `case` to `ScreenshotTag`
+2. Add a `captureXxx()` method in `ScreenshotGenerator` and call it from `captureAll()`
+
+Requires the backend to be reachable and the test account (`ankush@gmail.com`) to exist.
+
+### Test Output Handling
+
+**IMPORTANT**: Never use `head`, `grep`, or `tail` to filter test output. The test result file is located at:
+- `./test_results.xcresult`
+
+To parse test results, **always use the `--legacy` flag** (required — without it xcresulttool errors):
+
+```bash
+xcrun xcresulttool get object --legacy --path ./test_results.xcresult --format json
+```
+
+To extract failure messages with file locations:
+
+```bash
+xcrun xcresulttool get object --legacy --path ./test_results.xcresult --format json 2>/dev/null | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+
+def find_issues(obj, depth=0):
+    if depth > 20: return
+    if isinstance(obj, dict):
+        type_name = obj.get('_type', {}).get('_name', '')
+        if 'Issue' in type_name or 'Failure' in type_name:
+            msg = obj.get('message', {}).get('_value', '')
+            if msg:
+                loc = obj.get('documentLocationInCreatingWorkspace', {})
+                url = loc.get('url', {}).get('_value', '')
+                print(f'{url}: {msg}')
+        for v in obj.values():
+            find_issues(v, depth+1)
+    elif isinstance(obj, list):
+        for item in obj:
+            find_issues(item, depth+1)
+
+find_issues(data)
+"
+```
+
 ---
 
 ## Git Guidelines
@@ -102,7 +160,7 @@ Tests are **mandatory** for all business logic, view models, and model behavior.
 ### Approach
 
 - Follow **BDD/TDD**: write tests first or alongside implementation.
-- Test names should read as behavior: `test_addExpense_withZeroAmount_doesNotSave()`
+- Test names should read as behavior: `testAddTransaction_withZeroAmount_doesNotSave()`
 - One assertion per logical concept per test.
 - Use `make test-one TEST=YourTestClass` to run only the tests you're working on.
 
@@ -129,6 +187,6 @@ Before submitting changes, verify:
 - [ ] Tests cover the actual behavior being changed
 - [ ] `make test-one TEST=<relevant>` passes
 - [ ] No force unwraps introduced
-- [ ] Uses existing shared utilities (`AppColors`, `AppConstants`, `CurrencyFormatter`)
+- [ ] Uses existing shared utilities (`AppColors`, `AppConstants`, `CurrencyFormatter`, `AppLogger`, `AppRoute`)
 - [ ] Code is straightforward — no cleverness for its own sake
 - [ ] If a major flow changed, update `README.md` to reflect it

@@ -10,15 +10,15 @@ import SwiftUI
 struct MonthSelector: View {
     @Binding var selectedMonth: Date
     @State private var showDatePicker = false
-    @State private var buttonTapped = false
+    @State private var buttonTapped = 0
     
     var body: some View {
         Button(action: {
-            buttonTapped = true
+            buttonTapped += 1
             showDatePicker = true
         }) {
             HStack {
-                Text(formatMonth(selectedMonth))
+                Text(selectedMonth, format: .dateTime.month(.wide).year())
                     .font(.body)
                     .foregroundStyle(.primary)
                 Image(systemName: "chevron.down")
@@ -31,9 +31,7 @@ struct MonthSelector: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .sensoryFeedback(.impact(weight: .light), trigger: buttonTapped)
-        .onChange(of: buttonTapped) { _, newValue in
-            if newValue { buttonTapped = false }
-        }
+        .accessibilityIdentifier("budget.month-selector")
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
                 VStack {
@@ -59,11 +57,6 @@ struct MonthSelector: View {
         }
     }
     
-    private func formatMonth(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
-    }
 }
 
 #Preview {

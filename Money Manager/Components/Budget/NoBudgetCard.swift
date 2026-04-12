@@ -25,6 +25,7 @@ struct NoBudgetCard: View {
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("No budget set. Set a monthly budget to track your spending.")
+        .accessibilityIdentifier("budget.no-budget-card")
     }
 }
 

@@ -1,99 +1,141 @@
 import SwiftUI
 import SwiftData
 
+enum TransactionTypeFilter: String, CaseIterable {
+    case all      = "All"
+    case expenses = "Expenses"
+    case income   = "Income"
+}
+
 @MainActor
 @Observable class OverviewViewModel {
     var selectedView: ViewType = .daily
-    var selectedDate: Date = Date() { didSet { recalculate() } }
-    var filterMode: FilterMode = .monthly { didSet { recalculate() } }
-    var showAddExpense = false
+    var selectedDate: Date = Date() { didSet { if oldValue != selectedDate { recalculate() } } }
+    var filterMode: FilterMode = .monthly { didSet { if oldValue != filterMode { recalculate() } } }
+    var showAddTransaction = false
     var showBudgetSheet = false
-    var searchText = "" { didSet { recalculate() } }
-    var selectedCategoryFilter: String? { didSet { recalculate() } }
-    
-    var filteredExpenses: [Expense] = []
+    var searchText = "" { didSet { if oldValue != searchText { recalculate() } } }
+    var selectedCategoryFilter: String? { didSet { if oldValue != selectedCategoryFilter { recalculate() } } }
+    var transactionTypeFilter: TransactionTypeFilter = .all { didSet { if oldValue != transactionTypeFilter { recalculate() } } }
+
+    var filteredTransactions: [Transaction] = []
     var currentBudget: MonthlyBudget?
     var dailyBudgetLimit: Double = 0
     var totalSpent: Double = 0
+    var totalIncome: Double = 0
     var categorySpending: [CategorySpending] = []
-    var expenseToDelete: Expense?
-    
-    private var allExpenses: [Expense] = []
+    var transactionToDelete: Transaction?
+
+    var netBalance: Double { totalIncome - totalSpent }
+
+    private var allTransactions: [Transaction] = []
     private var budgets: [MonthlyBudget] = []
     private var customCategories: [CustomCategory] = []
-    private var modelContext: ModelContext?
-    
-    func configure(allExpenses: [Expense], budgets: [MonthlyBudget], customCategories: [CustomCategory], modelContext: ModelContext?) {
-        self.allExpenses = allExpenses
+    private var categoryLookup: [String: CustomCategory] = [:]
+    var modelContext: ModelContext? {
+        get { persistence.modelContext }
+        set { persistence.modelContext = newValue }
+    }
+    let persistence: PersistenceService
+
+    init(persistence: PersistenceService = PersistenceService()) {
+        self.persistence = persistence
+    }
+
+    func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
+        self.allTransactions = allTransactions
         self.budgets = budgets
         self.customCategories = customCategories
-        self.modelContext = modelContext
-        
+        self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
     }
-    
+
     func recalculate() {
         let calendar = Calendar.current
-        
-        let dateFiltered: [Expense]
+
+        let dateFiltered: [Transaction]
         if filterMode == .daily {
             let startOfDay = calendar.startOfDay(for: selectedDate)
-            let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay)!
-            
-            dateFiltered = allExpenses.filter { expense in
-                !expense.isDeleted &&
-                expense.date >= startOfDay &&
-                expense.date <= endOfDay
+            guard let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) else {
+                filteredTransactions = []
+                return
+            }
+
+            dateFiltered = allTransactions.filter { transaction in
+                !transaction.isSoftDeleted &&
+                transaction.date >= startOfDay &&
+                transaction.date <= endOfDay
             }
         } else {
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate))!
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
-            
-            dateFiltered = allExpenses.filter { expense in
-                !expense.isDeleted &&
-                expense.date >= startOfMonth &&
-                expense.date <= endOfMonth
+            guard
+                let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
+                let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
+            else {
+                filteredTransactions = []
+                return
+            }
+
+            dateFiltered = allTransactions.filter { transaction in
+                !transaction.isSoftDeleted &&
+                transaction.date >= startOfMonth &&
+                transaction.date < firstDayNextMonth
             }
         }
-        
+
         var result = dateFiltered
-        
+
         if !searchText.isEmpty {
-            result = result.filter { expense in
-                expense.category.localizedStandardContains(searchText) ||
-                (expense.expenseDescription?.localizedStandardContains(searchText) ?? false) ||
-                (expense.notes?.localizedStandardContains(searchText) ?? false) ||
-                (expense.groupName?.localizedStandardContains(searchText) ?? false)
+            result = result.filter { transaction in
+                transaction.category.localizedStandardContains(searchText) ||
+                (transaction.transactionDescription?.localizedStandardContains(searchText) ?? false) ||
+                (transaction.notes?.localizedStandardContains(searchText) ?? false)
             }
         }
-        
+
         if let categoryFilter = selectedCategoryFilter {
             result = result.filter { $0.category == categoryFilter }
         }
-        
-        filteredExpenses = result
-        
+
+        // Compute totals before applying type filter (so budget card is always accurate)
+        totalSpent = result.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
+        totalIncome = result.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
+
+        switch transactionTypeFilter {
+        case .all:      break
+        case .expenses: result = result.filter { $0.type == .expense }
+        case .income:   result = result.filter { $0.type == .income }
+        }
+
+        filteredTransactions = result
+
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
         currentBudget = budgets.first { $0.year == year && $0.month == month }
-        
+
         if filterMode == .daily, let budget = currentBudget {
-            let range = calendar.range(of: .day, in: .month, for: selectedDate)!
-            let daysInMonth = range.count
+            let daysInMonth = calendar.range(of: .day, in: .month, for: selectedDate)?.count ?? 30
             dailyBudgetLimit = budget.limit / Double(daysInMonth)
         } else {
             dailyBudgetLimit = 0
         }
-        
-        totalSpent = filteredExpenses.reduce(0) { $0 + $1.amount }
-        
-        let grouped = Dictionary(grouping: filteredExpenses, by: { $0.category })
-        let total = totalSpent
-        
-        if total > 0 {
-            categorySpending = grouped.map { categoryName, expenses in
-                let amount = expenses.reduce(0) { $0 + $1.amount }
-                let percentage = Int((amount / total) * 100)
+
+        // For the category chart: use income when that filter is active, otherwise expenses
+        let categoryBase: [Transaction]
+        let categoryTotal: Double
+        if transactionTypeFilter == .income {
+            categoryBase = result  // already income-only at this point
+            categoryTotal = totalIncome
+        } else {
+            categoryBase = result.filter { $0.type == .expense }
+            categoryTotal = totalSpent
+        }
+
+        let grouped = Dictionary(grouping: categoryBase, by: { $0.category })
+
+        if categoryTotal > 0 {
+            categorySpending = grouped.map { categoryName, transactions in
+                let amount = transactions.reduce(0) { $0 + $1.amount }
+                let percentage = Int((amount / categoryTotal) * 100)
                 let (icon, color) = resolveCategory(categoryName)
                 return CategorySpending(
                     categoryName: categoryName,
@@ -107,7 +149,7 @@ import SwiftData
             categorySpending = []
         }
     }
-    
+
     func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {
         guard currentBudget == nil, defaultBudgetLimit > 0 else { return }
         let calendar = Calendar.current
@@ -117,46 +159,42 @@ import SwiftData
         modelContext.insert(budget)
         try? modelContext.save()
     }
-    
+
     func filterByCategory(_ categoryName: String) {
         selectedCategoryFilter = categoryName
         selectedView = .daily
     }
-    
+
     func clearCategoryFilter() {
         selectedCategoryFilter = nil
         selectedView = .categories
     }
-    
-    func deleteExpense(_ expense: Expense) {
-        expenseToDelete = expense
+
+    func deleteTransaction(_ transaction: Transaction) {
+        transactionToDelete = transaction
     }
-    
-    func confirmDeleteExpense() {
-        guard let expense = expenseToDelete else { return }
-        expense.isDeleted = true
-        expense.updatedAt = Date()
-        
+
+    func confirmDeleteTransaction() {
+        guard let transaction = transactionToDelete else { return }
+
+        transaction.isSoftDeleted = true
+        transaction.updatedAt = Date()
+        transactionToDelete = nil
+
         do {
-            try modelContext?.save()
-            recalculate()
+            try persistence.saveTransaction(transaction, action: "delete")
         } catch {
-            print("Error deleting expense: \(error)")
+            AppLogger.data.error("Error deleting transaction: \(error)")
         }
-        expenseToDelete = nil
+
+        recalculate()
     }
-    
-    func cancelDeleteExpense() {
-        expenseToDelete = nil
+
+    func cancelDeleteTransaction() {
+        transactionToDelete = nil
     }
-    
+
     func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
-        if let custom = customCategories.first(where: { $0.name == categoryName && !$0.isHidden }) {
-            return (custom.icon, Color(hex: custom.color))
-        }
-        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == categoryName }) {
-            return (predefined.icon, predefined.color)
-        }
-        return ("ellipsis.circle.fill", Color(hex: "#95A5A6"))
+        CategoryResolver.resolve(categoryName, lookup: categoryLookup)
     }
 }

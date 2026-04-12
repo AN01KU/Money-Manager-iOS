@@ -6,233 +6,250 @@ import Testing
 
 @MainActor
 struct TransactionDetailViewModelTests {
-    
+
     // MARK: - Initial State
-    
+
     @Test
-    func initialState() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testInitialStateSheetsAreDismissed() {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        // Sheets must start closed — opening one before the view has appeared would
+        // present immediately and skip the transition animation.
         #expect(viewModel.showEditSheet == false)
         #expect(viewModel.showDeleteAlert == false)
         #expect(viewModel.customCategories.isEmpty)
-        #expect(viewModel.expense.amount == 100)
     }
-    
-    // MARK: - isGroupExpense
-    
+
+    // MARK: - isSettlementTransaction
+
     @Test
-    func isGroupExpenseWhenBothPresent() {
-        let expense = Expense(amount: 100, category: "Food", date: Date(), groupId: UUID(), groupName: "Trip")
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        #expect(viewModel.isGroupExpense == true)
+    func testIsSettlementTransactionWhenSettlementIdPresent() {
+        let transaction = Transaction(amount: 50, category: "Food", date: Date(), settlementId: UUID())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isSettlementTransaction == true)
     }
-    
+
     @Test
-    func isGroupExpenseWhenMissingGroupId() {
-        let expense = Expense(amount: 100, category: "Food", date: Date(), groupName: "Trip")
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        #expect(viewModel.isGroupExpense == false)
+    func testIsSettlementTransactionWhenSettlementIdNil() {
+        let transaction = Transaction(amount: 50, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isSettlementTransaction == false)
     }
-    
+
     @Test
-    func isGroupExpenseWhenMissingGroupName() {
-        let expense = Expense(amount: 100, category: "Food", date: Date(), groupId: UUID())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
-        #expect(viewModel.isGroupExpense == false)
+    func testIsSettlementTransactionIsIndependentOfGroupTransactionId() {
+        // A group transaction (split expense) is not the same as a settlement.
+        // Having a groupTransactionId must not make isSettlementTransaction true.
+        let transaction = Transaction(amount: 100, category: "Food", date: Date(), groupTransactionId: UUID())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isGroupTransaction == true)
+        #expect(viewModel.isSettlementTransaction == false)
     }
-    
+
+    // MARK: - isGroupTransaction
+
+    @Test
+    func testIsGroupTransactionWhenGroupTransactionIdPresent() {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date(), groupTransactionId: UUID())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isGroupTransaction == true)
+    }
+
+    @Test
+    func testIsGroupTransactionWhenGroupTransactionIdNil() {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
+        #expect(viewModel.isGroupTransaction == false)
+    }
+
     // MARK: - categoryIcon
-    
+
     @Test
-    func categoryIconForPredefinedCategory() {
-        let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryIconForPredefinedCategory() {
+        let transaction = Transaction(amount: 100, category: "Food & Dining", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         #expect(viewModel.categoryIcon == "fork.knife.circle.fill")
     }
-    
+
     @Test
-    func categoryIconFallbackForUnknownCategory() {
-        let expense = Expense(amount: 100, category: "Unknown Category", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryIconFallbackForUnknownCategory() {
+        let transaction = Transaction(amount: 100, category: "Unknown Category", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
     }
-    
+
     @Test
-    func categoryIconPrefersCustomCategory() {
-        let expense = Expense(amount: 100, category: "Pets", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryIconPrefersCustomCategory() {
+        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         viewModel.customCategories = [custom]
-        
+
         #expect(viewModel.categoryIcon == "pawprint.fill")
     }
-    
+
     @Test
-    func categoryIconIgnoresHiddenCustomCategory() {
-        let expense = Expense(amount: 100, category: "Pets", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryIconIgnoresHiddenCustomCategory() {
+        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         custom.isHidden = true
         viewModel.customCategories = [custom]
-        
-        // Falls through to predefined/fallback since custom is hidden
+
         #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
     }
-    
+
     // MARK: - categoryColor
-    
+
     @Test
-    func categoryColorForPredefinedCategory() {
-        let expense = Expense(amount: 100, category: "Food & Dining", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryColorForPredefinedCategory() {
+        let transaction = Transaction(amount: 100, category: "Food & Dining", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         #expect(viewModel.categoryColor == PredefinedCategory.foodDining.color)
     }
-    
+
     @Test
-    func categoryColorFallbackForUnknownCategory() {
-        let expense = Expense(amount: 100, category: "Unknown Category", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryColorFallbackForUnknownCategory() {
+        let transaction = Transaction(amount: 100, category: "Unknown Category", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         #expect(viewModel.categoryColor == .gray)
     }
-    
+
     @Test
-    func categoryColorPrefersCustomCategory() {
-        let expense = Expense(amount: 100, category: "Pets", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryColorPrefersCustomCategory() {
+        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         viewModel.customCategories = [custom]
-        
+
         #expect(viewModel.categoryColor == Color(hex: "#FF0000"))
     }
-    
+
     @Test
-    func categoryColorIgnoresHiddenCustomCategory() {
-        let expense = Expense(amount: 100, category: "Pets", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testCategoryColorIgnoresHiddenCustomCategory() {
+        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         custom.isHidden = true
         viewModel.customCategories = [custom]
-        
-        // Falls through to fallback since custom is hidden
+
         #expect(viewModel.categoryColor == .gray)
     }
-    
+
     // MARK: - configure
-    
+
     @Test
-    func configureWithSwiftDataContext() throws {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: schema, configurations: [config])
-        let context = ModelContext(container)
-        
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        viewModel.configure(modelContext: context)
-        
-        // Verify deleteExpense works with a real context (completion called)
+    func testConfigureWithSwiftDataContext() throws {
+        let context = ModelContext(try makeTestContainer())
+
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+        viewModel.modelContext = context
+
         var completionCalled = false
-        viewModel.deleteExpense {
+        viewModel.deleteTransaction {
             completionCalled = true
         }
         #expect(completionCalled == true)
-        #expect(expense.isDeleted == true)
+        #expect(transaction.isSoftDeleted == true)
     }
-    
-    // MARK: - deleteExpense
-    
+
+    // MARK: - deleteTransaction
+
     @Test
-    func deleteExpenseSetsIsDeletedAndUpdatedAt() {
-        let expense = Expense(amount: 100, category: "Food", date: Date())
-        let originalUpdatedAt = expense.updatedAt
-        let viewModel = TransactionDetailViewModel(expense: expense)
-        
+    func testDeleteTransactionSetsIsDeletedAndUpdatedAt() {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let originalUpdatedAt = transaction.updatedAt
+        let viewModel = TransactionDetailViewModel(transaction: transaction)
+
         var completionCalled = false
-        viewModel.deleteExpense {
+        viewModel.deleteTransaction {
             completionCalled = true
         }
-        
-        #expect(expense.isDeleted == true)
-        #expect(expense.updatedAt >= originalUpdatedAt)
+
+        #expect(transaction.isSoftDeleted == true)
+        #expect(transaction.updatedAt >= originalUpdatedAt)
         #expect(completionCalled == true)
     }
-    
+
     // MARK: - formatAmount
-    
+
     @Test
-    func formatAmountWithDecimals() {
-        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
-        
+    func testFormatAmountWithDecimals() {
+        let viewModel = TransactionDetailViewModel(transaction: Transaction(amount: 0, category: "Food", date: Date()))
+
         let result = viewModel.formatAmount(1234.56)
         #expect(result.contains("1,234") || result.contains("1234"))
         #expect(result.contains("56"))
     }
-    
+
     @Test
-    func formatAmountWholeNumber() {
-        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
-        
+    func testFormatAmountWholeNumber() {
+        let viewModel = TransactionDetailViewModel(transaction: Transaction(amount: 0, category: "Food", date: Date()))
+
         let result = viewModel.formatAmount(100)
         #expect(result.contains("100"))
     }
-    
+
     // MARK: - formatDateAndTime
-    
+
     @Test
-    func formatDateAndTimeWithTime() {
-        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
+    func testFormatDateAndTimeWithTime() {
+        let viewModel = TransactionDetailViewModel(transaction: Transaction(amount: 0, category: "Food", date: Date()))
         let calendar = Calendar.current
-        
+
         var dateComponents = DateComponents()
         dateComponents.year = 2026
         dateComponents.month = 1
         dateComponents.day = 15
         let date = calendar.date(from: dateComponents)!
         let time = calendar.date(bySettingHour: 14, minute: 30, second: 0, of: date)!
-        
+
         let result = viewModel.formatDateAndTime(date, time: time)
-        
+
         #expect(result.contains("Jan") || result.contains("January"))
         #expect(result.contains("15"))
         #expect(result.contains("2:30") || result.contains("14:30"))
     }
-    
+
     @Test
-    func formatDateAndTimeWithoutTime() {
-        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
+    func testFormatDateAndTimeWithoutTime() {
+        let viewModel = TransactionDetailViewModel(transaction: Transaction(amount: 0, category: "Food", date: Date()))
         let calendar = Calendar.current
         let date = calendar.startOfDay(for: Date())
-        
+
         let result = viewModel.formatDateAndTime(date, time: nil)
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .none
-        let expectedDateOnly = dateFormatter.string(from: date)
-        
+
+        let expectedDateOnly = date.formatted(date: .abbreviated, time: .omitted)
+
         #expect(result == expectedDateOnly)
     }
-    
+
     // MARK: - formatFullDate
-    
+
     @Test
-    func formatFullDateReturnsFormattedString() {
-        let viewModel = TransactionDetailViewModel(expense: Expense(amount: 0, category: "Food", date: Date()))
-        
-        let result = viewModel.formatFullDate(Date())
-        #expect(!result.isEmpty)
+    func testFormatFullDateMatchesAbbreviatedDateAndShortenedTime() {
+        let viewModel = TransactionDetailViewModel(transaction: Transaction(amount: 0, category: "Food", date: Date()))
+        let calendar = Calendar.current
+        let date = calendar.date(from: DateComponents(year: 2026, month: 4, day: 8, hour: 9, minute: 15))!
+
+        let result = viewModel.formatFullDate(date)
+        let expected = date.formatted(date: .abbreviated, time: .shortened)
+
+        #expect(result == expected)
     }
 }
