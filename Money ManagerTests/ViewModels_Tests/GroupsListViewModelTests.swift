@@ -1,366 +1,257 @@
-// MARK: - Commented out: GroupsListViewModel removed in offline-v1
-/*
 import Foundation
 import Testing
 @testable import Money_Manager
 
 @MainActor
 struct GroupsListViewModelTests {
-    
-    @Test
-    func testFilteredGroupsReturnsAllWhenSearchEmpty() {
-        let group1 = SplitGroup(id: UUID(), name: "Goa Trip", createdBy: UUID(), createdAt: "2026-01-01")
-        let group2 = SplitGroup(id: UUID(), name: "Office Lunch", createdBy: UUID(), createdAt: "2026-01-02")
-        let viewModel = GroupsListViewModel(groups: [group1, group2])
-        
-        viewModel.searchText = ""
-        
-        #expect(viewModel.filteredGroups.count == 2)
-    }
-    
-    @Test
-    func testFilteredGroupsFiltersByName() {
-        let group1 = SplitGroup(id: UUID(), name: "Goa Trip", createdBy: UUID(), createdAt: "2026-01-01")
-        let group2 = SplitGroup(id: UUID(), name: "Office Lunch", createdBy: UUID(), createdAt: "2026-01-02")
-        let viewModel = GroupsListViewModel(groups: [group1, group2])
-        
-        viewModel.searchText = "Goa"
-        
-        #expect(viewModel.filteredGroups.count == 1)
-        #expect(viewModel.filteredGroups.first?.name == "Goa Trip")
-    }
-    
-    @Test
-    func testFilteredGroupsSearchIsCaseInsensitive() {
-        let group1 = SplitGroup(id: UUID(), name: "Goa Trip", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupsListViewModel(groups: [group1])
-        
-        viewModel.searchText = "goa"
-        
-        #expect(viewModel.filteredGroups.count == 1)
-    }
-    
-    @Test
-    func testFilteredGroupsReturnsEmptyForNoMatch() {
-        let group1 = SplitGroup(id: UUID(), name: "Goa Trip", createdBy: UUID(), createdAt: "2026-01-01")
-        let viewModel = GroupsListViewModel(groups: [group1])
-        
-        viewModel.searchText = "Birthday"
-        
-        #expect(viewModel.filteredGroups.isEmpty)
-    }
-    
-    @Test
-    func testNetBalanceCalculatesCorrectly() {
-        let currentUserId = TestData.currentUser.id
-        let groupId1 = UUID()
-        let groupId2 = UUID()
-        let group1 = SplitGroup(id: groupId1, name: "Trip", createdBy: UUID(), createdAt: "2026-01-01")
-        let group2 = SplitGroup(id: groupId2, name: "Flat", createdBy: UUID(), createdAt: "2026-01-02")
-        
-        let viewModel = GroupsListViewModel(
-            groups: [group1, group2],
-            balances: [
-                groupId1: [UserBalance(userId: currentUserId, amount: "100.00"), UserBalance(userId: UUID(), amount: "-100.00")],
-                groupId2: [UserBalance(userId: currentUserId, amount: "-50.00"), UserBalance(userId: UUID(), amount: "50.00")]
-            ]
+
+    // MARK: - Helpers
+
+    private func makeGroup(
+        id: UUID = UUID(),
+        name: String = "Test Group",
+        createdBy: UUID = UUID(),
+        balances: [APIGroupBalance] = [],
+        members: [APIGroupMember] = []
+    ) -> APIGroupWithDetails {
+        APIGroupWithDetails(
+            id: id,
+            name: name,
+            createdBy: createdBy,
+            createdAt: Date(),
+            members: members,
+            balances: balances
         )
-        
-        #expect(viewModel.netBalance == 50.0)
     }
-    
-    @Test
-    func testNetBalanceReturnsZeroWhenNoGroups() {
-        let viewModel = GroupsListViewModel()
-        
-        #expect(viewModel.netBalance == 0)
+
+    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
+        APIGroupBalance(userId: userId, amount: amount)
     }
-    
+
+    private func makeTransaction(description: String = "Test", totalAmount: Double = 10.0, paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
+        APIGroupTransaction(
+            id: UUID(), groupId: UUID(), paidByUserId: paidBy,
+            totalAmount: totalAmount, category: "Food", date: createdAt,
+            description: description, notes: nil, isDeleted: false,
+            createdAt: createdAt, updatedAt: Date(), splits: []
+        )
+    }
+
+    private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
+        let body = APIGroupDetailsBody(
+            id: groupId, name: groupName, createdBy: UUID(), createdAt: Date(),
+            members: [], balances: [], settlements: []
+        )
+        return APIGroupDetails(group: body, isMember: true)
+    }
+
+    // MARK: - Initial state
+
     @Test
-    func testUserBalanceReturnsCorrectValue() {
-        let currentUserId = TestData.currentUser.id
+    func testInitialStateIsEmpty() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        #expect(vm.groups.isEmpty)
+        #expect(vm.isLoading == false)
+        #expect(vm.searchText.isEmpty)
+        #expect(vm.selectedTab == .groups)
+        #expect(vm.recentActivity.isEmpty)
+    }
+
+    // MARK: - load()
+
+    @Test
+    func testLoadPopulatesGroups() async {
+        let mock = MockGroupService.fresh()
+        mock.stubbedGroups = [makeGroup(name: "Trip"), makeGroup(name: "Office")]
+        let vm = GroupsListViewModel(groupService: mock)
+        await vm.load()
+        #expect(vm.groups.count == 2)
+        #expect(vm.isLoading == false)
+    }
+
+    @Test
+    func testLoadPopulatesRecentActivityFromGroupDetails() async {
+        let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let balances = [
-            UserBalance(userId: currentUserId, amount: "250.50"),
-            UserBalance(userId: UUID(), amount: "-250.50")
+        let group = makeGroup(id: groupId, name: "Weekend Trip")
+        mock.stubbedGroups = [group]
+        mock.stubbedGroupDetails = makeDetails(groupId: groupId, groupName: "Weekend Trip")
+        mock.stubbedTransactions = [makeTransaction(description: "Dinner"), makeTransaction(description: "Taxi")]
+        let vm = GroupsListViewModel(groupService: mock)
+        await vm.load()
+        #expect(vm.recentActivity.count == 2)
+        #expect(vm.recentActivity.allSatisfy { $0.groupName == "Weekend Trip" })
+    }
+
+    @Test
+    func testLoadRecentActivitySortedNewestFirst() async {
+        let mock = MockGroupService.fresh()
+        let groupId = UUID()
+        let older = makeTransaction(description: "Old", totalAmount: 10, createdAt: Date(timeIntervalSinceNow: -3600))
+        let newer = makeTransaction(description: "New", totalAmount: 20, createdAt: Date(timeIntervalSinceNow: -60))
+        mock.stubbedGroups = [makeGroup(id: groupId)]
+        mock.stubbedTransactions = [older, newer]
+        let vm = GroupsListViewModel(groupService: mock)
+        await vm.load()
+        if case .transaction(let tx, _) = vm.recentActivity.first {
+            #expect(tx.description == "New")
+        } else {
+            Issue.record("Expected .transaction as first activity item")
+        }
+    }
+
+    @Test
+    func testLoadRecentActivityEmptyWhenNoTransactions() async {
+        let mock = MockGroupService.fresh()
+        mock.stubbedGroups = [makeGroup()]
+        let vm = GroupsListViewModel(groupService: mock)
+        await vm.load()
+        #expect(vm.recentActivity.isEmpty)
+    }
+
+    // MARK: - filteredGroups
+
+    @Test
+    func testFilteredGroupsWithEmptySearchReturnsAll() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.groups = [makeGroup(name: "Trip"), makeGroup(name: "Flatmates")]
+        vm.searchText = ""
+        #expect(vm.filteredGroups.count == 2)
+    }
+
+    @Test
+    func testFilteredGroupsWithSearchFiltersByName() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.groups = [makeGroup(name: "Weekend Trip"), makeGroup(name: "Flatmates")]
+        vm.searchText = "trip"
+        #expect(vm.filteredGroups.count == 1)
+        #expect(vm.filteredGroups.first?.name == "Weekend Trip")
+    }
+
+    @Test
+    func testFilteredGroupsWithSearchCaseInsensitive() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.groups = [makeGroup(name: "FLAT"), makeGroup(name: "Office")]
+        vm.searchText = "flat"
+        #expect(vm.filteredGroups.count == 1)
+    }
+
+    @Test
+    func testFilteredGroupsWithNoMatchReturnsEmpty() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.groups = [makeGroup(name: "Trip"), makeGroup(name: "Office")]
+        vm.searchText = "xyz"
+        #expect(vm.filteredGroups.isEmpty)
+    }
+
+    // MARK: - filteredActivity
+
+    @Test
+    func testFilteredActivityWithEmptySearchReturnsAll() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.recentActivity = [
+            .transaction(makeTransaction(description: "Dinner"), groupName: "Trip"),
+            .transaction(makeTransaction(description: "Taxi"),   groupName: "Work")
         ]
-        
-        let viewModel = GroupsListViewModel(groups: [group], balances: [groupId: balances])
-        
-        #expect(viewModel.userBalance(for: groupId) == 250.50)
+        vm.searchText = ""
+        #expect(vm.filteredActivity.count == 2)
     }
-    
+
     @Test
-    func testUserBalanceReturnsZeroWhenNoBalance() {
-        let groupId = UUID()
-        
-        let viewModel = GroupsListViewModel()
-        
-        let result = viewModel.userBalance(for: groupId)
-        
-        #expect(result == 0)
+    func testFilteredActivityMatchesTransactionDescription() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.recentActivity = [
+            .transaction(makeTransaction(description: "Dinner"), groupName: "Trip"),
+            .transaction(makeTransaction(description: "Hotel"),  groupName: "Trip")
+        ]
+        vm.searchText = "dinner"
+        #expect(vm.filteredActivity.count == 1)
+        if case .transaction(let tx, _) = vm.filteredActivity.first {
+            #expect(tx.description == "Dinner")
+        } else {
+            Issue.record("Expected .transaction as first filtered activity item")
+        }
     }
-    
+
     @Test
-    func testRelativeTimeReturnsNowForRecent() {
-        let viewModel = GroupsListViewModel()
-        let now = ISO8601DateFormatter().string(from: Date())
-        
-        let result = viewModel.relativeTime(from: now)
-        
-        #expect(result == "now")
+    func testFilteredActivityMatchesGroupName() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.recentActivity = [
+            .transaction(makeTransaction(description: "Dinner"), groupName: "Weekend Trip"),
+            .transaction(makeTransaction(description: "Lunch"),  groupName: "Office")
+        ]
+        vm.searchText = "weekend"
+        #expect(vm.filteredActivity.count == 1)
+        #expect(vm.filteredActivity.first?.groupName == "Weekend Trip")
     }
-    
+
+    // MARK: - netBalance
+
     @Test
-    func testRelativeTimeReturnsMinutesAgo() {
-        let viewModel = GroupsListViewModel()
-        let date = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-300))
-        
-        let result = viewModel.relativeTime(from: date)
-        
-        #expect(result.contains("m ago"))
+    func testNetBalanceWithNoCurrentUserReturnsZero() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let uid = UUID()
+        vm.groups = [makeGroup(balances: [makeBalance(userId: uid, amount: 50.0)])]
+        #expect(vm.netBalance == 0)
     }
-    
+
     @Test
-    func testRelativeTimeReturnsHoursAgo() {
-        let viewModel = GroupsListViewModel()
-        let date = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-7200))
-        
-        let result = viewModel.relativeTime(from: date)
-        
-        #expect(result.contains("h ago"))
+    func testNetBalanceWithNoGroupsReturnsZero() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        vm.groups = []
+        #expect(vm.netBalance == 0)
     }
-    
+
+    // MARK: - userBalance(for:)
+
     @Test
-    func testRelativeTimeReturnsEmptyForInvalidDate() {
-        let viewModel = GroupsListViewModel()
-        
-        let result = viewModel.relativeTime(from: "invalid-date")
-        
-        #expect(result == "")
+    func testUserBalanceWithNoCurrentUserReturnsZero() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let uid = UUID()
+        let group = makeGroup(balances: [makeBalance(userId: uid, amount: 75.0)])
+        #expect(vm.userBalance(for: group) == 0)
     }
-    
+
     @Test
-    func testNameForUserReturnsUsername() {
-        let userId = UUID()
-        let user = APIUser(id: userId, email: "john@example.com", username: "John", createdAt: "2026-01-01")
-        let groupId = UUID()
-        
-        let viewModel = GroupsListViewModel(members: [groupId: [user]])
-        
-        let result = viewModel.nameForUser(userId)
-        
-        #expect(result == "John")
+    func testUserBalanceWithNoBalanceEntryReturnsZero() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let group = makeGroup(balances: [])
+        #expect(vm.userBalance(for: group) == 0)
     }
-    
+
+    // MARK: - displayName(for:)
+
     @Test
-    func testNameForUserReturnsUnknownWhenNotFound() {
-        let viewModel = GroupsListViewModel()
-        
-        let result = viewModel.nameForUser(UUID())
-        
-        #expect(result == "Unknown")
+    func testDisplayNameReturnsUsername() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
+        #expect(vm.displayName(for: member) == "alice")
     }
-    
+
     @Test
-    func testAddGroupInsertsAtBeginning() {
-        let group1 = SplitGroup(id: UUID(), name: "Old Group", createdBy: UUID(), createdAt: "2026-01-01")
-        let group2 = SplitGroup(id: UUID(), name: "New Group", createdBy: UUID(), createdAt: "2026-01-02")
-        
-        let viewModel = GroupsListViewModel(groups: [group1])
-        viewModel.addGroup(group2)
-        
-        #expect(viewModel.groups.first?.name == "New Group")
+    func testDisplayNameWithNoAtSignReturnsUsername() {
+        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joinedAt: Date())
+        #expect(vm.displayName(for: member) == "noatsign")
     }
-    
+
+    // MARK: - createGroup
+
     @Test
-    func testLoadFromDBConvertsGroupModelsToViewModels() {
-        let groupId = UUID()
-        let createdBy = UUID()
-        
-        let dbGroup = SplitGroupModel(id: groupId, name: "DB Group", createdBy: createdBy, createdAt: "2026-01-01")
-        
-        let viewModel = GroupsListViewModel()
-        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [], dbExpenses: [], dbBalances: [])
-        
-        #expect(viewModel.groups.count == 1)
-        #expect(viewModel.groups.first?.name == "DB Group")
+    func testCreateGroupInsertsAtTopOfList() async throws {
+        let mock = MockGroupService.fresh()
+        let vm = GroupsListViewModel(groupService: mock)
+        vm.groups = [makeGroup(name: "Existing")]
+        _ = try await vm.createGroup(name: "New Group")
+        #expect(vm.groups.count == 2)
+        #expect(vm.groups.first?.name == "New Group")
     }
-    
+
     @Test
-    func testLoadFromDBConvertsMemberModels() {
-        let groupId = UUID()
-        let createdBy = UUID()
-        let memberId = UUID()
-        
-        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
-        let dbMember = GroupMemberModel(id: memberId, email: "test@example.com", username: "testuser", createdAt: "2026-01-01")
-        dbMember.group = dbGroup
-        
-        let viewModel = GroupsListViewModel()
-        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [dbMember], dbExpenses: [], dbBalances: [])
-        
-        #expect(viewModel.groupMembers[groupId]?.count == 1)
-        #expect(viewModel.groupMembers[groupId]?.first?.username == "testuser")
-    }
-    
-    @Test
-    func testLoadFromDBConvertsExpenseModels() {
-        let groupId = UUID()
-        let createdBy = UUID()
-        let expenseId = UUID()
-        
-        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
-        let dbExpense = GroupExpenseModel(id: expenseId, description: "Lunch", category: "Food", totalAmount: 500.0, paidBy: createdBy, createdAt: "2026-01-01")
-        dbExpense.group = dbGroup
-        
-        let viewModel = GroupsListViewModel()
-        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [], dbExpenses: [dbExpense], dbBalances: [])
-        
-        #expect(viewModel.groupExpenses[groupId]?.count == 1)
-        #expect(viewModel.groupExpenses[groupId]?.first?.description == "Lunch")
-    }
-    
-    @Test
-    func testLoadFromDBConvertsBalanceModels() {
-        let groupId = UUID()
-        let createdBy = UUID()
-        let userId = UUID()
-        
-        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
-        let dbBalance = GroupBalanceModel(userId: userId, amount: 100.0, group: dbGroup)
-        
-        let viewModel = GroupsListViewModel()
-        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [], dbExpenses: [], dbBalances: [dbBalance])
-        
-        #expect(viewModel.groupBalances[groupId]?.count == 1)
-        #expect(viewModel.groupBalances[groupId]?.first?.userId == userId)
-    }
-    
-    @Test
-    func testLoadFromDBHandlesEmptyArrays() {
-        let viewModel = GroupsListViewModel()
-        viewModel.loadFromDB(dbGroups: [], dbMembers: [], dbExpenses: [], dbBalances: [])
-        
-        #expect(viewModel.groups.isEmpty)
-        #expect(viewModel.groupMembers.isEmpty)
-        #expect(viewModel.groupExpenses.isEmpty)
-        #expect(viewModel.groupBalances.isEmpty)
-    }
-    
-    // MARK: - Net Balance (Current User Only)
-    
-    @Test
-    func testNetBalanceIgnoresOtherUsersBalances() {
-        let currentUserId = TestData.currentUser.id
-        let otherUserId = UUID()
-        let groupId = UUID()
-        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        
-        let viewModel = GroupsListViewModel(
-            groups: [group],
-            balances: [groupId: [
-                UserBalance(userId: currentUserId, amount: "200.00"),
-                UserBalance(userId: otherUserId, amount: "-200.00")
-            ]]
-        )
-        
-        #expect(viewModel.netBalance == 200.0)
-    }
-    
-    @Test
-    func testNetBalanceSumsAcrossMultipleGroups() {
-        let currentUserId = TestData.currentUser.id
-        let groupId1 = UUID()
-        let groupId2 = UUID()
-        let groupId3 = UUID()
-        let group1 = SplitGroup(id: groupId1, name: "A", createdBy: UUID(), createdAt: "2026-01-01")
-        let group2 = SplitGroup(id: groupId2, name: "B", createdBy: UUID(), createdAt: "2026-01-01")
-        let group3 = SplitGroup(id: groupId3, name: "C", createdBy: UUID(), createdAt: "2026-01-01")
-        
-        let viewModel = GroupsListViewModel(
-            groups: [group1, group2, group3],
-            balances: [
-                groupId1: [UserBalance(userId: currentUserId, amount: "100.00")],
-                groupId2: [UserBalance(userId: currentUserId, amount: "-300.00")],
-                groupId3: [UserBalance(userId: currentUserId, amount: "50.00")]
-            ]
-        )
-        
-        #expect(viewModel.netBalance == -150.0)
-    }
-    
-    @Test
-    func testNetBalanceReturnsZeroWhenUserNotInBalances() {
-        let groupId = UUID()
-        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        let otherUserId = UUID()
-        
-        let viewModel = GroupsListViewModel(
-            groups: [group],
-            balances: [groupId: [UserBalance(userId: otherUserId, amount: "500.00")]]
-        )
-        
-        #expect(viewModel.netBalance == 0)
-    }
-    
-    // MARK: - User Balance Per Group (Current User Only)
-    
-    @Test
-    func testUserBalanceIgnoresOtherUsersInGroup() {
-        let currentUserId = TestData.currentUser.id
-        let groupId = UUID()
-        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        
-        let viewModel = GroupsListViewModel(
-            groups: [group],
-            balances: [groupId: [
-                UserBalance(userId: currentUserId, amount: "-75.00"),
-                UserBalance(userId: UUID(), amount: "75.00")
-            ]]
-        )
-        
-        #expect(viewModel.userBalance(for: groupId) == -75.0)
-    }
-    
-    @Test
-    func testUserBalanceReturnsZeroWhenUserNotInGroup() {
-        let groupId = UUID()
-        let group = SplitGroup(id: groupId, name: "Test", createdBy: UUID(), createdAt: "2026-01-01")
-        
-        let viewModel = GroupsListViewModel(
-            groups: [group],
-            balances: [groupId: [UserBalance(userId: UUID(), amount: "100.00")]]
-        )
-        
-        #expect(viewModel.userBalance(for: groupId) == 0)
-    }
-    
-    // MARK: - DB Data Persistence
-    
-    @Test
-    func testLoadFromDBPreservesMembersWithNoAPIResponse() {
-        let groupId = UUID()
-        let memberId = UUID()
-        let createdBy = UUID()
-        
-        let dbGroup = SplitGroupModel(id: groupId, name: "Test Group", createdBy: createdBy, createdAt: "2026-01-01")
-        let dbMember = GroupMemberModel(id: memberId, email: "existing@test.com", username: "existing", createdAt: "2026-01-01")
-        dbMember.group = dbGroup
-        
-        let viewModel = GroupsListViewModel()
-        viewModel.loadFromDB(dbGroups: [dbGroup], dbMembers: [dbMember], dbExpenses: [], dbBalances: [])
-        
-        #expect(viewModel.groupMembers[groupId]?.count == 1)
-        #expect(viewModel.groupMembers[groupId]?.first?.email == "existing@test.com")
-        
-        let apiGroup = SplitGroup(id: groupId, name: "Updated Group", createdBy: createdBy, createdAt: "2026-01-01", members: nil, balances: nil)
-        
-        viewModel.groups = [apiGroup]
-        
-        #expect(viewModel.groupMembers[groupId]?.count == 1)
+    func testCreateGroupCallsServiceWithName() async throws {
+        let mock = MockGroupService.fresh()
+        let vm = GroupsListViewModel(groupService: mock)
+        _ = try await vm.createGroup(name: "Trip")
+        #expect(mock.createGroupCalls == ["Trip"])
     }
 }
-
-*/

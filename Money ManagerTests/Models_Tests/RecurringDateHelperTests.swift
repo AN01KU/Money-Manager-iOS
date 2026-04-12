@@ -3,15 +3,16 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct RecurringDateHelperTests {
     
     @Test
     func testNextOccurrenceReturnsNilWhenInactive() {
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             isActive: false
         )
         
@@ -22,11 +23,11 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForDailyFrequency() {
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Daily Coffee",
             amount: 50,
             category: "Food",
-            frequency: "daily",
+            frequency: .daily,
             startDate: yesterday
         )
         
@@ -38,28 +39,29 @@ struct RecurringDateHelperTests {
     @Test
     func testNextOccurrenceForWeeklyFrequency() {
         let pastDate = Calendar.current.date(byAdding: .weekOfYear, value: -2, to: Date())!
-        
-        let expense = RecurringExpense(
+
+        let expense = RecurringTransaction(
             name: "Weekly Gym",
             amount: 500,
             category: "Health",
-            frequency: "weekly",
+            frequency: .weekly,
             startDate: pastDate
         )
-        
+
         let next = expense.nextOccurrence
         #expect(next != nil)
+        #expect(next! > Date())
     }
     
     @Test
     func testNextOccurrenceForMonthlyFrequency() {
         let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Rent",
             amount: 15000,
             category: "Housing",
-            frequency: "monthly",
+            frequency: .monthly,
             dayOfMonth: 1,
             startDate: lastMonth
         )
@@ -72,11 +74,11 @@ struct RecurringDateHelperTests {
     func testNextOccurrenceForMonthlyWithoutDayOfMonth() {
         let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Subscription",
             amount: 100,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: lastMonth
         )
         
@@ -87,17 +89,18 @@ struct RecurringDateHelperTests {
     @Test
     func testNextOccurrenceForYearlyFrequency() {
         let lastYear = Calendar.current.date(byAdding: .year, value: -1, to: Date())!
-        
-        let expense = RecurringExpense(
+
+        let expense = RecurringTransaction(
             name: "Insurance",
             amount: 12000,
             category: "Insurance",
-            frequency: "yearly",
+            frequency: .yearly,
             startDate: lastYear
         )
-        
+
         let next = expense.nextOccurrence
         #expect(next != nil)
+        #expect(next! > Date())
     }
     
     @Test
@@ -105,11 +108,11 @@ struct RecurringDateHelperTests {
         let startDate = Calendar.current.date(byAdding: .month, value: -3, to: Date())!
         let endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Active Subscription",
             amount: 100,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: startDate,
             endDate: endDate,
             isActive: true
@@ -119,27 +122,14 @@ struct RecurringDateHelperTests {
     }
     
     @Test
-    func testNextOccurrenceReturnsNilForUnknownFrequency() {
-        let expense = RecurringExpense(
-            name: "Unknown",
-            amount: 100,
-            category: "Other",
-            frequency: "bi-monthly",
-            startDate: Date()
-        )
-        
-        #expect(expense.nextOccurrence == nil)
-    }
-    
-    @Test
     func testNextOccurrenceWithWeeklySpecificDays() {
         let pastDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Weekly Yoga",
             amount: 200,
             category: "Health",
-            frequency: "weekly",
+            frequency: .weekly,
             daysOfWeek: [1, 3, 5],
             startDate: pastDate
         )
@@ -152,11 +142,11 @@ struct RecurringDateHelperTests {
     func testLastOccurrenceReturnsStartDateWhenNoLastAddedDate() {
         let startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: startDate
         )
         
@@ -168,11 +158,11 @@ struct RecurringDateHelperTests {
         let startDate = Calendar.current.date(byAdding: .month, value: -2, to: Date())!
         let lastAdded = Calendar.current.date(byAdding: .day, value: -5, to: Date())!
         
-        let expense = RecurringExpense(
+        let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
             category: "Entertainment",
-            frequency: "monthly",
+            frequency: .monthly,
             startDate: startDate,
             lastAddedDate: lastAdded
         )
@@ -181,6 +171,7 @@ struct RecurringDateHelperTests {
     }
 }
 
+@MainActor
 struct DateExtensionTests {
     
     @Test

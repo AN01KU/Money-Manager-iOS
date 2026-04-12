@@ -14,7 +14,7 @@ final class NavigationTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "--skipOnboarding", "--useTestData"]
+        app.launchArguments = getTestAppLaunchArguments()
         app.launch()
     }
     
@@ -24,7 +24,11 @@ final class NavigationTests: XCTestCase {
     }
     
     // MARK: - Tab Bar Navigation
-    
+    // Tab buttons are located by their title ("Overview", "Settings") rather than a custom
+    // accessibilityIdentifier. The iOS 18 Tab API sets the accessibility label from the tab
+    // title — this is stable since tab titles are part of the intentional UI design and
+    // rarely change. No custom identifiers are needed here.
+
     func testOverviewTabExists() throws {
         let overviewTab = app.tabBars.buttons["Overview"]
         XCTAssertTrue(overviewTab.waitForExistence(timeout: 3), "Overview tab should exist")

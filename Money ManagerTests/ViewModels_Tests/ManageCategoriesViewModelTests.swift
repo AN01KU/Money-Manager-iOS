@@ -7,206 +7,199 @@ import Testing
 
 @MainActor
 struct ManageCategoriesViewModelTests {
-    
-    private func makeContext(models: [any PersistentModel.Type] = [Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self]) -> ModelContext {
-        let schema = Schema(models)
+
+    private func makeContext() throws -> ModelContext {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
+        let container = try ModelContainer(
+            for: Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self]),
+            configurations: config
+        )
         return ModelContext(container)
     }
-    
-    @Test
-    func testVisibleAndHiddenCategoriesFiltering() {
-        let viewModel = ManageCategoriesViewModel()
-        
-        let visible1 = CustomCategory(name: "Cat1", icon: "star", color: "#FF0000")
-        let visible2 = CustomCategory(name: "Cat2", icon: "star", color: "#00FF00")
-        let hidden = CustomCategory(name: "Hidden", icon: "star", color: "#0000FF")
-        hidden.isHidden = true
-        
-        viewModel.configure(customCategories: [visible1, visible2, hidden], modelContext: nil)
-        
-        #expect(viewModel.visibleCategories.count == 2)
-        #expect(viewModel.hiddenCategories.count == 1)
-        #expect(viewModel.hiddenCategories.first?.name == "Hidden")
+
+    private func makeCustom(name: String, hidden: Bool = false) -> TransactionCategory {
+        let row = CustomCategory(name: name, icon: "star", color: "#FF0000")
+        row.isHidden = hidden
+        return TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name,
+            icon: row.icon,
+            colorHex: row.color,
+            isHidden: row.isHidden,
+            isPredefined: false,
+            isDeletable: true,
+            overrideRow: row
+        )
     }
-    
+
     @Test
-    func testHideCategoryDirectly() {
-        let context = makeContext()
+    func testHideCategoryUpdatesOverrideRow() throws {
+        let context = try makeContext()
+        let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
+        context.insert(row)
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name, icon: row.icon, colorHex: row.color,
+            isHidden: false, isPredefined: false, isDeletable: true,
+            overrideRow: row
+        )
+
         let viewModel = ManageCategoriesViewModel()
-        let category = CustomCategory(name: "Test", icon: "star", color: "#FF0000")
-        context.insert(category)
-        
-        viewModel.configure(customCategories: [category], modelContext: context)
+        viewModel.modelContext = context
         viewModel.hideCategory(category)
-        
-        #expect(category.isHidden == true)
+
+        #expect(row.isHidden == true)
     }
-    
+
     @Test
-    func testHideCategoryAtIndexSkipsPredefined() {
+    func testRestoreCategoryUpdatesOverrideRow() throws {
+        let context = try makeContext()
+        let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
+        row.isHidden = true
+        context.insert(row)
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name, icon: row.icon, colorHex: row.color,
+            isHidden: true, isPredefined: false, isDeletable: true,
+            overrideRow: row
+        )
+
         let viewModel = ManageCategoriesViewModel()
-        
-        let predefined = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "food")
-        let custom = CustomCategory(name: "Custom", icon: "star", color: "#00FF00")
-        
-        viewModel.configure(customCategories: [predefined, custom], modelContext: nil)
-        
-        // hideCategory(at:) only targets non-predefined visible categories
-        viewModel.hideCategory(at: 0)
-        #expect(custom.isHidden == true)
-        #expect(predefined.isHidden == false)
-    }
-    
-    @Test
-    func testHideCategoryAtInvalidIndexDoesNothing() {
-        let viewModel = ManageCategoriesViewModel()
-        let category = CustomCategory(name: "Test", icon: "star", color: "#FF0000")
-        viewModel.configure(customCategories: [category], modelContext: nil)
-        
-        viewModel.hideCategory(at: 99)
-        #expect(category.isHidden == false)
-    }
-    
-    @Test
-    func testRestoreCategory() {
-        let context = makeContext()
-        let viewModel = ManageCategoriesViewModel()
-        let category = CustomCategory(name: "Test", icon: "star", color: "#FF0000")
-        category.isHidden = true
-        context.insert(category)
-        
-        viewModel.configure(customCategories: [category], modelContext: context)
+        viewModel.modelContext = context
         viewModel.restoreCategory(category)
-        
-        #expect(category.isHidden == false)
+
+        #expect(row.isHidden == false)
     }
-    
+
     @Test
-    func testDeleteCategoryBlocksUndeletableOther() {
+    func testDeleteCategoryBlocksOther() {
         let viewModel = ManageCategoriesViewModel()
-        let other = CustomCategory(name: "Other", icon: "ellipsis.circle.fill", color: "#95A5A6", isPredefined: true, predefinedKey: "other")
-        viewModel.configure(customCategories: [other], modelContext: nil)
-        
-        viewModel.deleteCategory(other)
-        
+        let category = TransactionCategory(
+            id: "predefined:other",
+            name: "Other", icon: "ellipsis.circle.fill", colorHex: "#95A5A6",
+            isHidden: false, isPredefined: true, isDeletable: false,
+            overrideRow: nil
+        )
+
+        viewModel.deleteCategory(category)
+
         #expect(viewModel.categoryToDelete == nil)
         #expect(viewModel.showDeleteConfirmation == false)
     }
-    
+
     @Test
     func testDeleteCategoryAllowsDeletable() {
         let viewModel = ManageCategoriesViewModel()
-        let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "foodDining")
-        viewModel.configure(customCategories: [category], modelContext: nil)
-        
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name, icon: row.icon, colorHex: row.color,
+            isHidden: false, isPredefined: false, isDeletable: true,
+            overrideRow: row
+        )
+
         viewModel.deleteCategory(category)
-        
-        #expect(viewModel.categoryToDelete === category)
+
+        #expect(viewModel.categoryToDelete?.name == "Food")
         #expect(viewModel.showDeleteConfirmation == true)
     }
-    
+
     @Test
-    func testConfirmDeleteReassignsExpensesAndRemovesCategory() throws {
-        let context = makeContext()
-        
-        let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let foodExpense = Expense(amount: 100, category: "Food", date: Date())
-        let otherExpense = Expense(amount: 200, category: "Transport", date: Date())
-        
-        context.insert(category)
+    func testConfirmDeleteReassignsTransactionsAndRemovesRow() throws {
+        let context = try makeContext()
+
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let foodExpense = Transaction(amount: 100, category: "Food", date: Date(), categoryId: row.id)
+        let otherExpense = Transaction(amount: 200, category: "Transport", date: Date())
+
+        context.insert(row)
         context.insert(foodExpense)
         context.insert(otherExpense)
         try context.save()
-        
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name, icon: row.icon, colorHex: row.color,
+            isHidden: false, isPredefined: false, isDeletable: true,
+            overrideRow: row
+        )
+
         let viewModel = ManageCategoriesViewModel()
-        viewModel.configure(customCategories: [category], modelContext: context)
+        viewModel.modelContext = context
         viewModel.deleteCategory(category)
         viewModel.confirmDelete()
-        
-        // State is cleared
+
         #expect(viewModel.categoryToDelete == nil)
         #expect(viewModel.showDeleteConfirmation == false)
         #expect(viewModel.deleteConfirmedTrigger == 1)
-        
-        // "Food" expenses reassigned to "Other"
         #expect(foodExpense.category == "Other")
-        // "Transport" expense unchanged
         #expect(otherExpense.category == "Transport")
-        
-        // Category removed
+
         let remaining = try context.fetch(FetchDescriptor<CustomCategory>())
         #expect(remaining.isEmpty)
     }
-    
+
     @Test
     func testConfirmDeleteWithNoCategorySetDoesNothing() {
         let viewModel = ManageCategoriesViewModel()
         let initialTrigger = viewModel.deleteConfirmedTrigger
-        
         viewModel.confirmDelete()
-        
         #expect(viewModel.deleteConfirmedTrigger == initialTrigger)
     }
-    
+
     @Test
-    func testRestoreDefaults() throws {
-        let context = makeContext()
-        
-        // Insert a predefined category with modified values
-        let modified = CustomCategory(
+    func testRestoreDefaultsDeletesOverrideRows() throws {
+        let context = try makeContext()
+
+        let override = CustomCategory(
             name: "RENAMED",
             icon: "xmark",
             color: "#000000",
             isPredefined: true,
             predefinedKey: PredefinedCategory.allCases.first!.key
         )
-        modified.isHidden = true
-        context.insert(modified)
+        override.isHidden = true
+        context.insert(override)
         try context.save()
-        
+
         let viewModel = ManageCategoriesViewModel()
         viewModel.restoreDefaults(modelContext: context)
-        
-        let original = PredefinedCategory.allCases.first!
-        #expect(modified.name == original.rawValue)
-        #expect(modified.icon == original.icon)
-        #expect(modified.color == original.defaultColorHex)
-        #expect(modified.isHidden == false)
+
+        // Override row should be deleted — enum is now the source of truth
+        let remaining = try context.fetch(FetchDescriptor<CustomCategory>(
+            predicate: #Predicate { $0.isPredefined == true }
+        ))
+        #expect(remaining.isEmpty)
         #expect(viewModel.resetTrigger == 1)
     }
-    
+
     @Test
     func testRestoreDefaultsWithNilContextDoesNothing() {
         let viewModel = ManageCategoriesViewModel()
         viewModel.restoreDefaults(modelContext: nil)
         #expect(viewModel.resetTrigger == 0)
     }
-    
+
     @Test
-    func testResetAll() throws {
-        let context = makeContext()
-        
-        // Insert some existing categories
+    func testResetAllDeletesAllCategoryRows() throws {
+        let context = try makeContext()
+
         let custom = CustomCategory(name: "My Custom", icon: "star", color: "#FF0000")
-        let predefined = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "food")
+        let override = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "foodDining")
         context.insert(custom)
-        context.insert(predefined)
+        context.insert(override)
         try context.save()
-        
+
         let viewModel = ManageCategoriesViewModel()
         viewModel.resetAll(modelContext: context)
-        
-        let allCategories = try context.fetch(FetchDescriptor<CustomCategory>())
-        
-        // Should have exactly PredefinedCategory.allCases.count categories
-        #expect(allCategories.count == PredefinedCategory.allCases.count)
-        // All should be predefined
-        #expect(allCategories.allSatisfy { $0.isPredefined })
+
+        let remaining = try context.fetch(FetchDescriptor<CustomCategory>())
+        #expect(remaining.isEmpty)
         #expect(viewModel.resetTrigger == 1)
     }
-    
+
     @Test
     func testResetAllWithNilContextDoesNothing() {
         let viewModel = ManageCategoriesViewModel()
@@ -219,14 +212,11 @@ struct ManageCategoriesViewModelTests {
 
 @MainActor
 struct AddCategoryViewModelTests {
-    
-    private func makeContext() -> ModelContext {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+
+    private func makeContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
-    
+
     @Test
     func testDefaultValues() {
         let viewModel = AddCategoryViewModel()
@@ -236,38 +226,38 @@ struct AddCategoryViewModelTests {
         #expect(viewModel.isSaving == false)
         #expect(viewModel.showError == false)
     }
-    
+
     @Test
     func testSaveCreatesCategory() async throws {
-        let context = makeContext()
+        let context = try makeContext()
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "  Groceries  "
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#FF6B6B"
-        
+
         let result = await viewModel.save()
-        
+
         #expect(result == true)
         #expect(viewModel.isSaving == false)
-        
+
         let categories = try context.fetch(FetchDescriptor<CustomCategory>())
         #expect(categories.count == 1)
         #expect(categories.first?.name == "Groceries")
         #expect(categories.first?.icon == "cart.circle.fill")
         #expect(categories.first?.color == "#FF6B6B")
     }
-    
+
     @Test
     func testColorConflictDetection() {
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#ff6b6b")
         let viewModel = AddCategoryViewModel()
         viewModel.allCategories = [existing]
         viewModel.selectedColor = "#FF6B6B"
-        
+
         #expect(viewModel.colorConflictCategory == "Food")
     }
-    
+
     @Test
     func testColorConflictIgnoresHiddenCategories() {
         let hidden = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
@@ -275,47 +265,60 @@ struct AddCategoryViewModelTests {
         let viewModel = AddCategoryViewModel()
         viewModel.allCategories = [hidden]
         viewModel.selectedColor = "#FF6B6B"
-        
+
         #expect(viewModel.colorConflictCategory == nil)
     }
-    
+
     @Test
-    func testSaveBlockedByColorConflict() async {
-        let context = makeContext()
+    func testSaveBlockedByColorConflict() async throws {
+        let context = try makeContext()
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
-        
+
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context, allCategories: [existing])
+        viewModel.modelContext = context
+        viewModel.allCategories = [existing]
         viewModel.name = "New Category"
         viewModel.selectedColor = "#FF6B6B"
-        
+
         let result = await viewModel.save()
-        
+
         #expect(result == false)
         #expect(viewModel.showColorWarning == true)
     }
-    
+
     @Test
     func testSaveSucceedsAfterColorWarningConfirmed() async throws {
-        let context = makeContext()
+        let context = try makeContext()
         let existing = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF6B6B")
-        
+
         let viewModel = AddCategoryViewModel()
-        viewModel.configure(modelContext: context, allCategories: [existing])
+        viewModel.modelContext = context
+        viewModel.allCategories = [existing]
         viewModel.name = "New Category"
         viewModel.selectedColor = "#FF6B6B"
-        
-        // First attempt blocked
+
         let blocked = await viewModel.save()
         #expect(blocked == false)
-        
-        // User confirms despite warning
+
         viewModel.confirmSaveDespiteColorWarning()
         let saved = await viewModel.save()
         #expect(saved == true)
-        
+
         let categories = try context.fetch(FetchDescriptor<CustomCategory>())
         #expect(categories.count == 1)
+    }
+
+    @Test
+    func testSaveBlockedByDuplicatePredefinedName() async throws {
+        let context = try makeContext()
+        let viewModel = AddCategoryViewModel()
+        viewModel.modelContext = context
+        viewModel.name = "Food & Dining"  // matches PredefinedCategory.foodDining.rawValue
+
+        let result = await viewModel.save()
+
+        #expect(result == false)
+        #expect(viewModel.showError == true)
     }
 }
 
@@ -323,123 +326,163 @@ struct AddCategoryViewModelTests {
 
 @MainActor
 struct EditCategoryViewModelTests {
-    
-    private func makeContext() -> ModelContext {
-        let schema = Schema([Expense.self, RecurringExpense.self, MonthlyBudget.self, CustomCategory.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: config)
-        return ModelContext(container)
+
+    private func makeContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
     }
-    
+
+    private func makeTransactionCategory(from row: CustomCategory) -> TransactionCategory {
+        TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name, icon: row.icon, colorHex: row.color,
+            isHidden: row.isHidden, isPredefined: false, isDeletable: true,
+            overrideRow: row
+        )
+    }
+
     @Test
     func testInitSetsValuesFromCategory() {
-        let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let category = makeTransactionCategory(from: row)
         let viewModel = EditCategoryViewModel(category: category)
-        
+
         #expect(viewModel.name == "Food")
         #expect(viewModel.selectedIcon == "fork.knife")
         #expect(viewModel.selectedColor == "#FF0000")
         #expect(viewModel.isSaving == false)
         #expect(viewModel.showError == false)
     }
-    
+
     @Test
     func testSaveEmptyNameFails() {
-        let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let category = makeTransactionCategory(from: row)
         let viewModel = EditCategoryViewModel(category: category)
         viewModel.name = "   "
-        
+
         let result = viewModel.save()
-        
+
         #expect(result == false)
         #expect(viewModel.showError == true)
         #expect(viewModel.errorMessage.contains("empty"))
     }
-    
+
     @Test
-    func testSaveUpdatesCategory() {
-        let context = makeContext()
-        let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        context.insert(category)
-        
+    func testSaveUpdatesOverrideRow() throws {
+        let context = try makeContext()
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        context.insert(row)
+
+        let category = makeTransactionCategory(from: row)
         let viewModel = EditCategoryViewModel(category: category)
-        viewModel.configure(modelContext: context)
+        viewModel.modelContext = context
         viewModel.name = "  Updated Food  "
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#00FF00"
-        
+
         let result = viewModel.save()
-        
+
         #expect(result == true)
-        #expect(category.name == "Updated Food")
-        #expect(category.icon == "cart.circle.fill")
-        #expect(category.color == "#00FF00")
+        #expect(row.name == "Updated Food")
+        #expect(row.icon == "cart.circle.fill")
+        #expect(row.color == "#00FF00")
         #expect(viewModel.isSaving == false)
     }
-    
+
     @Test
     func testColorConflictDetectsSameColorDifferentCategory() {
-        let cat1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let cat2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#FF0000")
-        
-        let viewModel = EditCategoryViewModel(category: cat1, allCategories: [cat1, cat2])
-        
+        let row1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let row2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#FF0000")
+        let category = makeTransactionCategory(from: row1)
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [row1, row2])
+
         #expect(viewModel.colorConflictCategory == "Transport")
     }
-    
+
     @Test
     func testColorConflictIgnoresSelf() {
-        let category = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let viewModel = EditCategoryViewModel(category: category, allCategories: [category])
-        
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let category = makeTransactionCategory(from: row)
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [row])
+
         #expect(viewModel.colorConflictCategory == nil)
     }
-    
+
     @Test
     func testColorConflictIgnoresHidden() {
-        let cat1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let cat2 = CustomCategory(name: "Hidden", icon: "car.fill", color: "#FF0000")
-        cat2.isHidden = true
-        
-        let viewModel = EditCategoryViewModel(category: cat1, allCategories: [cat1, cat2])
-        
+        let row1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let row2 = CustomCategory(name: "Hidden", icon: "car.fill", color: "#FF0000")
+        row2.isHidden = true
+        let category = makeTransactionCategory(from: row1)
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [row1, row2])
+
         #expect(viewModel.colorConflictCategory == nil)
     }
-    
+
     @Test
     func testSaveBlockedByColorConflict() {
-        let cat1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let cat2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#00FF00")
-        
-        let viewModel = EditCategoryViewModel(category: cat1, allCategories: [cat1, cat2])
+        let row1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let row2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#00FF00")
+        let category = makeTransactionCategory(from: row1)
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [row1, row2])
         viewModel.selectedColor = "#00FF00"
-        
+
         let result = viewModel.save()
-        
+
         #expect(result == false)
         #expect(viewModel.showColorWarning == true)
     }
-    
+
     @Test
-    func testSaveSucceedsAfterColorWarningConfirmed() {
-        let context = makeContext()
-        let cat1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
-        let cat2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#00FF00")
-        context.insert(cat1)
-        
-        let viewModel = EditCategoryViewModel(category: cat1, allCategories: [cat1, cat2])
-        viewModel.configure(modelContext: context)
+    func testSaveSucceedsAfterColorWarningConfirmed() throws {
+        let context = try makeContext()
+        let row1 = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let row2 = CustomCategory(name: "Transport", icon: "car.fill", color: "#00FF00")
+        context.insert(row1)
+
+        let category = makeTransactionCategory(from: row1)
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [row1, row2])
+        viewModel.modelContext = context
         viewModel.selectedColor = "#00FF00"
-        
-        // First attempt blocked
+
         let blocked = viewModel.save()
         #expect(blocked == false)
-        
-        // Confirm despite warning
+
         viewModel.confirmSaveDespiteColorWarning()
         let saved = viewModel.save()
         #expect(saved == true)
-        #expect(cat1.color == "#00FF00")
+        #expect(row1.color == "#00FF00")
+    }
+
+    @Test
+    func testEditPredefinedCreatesOverrideRow() throws {
+        let context = try makeContext()
+
+        // Predefined with no override row yet
+        let predefined = PredefinedCategory.foodDining
+        let category = TransactionCategory(
+            id: "predefined:\(predefined.key)",
+            name: predefined.rawValue,
+            icon: predefined.icon,
+            colorHex: predefined.defaultColorHex,
+            isHidden: false,
+            isPredefined: true,
+            isDeletable: true,
+            overrideRow: nil
+        )
+
+        let viewModel = EditCategoryViewModel(category: category)
+        viewModel.modelContext = context
+        viewModel.name = "Eating Out"
+
+        let result = viewModel.save()
+        #expect(result == true)
+
+        let rows = try context.fetch(FetchDescriptor<CustomCategory>())
+        #expect(rows.count == 1)
+        #expect(rows.first?.name == "Eating Out")
+        #expect(rows.first?.predefinedKey == predefined.key)
+        #expect(rows.first?.isPredefined == true)
     }
 }
 
@@ -447,26 +490,39 @@ struct EditCategoryViewModelTests {
 
 @MainActor
 struct CategoryEditorViewModelTests {
-    
+
     @Test
     func testCheckColorConflictReturnsTrueWhenNoConflict() {
         let viewModel = CategoryEditorViewModel(icon: "star", color: "#FF0000")
-        // Base class colorConflictCategory always returns nil
         #expect(viewModel.checkColorConflict() == true)
     }
-    
+
     @Test
     func testResetColorWarningClearsPendingState() {
         let viewModel = CategoryEditorViewModel()
         viewModel.confirmSaveDespiteColorWarning()
         viewModel.resetColorWarning()
-        // After reset, checkColorConflict should still return true (no conflict in base class)
         #expect(viewModel.checkColorConflict() == true)
     }
-    
+
     @Test
     func testStaticOptionsAreNonEmpty() {
         #expect(!CategoryEditorViewModel.colorOptions.isEmpty)
         #expect(!CategoryEditorViewModel.iconOptions.isEmpty)
+    }
+
+    @Test
+    func testValidateNameRejectsPredefinedName() {
+        let viewModel = CategoryEditorViewModel()
+        let (_, error) = viewModel.validateName("Food & Dining")
+        #expect(error != nil)
+    }
+
+    @Test
+    func testValidateNameAllowsPredefinedNameWhenEditing() {
+        let viewModel = CategoryEditorViewModel()
+        viewModel.editingPredefinedKey = PredefinedCategory.foodDining.key
+        let (_, error) = viewModel.validateName("Food & Dining")
+        #expect(error == nil)
     }
 }

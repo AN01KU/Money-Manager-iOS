@@ -7,7 +7,7 @@
 <h1 align="center">Money Manager</h1>
 
 <p align="center">
-  A personal finance iOS app for tracking expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
+  A personal finance iOS app for tracking income and expenses, managing budgets, splitting costs with friends, and staying on top of your spending.
 </p>
 
 <p align="center">
@@ -20,12 +20,13 @@
   <img src="https://img.shields.io/badge/iOS-18.0%2B-blue" alt="iOS 18.0+">
   <img src="https://img.shields.io/badge/Swift-6.0-orange" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-16.4%2B-purple" alt="Xcode 16.4+">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
 </p>
 
 ## Features
 
-### Expense Tracking
-- Log expenses with amounts, categories, notes, and dates
+### Transaction Tracking
+- Log income and expenses with amounts, categories, notes, and dates
 - Quick-add with preset amounts for fast entry
 - View and filter transactions by day or month
 - Detailed transaction history with search functionality
@@ -36,21 +37,27 @@
 - Dashboard with projected spending, daily averages, and remaining budget
 - Over-budget alerts to keep you on track
 
-### Recurring Expenses
-- Set up recurring expenses (daily, weekly, monthly)
+### Recurring Transactions
+- Set up recurring transactions (daily, weekly, monthly)
 - Flexible scheduling — choose specific days of the week or month
 - Skip weekends or specific dates
-- Auto-generates expenses so you never forget a bill
+- Auto-generates transactions so you never forget a bill
 
 ### Categories
 - Comes with predefined spending categories
 - Create your own categories with custom names, colors, and icons
-- Organize expenses the way that makes sense to you
+- Organize transactions the way that makes sense to you
+
+### Server Sync
+- Syncs transactions, budgets, categories, and recurring transactions with a backend server
+- Offline-first — all data is stored locally and changes are queued when offline
+- Replays queued changes automatically on reconnect
+- Account-based with token authentication
 
 ### Additional Features
 - Multi-currency support
 - Export data to CSV/JSON formats
-- All data stored locally on device
+- Local-first storage with optional server sync
 
 ## Tech Stack
 
@@ -60,6 +67,7 @@
 | Architecture | MVVM |
 | Local Storage | SwiftData |
 | Charts | Swift Charts |
+| Networking | URLSession |
 
 ## Requirements
 
@@ -71,23 +79,23 @@
 
 ## Screenshots
 
-| Overview | Breakdown | Add Expense |
-|:--------:|:----------:|:----------:|
-| <img src="Screenshots/expenses-list.png" width="200"/> | <img src="Screenshots/expenses-breakdown.png" width="200"/> | <img src="Screenshots/expense-add.png" width="200"/> |
+| Overview | Transactions | Add Transaction |
+|:--------:|:------------:|:---------------:|
+| <img src="Screenshots/overview.png" width="200"/> | <img src="Screenshots/transactions-list.png" width="200"/> | <img src="Screenshots/transaction-add.png" width="200"/> |
 
-| Category | Recurring Expense |Settings | 
-|:--------:|:--------:|:--------:| 
-| <img src="Screenshots/categories.png" width="200"/> | <img src="Screenshots/expense-recurring-list.png" width="200"/> | <img src="Screenshots/settings.png" width="200"/> |
+| Budget | Groups | Group Detail |
+|:------:|:------:|:------------:|
+| <img src="Screenshots/budget-set.png" width="200"/> | <img src="Screenshots/groups-list.png" width="200"/> | <img src="Screenshots/group-detail.png" width="200"/> |
 
 ## Architecture
 
 ```
 Money Manager/
-├── Models/           # Data models (Expense, Budget, Category, etc.)
+├── Models/           # Data models (Transaction, Budget, Category, etc.)
 ├── ViewModels/       # Business logic and state management
 ├── Pages/            # Screen-level views
 ├── Components/       # Reusable UI components
-├── Services/         # Keychain and core services
+├── Services/         # Networking, sync, and core services
 ├── Helpers/          # Constants and utilities
 ├── ContentView.swift
 └── Money_ManagerApp.swift
@@ -129,11 +137,20 @@ make test-unit
 # Run UI tests
 make test-ui
 
+# Capture screenshots (requires backend reachable)
+make screenshots
+
 # Run a single test class
 make test-one TEST=BackupViewModelTests
 
+# Run API integration tests (requires backend running at localhost:8080)
+make test-api
+
 # View coverage report
 make coverage
+
+# Build a Simulator release zip (used for GitHub releases)
+make release
 
 # Clean build artifacts
 make clean
@@ -145,6 +162,7 @@ The project includes comprehensive unit and UI tests:
 
 - **Unit Tests** — Model validation, ViewModel logic, data transformations
 - **UI Tests** — User flow verification, screen rendering tests
+- **API Integration Tests** — End-to-end tests against a live backend (`make test-api`)
 
 Run tests with:
 ```bash
@@ -165,7 +183,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is for personal use. All rights reserved.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 

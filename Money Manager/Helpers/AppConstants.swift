@@ -22,7 +22,7 @@ enum AppConstants {
         static let shortTimeout: TimeInterval = 10
     }
     
-    /// Quick amount presets for expense entry
+    /// Quick amount presets for transaction entry
     enum QuickAmounts {
         static let personal: [Double] = [100, 500, 1000]
         static let shared: [Double] = [500, 1000, 2000]

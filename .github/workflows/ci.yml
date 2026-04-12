@@ -9,6 +9,7 @@ on:
       - 'Money ManagerTests/**'
       - 'Money ManagerUITests/**'
       - 'Money Manager.xcodeproj/**'
+      - 'Config/**'
       - '.github/workflows/ci.yml'
   pull_request:
     paths:
@@ -36,6 +37,14 @@ jobs:
       MIN_MACOS_VERSION: '15.0'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create xcconfig files
+        run: |
+          echo "API_BASE_HOST = ${{ vars.API_BASE_HOST }}" > Config/Debug.xcconfig
+          echo "TEST_EMAIL = ${{ secrets.TEST_EMAIL }}" >> Config/Debug.xcconfig
+          echo "TEST_PASSWORD = ${{ secrets.TEST_PASSWORD }}" >> Config/Debug.xcconfig
+          echo "TEST_INVITE_CODE = ${{ secrets.TEST_INVITE_CODE }}" >> Config/Debug.xcconfig
+          echo "API_BASE_HOST = ${{ vars.API_BASE_HOST }}" > Config/Release.xcconfig
 
       - name: Verify environment
         run: |

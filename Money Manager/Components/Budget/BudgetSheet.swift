@@ -18,8 +18,8 @@ struct BudgetSheet: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var errorTriggered = false
-    @State private var successTriggered = false
+    @State private var errorTriggered = 0
+    @State private var successTriggered = 0
     @FocusState private var isAmountFocused: Bool
     
     var body: some View {
@@ -35,11 +35,12 @@ struct BudgetSheet: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                             .focused($isAmountFocused)
+                            .accessibilityIdentifier("budget.amount-field")
                     }
                 } header: {
                     Text("Monthly Budget Amount")
                 } footer: {
-                    Text("Set your monthly spending limit for \(formatMonth(selectedMonth))")
+                    Text("Set your monthly spending limit for \(selectedMonth.formatted(.dateTime.month(.wide).year()))")
                 }
                 
                 if let amount = Double(budgetAmount), amount > 0 {
@@ -55,6 +56,7 @@ struct BudgetSheet: View {
                     }
                 }
             }
+            .dismissKeyboardOnScroll()
             .navigationTitle("Set Budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -62,6 +64,7 @@ struct BudgetSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("budget.cancel-button")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if isSaving {
@@ -71,7 +74,8 @@ struct BudgetSheet: View {
                             saveBudget()
                         }
                         .fontWeight(.semibold)
-                        .disabled(budgetAmount.isEmpty || Double(budgetAmount) == nil || Double(budgetAmount)! <= 0)
+                        .disabled(budgetAmount.isEmpty || (Double(budgetAmount) ?? 0) <= 0)
+                        .accessibilityIdentifier("budget.save-button")
                     }
                 }
             }
@@ -81,12 +85,9 @@ struct BudgetSheet: View {
                 Text(errorMessage)
             }
             .onChange(of: showError) { _, show in
-                if show { errorTriggered = true }
+                if show { errorTriggered += 1 }
             }
             .sensoryFeedback(.error, trigger: errorTriggered)
-            .onChange(of: errorTriggered) { _, newValue in
-                if newValue { errorTriggered = false }
-            }
             .sensoryFeedback(.success, trigger: successTriggered)
             .onAppear {
                 loadExistingBudget()
@@ -108,9 +109,9 @@ struct BudgetSheet: View {
                 budget.year == year && budget.month == month
             }
         )).first {
-            budgetAmount = String(format: "%.0f", existing.limit)
+            budgetAmount = existing.limit.formatted(.number.precision(.fractionLength(0)))
         } else if defaultBudgetLimit > 0 {
-            budgetAmount = String(format: "%.0f", defaultBudgetLimit)
+            budgetAmount = defaultBudgetLimit.formatted(.number.precision(.fractionLength(0)))
         }
     }
     
@@ -122,7 +123,10 @@ struct BudgetSheet: View {
         let year = calendar.component(.year, from: selectedMonth)
         let month = calendar.component(.month, from: selectedMonth)
         
-        // Save locally first — this is the source of truth
+        let budgetID: UUID
+        let action: String
+        let httpMethod: String
+        
         if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
             predicate: #Predicate<MonthlyBudget> { budget in
                 budget.year == year && budget.month == month
@@ -130,6 +134,9 @@ struct BudgetSheet: View {
         )).first {
             existing.limit = amount
             existing.updatedAt = Date()
+            budgetID = existing.id
+            action = "update"
+            httpMethod = "PUT"
         } else {
             let budget = MonthlyBudget(
                 year: year,
@@ -137,12 +144,34 @@ struct BudgetSheet: View {
                 limit: amount
             )
             modelContext.insert(budget)
+            budgetID = budget.id
+            action = "create"
+            httpMethod = "POST"
         }
         
         defaultBudgetLimit = amount
         
         do {
             try modelContext.save()
+            
+            let payload: Data? = action == "create"
+                ? try? APIClient.apiEncoder.encode(APICreateBudgetRequest(id: budgetID, year: year, month: month, limit: amount))
+                : try? APIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: amount))
+            changeQueueManager.enqueue(
+                entityType: "budget",
+                entityID: budgetID,
+                action: action,
+                endpoint: "/budgets",
+                httpMethod: httpMethod,
+                payload: payload,
+                context: modelContext
+            )
+            
+            if NetworkMonitor.shared.isConnected {
+                Task {
+                    await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
+                }
+            }
         } catch {
             errorMessage = "Failed to save budget locally"
             showError = true
@@ -151,15 +180,10 @@ struct BudgetSheet: View {
         }
         
         isSaving = false
-        successTriggered = true
+        successTriggered += 1
         dismiss()
     }
     
-    private func formatMonth(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
-    }
 }
 
 #Preview {

@@ -13,7 +13,7 @@ struct EmptyStateView: View {
     let message: String
     var actionTitle: String?
     var action: (() -> Void)?
-    @State private var buttonTapped = false
+    @State private var buttonTapped = 0
     
     init(
         icon: String = "tray",
@@ -45,7 +45,7 @@ struct EmptyStateView: View {
             
             if let actionTitle = actionTitle, let action = action {
                 Button(action: {
-                    buttonTapped = true
+                    buttonTapped += 1
                     action()
                 }) {
                     Text(actionTitle)
@@ -57,9 +57,6 @@ struct EmptyStateView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: buttonTapped)
-                .onChange(of: buttonTapped) { _, newValue in
-                    if newValue { buttonTapped = false }
-                }
                 .padding(.top, 8)
             }
         }

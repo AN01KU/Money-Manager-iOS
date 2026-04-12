@@ -3,105 +3,68 @@ import SwiftData
 
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Expense> { !$0.isDeleted }, sort: \Expense.date, order: .reverse) private var allExpenses: [Expense]
+    @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
-    
-    @State private var selectedMonth: Date = Date()
-    @State private var showBudgetSheet = false
-    @State private var refreshTrigger = false
-    
-    private var currentBudget: MonthlyBudget? {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-        return budgets.first { $0.year == year && $0.month == month }
-    }
-    
-    private var currentMonthExpenses: [Expense] {
-        let calendar = Calendar.current
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth))!
-        let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
-        
-        return allExpenses.filter { expense in
-            !expense.isDeleted &&
-            expense.date >= startOfMonth &&
-            expense.date <= endOfMonth
-        }
-    }
-    
-    private var totalSpent: Double {
-        currentMonthExpenses.reduce(0) { $0 + $1.amount }
-    }
-    
-    private var remainingBudget: Double {
-        guard let budget = currentBudget else { return 0 }
-        return max(0, budget.limit - totalSpent)
-    }
-    
-    private var budgetPercentage: Int {
-        guard let budget = currentBudget, budget.limit > 0 else { return 0 }
-        return Int((totalSpent / budget.limit) * 100.0)
-    }
-    
-    private var daysRemaining: Int {
-        let calendar = Calendar.current
-        let today = Date()
-        let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth))!)!
-        
-        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
-            let daysLeft = calendar.dateComponents([.day], from: today, to: endOfMonth).day ?? 0
-            return max(0, daysLeft)
-        }
-        return 0
-    }
-    
-    private var dailyAverage: Double {
-        guard daysRemaining > 0 else { return 0 }
-        return remainingBudget / Double(daysRemaining + 1)
-    }
-    
+
+    @State private var viewModel = BudgetsViewModel()
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                MonthSelector(selectedMonth: $selectedMonth)
+                MonthSelector(selectedMonth: $viewModel.selectedMonth)
                     .padding(.horizontal)
                     .padding(.top)
-                
-                if let budget = currentBudget {
+
+                if let budget = viewModel.currentBudget {
                     BudgetCard(
                         budget: budget,
-                        spent: totalSpent,
-                        remaining: remainingBudget,
-                        percentage: budgetPercentage,
-                        daysRemaining: daysRemaining,
-                        dailyAverage: dailyAverage,
+                        spent: viewModel.totalSpent,
+                        remaining: viewModel.remainingBudget,
+                        percentage: viewModel.budgetPercentage,
+                        daysRemaining: viewModel.daysRemaining,
+                        dailyAverage: viewModel.dailyAverage,
                         onEdit: {
-                            showBudgetSheet = true
+                            viewModel.showBudgetSheet = true
                         }
                     )
                     .padding(.horizontal)
-                    
+
                     BudgetStatusBanner(
-                        spent: totalSpent,
+                        spent: viewModel.totalSpent,
                         limit: budget.limit,
-                        percentage: budgetPercentage
+                        percentage: viewModel.budgetPercentage
                     )
                     .padding(.horizontal)
-                    
+
+                    if let insight = viewModel.spendingInsight {
+                        HStack(spacing: 8) {
+                            Image(systemName: viewModel.totalSpent >= budget.limit ? "exclamationmark.triangle.fill" : viewModel.projectedMonthEnd > budget.limit ? "arrow.up.circle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(viewModel.totalSpent >= budget.limit ? AppColors.expense : viewModel.projectedMonthEnd > budget.limit ? AppColors.budgetCaution : AppColors.positive)
+                            Text(insight)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemBackground))
+                        .clipShape(.rect(cornerRadius: 12))
+                        .padding(.horizontal)
+                    }
+
                 } else {
                     NoBudgetCard(
-                        selectedMonth: selectedMonth,
+                        selectedMonth: viewModel.selectedMonth,
                         onSetBudget: {
-                            showBudgetSheet = true
+                            viewModel.showBudgetSheet = true
                         }
                     )
                     .padding(.horizontal)
                 }
-                
-                if !currentMonthExpenses.isEmpty {
+
+                if !viewModel.currentMonthTransactions.isEmpty {
                     SpendingSummaryCard(
-                        totalSpent: totalSpent,
-                        transactionCount: currentMonthExpenses.count
+                        totalSpent: viewModel.totalSpent,
+                        transactionCount: viewModel.currentMonthTransactions.count
                     )
                     .padding(.horizontal)
                 }
@@ -111,17 +74,23 @@ struct BudgetsView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Budgets")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showBudgetSheet) {
-            BudgetSheet(selectedMonth: selectedMonth)
+        .sheet(isPresented: $viewModel.showBudgetSheet) {
+            BudgetSheet(selectedMonth: viewModel.selectedMonth)
         }
-        .onAppear {
-            refreshTrigger.toggle()
+        .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, budgets: budgets), initial: true) {
+            viewModel.configure(allTransactions: allTransactions, budgets: budgets, modelContext: modelContext)
         }
     }
 }
 
+// MARK: - Helpers
+
+private struct BudgetsQuerySnapshot: Equatable {
+    let transactions: [Transaction]
+    let budgets: [MonthlyBudget]
+}
 
 #Preview {
     BudgetsView()
-        .modelContainer(for: [Expense.self, MonthlyBudget.self])
+        .modelContainer(for: [Transaction.self, MonthlyBudget.self])
 }

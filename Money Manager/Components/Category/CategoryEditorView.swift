@@ -15,25 +15,26 @@ struct CategoryEditorView: View {
                     Text("Name")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    
+
                     TextField("e.g., Subscriptions, Pets", text: $name)
                         .textInputAutocapitalization(.words)
                 }
                 .padding(.vertical, 4)
             }
-            
+
             Section("Icon") {
                 iconGrid
             }
-            
+
             Section("Color") {
                 colorGrid
             }
-            
+
             Section("Preview") {
                 previewView
             }
         }
+        .dismissKeyboardOnScroll()
     }
     
     @ViewBuilder

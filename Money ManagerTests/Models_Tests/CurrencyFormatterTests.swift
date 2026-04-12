@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Money_Manager
 
+@MainActor
 struct CurrencyFormatterTests {
     
     @Test

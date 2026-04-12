@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_BASE_HOST</key>
+	<string>$(API_BASE_HOST)</string>
+	<key>TEST_EMAIL</key>
+	<string>$(TEST_EMAIL)</string>
+	<key>TEST_PASSWORD</key>
+	<string>$(TEST_PASSWORD)</string>
+	<key>TEST_INVITE_CODE</key>
+	<string>$(TEST_INVITE_CODE)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+</dict>
+</plist>
