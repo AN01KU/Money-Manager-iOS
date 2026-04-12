@@ -401,6 +401,7 @@ make test-one TEST=SomeTestClass    # Run a single test suite (preferred when wo
 make test-ui                        # Run UI tests (slow — never run automatically)
 make test                           # Run everything (unit + API + UI)
 make coverage                       # View coverage summary
+make release                        # Build a Simulator release zip locally (for testing before tagging)
 make clean                          # Clean build artifacts
 make screenshots                    # Capture all screens → copies PNGs to Screenshots/
 make screenshot-one TAG=overview    # Capture a single screen by tag

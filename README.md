@@ -149,6 +149,9 @@ make test-api
 # View coverage report
 make coverage
 
+# Build a Simulator release zip (used for GitHub releases)
+make release
+
 # Clean build artifacts
 make clean
 ```

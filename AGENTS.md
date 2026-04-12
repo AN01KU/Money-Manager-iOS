@@ -110,6 +110,12 @@ find_issues(data)
 - All tests must pass before merging
 - Coverage threshold is 50% (warning, not blocking)
 
+### Releases
+
+- Releases are created by pushing a `v*` tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`)
+- The release workflow (`.github/workflows/release.yml`) builds a Simulator `.app`, zips it, and attaches it to a GitHub Release automatically
+- Use `make release` to build a release zip locally before tagging
+
 ---
 
 ## Coding Guidelines
