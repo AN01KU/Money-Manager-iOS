@@ -174,7 +174,7 @@ struct APIPagination: Codable {
     let total: Int
 }
 
-struct APIMessageResponse: Codable {
+struct APIMessageResponse: Codable, Sendable {
     let message: String
 }
 
