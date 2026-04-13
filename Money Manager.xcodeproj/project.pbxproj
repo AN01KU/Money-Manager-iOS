@@ -23,6 +23,10 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXBuildFile section */
+		6BAC1D012F9A000000000001 /* APIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 6BAC1D022F9A000000000002 /* APIClient */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		6B0D634C2F7C4E4000BE2D7E /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		6B62AB4D2F464BCD004EA7DF /* Money ManagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Money ManagerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -98,6 +102,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6BAC1D012F9A000000000001 /* APIClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -187,6 +192,7 @@
 			);
 			name = "Money Manager";
 			packageProductDependencies = (
+				6BAC1D022F9A000000000002 /* APIClient */,
 			);
 			productName = "Money Manager";
 			productReference = 6B6A4C4E2EFD151B00B81C49 /* Money Manager.app */;
@@ -249,6 +255,9 @@
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6B6A4C4F2EFD151B00B81C49 /* Products */;
+			packageReferences = (
+				6BAC1D032F9A000000000003 /* XCRemoteSwiftPackageReference "Swift-APIClient" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -646,6 +655,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6BAC1D032F9A000000000003 /* XCRemoteSwiftPackageReference "Swift-APIClient" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AN01KU/Swift-APIClient";
+			requirement = {
+				kind = exactVersion;
+				version = "1.0.1";
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6BAC1D022F9A000000000002 /* APIClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6BAC1D032F9A000000000003 /* XCRemoteSwiftPackageReference "Swift-APIClient" */;
+			productName = APIClient;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6B6A4C462EFD151B00B81C49 /* Project object */;
 }
