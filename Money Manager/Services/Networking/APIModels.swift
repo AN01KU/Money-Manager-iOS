@@ -178,6 +178,13 @@ struct APIMessageResponse: Codable, Sendable {
     let message: String
 }
 
+/// Decodes successfully regardless of response body shape.
+/// Used when only success (2xx) matters, not the response payload.
+struct EmptyResponse: Codable {
+    init() {}
+    init(from decoder: Decoder) throws {}
+}
+
 struct APISignupRequest: Codable {
     let email: String
     let username: String

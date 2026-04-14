@@ -1,3 +1,4 @@
+import APIClient
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -12,9 +13,9 @@ struct APIIntegrationTests {
     private static var authSyncSessionID: UUID? = nil
 
     init() {
-        APIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken)
+        AppAPIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken)
         if let sid = Self.authSyncSessionID {
-            APIClient.shared.setTestSyncSessionID(sid)
+            AppAPIClient.shared.setTestSyncSessionID(sid)
         }
     }
 
@@ -34,17 +35,17 @@ struct APIIntegrationTests {
             let username = "user_\(UUID().uuidString.prefix(8))"
 
             let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "FIN-INVITE-2026")
-            let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
+            let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
 
             Self.authToken = signupResponse.token
             Self.authSyncSessionID = signupResponse.syncSessionId
             Self.authEmail = email
-            APIClient.shared.setTestToken(Self.authToken)
-            APIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
+            AppAPIClient.shared.setTestToken(Self.authToken)
+            AppAPIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
         } else {
-            APIClient.shared.setTestToken(Self.authToken)
+            AppAPIClient.shared.setTestToken(Self.authToken)
             if let sid = Self.authSyncSessionID {
-                APIClient.shared.setTestSyncSessionID(sid)
+                AppAPIClient.shared.setTestSyncSessionID(sid)
             }
         }
     }
@@ -57,7 +58,7 @@ struct APIIntegrationTests {
         let username = "user_\(UUID().uuidString.prefix(8))"
 
         let request = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "FIN-INVITE-2026")
-        let response: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: request)
+        let response: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: request)
 
         #expect(!response.token.isEmpty)
         #expect(response.user.email == email)
@@ -66,8 +67,8 @@ struct APIIntegrationTests {
         Self.authToken = response.token
         Self.authSyncSessionID = response.syncSessionId
         Self.authEmail = email
-        APIClient.shared.setTestToken(response.token)
-        APIClient.shared.setTestSyncSessionID(response.syncSessionId)
+        AppAPIClient.shared.setTestToken(response.token)
+        AppAPIClient.shared.setTestSyncSessionID(response.syncSessionId)
     }
 
     @Test("Preflight returns valid for fresh sync session")
@@ -81,7 +82,7 @@ struct APIIntegrationTests {
         }
 
         let body = APISyncPreflightRequest(syncSessionId: sessionID)
-        let response: APISyncPreflightResponse = try await APIClient.shared.post("/sync/preflight", body: body)
+        let response: APISyncPreflightResponse = try await AppAPIClient.shared.post(.raw("/sync/preflight"), body: body)
 
         #expect(response.valid == true)
         #expect(response.reason == nil)
@@ -103,7 +104,7 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let response: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == request.name)
         #expect(response.icon == request.icon)
@@ -135,7 +136,7 @@ struct APIIntegrationTests {
             color: "#FF6B6B",
             predefined_key: "foodDining"
         )
-        let response: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == "Eating Out")
         #expect(response.isPredefined == true)
@@ -149,12 +150,12 @@ struct APIIntegrationTests {
         let email = "api_\(UUID().uuidString.prefix(8))@test.com"
         let username = "user_\(UUID().uuidString.prefix(8))"
         let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "FIN-INVITE-2026")
-        let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
-        APIClient.shared.setTestToken(signupResponse.token)
+        let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
+        AppAPIClient.shared.setTestToken(signupResponse.token)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         // New architecture: no DB seeding — backend returns 15 predefined categories in-memory
         #expect(response.data.count == 15)
@@ -162,8 +163,8 @@ struct APIIntegrationTests {
         #expect(response.data.allSatisfy { $0.predefinedKey != nil })
 
         // Cleanup
-        try await APIClient.shared.delete("/me")
-        APIClient.shared.setTestToken(Self.authToken)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
     }
 
     @Test("List categories returns created custom categories")
@@ -173,11 +174,11 @@ struct APIIntegrationTests {
 
         let name = "ListTest \(UUID().uuidString.prefix(8))"
         let request = APICreateCategoryRequest(id: nil, name: name, icon: "star.circle.fill", color: "#4ECDC4", isHidden: nil, isPredefined: nil, predefinedKey: nil)
-        let _: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let _: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         #expect(response.data.contains(where: { $0.name == name }))
     }
@@ -196,11 +197,11 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         let found = response.data.first(where: { $0.id == created.id })
 
         #expect(found != nil)
@@ -223,13 +224,13 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         let updateName = "Updated \(UUID().uuidString.prefix(4))"
         let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, is_hidden: nil)
-        let updated: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: updateRequest)
+        let updated: APICustomCategory = try await AppAPIClient.shared.put(.raw("/categories/\(created.id)"), body: updateRequest)
 
         #expect(updated.name == updateName)
         #expect(updated.icon == "heart.fill")
@@ -249,20 +250,20 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         // Hide it
         let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, is_hidden: true)
-        let hidden: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: hideRequest)
+        let hidden: APICustomCategory = try await AppAPIClient.shared.put(.raw("/categories/\(created.id)"), body: hideRequest)
         #expect(hidden.isHidden == true)
 
         await delay(200)
 
         // Unhide it
         let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, is_hidden: false)
-        let restored: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: unhideRequest)
+        let restored: APICustomCategory = try await AppAPIClient.shared.put(.raw("/categories/\(created.id)"), body: unhideRequest)
         #expect(restored.isHidden == false)
     }
 
@@ -280,15 +281,15 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
-        let _: APIMessageResponse = try await APIClient.shared.deleteMessage("/categories/\(created.id)")
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(created.id)"))
 
         await delay(200)
 
-        let categories: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
@@ -313,17 +314,17 @@ struct APIIntegrationTests {
             color: "#4ECDC4",
             predefined_key: "transport"
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
         // Delete the override → should reset to default (row removed server-side)
-        let _: APIMessageResponse = try await APIClient.shared.deleteMessage("/categories/\(created.id)")
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(created.id)"))
 
         await delay(200)
 
         // Override row should be gone
-        let categories: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
@@ -335,7 +336,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: 5000.00)
-        let response: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
+        let response: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
 
         #expect(compareAmount(response.limit, request.limit))
     }
@@ -345,7 +346,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APIMonthlyBudget> = try await APIClient.shared.get("/budgets")
+        let response: APIListResponse<APIMonthlyBudget> = try await AppAPIClient.shared.get(.raw("/budgets"))
 
         #expect(!response.data.isEmpty)
     }
@@ -356,12 +357,12 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: 1000.00)
-        let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: createRequest)
+        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: createRequest)
 
         await delay(200)
 
         let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: 1500.00)
-        let updated: APIMonthlyBudget = try await APIClient.shared.put("/budgets/\(created.id)", body: updateRequest)
+        let updated: APIMonthlyBudget = try await AppAPIClient.shared.put(.raw("/budgets/\(created.id)"), body: updateRequest)
 
         #expect(compareAmount(updated.limit, 1500))
     }
@@ -372,11 +373,11 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: 999.00)
-        let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
+        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
 
         await delay(200)
 
-        try await APIClient.shared.delete("/budgets/\(created.id)")
+        try await AppAPIClient.shared.delete(.raw("/budgets/\(created.id)"))
     }
 
     // MARK: - Recurring Transaction Tests
@@ -402,7 +403,7 @@ struct APIIntegrationTests {
             type: "expense"
         )
 
-        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: request)
+        let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
 
         #expect(response.name == request.name)
         #expect(compareAmount(response.amount, request.amount))
@@ -429,7 +430,7 @@ struct APIIntegrationTests {
             type: "expense"
         )
 
-        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: request)
+        let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
 
         #expect(response.frequency == "weekly")
         #expect(response.daysOfWeek == [1, 3, 5])
@@ -441,7 +442,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APIRecurringTransaction> = try await APIClient.shared.get("/recurring-transactions")
+        let response: APIListResponse<APIRecurringTransaction> = try await AppAPIClient.shared.get(.raw("/recurring-transactions"))
 
         #expect(!response.data.isEmpty)
     }
@@ -466,11 +467,11 @@ struct APIIntegrationTests {
             notes: nil,
             type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
+        let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
         await delay(200)
 
-        let response: APIRecurringTransaction = try await APIClient.shared.get("/recurring-transactions/\(created.id)")
+        let response: APIRecurringTransaction = try await AppAPIClient.shared.get(.raw("/recurring-transactions/\(created.id)"))
 
         #expect(response.id == created.id)
     }
@@ -495,7 +496,7 @@ struct APIIntegrationTests {
             notes: nil,
             type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
+        let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
         await delay(200)
 
@@ -505,7 +506,7 @@ struct APIIntegrationTests {
             isActive: false, notes: nil,
             type: "expense"
         )
-        let updated: APIRecurringTransaction = try await APIClient.shared.put("/recurring-transactions/\(created.id)", body: updateRequest)
+        let updated: APIRecurringTransaction = try await AppAPIClient.shared.put(.raw("/recurring-transactions/\(created.id)"), body: updateRequest)
 
         #expect(compareAmount(updated.amount, 12))
         #expect(updated.isActive == false)
@@ -531,11 +532,11 @@ struct APIIntegrationTests {
             notes: nil,
             type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
+        let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
         await delay(200)
 
-        try await APIClient.shared.delete("/recurring-transactions/\(created.id)")
+        try await AppAPIClient.shared.delete(.raw("/recurring-transactions/\(created.id)"))
     }
 
     // MARK: - Transaction Tests
@@ -557,7 +558,7 @@ struct APIIntegrationTests {
             recurringExpenseId: nil
         )
 
-        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+        let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.category == request.category)
@@ -582,7 +583,7 @@ struct APIIntegrationTests {
             recurringExpenseId: nil
         )
 
-        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+        let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.type == "income")
@@ -605,7 +606,7 @@ struct APIIntegrationTests {
             recurringExpenseId: nil
         )
 
-        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+        let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.description == request.description)
@@ -617,7 +618,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get("/transactions")
+        let response: APIPaginatedResponse<APITransaction> = try await AppAPIClient.shared.get(.raw("/transactions"))
 
         #expect(!response.data.isEmpty)
     }
@@ -627,10 +628,9 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get(
-            "/transactions",
-            queryItems: [URLQueryItem(name: "type", value: "expense")]
-        )
+        let (response, _): BaseAPI.APIResponse<APIPaginatedResponse<APITransaction>> = try await AppAPIClient.shared.client
+            .request(.raw("/transactions?type=expense"))
+            .response()
 
         #expect(response.data.allSatisfy { $0.type == "expense" })
     }
@@ -640,10 +640,9 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get(
-            "/transactions",
-            queryItems: [URLQueryItem(name: "type", value: "income")]
-        )
+        let (response, _): BaseAPI.APIResponse<APIPaginatedResponse<APITransaction>> = try await AppAPIClient.shared.client
+            .request(.raw("/transactions?type=income"))
+            .response()
 
         #expect(response.data.allSatisfy { $0.type == "income" })
     }
@@ -664,11 +663,11 @@ struct APIIntegrationTests {
             notes: nil,
             recurringExpenseId: nil
         )
-        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+        let created: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: createRequest)
 
         await delay(200)
 
-        let response: APITransaction = try await APIClient.shared.get("/transactions/\(created.id)")
+        let response: APITransaction = try await AppAPIClient.shared.get(.raw("/transactions/\(created.id)"))
 
         #expect(response.id == created.id)
         #expect(response.type == "expense")
@@ -690,7 +689,7 @@ struct APIIntegrationTests {
             notes: nil,
             recurringExpenseId: nil
         )
-        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+        let created: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: createRequest)
 
         await delay(200)
 
@@ -703,7 +702,7 @@ struct APIIntegrationTests {
             description: "After update",
             notes: nil
         )
-        let updated: APITransaction = try await APIClient.shared.patch("/transactions/\(created.id)", body: updateRequest)
+        let updated: APITransaction = try await AppAPIClient.shared.patch(.raw("/transactions/\(created.id)"), body: updateRequest)
 
         #expect(compareAmount(updated.amount, 55))
         #expect(updated.description == "After update")
@@ -725,15 +724,15 @@ struct APIIntegrationTests {
             notes: nil,
             recurringExpenseId: nil
         )
-        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+        let created: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: createRequest)
 
         await delay(200)
 
-        try await APIClient.shared.delete("/transactions/\(created.id)")
+        try await AppAPIClient.shared.delete(.raw("/transactions/\(created.id)"))
 
         await delay(200)
 
-        let response: APITransaction = try await APIClient.shared.get("/transactions/\(created.id)")
+        let response: APITransaction = try await AppAPIClient.shared.get(.raw("/transactions/\(created.id)"))
         #expect(response.isDeleted == true)
     }
 
@@ -745,11 +744,11 @@ struct APIIntegrationTests {
         await delay(200)
 
         let groupRequest = APICreateGroupRequest(name: "Test Group \(UUID().uuidString.prefix(4))")
-        let group: APIGroup = try await APIClient.shared.post("/groups", body: groupRequest)
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupRequest)
 
         await delay(200)
 
-        let membersResponse: APIListResponse<APIGroupMember> = try await APIClient.shared.get("/groups/\(group.id)/members")
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
         guard let member = membersResponse.data.first else {
             Issue.record("Group has no members")
             return
@@ -767,8 +766,8 @@ struct APIIntegrationTests {
             ]
         )
 
-        let response: APIGroupTransaction = try await APIClient.shared.post(
-            "/groups/\(group.id)/transactions",
+        let response: APIGroupTransaction = try await AppAPIClient.shared.post(
+            .raw("/groups/\(group.id)/transactions"),
             body: txRequest
         )
 
@@ -784,11 +783,11 @@ struct APIIntegrationTests {
         await delay(200)
 
         let groupRequest = APICreateGroupRequest(name: "List Test \(UUID().uuidString.prefix(4))")
-        let group: APIGroup = try await APIClient.shared.post("/groups", body: groupRequest)
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupRequest)
 
         await delay(200)
 
-        let membersResponse: APIListResponse<APIGroupMember> = try await APIClient.shared.get("/groups/\(group.id)/members")
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
         guard let member = membersResponse.data.first else {
             Issue.record("Group has no members")
             return
@@ -805,12 +804,12 @@ struct APIIntegrationTests {
                 APIGroupTransactionSplitInput(userId: member.id, amount: 30.00)
             ]
         )
-        let _: APIGroupTransaction = try await APIClient.shared.post("/groups/\(group.id)/transactions", body: txRequest)
+        let _: APIGroupTransaction = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/transactions"), body: txRequest)
 
         await delay(200)
 
         struct GroupTransactionsResponse: Codable { let data: [APIGroupTransaction] }
-        let response: GroupTransactionsResponse = try await APIClient.shared.get("/groups/\(group.id)/transactions")
+        let response: GroupTransactionsResponse = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/transactions"))
 
         #expect(!response.data.isEmpty)
     }
@@ -825,10 +824,9 @@ struct APIIntegrationTests {
         let month = Calendar.current.component(.month, from: Date())
         let year = Calendar.current.component(.year, from: Date())
 
-        let response: APIMonthlyDashboardResponse = try await APIClient.shared.get("/dashboard/monthly", queryItems: [
-            URLQueryItem(name: "month", value: "\(month)"),
-            URLQueryItem(name: "year", value: "\(year)")
-        ])
+        let (response, _): BaseAPI.APIResponse<APIMonthlyDashboardResponse> = try await AppAPIClient.shared.client
+            .request(.raw("/dashboard/monthly?month=\(month)&year=\(year)"))
+            .response()
 
         #expect(response.totalTransactions != nil)
     }
@@ -839,6 +837,6 @@ struct APIIntegrationTests {
     func testCleanupDeleteUser() async throws {
         guard !Self.authToken.isEmpty else { return }
         await delay(200)
-        try await APIClient.shared.delete("/me")
+        try await AppAPIClient.shared.delete(.raw("/me"))
     }
 }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6B3971CE2F8DDC99006BAFB8 /* APIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 6B3971CD2F8DDC99006BAFB8 /* APIClient */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		6B62AB5A2F464BCD004EA7DF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -22,10 +26,6 @@
 			remoteInfo = "Money Manager";
 		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXBuildFile section */
-		6BAC1D012F9A000000000001 /* APIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 6BAC1D022F9A000000000002 /* APIClient */; };
-/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		6B0D634C2F7C4E4000BE2D7E /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -102,7 +102,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6BAC1D012F9A000000000001 /* APIClient in Frameworks */,
+				6B3971CE2F8DDC99006BAFB8 /* APIClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,7 +192,7 @@
 			);
 			name = "Money Manager";
 			packageProductDependencies = (
-				6BAC1D022F9A000000000002 /* APIClient */,
+				6B3971CD2F8DDC99006BAFB8 /* APIClient */,
 			);
 			productName = "Money Manager";
 			productReference = 6B6A4C4E2EFD151B00B81C49 /* Money Manager.app */;
@@ -253,11 +253,11 @@
 			);
 			mainGroup = 6B6A4C452EFD151B00B81C49;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6B3971CC2F8DDC99006BAFB8 /* XCRemoteSwiftPackageReference "Swift-API-Client" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6B6A4C4F2EFD151B00B81C49 /* Products */;
-			packageReferences = (
-				6BAC1D032F9A000000000003 /* XCRemoteSwiftPackageReference "Swift-APIClient" */,
-			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -657,20 +657,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6BAC1D032F9A000000000003 /* XCRemoteSwiftPackageReference "Swift-APIClient" */ = {
+		6B3971CC2F8DDC99006BAFB8 /* XCRemoteSwiftPackageReference "Swift-API-Client" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/AN01KU/Swift-APIClient";
+			repositoryURL = "https://github.com/AN01KU/Swift-API-Client.git";
 			requirement = {
-				kind = exactVersion;
-				version = "1.0.1";
+				branch = main;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		6BAC1D022F9A000000000002 /* APIClient */ = {
+		6B3971CD2F8DDC99006BAFB8 /* APIClient */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 6BAC1D032F9A000000000003 /* XCRemoteSwiftPackageReference "Swift-APIClient" */;
+			package = 6B3971CC2F8DDC99006BAFB8 /* XCRemoteSwiftPackageReference "Swift-API-Client" */;
 			productName = APIClient;
 		};
 /* End XCSwiftPackageProductDependency section */

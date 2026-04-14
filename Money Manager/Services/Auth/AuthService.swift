@@ -15,7 +15,7 @@ final class AuthService: AuthServiceProtocol {
     var errorMessage: String?
 
     private let session = SessionStore.shared
-    private let apiClient = APIClient.shared
+    private let apiClient = AppAPIClient.shared
 
     nonisolated(unsafe) private var sessionExpiredObserver: Any?
 
@@ -48,7 +48,7 @@ final class AuthService: AuthServiceProtocol {
             return
         }
         do {
-            let user: APIUser = try await apiClient.get("/me")
+            let user: APIUser = try await apiClient.get(.me)
             AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             session.saveLastLoggedInEmail(user.email.lowercased())
             authState = .authenticated(user)
@@ -82,7 +82,7 @@ final class AuthService: AuthServiceProtocol {
 
         do {
             let request = APILoginRequest(email: email, password: password)
-            let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
+            let response: APIAuthResponse = try await apiClient.post(.login, body: request)
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
@@ -102,7 +102,7 @@ final class AuthService: AuthServiceProtocol {
 
         do {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
-            let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
+            let response: APIAuthResponse = try await apiClient.post(.signup, body: request)
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(email.lowercased())
@@ -126,7 +126,7 @@ final class AuthService: AuthServiceProtocol {
         if let id = syncSessionID {
             Task {
                 let body = APILogoutRequest(syncSessionId: id)
-                try? await apiClient.post("/auth/logout", body: body) as EmptyResponse
+                let _: EmptyResponse = try await apiClient.post(.logout, body: body)
             }
         }
     }

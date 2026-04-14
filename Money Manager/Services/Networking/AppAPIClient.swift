@@ -24,7 +24,14 @@ final class AppAPIClient: Sendable {
         return encoder
     }()
 
-    private init() {
+    private convenience init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = AppConstants.API.defaultTimeout
+        config.timeoutIntervalForResource = AppConstants.API.defaultTimeout
+        self.init(sessionConfiguration: config)
+    }
+
+    init(sessionConfiguration: URLSessionConfiguration) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
@@ -38,13 +45,9 @@ final class AppAPIClient: Sendable {
             return Date(timeIntervalSince1970: Double(ms) / 1000.0)
         }
 
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = AppConstants.API.defaultTimeout
-        config.timeoutIntervalForResource = AppConstants.API.defaultTimeout
-
         self.decoder = decoder
         client = BaseAPI.BaseAPIClient<MoneyManagerEndpoint>(
-            sessionConfiguration: config,
+            sessionConfiguration: sessionConfiguration,
             encoder: encoder,
             decoder: decoder,
             interceptors: [
@@ -62,22 +65,22 @@ final class AppAPIClient: Sendable {
 
     // MARK: - GET
 
-    func get<T: Decodable & Sendable>(_ endpoint: MoneyManagerEndpoint) async throws -> T {
+    func get<T: Decodable>(_ endpoint: MoneyManagerEndpoint) async throws -> T {
         let (data, _) = try await client.get(endpoint) as BaseAPI.APIResponse<T>
         return data
     }
 
     // MARK: - POST
 
-    func post<Req: Encodable & Sendable, Res: Decodable & Sendable>(
+    func post<Req: Encodable, Res: Decodable>(
         _ endpoint: MoneyManagerEndpoint,
-        body: Req
+        body: sending Req
     ) async throws -> Res {
         let (data, _) = try await client.post(endpoint, body: body) as BaseAPI.APIResponse<Res>
         return data
     }
 
-    func post<T: Decodable & Sendable>(
+    func post<T: Decodable>(
         _ endpoint: MoneyManagerEndpoint,
         rawBody: Data
     ) async throws -> T {
@@ -87,7 +90,19 @@ final class AppAPIClient: Sendable {
 
     // MARK: - PUT
 
-    func put<T: Decodable & Sendable>(
+    func put<Req: Encodable, Res: Decodable>(
+        _ endpoint: MoneyManagerEndpoint,
+        body: sending Req
+    ) async throws -> Res {
+        let (data, _): BaseAPI.APIResponse<Res> = try await client
+            .request(endpoint)
+            .method(.put)
+            .body(body)
+            .response()
+        return data
+    }
+
+    func put<T: Decodable>(
         _ endpoint: MoneyManagerEndpoint,
         rawBody: Data
     ) async throws -> T {
@@ -97,9 +112,9 @@ final class AppAPIClient: Sendable {
 
     // MARK: - PATCH
 
-    func patch<Req: Encodable & Sendable, Res: Decodable & Sendable>(
+    func patch<Req: Encodable, Res: Decodable>(
         _ endpoint: MoneyManagerEndpoint,
-        body: Req
+        body: sending Req
     ) async throws -> Res {
         let (data, _): BaseAPI.APIResponse<Res> = try await client
             .request(endpoint)
@@ -109,7 +124,7 @@ final class AppAPIClient: Sendable {
         return data
     }
 
-    func patch<T: Decodable & Sendable>(
+    func patch<T: Decodable>(
         _ endpoint: MoneyManagerEndpoint,
         rawBody: Data
     ) async throws -> T {
@@ -160,6 +175,7 @@ final class AppAPIClient: Sendable {
             SessionStore.shared.saveSyncSessionID(id)
         }
     }
+
     #endif
 }
 
