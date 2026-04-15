@@ -67,7 +67,7 @@
 | Architecture | MVVM |
 | Local Storage | SwiftData |
 | Charts | Swift Charts |
-| Networking | URLSession |
+| Networking | Swift-APIClient (URLSession) |
 
 ## Requirements
 
