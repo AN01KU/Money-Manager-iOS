@@ -22,7 +22,7 @@ final class SyncService: SyncServiceProtocol {
     var syncSuccessCount: Int = 0
     var syncFailureCount: Int = 0
 
-    private let apiClient = APIClient.shared
+    private let apiClient = AppAPIClient.shared
     private let groupService = GroupService.shared
     private let networkMonitor = NetworkMonitor.shared
     private var authService: AuthServiceProtocol?
@@ -153,7 +153,7 @@ final class SyncService: SyncServiceProtocol {
 
         do {
             let body = APISyncPreflightRequest(syncSessionId: sessionID)
-            let response: APISyncPreflightResponse = try await apiClient.post("/sync/preflight", body: body)
+            let response: APISyncPreflightResponse = try await apiClient.post(.syncPreflight, body: body)
             return response.valid ? .valid : .invalid(reason: response.reason ?? "UNKNOWN")
         } catch let error as APIError {
             if case .syncSessionInvalid(let reason) = error {
@@ -211,7 +211,7 @@ final class SyncService: SyncServiceProtocol {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for transaction in transactions where !transaction.isSoftDeleted {
             do {
-                let payload = try APIClient.apiEncoder.encode(transaction.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "transaction",
                     entityID: transaction.id,
@@ -231,7 +231,7 @@ final class SyncService: SyncServiceProtocol {
         for category in categories {
             AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
             do {
-                let payload = try APIClient.apiEncoder.encode(category.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(category.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "category",
                     entityID: category.id,
@@ -249,7 +249,7 @@ final class SyncService: SyncServiceProtocol {
         let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
         for budget in budgets {
             do {
-                let payload = try APIClient.apiEncoder.encode(budget.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(budget.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "budget",
                     entityID: budget.id,
@@ -267,7 +267,7 @@ final class SyncService: SyncServiceProtocol {
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
             do {
-                let payload = try APIClient.apiEncoder.encode(item.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(item.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "recurring",
                     entityID: item.id,
@@ -297,7 +297,7 @@ final class SyncService: SyncServiceProtocol {
     
     private func pullCategories(context: ModelContext) async {
         do {
-            let response: APIListResponse<APICustomCategory> = try await apiClient.get("/categories")
+            let response: APIListResponse<APICustomCategory> = try await apiClient.get(.syncCategories)
             upsertCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull categories: \(error)")
@@ -307,7 +307,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func pullBudgets(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get("/budgets")
+            let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get(.syncBudgets)
             upsertBudgets(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull budgets: \(error)")
@@ -317,7 +317,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func pullRecurring(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get("/recurring-transactions")
+            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get(.syncRecurring)
             upsertRecurring(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull recurring: \(error)")
@@ -332,13 +332,7 @@ final class SyncService: SyncServiceProtocol {
             let limit = 100
 
             while true {
-                let queryItems = [
-                    URLQueryItem(name: "limit", value: "\(limit)"),
-                    URLQueryItem(name: "offset", value: "\(offset)"),
-                    URLQueryItem(name: "is_deleted", value: "false")  // query param, not a Swift property access
-                ]
-
-                let response: APIPaginatedResponse<APITransaction> = try await apiClient.get("/transactions", queryItems: queryItems)
+                let response: APIPaginatedResponse<APITransaction> = try await apiClient.get(.syncTransactions(limit: limit, offset: offset))
                 allTransactions.append(contentsOf: response.data)
 
                 if response.data.count < limit || offset + response.data.count >= response.pagination.total {

@@ -174,8 +174,15 @@ struct APIPagination: Codable {
     let total: Int
 }
 
-struct APIMessageResponse: Codable {
+struct APIMessageResponse: Codable, Sendable {
     let message: String
+}
+
+/// Decodes successfully regardless of response body shape.
+/// Used when only success (2xx) matters, not the response payload.
+struct EmptyResponse: Codable {
+    init() {}
+    init(from decoder: Decoder) throws {}
 }
 
 struct APISignupRequest: Codable {
@@ -347,7 +354,14 @@ struct APIUpdateCategoryRequest: Codable {
     let name: String?
     let icon: String?
     let color: String?
-    let is_hidden: Bool?
+    let isHidden: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case icon
+        case color
+        case isHidden = "is_hidden"
+    }
 }
 
 // MARK: - Group API Models

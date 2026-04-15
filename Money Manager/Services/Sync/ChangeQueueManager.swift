@@ -13,17 +13,11 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     /// Base delay in seconds — actual delay is `baseRetryDelay * 2^retryCount + jitter`
     private static let baseRetryDelay: TimeInterval = 2.0
 
-    private var apiClient: APIClient = APIClient.shared
+    private var apiClient: AppAPIClient = AppAPIClient.shared
     private var modelContainer: ModelContainer?
     private var isReplaying = false
 
     init() {}
-
-    #if DEBUG
-    func setAPIClientForTesting(_ client: APIClient) {
-        apiClient = client
-    }
-    #endif
 
     func configure(container: ModelContainer) {
         self.modelContainer = container
@@ -221,15 +215,15 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.post(endpoint, rawBody: payload)
+            let _: EmptyResponse = try await apiClient.post(.raw(endpoint), rawBody: payload)
         case "PUT":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.put(endpoint, rawBody: payload)
+            let _: EmptyResponse = try await apiClient.put(.raw(endpoint), rawBody: payload)
         case "PATCH":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.patch(endpoint, rawBody: payload)
+            let _: EmptyResponse = try await apiClient.patch(.raw(endpoint), rawBody: payload)
         case "DELETE":
-            let _: APIMessageResponse = try await apiClient.deleteMessage(endpoint)
+            let _: APIMessageResponse = try await apiClient.deleteMessage(.raw(endpoint))
         default:
             AppLogger.sync.warning("[ReplayDebug] unhandled httpMethod=\(change.httpMethod) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action)")
             return

@@ -147,7 +147,7 @@ extension CustomCategory {
             name: name,
             icon: icon,
             color: color,
-            is_hidden: isHidden  // is_hidden intentionally left as-is per refactor rules
+            isHidden: isHidden
         )
     }
     

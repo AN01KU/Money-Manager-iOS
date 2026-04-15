@@ -155,8 +155,8 @@ struct BudgetSheet: View {
             try modelContext.save()
             
             let payload: Data? = action == "create"
-                ? try? APIClient.apiEncoder.encode(APICreateBudgetRequest(id: budgetID, year: year, month: month, limit: amount))
-                : try? APIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: amount))
+                ? try? AppAPIClient.apiEncoder.encode(APICreateBudgetRequest(id: budgetID, year: year, month: month, limit: amount))
+                : try? AppAPIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: amount))
             changeQueueManager.enqueue(
                 entityType: "budget",
                 entityID: budgetID,
