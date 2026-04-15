@@ -15,14 +15,16 @@ final class AppAPIClient: Sendable {
 
     /// Shared encoder configured with millisecond-epoch date strategy.
     /// Used by `SyncService.enqueueLocalData` when pre-serialising payloads.
-    static let apiEncoder: JSONEncoder = {
+    static let apiEncoder: JSONEncoder = makeEncoder()
+
+    private static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
             try container.encode(Int64(date.timeIntervalSince1970 * 1000))
         }
         return encoder
-    }()
+    }
 
     private convenience init() {
         let config = URLSessionConfiguration.default
@@ -32,11 +34,7 @@ final class AppAPIClient: Sendable {
     }
 
     init(sessionConfiguration: URLSessionConfiguration) {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .custom { date, encoder in
-            var container = encoder.singleValueContainer()
-            try container.encode(Int64(date.timeIntervalSince1970 * 1000))
-        }
+        let encoder = Self.makeEncoder()
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
@@ -160,22 +158,20 @@ final class AppAPIClient: Sendable {
     // MARK: - Debug test helpers
 
     #if DEBUG
+    /// In-memory token override — bypasses Keychain so 401-triggered clearSession() can't wipe it.
+    nonisolated(unsafe) static var testTokenOverride: String? = nil
+    /// In-memory sync session override — same rationale as testTokenOverride.
+    nonisolated(unsafe) static var testSyncSessionIDOverride: UUID? = nil
+
     @MainActor
     func setTestToken(_ token: String?) {
-        if let token {
-            SessionStore.shared.saveToken(token)
-        } else {
-            SessionStore.shared.clearSession()
-        }
+        AppAPIClient.testTokenOverride = token
     }
 
     @MainActor
     func setTestSyncSessionID(_ id: UUID?) {
-        if let id {
-            SessionStore.shared.saveSyncSessionID(id)
-        }
+        AppAPIClient.testSyncSessionIDOverride = id
     }
-
     #endif
 }
 

@@ -14,7 +14,17 @@ struct SyncSessionInterceptor: BaseAPI.RequestInterceptor {
         guard let path = request.url?.path, !path.hasPrefix("/auth/") else {
             return request
         }
-        guard let syncSessionID = await SessionStore.shared.getSyncSessionID() else {
+        #if DEBUG
+        let syncSessionID: UUID?
+        if let override = AppAPIClient.testSyncSessionIDOverride {
+            syncSessionID = override
+        } else {
+            syncSessionID = await SessionStore.shared.getSyncSessionID()
+        }
+        #else
+        let syncSessionID = await SessionStore.shared.getSyncSessionID()
+        #endif
+        guard let syncSessionID else {
             return request
         }
         var modified = request

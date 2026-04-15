@@ -229,7 +229,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let updateName = "Updated \(UUID().uuidString.prefix(4))"
-        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, is_hidden: nil)
+        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, isHidden: nil)
         let updated: APICustomCategory = try await AppAPIClient.shared.put(.raw("/categories/\(created.id)"), body: updateRequest)
 
         #expect(updated.name == updateName)
@@ -255,14 +255,14 @@ struct APIIntegrationTests {
         await delay(200)
 
         // Hide it
-        let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, is_hidden: true)
+        let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: true)
         let hidden: APICustomCategory = try await AppAPIClient.shared.put(.raw("/categories/\(created.id)"), body: hideRequest)
         #expect(hidden.isHidden == true)
 
         await delay(200)
 
         // Unhide it
-        let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, is_hidden: false)
+        let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: false)
         let restored: APICustomCategory = try await AppAPIClient.shared.put(.raw("/categories/\(created.id)"), body: unhideRequest)
         #expect(restored.isHidden == false)
     }
@@ -629,7 +629,8 @@ struct APIIntegrationTests {
         await delay(200)
 
         let (response, _): BaseAPI.APIResponse<APIPaginatedResponse<APITransaction>> = try await AppAPIClient.shared.client
-            .request(.raw("/transactions?type=expense"))
+            .request(.raw("/transactions"))
+            .queryParameters(["type": "expense"])
             .response()
 
         #expect(response.data.allSatisfy { $0.type == "expense" })
@@ -641,7 +642,8 @@ struct APIIntegrationTests {
         await delay(200)
 
         let (response, _): BaseAPI.APIResponse<APIPaginatedResponse<APITransaction>> = try await AppAPIClient.shared.client
-            .request(.raw("/transactions?type=income"))
+            .request(.raw("/transactions"))
+            .queryParameters(["type": "income"])
             .response()
 
         #expect(response.data.allSatisfy { $0.type == "income" })
@@ -825,7 +827,8 @@ struct APIIntegrationTests {
         let year = Calendar.current.component(.year, from: Date())
 
         let (response, _): BaseAPI.APIResponse<APIMonthlyDashboardResponse> = try await AppAPIClient.shared.client
-            .request(.raw("/dashboard/monthly?month=\(month)&year=\(year)"))
+            .request(.raw("/dashboard/monthly"))
+            .queryParameters(["month": "\(month)", "year": "\(year)"])
             .response()
 
         #expect(response.totalTransactions != nil)

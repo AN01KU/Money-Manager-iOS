@@ -9,9 +9,17 @@ struct BearerTokenInterceptor: BaseAPI.RequestInterceptor {
         guard let path = request.url?.path, !path.hasPrefix("/auth/") else {
             return request
         }
-        guard let token = await SessionStore.shared.getToken() else {
-            return request
+        #if DEBUG
+        let token: String?
+        if let override = AppAPIClient.testTokenOverride {
+            token = override
+        } else {
+            token = await SessionStore.shared.getToken()
         }
+        #else
+        let token = await SessionStore.shared.getToken()
+        #endif
+        guard let token else { return request }
         var modified = request
         modified.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         return modified

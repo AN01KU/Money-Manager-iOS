@@ -354,7 +354,14 @@ struct APIUpdateCategoryRequest: Codable {
     let name: String?
     let icon: String?
     let color: String?
-    let is_hidden: Bool?
+    let isHidden: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case icon
+        case color
+        case isHidden = "is_hidden"
+    }
 }
 
 // MARK: - Group API Models
