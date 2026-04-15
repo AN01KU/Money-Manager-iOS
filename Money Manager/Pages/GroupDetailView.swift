@@ -195,10 +195,7 @@ struct GroupDetailView: View {
         var grouped: [String: [APIGroupTransaction]] = [:]
 
         for tx in viewModel.transactions {
-            let day = calendar.startOfDay(for: tx.date)
-            let key = calendar.isDateInToday(day)
-                ? "TODAY"
-                : day.formatted(.dateTime.month(.wide).day()).uppercased()
+            let key = calendar.dayKey(for: tx.date)
             grouped[key, default: []].append(tx)
         }
 
