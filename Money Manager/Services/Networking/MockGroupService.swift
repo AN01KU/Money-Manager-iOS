@@ -59,12 +59,15 @@ final class MockGroupService: GroupServiceProtocol {
     }
 
     var stubbedTransactions: [APIGroupTransaction] = []
+    var deleteError: Error? = nil
 
     func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
         stubbedTransactions
     }
 
-    func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {}
+    func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {
+        if let error = deleteError { throw error }
+    }
 
     func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction {
         APIGroupTransaction(
