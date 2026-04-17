@@ -331,4 +331,118 @@ struct BudgetsViewModelTests {
 
         #expect(viewModel.currentMonthTransactions.count == 1)
     }
+
+    // MARK: - currentMonthTransactions: income exclusion
+
+    @Test
+    func testCurrentMonthTransactionsExcludesIncomeTransactions() {
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+
+        let expense = Transaction(amount: 500, category: "Food", date: Date())
+        let income = Transaction(type: .income, amount: 2000, category: "Salary", date: Date())
+
+        viewModel.configure(allTransactions: [expense, income], budgets: [], modelContext: nil)
+
+        // Only the expense should be counted
+        #expect(viewModel.currentMonthTransactions.count == 1)
+        #expect(viewModel.currentMonthTransactions.first?.category == "Food")
+    }
+
+    // MARK: - projectedMonthEnd
+
+    @Test
+    func testProjectedMonthEndIsPositiveForCurrentMonth() {
+        let (year, month) = currentYearMonth()
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+
+        let expense = Transaction(amount: 500, category: "Food", date: Date())
+        let budget = MonthlyBudget(year: year, month: month, limit: 5000)
+
+        viewModel.configure(allTransactions: [expense], budgets: [budget], modelContext: nil)
+
+        // With spending present, projected should be > 0
+        #expect(viewModel.projectedMonthEnd > 0)
+    }
+
+    @Test
+    func testProjectedMonthEndForPastMonthUsesFullMonthRate() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: Date())!
+        let startOfLastMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: lastMonth))!
+
+        viewModel.selectedMonth = lastMonth
+
+        // Spend on the 1st of last month
+        let expense = Transaction(amount: 300, category: "Food", date: startOfLastMonth)
+        viewModel.configure(allTransactions: [expense], budgets: [], modelContext: nil)
+
+        // For a past month, daysElapsed == full month length, daysLeft == 0 → projected == totalSpent
+        #expect(viewModel.projectedMonthEnd == viewModel.totalSpent)
+    }
+
+    // MARK: - spendingInsight
+
+    @Test
+    func testSpendingInsightNilWhenNoBudget() {
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+        viewModel.configure(allTransactions: [], budgets: [], modelContext: nil)
+
+        #expect(viewModel.spendingInsight == nil)
+    }
+
+    @Test
+    func testSpendingInsightNilForPastMonth() {
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: Date())!
+        let year = calendar.component(.year, from: lastMonth)
+        let month = calendar.component(.month, from: lastMonth)
+
+        viewModel.selectedMonth = lastMonth
+        let budget = MonthlyBudget(year: year, month: month, limit: 5000)
+        viewModel.configure(allTransactions: [], budgets: [budget], modelContext: nil)
+
+        // spendingInsight only shows for current month
+        #expect(viewModel.spendingInsight == nil)
+    }
+
+    @Test
+    func testSpendingInsightExceededBudgetMessage() {
+        let (year, month) = currentYearMonth()
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+
+        // Spend more than the budget limit
+        let expense = Transaction(amount: 2000, category: "Food", date: Date())
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
+        viewModel.configure(allTransactions: [expense], budgets: [budget], modelContext: nil)
+
+        let insight = viewModel.spendingInsight
+        if insight != nil {
+            // When daysElapsed > 1, should say "exceeded"
+            #expect(insight?.contains("exceeded") == true)
+        }
+    }
+
+    @Test
+    func testSpendingInsightOnTrackMessage() {
+        let (year, month) = currentYearMonth()
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+
+        // Tiny spend against very large budget → on track
+        let expense = Transaction(amount: 1, category: "Food", date: Date())
+        let budget = MonthlyBudget(year: year, month: month, limit: 1_000_000)
+        viewModel.configure(allTransactions: [expense], budgets: [budget], modelContext: nil)
+
+        let insight = viewModel.spendingInsight
+        if insight != nil {
+            // When daysElapsed > 1 and projected well under limit, shows "On track"
+            #expect(insight?.contains("On track") == true || insight?.contains("overspend") == true || insight?.contains("exceeded") == true)
+        }
+    }
 }

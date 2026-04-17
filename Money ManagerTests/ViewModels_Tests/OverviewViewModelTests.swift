@@ -1088,4 +1088,39 @@ struct OverviewViewModelTests {
 
         #expect(viewModel.netBalance == 0)
     }
+
+    // MARK: - categorySpending: income filter
+
+    @Test
+    func testCategorySpendingUsesIncomeWhenIncomeFilterActive() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        viewModel.transactionTypeFilter = .income
+
+        let income1 = Transaction(type: .income, amount: 500, category: "Work & Professional", date: Date())
+        let income2 = Transaction(type: .income, amount: 300, category: "Other Income", date: Date())
+
+        viewModel.update(allTransactions: [income1, income2], budgets: [], customCategories: [])
+
+        // categorySpending should reflect income categories, not expenses
+        #expect(viewModel.categorySpending.count == 2)
+        let workCategory = viewModel.categorySpending.first { $0.categoryName == "Work & Professional" }
+        #expect(workCategory != nil)
+        #expect(workCategory?.amount == 500)
+    }
+
+    @Test
+    func testCategorySpendingIsEmptyWhenNoSpending() {
+        let viewModel = OverviewViewModel()
+        viewModel.filterMode = .monthly
+        viewModel.selectedDate = Date()
+        viewModel.transactionTypeFilter = .expenses
+
+        // Only income — no expenses → totalSpent == 0 → categorySpending should be empty
+        let income = Transaction(type: .income, amount: 1000, category: "Salary", date: Date())
+        viewModel.update(allTransactions: [income], budgets: [], customCategories: [])
+
+        #expect(viewModel.categorySpending.isEmpty)
+    }
 }

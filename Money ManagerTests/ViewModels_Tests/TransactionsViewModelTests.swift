@@ -213,4 +213,81 @@ struct TransactionsViewModelTests {
         #expect(vm.isConfirmingDelete == false)
         #expect(vm.filteredTransactions.isEmpty)
     }
+
+    // MARK: - Combined filters
+
+    @Test
+    func testCombinedSearchAndTypeFilterNarrowsResults() {
+        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let income = Transaction(type: .income, amount: 500, category: "Food", date: Date())
+        let other = Transaction(amount: 200, category: "Transport", date: Date())
+
+        let vm = makeVM(transactions: [expense, income, other])
+        vm.searchText = "Food"
+        vm.transactionTypeFilter = .expenses
+
+        // Should only return the expense with category "Food"
+        #expect(vm.filteredTransactions.count == 1)
+        #expect(vm.filteredTransactions.first?.type == .expense)
+    }
+
+    @Test
+    func testClearingCategoryFilterRestoresAll() {
+        let food = Transaction(amount: 100, category: "Food", date: Date())
+        let transport = Transaction(amount: 200, category: "Transport", date: Date())
+
+        let vm = makeVM(transactions: [food, transport])
+        vm.selectedCategoryFilter = "Food"
+        #expect(vm.filteredTransactions.count == 1)
+
+        vm.selectedCategoryFilter = nil
+        #expect(vm.filteredTransactions.count == 2)
+    }
+
+    @Test
+    func testTransactionTypeFilterDidSetTriggersRecalculate() {
+        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let income = Transaction(type: .income, amount: 500, category: "Salary", date: Date())
+
+        let vm = makeVM(transactions: [expense, income])
+        #expect(vm.filteredTransactions.count == 2)
+
+        vm.transactionTypeFilter = .income
+        #expect(vm.filteredTransactions.count == 1)
+        #expect(vm.filteredTransactions.first?.type == .income)
+    }
+
+    @Test
+    func testSelectedDateDidSetReFilters() {
+        let calendar = Calendar.current
+        let jan = calendar.date(from: DateComponents(year: 2024, month: 1, day: 15))!
+        let feb = calendar.date(from: DateComponents(year: 2024, month: 2, day: 15))!
+
+        let janExpense = Transaction(amount: 100, category: "Food", date: jan)
+        let febExpense = Transaction(amount: 200, category: "Food", date: feb)
+
+        let vm = TransactionsViewModel()
+        vm.selectedDate = jan
+        vm.update(allTransactions: [janExpense, febExpense], customCategories: [])
+
+        #expect(vm.filteredTransactions.count == 1)
+
+        vm.selectedDate = feb
+        #expect(vm.filteredTransactions.count == 1)
+        #expect(vm.filteredTransactions.first?.amount == 200)
+    }
+
+    @Test
+    func testSearchAndCategoryFilterCombined() {
+        let food1 = Transaction(amount: 100, category: "Food", date: Date(), transactionDescription: "Lunch")
+        let food2 = Transaction(amount: 200, category: "Food", date: Date(), transactionDescription: "Dinner")
+        let transport = Transaction(amount: 50, category: "Transport", date: Date())
+
+        let vm = makeVM(transactions: [food1, food2, transport])
+        vm.selectedCategoryFilter = "Food"
+        vm.searchText = "Lunch"
+
+        #expect(vm.filteredTransactions.count == 1)
+        #expect(vm.filteredTransactions.first?.transactionDescription == "Lunch")
+    }
 }
