@@ -2,9 +2,9 @@
 //  ScreenshotGenerator.swift
 //  Money Manager UITests
 //
-//  Generates screenshots for all app screens using a real test account.
-//  Screenshots are attached to the XCTest result bundle (keepAlways),
-//  then exported to Screenshots/ via `make screenshots`.
+//  Generates screenshots for all app screens using a throw-away test account.
+//  The account is created fresh each run, seeded with realistic data, and
+//  deleted once all screenshots are captured.
 //
 //  Usage:
 //    make screenshots                      → capture all screens
@@ -18,40 +18,53 @@
 
 import XCTest
 
-// MARK: - Credentials (test account only — never a real user account)
-
-private let screenshotEmail    = "ankush@gmail.com"
-private let screenshotPassword = "12345678"
-
 // MARK: - ScreenshotGenerator
 
 final class ScreenshotGenerator: XCTestCase {
 
     var app: XCUIApplication!
+    private let testUser = ScreenshotTestUser()
 
     // MARK: Setup / Teardown
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+
+        var token: String = ""
+        let setupExpectation = expectation(description: "test user created")
+        Task {
+            token = try await testUser.setUp()
+            setupExpectation.fulfill()
+        }
+        wait(for: [setupExpectation], timeout: 30)
+
         app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
             "--screenshotMode",
             "--skipOnboarding",
-            "--testEmail", screenshotEmail,
-            "--testPassword", screenshotPassword
+            "--testEmail", testUser.email,
+            "--testPassword", testUser.password,
+            "--testInviteCode", "ankush@money.manager"
         ]
+        app.launchEnvironment["SCREENSHOT_TOKEN"] = token
         app.launch()
 
-        // App logs in automatically on startup — just wait for the tab bar
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.waitForExistence(timeout: 20), "App did not load after login")
-        wait(seconds: 1.5) // let sync settle
+        wait(seconds: 1.5)
     }
 
     override func tearDownWithError() throws {
         app.terminate()
         app = nil
+
+        let teardownExpectation = expectation(description: "test user deleted")
+        Task {
+            await testUser.tearDown()
+            teardownExpectation.fulfill()
+        }
+        wait(for: [teardownExpectation], timeout: 15)
     }
 
     // MARK: - All Screens
@@ -172,16 +185,16 @@ final class ScreenshotGenerator: XCTestCase {
 
     private func captureScreen(_ tag: ScreenshotTag) throws {
         switch tag {
-        case .overview:       try captureOverview()
+        case .overview:         try captureOverview()
         case .transactionsList: try captureTransactionsList()
         case .addTransaction:   try captureAddTransaction()
-        case .budgets:        try captureBudgets()
-        case .recurringList:  try captureRecurringList()
-        case .categories:     try captureCategories()
-        case .settings:       try captureSettings()
-        case .groupsList:     try captureGroupsList()
-        case .groupDetail:    try captureGroupDetail()
-        case .groupBalances:  try captureGroupBalances()
+        case .budgets:          try captureBudgets()
+        case .recurringList:    try captureRecurringList()
+        case .categories:       try captureCategories()
+        case .settings:         try captureSettings()
+        case .groupsList:       try captureGroupsList()
+        case .groupDetail:      try captureGroupDetail()
+        case .groupBalances:    try captureGroupBalances()
         }
     }
 
@@ -200,14 +213,12 @@ final class ScreenshotGenerator: XCTestCase {
     }
 
     private func tapRow(_ identifier: String) {
-        // NavigationLink in a List is a button in the XCTest hierarchy
         let row = app.buttons.matching(identifier: identifier).firstMatch
         if row.waitForExistence(timeout: 3) {
             row.tap()
         }
     }
 
-    /// Navigate back — works for both nav push and sheet presentation.
     private func goBack() {
         let backButton = app.navigationBars.buttons.firstMatch
         if backButton.waitForExistence(timeout: 1) && backButton.isHittable {
@@ -226,8 +237,6 @@ final class ScreenshotGenerator: XCTestCase {
         app.swipeDown()
     }
 
-    /// Attach screenshot to the XCTest result bundle under the tag's filename.
-    /// The Makefile exports these from .xcresult → Screenshots/ using the manifest.
     private func save(_ tag: ScreenshotTag) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = tag.filename
