@@ -82,6 +82,11 @@ final class AddTransactionTests: XCTestCase {
         XCTAssertTrue(amountField.waitForExistence(timeout: 2))
 
         amountField.tap()
+        // Select all existing content and replace with typed value
+        amountField.press(forDuration: 1.0)
+        if app.menuItems["Select All"].waitForExistence(timeout: 1) {
+            app.menuItems["Select All"].tap()
+        }
         amountField.typeText("1000")
 
         let value = amountField.value as? String ?? ""
