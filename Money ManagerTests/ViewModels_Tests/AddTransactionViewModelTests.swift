@@ -465,6 +465,143 @@ struct AddTransactionViewModelTests {
         #expect(recurring.first?.endDate == nil)
     }
 
+    // MARK: - Recurring amount alert (editing recurring-linked transaction)
+
+    @Test
+    func testSaveShowsRecurringAlertWhenEditingRecurringLinkedWithChangedAmount() throws {
+        let context = try makeContext()
+        // Create a recurring transaction and a linked expense
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        context.insert(recurring)
+
+        let existing = Transaction(
+            amount: 1000,
+            category: "Housing",
+            date: Date(),
+            recurringExpenseId: recurring.id
+        )
+        context.insert(existing)
+        try context.save()
+
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
+        vm.modelContext = context
+        vm.setup()  // sets originalAmount = 1000, editingRecurringExpenseId
+
+        // Change the amount — this should trigger the alert instead of saving
+        vm.amount = "1500"
+        vm.selectedCategory = "Housing"
+
+        var completed = false
+        vm.save { completed = true }
+
+        #expect(vm.showRecurringAmountAlert == true)
+        #expect(completed == false) // alert shown, save deferred
+    }
+
+    @Test
+    func testSaveDoesNotShowAlertWhenAmountUnchanged() throws {
+        let context = try makeContext()
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        context.insert(recurring)
+
+        let existing = Transaction(
+            amount: 1000,
+            category: "Housing",
+            date: Date(),
+            recurringExpenseId: recurring.id
+        )
+        context.insert(existing)
+        try context.save()
+
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
+        vm.modelContext = context
+        vm.setup()  // sets originalAmount = 1000
+
+        // Keep the same amount — no alert expected
+        vm.amount = "1000"
+        vm.selectedCategory = "Housing"
+
+        var completed = false
+        vm.save { completed = true }
+
+        #expect(vm.showRecurringAmountAlert == false)
+        #expect(completed == true)
+    }
+
+    @Test
+    func testSaveAlsoUpdatingRecurringUpdatesRecurringAmount() throws {
+        let context = try makeContext()
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        context.insert(recurring)
+
+        let existing = Transaction(
+            amount: 1000,
+            category: "Housing",
+            date: Date(),
+            recurringExpenseId: recurring.id
+        )
+        context.insert(existing)
+        try context.save()
+
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
+        vm.modelContext = context
+        vm.setup()
+
+        vm.amount = "2000"
+        vm.selectedCategory = "Housing"
+
+        // Trigger save → shows alert (deferred)
+        vm.save { }
+        #expect(vm.showRecurringAmountAlert == true)
+
+        // User chooses to also update the recurring template
+        var completed = false
+        vm.saveAlsoUpdatingRecurring { completed = true }
+
+        #expect(completed == true)
+        // Recurring amount should now be updated
+        let fetchedRecurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(fetchedRecurring.first?.amount == 2000)
+    }
+
+    @Test
+    func testSaveThisTransactionOnlyDoesNotUpdateRecurringTemplate() throws {
+        let context = try makeContext()
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        context.insert(recurring)
+
+        let existing = Transaction(
+            amount: 1000,
+            category: "Housing",
+            date: Date(),
+            recurringExpenseId: recurring.id
+        )
+        context.insert(existing)
+        try context.save()
+
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
+        vm.modelContext = context
+        vm.setup()
+
+        vm.amount = "1500"
+        vm.selectedCategory = "Housing"
+
+        vm.save { }
+        #expect(vm.showRecurringAmountAlert == true)
+
+        // User chooses to update only this transaction
+        vm.saveThisTransactionOnly()
+
+        // Recurring amount stays unchanged
+        let fetchedRecurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(fetchedRecurring.first?.amount == 1000)
+
+        // Transaction is updated
+        let fetchedTx = try context.fetch(FetchDescriptor<Transaction>())
+        let editedTx = fetchedTx.first { $0.recurringExpenseId == recurring.id }
+        #expect(editedTx?.amount == 1500)
+    }
+
     // MARK: - TransactionType init(kind:)
 
     @Test

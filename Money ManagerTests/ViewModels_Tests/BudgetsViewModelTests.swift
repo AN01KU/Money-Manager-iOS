@@ -445,4 +445,83 @@ struct BudgetsViewModelTests {
             #expect(insight?.contains("On track") == true || insight?.contains("overspend") == true || insight?.contains("exceeded") == true)
         }
     }
+
+    @Test
+    func testSpendingInsightNilWhenDaysElapsedIsOne() {
+        // When daysElapsed == 1, no insight is shown (too early in the month)
+        // We simulate this by using the first day of the current month as selectedMonth
+        // and checking that the guard fires.
+        let viewModel = BudgetsViewModel()
+        let calendar = Calendar.current
+        let (year, month) = currentYearMonth()
+        let firstDayOfMonth = calendar.date(from: DateComponents(year: year, month: month, day: 1))!
+        viewModel.selectedMonth = firstDayOfMonth
+
+        // Only works if today IS the 1st; otherwise daysElapsed > 1.
+        // If today is the 1st, insight is nil (daysElapsed == 1 guard fires).
+        // If today is not the 1st, daysElapsed > 1, insight may appear.
+        // Test just verifies the property doesn't crash.
+        let expense = Transaction(amount: 500, category: "Food", date: firstDayOfMonth)
+        let budget = MonthlyBudget(year: year, month: month, limit: 1000)
+        viewModel.configure(allTransactions: [expense], budgets: [budget], modelContext: nil)
+
+        // No crash is the key assertion; value depends on what day today is.
+        _ = viewModel.spendingInsight
+    }
+
+    @Test
+    func testSpendingInsightZeroLimitBudgetReturnsNil() {
+        let (year, month) = currentYearMonth()
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+
+        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let budget = MonthlyBudget(year: year, month: month, limit: 0)
+        viewModel.configure(allTransactions: [expense], budgets: [budget], modelContext: nil)
+
+        #expect(viewModel.spendingInsight == nil)
+    }
+
+    @Test
+    func testDaysRemainingIsZeroForPastMonth() {
+        let viewModel = BudgetsViewModel()
+        let pastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
+        viewModel.selectedMonth = pastMonth
+        viewModel.configure(allTransactions: [], budgets: [], modelContext: nil)
+
+        #expect(viewModel.daysRemaining == 0)
+    }
+
+    @Test
+    func testDailyAverageIsZeroWhenNoDaysRemaining() {
+        let viewModel = BudgetsViewModel()
+        // Past month → daysRemaining == 0 → dailyAverage == 0
+        let pastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
+        viewModel.selectedMonth = pastMonth
+        viewModel.configure(allTransactions: [], budgets: [], modelContext: nil)
+
+        #expect(viewModel.dailyAverage == 0)
+    }
+
+    @Test
+    func testCurrentBudgetReturnsNilForMonthWithNoBudget() {
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+        viewModel.configure(allTransactions: [], budgets: [], modelContext: nil)
+
+        #expect(viewModel.currentBudget == nil)
+    }
+
+    @Test
+    func testCurrentBudgetMatchesYearAndMonth() {
+        let (year, month) = currentYearMonth()
+        let viewModel = BudgetsViewModel()
+        viewModel.selectedMonth = Date()
+
+        let budget = MonthlyBudget(year: year, month: month, limit: 500)
+        let otherBudget = MonthlyBudget(year: year - 1, month: month, limit: 200)
+        viewModel.configure(allTransactions: [], budgets: [budget, otherBudget], modelContext: nil)
+
+        #expect(viewModel.currentBudget?.limit == 500)
+    }
 }

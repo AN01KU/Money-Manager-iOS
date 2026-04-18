@@ -53,6 +53,34 @@ struct ManageCategoriesViewModelTests {
     }
 
     @Test
+    func testHidePredefinedCategoryCreatesHiddenOverrideRow() throws {
+        let context = try makeContext()
+        let predefined = PredefinedCategory.foodDining
+
+        // Predefined category with NO override row yet
+        let category = TransactionCategory(
+            id: "predefined:\(predefined.key)",
+            name: predefined.rawValue,
+            icon: predefined.icon,
+            colorHex: predefined.defaultColorHex,
+            isHidden: false,
+            isPredefined: true,
+            isDeletable: true,
+            overrideRow: nil
+        )
+
+        let viewModel = ManageCategoriesViewModel()
+        viewModel.modelContext = context
+        viewModel.hideCategory(category)
+
+        let rows = try context.fetch(FetchDescriptor<CustomCategory>())
+        #expect(rows.count == 1)
+        #expect(rows.first?.isHidden == true)
+        #expect(rows.first?.predefinedKey == predefined.key)
+        #expect(rows.first?.isPredefined == true)
+    }
+
+    @Test
     func testRestoreCategoryUpdatesOverrideRow() throws {
         let context = try makeContext()
         let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
@@ -523,6 +551,68 @@ struct CategoryEditorViewModelTests {
         let viewModel = CategoryEditorViewModel()
         viewModel.editingPredefinedKey = PredefinedCategory.foodDining.key
         let (_, error) = viewModel.validateName("Food & Dining")
+        #expect(error == nil)
+    }
+
+    @Test
+    func testValidateNameEmptyStringReturnsError() {
+        let viewModel = CategoryEditorViewModel()
+        let (_, error) = viewModel.validateName("")
+        #expect(error == "Category name cannot be empty")
+    }
+
+    @Test
+    func testValidateNameWhitespaceOnlyReturnsError() {
+        let viewModel = CategoryEditorViewModel()
+        let (_, error) = viewModel.validateName("   ")
+        #expect(error == "Category name cannot be empty")
+    }
+
+    @Test
+    func testValidateNameDuplicateCustomCategoryReturnsError() {
+        let viewModel = CategoryEditorViewModel()
+        let existing = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        viewModel.allCategories = [existing]
+        let (_, error) = viewModel.validateName("Fitness")
+        #expect(error != nil)
+        #expect(error?.contains("already exists") == true)
+    }
+
+    @Test
+    func testValidateNameCaseInsensitiveDuplicateDetection() {
+        let viewModel = CategoryEditorViewModel()
+        let existing = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        viewModel.allCategories = [existing]
+        let (_, error) = viewModel.validateName("FITNESS")
+        #expect(error != nil)
+    }
+
+    @Test
+    func testValidateNameHiddenCustomCategoryIsNotDuplicate() {
+        let viewModel = CategoryEditorViewModel()
+        let hidden = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        hidden.isHidden = true
+        viewModel.allCategories = [hidden]
+        let (_, error) = viewModel.validateName("Fitness")
+        // Hidden categories are excluded from duplicate check
+        #expect(error == nil)
+    }
+
+    @Test
+    func testValidateNameExcludingIdSkipsOwnEntry() {
+        let viewModel = CategoryEditorViewModel()
+        let own = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        viewModel.allCategories = [own]
+        let (_, error) = viewModel.validateName("Fitness", excludingId: own.id)
+        // Excluding own id → no duplicate → valid
+        #expect(error == nil)
+    }
+
+    @Test
+    func testValidateNameValidUniqueNameReturnsNilError() {
+        let viewModel = CategoryEditorViewModel()
+        let (trimmed, error) = viewModel.validateName("  My Custom  ")
+        #expect(trimmed == "My Custom")
         #expect(error == nil)
     }
 }

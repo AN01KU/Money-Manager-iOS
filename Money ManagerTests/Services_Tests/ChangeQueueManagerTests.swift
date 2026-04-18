@@ -210,6 +210,29 @@ struct ChangeQueueManagerTests {
         #expect(all.count == 0)
     }
 
+    // MARK: - enqueue default branch (delete then update = inserts new alongside existing)
+
+    @Test
+    func testEnqueueDeleteThenUpdateKeepsBothChanges() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager()
+        manager.configure(container: container)
+        let id = UUID()
+
+        // Enqueue a delete first
+        manager.enqueue(entityType: "expense", entityID: id, action: "delete",
+                        endpoint: "/expenses/\(id)", httpMethod: "DELETE", payload: nil, context: context)
+
+        // Now enqueue an update for the same entity — hits the default branch
+        manager.enqueue(entityType: "expense", entityID: id, action: "update",
+                        endpoint: "/expenses/\(id)", httpMethod: "PUT", payload: nil, context: context)
+
+        let changes = try context.fetch(FetchDescriptor<PendingChange>())
+        // Default branch inserts a NEW change alongside the existing delete → 2 changes
+        #expect(changes.count == 2)
+    }
+
     // MARK: - pendingCount
 
     @Test

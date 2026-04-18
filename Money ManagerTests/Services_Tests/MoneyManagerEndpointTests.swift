@@ -75,6 +75,37 @@ struct MoneyManagerEndpointTests {
         #expect(MoneyManagerEndpoint.settlements.path == "/settlements")
     }
 
+    // MARK: - Remaining sync paths
+
+    @Test func testSyncCategoriesPath() {
+        #expect(MoneyManagerEndpoint.syncCategories.path == "/categories")
+    }
+
+    @Test func testSyncBudgetsPath() {
+        #expect(MoneyManagerEndpoint.syncBudgets.path == "/budgets")
+    }
+
+    @Test func testSyncRecurringPath() {
+        #expect(MoneyManagerEndpoint.syncRecurring.path == "/recurring-transactions")
+    }
+
+    // MARK: - Remaining group paths
+
+    @Test func testGroupAddMemberPath() {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
+        #expect(MoneyManagerEndpoint.groupAddMember(id).path == "/groups/00000000-0000-0000-0000-000000000005/add-member")
+    }
+
+    @Test func testGroupBalancesPath() {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000006")!
+        #expect(MoneyManagerEndpoint.groupBalances(id).path == "/groups/00000000-0000-0000-0000-000000000006/balances")
+    }
+
+    @Test func testGroupTransactionsPath() {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000007")!
+        #expect(MoneyManagerEndpoint.groupTransactions(id).path == "/groups/00000000-0000-0000-0000-000000000007/transactions")
+    }
+
     // MARK: - Raw path
 
     @Test func testRawPathPassthrough() {
