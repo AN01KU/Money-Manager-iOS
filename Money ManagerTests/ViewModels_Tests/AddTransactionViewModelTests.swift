@@ -426,4 +426,66 @@ struct AddTransactionViewModelTests {
         let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
         #expect(recurring.first?.dayOfMonth == nil)
     }
+
+    @Test
+    func testSaveWithRecurringHasEndDatePersistsEndDate() throws {
+        let context = try makeContext()
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.modelContext = context
+        vm.amount = "500"
+        vm.selectedCategory = "Housing"
+        vm.description = "Lease"
+        vm.isRecurring = true
+        vm.recurringFrequency = .monthly
+        vm.recurringHasEndDate = true
+        let endDate = Calendar.current.date(byAdding: .month, value: 6, to: Date())!
+        vm.recurringEndDate = endDate
+
+        vm.save {}
+
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(recurring.first?.endDate != nil)
+    }
+
+    @Test
+    func testSaveWithRecurringNoEndDateSetsNilEndDate() throws {
+        let context = try makeContext()
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.modelContext = context
+        vm.amount = "500"
+        vm.selectedCategory = "Housing"
+        vm.description = "Ongoing rent"
+        vm.isRecurring = true
+        vm.recurringFrequency = .monthly
+        vm.recurringHasEndDate = false  // no end date
+
+        vm.save {}
+
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(recurring.first?.endDate == nil)
+    }
+
+    // MARK: - TransactionType init(kind:)
+
+    @Test
+    func testTransactionTypeInitFromIncomeKind() {
+        let type = TransactionType(kind: .income)
+        #expect(type == .income)
+    }
+
+    @Test
+    func testTransactionTypeInitFromExpenseKind() {
+        let type = TransactionType(kind: .expense)
+        #expect(type == .expense)
+    }
+
+    @Test
+    func testTransactionTypeKindForExpense() {
+        #expect(TransactionType.expense.kind == .expense)
+    }
+
+    @Test
+    func testTransactionTypeKindForIncome() {
+        #expect(TransactionType.income.kind == .income)
+    }
 }
