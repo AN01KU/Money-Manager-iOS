@@ -170,6 +170,34 @@ struct ManageCategoriesViewModelTests {
     }
 
     @Test
+    func testConfirmDeleteReassignsLinkedRecurringTransactions() throws {
+        let context = try makeContext()
+
+        let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let recurring = RecurringTransaction(name: "Grocery", amount: 500, category: "Food", frequency: .monthly)
+        recurring.categoryId = row.id
+
+        context.insert(row)
+        context.insert(recurring)
+        try context.save()
+
+        let category = TransactionCategory(
+            id: "custom:\(row.id.uuidString)",
+            name: row.name, icon: row.icon, colorHex: row.color,
+            isHidden: false, isPredefined: false, isDeletable: true,
+            overrideRow: row
+        )
+
+        let viewModel = ManageCategoriesViewModel()
+        viewModel.modelContext = context
+        viewModel.deleteCategory(category)
+        viewModel.confirmDelete()
+
+        #expect(recurring.category == "Other")
+        #expect(recurring.categoryId == nil)
+    }
+
+    @Test
     func testConfirmDeleteWithNoCategorySetDoesNothing() {
         let viewModel = ManageCategoriesViewModel()
         let initialTrigger = viewModel.deleteConfirmedTrigger
