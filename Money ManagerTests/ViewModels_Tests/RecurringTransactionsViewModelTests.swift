@@ -159,6 +159,29 @@ struct RecurringTransactionsViewModelTests {
         #expect(paused.isSoftDeleted == true)
     }
 
+    @Test
+    func testDeleteItemUnlinksLinkedTransactions() throws {
+        let context = ModelContext(try makeTestContainer())
+
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        context.insert(recurring)
+
+        let tx = Transaction(amount: 1000, category: "Housing", date: Date(), recurringExpenseId: recurring.id)
+        context.insert(tx)
+        try context.save()
+
+        let persistence = PersistenceService(changeQueue: MockChangeQueueManager.shared)
+        persistence.modelContext = context
+        let viewModel = RecurringTransactionsViewModel(persistence: persistence)
+        viewModel.update(recurring: [recurring])
+
+        viewModel.deleteItem(recurring)
+
+        let transactions = try context.fetch(FetchDescriptor<Transaction>())
+        #expect(transactions.first?.recurringExpenseId == nil)
+        #expect(recurring.isSoftDeleted == true)
+    }
+
     // MARK: - upcomingTotalThisMonth
 
     // nextOccurrence for daily items with yesterday as startDate lands on tomorrow,

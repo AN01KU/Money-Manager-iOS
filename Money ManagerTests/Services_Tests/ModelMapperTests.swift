@@ -256,4 +256,62 @@ struct ModelMapperTests {
         #expect(cat.icon == "🏋️")
         #expect(cat.color == "#FF0000")
     }
+
+    // MARK: - Transaction.applyRemote — group/settlement fields
+
+    @Test
+    func testApplyRemoteSetsGroupAndSettlementIds() throws {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let groupTxId = UUID()
+        let settlementId = UUID()
+        let groupId = UUID()
+
+        let json = """
+        {
+            "id": "\(transaction.id.uuidString)",
+            "user_id": "\(UUID().uuidString)",
+            "type": "expense",
+            "amount": 100,
+            "category": "Food",
+            "date": "2024-06-01T00:00:00Z",
+            "is_deleted": false,
+            "group_transaction_id": "\(groupTxId.uuidString)",
+            "settlement_id": "\(settlementId.uuidString)",
+            "group_id": "\(groupId.uuidString)",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-06-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+        let api = try Self.decoder.decode(APITransaction.self, from: json)
+        transaction.applyRemote(api)
+
+        #expect(transaction.groupTransactionId == groupTxId)
+        #expect(transaction.settlementId == settlementId)
+        #expect(transaction.groupId == groupId)
+    }
+
+    @Test
+    func testApplyRemoteSetsRecurringExpenseId() throws {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let recurringId = UUID()
+
+        let json = """
+        {
+            "id": "\(transaction.id.uuidString)",
+            "user_id": "\(UUID().uuidString)",
+            "type": "expense",
+            "amount": 100,
+            "category": "Food",
+            "date": "2024-06-01T00:00:00Z",
+            "is_deleted": false,
+            "recurring_transaction_id": "\(recurringId.uuidString)",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-06-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+        let api = try Self.decoder.decode(APITransaction.self, from: json)
+        transaction.applyRemote(api)
+
+        #expect(transaction.recurringExpenseId == recurringId)
+    }
 }
