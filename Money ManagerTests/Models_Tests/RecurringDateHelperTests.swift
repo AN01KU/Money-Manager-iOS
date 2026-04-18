@@ -205,7 +205,52 @@ struct DateExtensionTests {
     func testShortDateStringDoesNotContainTime() {
         let date = Date()
         let formatted = date.shortDateString
-        
+
         #expect(!formatted.contains(":"))
+    }
+
+    // MARK: - nextOccurrence: past endDate returns nil
+
+    @Test
+    func testNextOccurrenceReturnsNilWhenPastEndDate() {
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+        let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: Date())!
+
+        let recurring = RecurringTransaction(
+            name: "Old Subscription",
+            amount: 100,
+            category: "Entertainment",
+            frequency: .daily,
+            startDate: twoDaysAgo,
+            endDate: yesterday,  // endDate is in the past
+            isActive: true
+        )
+
+        // nextOccurrence would be tomorrow, but endDate is yesterday → should return nil
+        #expect(recurring.nextOccurrence == nil)
+    }
+
+    // MARK: - nextOccurrence: weekly with specific days of week
+
+    @Test
+    func testNextOccurrenceWeeklyWithEmptyDaysOfWeekFallsBack() {
+        let calendar = Calendar.current
+        let lastWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: Date())!
+
+        let recurring = RecurringTransaction(
+            name: "Weekly",
+            amount: 200,
+            category: "Food",
+            frequency: .weekly,
+            daysOfWeek: [], // empty → falls back to weekly interval
+            startDate: lastWeek,
+            isActive: true
+        )
+
+        let next = recurring.nextOccurrence
+        #expect(next != nil)
+        // next should be after today
+        #expect(next! > Date())
     }
 }

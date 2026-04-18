@@ -341,4 +341,89 @@ struct AddTransactionViewModelTests {
         #expect(components.hour == 0)
         #expect(components.minute == 0)
     }
+
+    // MARK: - isRecurring validation
+
+    @Test
+    func testIsValidFalseWhenRecurringEnabledButDescriptionBlank() {
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.amount = "500"
+        vm.selectedCategory = "Food"
+        vm.isRecurring = true
+        vm.description = "  "  // blank
+
+        #expect(vm.isValid == false)
+    }
+
+    @Test
+    func testIsValidTrueWhenRecurringEnabledWithDescription() {
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.amount = "500"
+        vm.selectedCategory = "Food"
+        vm.isRecurring = true
+        vm.description = "Monthly Rent"
+
+        #expect(vm.isValid == true)
+    }
+
+    // MARK: - isRecurring save creates RecurringTransaction
+
+    @Test
+    func testSaveWithRecurringCreatesRecurringTransaction() throws {
+        let context = try makeContext()
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.modelContext = context
+        vm.amount = "5000"
+        vm.selectedCategory = "Housing"
+        vm.description = "Monthly Rent"
+        vm.isRecurring = true
+        vm.recurringFrequency = .monthly
+        vm.recurringDayOfMonth = 1
+
+        vm.save {}
+
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(recurring.count == 1)
+        #expect(recurring.first?.name == "Monthly Rent")
+        #expect(recurring.first?.frequency == .monthly)
+
+        // The transaction should link to the recurring template
+        let transactions = try context.fetch(FetchDescriptor<Transaction>())
+        #expect(transactions.first?.recurringExpenseId == recurring.first?.id)
+    }
+
+    @Test
+    func testSaveWithRecurringMonthlySetsDayOfMonth() throws {
+        let context = try makeContext()
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.modelContext = context
+        vm.amount = "1000"
+        vm.selectedCategory = "Food"
+        vm.description = "Subscription"
+        vm.isRecurring = true
+        vm.recurringFrequency = .monthly
+        vm.recurringDayOfMonth = 15
+
+        vm.save {}
+
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(recurring.first?.dayOfMonth == 15)
+    }
+
+    @Test
+    func testSaveWithRecurringNonMonthlyDoesNotSetDayOfMonth() throws {
+        let context = try makeContext()
+        let vm = AddTransactionViewModel(mode: .personal())
+        vm.modelContext = context
+        vm.amount = "200"
+        vm.selectedCategory = "Food"
+        vm.description = "Weekly lunch"
+        vm.isRecurring = true
+        vm.recurringFrequency = .weekly
+
+        vm.save {}
+
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        #expect(recurring.first?.dayOfMonth == nil)
+    }
 }
