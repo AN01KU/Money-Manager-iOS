@@ -7,12 +7,18 @@ import SwiftUI
 
 
 struct GroupDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: GroupDetailViewModel
     @State private var selectedTransaction: APIGroupTransaction?
     @State private var transactionToEdit: APIGroupTransaction?
+    @State private var showRenameAlert = false
+    @State private var renameText = ""
 
-    init(group: APIGroupWithDetails, currentUserId: UUID?) {
+    var onGroupDeleted: ((UUID) -> Void)?
+
+    init(group: APIGroupWithDetails, currentUserId: UUID?, onGroupDeleted: ((UUID) -> Void)? = nil) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group, currentUserId: currentUserId))
+        self.onGroupDeleted = onGroupDeleted
     }
 
     var body: some View {
@@ -42,6 +48,42 @@ struct GroupDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(viewModel.group.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                GroupDetailMenuButton(
+                    isCreator: viewModel.currentUserId == viewModel.group.createdBy,
+                    onRename: {
+                        renameText = viewModel.group.name
+                        showRenameAlert = true
+                    },
+                    onDelete: { viewModel.showDeleteGroup = true },
+                    onLeave: { viewModel.showLeaveGroup = true }
+                )
+            }
+        }
+        .alert("Rename Group", isPresented: $showRenameAlert) {
+            TextField("Group name", text: $renameText)
+            Button("Rename") { viewModel.renameGroup(to: renameText) }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Delete Group", isPresented: $viewModel.showDeleteGroup) {
+            Button("Delete", role: .destructive) { viewModel.deleteGroup() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete the group and all its transactions. This cannot be undone.")
+        }
+        .alert("Leave Group", isPresented: $viewModel.showLeaveGroup) {
+            Button("Leave", role: .destructive) { viewModel.leaveGroup() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll no longer have access to this group. Make sure all balances are settled before leaving.")
+        }
+        .onChange(of: viewModel.didDeleteOrLeave) { _, deleted in
+            if deleted {
+                onGroupDeleted?(viewModel.group.id)
+                dismiss()
+            }
+        }
         .sheet(isPresented: $viewModel.showAddTransaction) {
             AddTransactionView(
                 mode: .shared(
@@ -124,12 +166,15 @@ struct GroupDetailView: View {
         switch viewModel.selectedSection {
         case .transactions:
             FloatingActionButton(icon: "plus") { viewModel.showAddTransaction = true }
+                .accessibilityIdentifier("group-detail.add-transaction-button")
         case .balances:
             if viewModel.hasUnsettledBalances {
                 FloatingActionButton(icon: "arrow.left.arrow.right") { viewModel.showSettlement = true }
+                    .accessibilityIdentifier("group-detail.settle-button")
             }
         case .members:
             FloatingActionButton(icon: "person.badge.plus") { viewModel.showAddMember = true }
+                .accessibilityIdentifier("group-detail.add-member-button")
         }
     }
 
@@ -156,6 +201,7 @@ struct GroupDetailView: View {
                                             GroupTransactionRow(transaction: transaction, members: viewModel.members, currentUserId: viewModel.currentUserId)
                                         }
                                         .buttonStyle(.plain)
+                                        .accessibilityIdentifier("group-detail.transaction-row")
                                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                             if transaction.paidByUserId == viewModel.currentUserId {
                                                 Button(role: .destructive) {
@@ -291,6 +337,16 @@ struct GroupDetailView: View {
                                 isAdmin: member.id == viewModel.group.createdBy,
                                 isPending: viewModel.isPending(member)
                             )
+                            .swipeActions(edge: .trailing) {
+                                if viewModel.currentUserId == viewModel.group.createdBy
+                                    && member.id != viewModel.group.createdBy {
+                                    Button(role: .destructive) {
+                                        viewModel.removeMember(member)
+                                    } label: {
+                                        Label("Remove", systemImage: "person.badge.minus")
+                                    }
+                                }
+                            }
                             if index < viewModel.members.count - 1 {
                                 Divider().padding(.leading, 58)
                             }
@@ -303,6 +359,41 @@ struct GroupDetailView: View {
                     .padding(.bottom, 80)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Toolbar Menu
+
+private struct GroupDetailMenuButton: View {
+    let isCreator: Bool
+    let onRename: () -> Void
+    let onDelete: () -> Void
+    let onLeave: () -> Void
+
+    var body: some View {
+        Menu {
+            if isCreator {
+                Button {
+                    onRename()
+                } label: {
+                    Label("Rename Group", systemImage: "pencil")
+                }
+                Divider()
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Group", systemImage: "trash")
+                }
+            } else {
+                Button(role: .destructive) {
+                    onLeave()
+                } label: {
+                    Label("Leave Group", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
         }
     }
 }

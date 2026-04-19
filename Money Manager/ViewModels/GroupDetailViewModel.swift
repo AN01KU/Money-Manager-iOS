@@ -49,6 +49,15 @@ final class GroupDetailViewModel {
     var showAddTransaction = false
     var showSettlement = false
 
+    // Rename group
+    var showRenameGroup = false
+    var isRenamed = false
+
+    // Delete / leave group
+    var showDeleteGroup = false
+    var showLeaveGroup = false
+    var didDeleteOrLeave = false
+
     let groupService: GroupServiceProtocol
     let currentUserId: UUID?
 
@@ -120,6 +129,73 @@ final class GroupDetailViewModel {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
         isLoading = false
+    }
+
+    // MARK: - Rename Group
+
+    func renameGroup(to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        Task {
+            do {
+                let updated = try await groupService.renameGroup(groupId: group.id, name: trimmed)
+                group = APIGroupWithDetails(
+                    id: updated.id,
+                    name: updated.name,
+                    createdBy: updated.createdBy,
+                    createdAt: updated.createdAt,
+                    members: members,
+                    balances: balances
+                )
+                isRenamed = true
+            } catch {
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Delete Group
+
+    func deleteGroup() {
+        Task {
+            do {
+                try await groupService.deleteGroup(groupId: group.id)
+                didDeleteOrLeave = true
+            } catch {
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Remove Member
+
+    func removeMember(_ member: APIGroupMember) {
+        let original = members
+        members.removeAll { $0.id == member.id }
+
+        Task {
+            do {
+                try await groupService.removeMember(groupId: group.id, userId: member.id)
+                let updated = try await groupService.fetchMembers(groupId: group.id)
+                members = updated
+            } catch {
+                members = original
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Leave Group
+
+    func leaveGroup() {
+        Task {
+            do {
+                try await groupService.leaveGroup(groupId: group.id)
+                didDeleteOrLeave = true
+            } catch {
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+        }
     }
 
     // MARK: - Add Member (optimistic, invite semantics)

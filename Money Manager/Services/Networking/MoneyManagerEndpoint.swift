@@ -5,6 +5,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
 
     // MARK: - Auth
     case me
+    case updateMe
     case login
     case signup
     case logout
@@ -22,7 +23,9 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
     case groups
     case group(UUID)
     case groupMembers(UUID)
+    case groupMember(groupId: UUID, userId: UUID)
     case groupAddMember(UUID)
+    case groupLeave(UUID)
     case groupBalances(UUID)
     case groupTransactions(UUID)
     case groupTransaction(groupId: UUID, transactionId: UUID)
@@ -43,6 +46,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
     var path: String {
         switch self {
         case .me:                           return "/me"
+        case .updateMe:                     return "/me"
         case .login:                        return "/auth/login"
         case .signup:                       return "/auth/signup"
         case .logout:                       return "/auth/logout"
@@ -55,7 +59,9 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .groups:                       return "/groups"
         case .group(let id):                return "/groups/\(id.uuidString)"
         case .groupMembers(let id):         return "/groups/\(id.uuidString)/members"
+        case .groupMember(let gid, let uid): return "/groups/\(gid.uuidString)/members/\(uid.uuidString)"
         case .groupAddMember(let id):       return "/groups/\(id.uuidString)/add-member"
+        case .groupLeave(let id):           return "/groups/\(id.uuidString)/leave"
         case .groupBalances(let id):        return "/groups/\(id.uuidString)/balances"
         case .groupTransactions(let id):    return "/groups/\(id.uuidString)/transactions"
         case .groupTransaction(let gid, let tid):

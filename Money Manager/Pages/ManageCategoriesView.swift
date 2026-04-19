@@ -132,6 +132,7 @@ struct ManageCategoriesView: View {
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: addTriggered)
                 .accessibilityLabel("Add category")
+                .accessibilityIdentifier("categories.add-button")
             }
         }
         .sheet(isPresented: $viewModel.showAddCategory) {

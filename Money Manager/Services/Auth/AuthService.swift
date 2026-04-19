@@ -116,6 +116,16 @@ final class AuthService: AuthServiceProtocol {
     }
 
     @MainActor
+    func updateProfile(username: String?, email: String?, password: String?) async throws {
+        let request = APIUpdateMeRequest(username: username, email: email, password: password)
+        let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
+        authState = .authenticated(updatedUser)
+        if let email = updatedUser.email as String? {
+            session.saveLastLoggedInEmail(email.lowercased())
+        }
+    }
+
+    @MainActor
     func logout() {
         let syncSessionID = session.getSyncSessionID()
         session.clearSession()

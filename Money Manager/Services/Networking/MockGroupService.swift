@@ -36,6 +36,16 @@ final class MockGroupService: GroupServiceProtocol {
         return APIGroup(id: UUID(), name: name, createdBy: UUID(), createdAt: Date())
     }
 
+    func renameGroup(groupId: UUID, name: String) async throws -> APIGroup {
+        APIGroup(id: groupId, name: name, createdBy: UUID(), createdAt: Date())
+    }
+
+    func deleteGroup(groupId: UUID) async throws {}
+
+    func removeMember(groupId: UUID, userId: UUID) async throws {}
+
+    func leaveGroup(groupId: UUID) async throws {}
+
     func fetchGroupDetails(groupId: UUID) async throws -> APIGroupDetails {
         if let details = stubbedGroupDetails { return details }
         let body = APIGroupDetailsBody(

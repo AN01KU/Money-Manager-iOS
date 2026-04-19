@@ -43,6 +43,17 @@ final class MockAuthService: AuthServiceProtocol {
         authState = .authenticated(APIUser(id: UUID(), email: email, username: username, createdAt: Date()))
     }
 
+    func updateProfile(username: String?, email: String?, password: String?) async throws {
+        if case .authenticated(let user) = authState {
+            authState = .authenticated(APIUser(
+                id: user.id,
+                email: email ?? user.email,
+                username: username ?? user.username,
+                createdAt: user.createdAt
+            ))
+        }
+    }
+
     func logout() {
         authState = .guest
     }

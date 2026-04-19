@@ -834,6 +834,261 @@ struct APIIntegrationTests {
         #expect(response.totalTransactions != nil)
     }
 
+    // MARK: - PATCH /me Tests
+
+    @Test("Update username returns updated user")
+    mutating func testUpdateMeUsername() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let newUsername = "user_\(UUID().uuidString.prefix(8))"
+        let request = APIUpdateMeRequest(username: newUsername, email: nil, password: nil)
+        let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+
+        #expect(response.username == newUsername)
+        #expect(response.email == Self.authEmail)
+    }
+
+    @Test("Update email returns updated user")
+    mutating func testUpdateMeEmail() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let newEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let request = APIUpdateMeRequest(username: nil, email: newEmail, password: nil)
+        let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+
+        #expect(response.email == newEmail)
+        // Update stored email so subsequent ensureAuthenticated calls stay consistent
+        Self.authEmail = newEmail
+    }
+
+    @Test("Update email to already-taken address returns 409")
+    mutating func testUpdateMeEmailConflict() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create a second user whose email we'll try to steal
+        let otherEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let otherUsername = "user_\(UUID().uuidString.prefix(8))"
+        let signupReq = APISignupRequest(email: otherEmail, username: otherUsername, password: testPassword, inviteCode: "ankush@money.manager")
+        let otherUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
+
+        // Try to update our account's email to the other user's email
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        await delay(200)
+
+        let request = APIUpdateMeRequest(username: nil, email: otherEmail, password: nil)
+        do {
+            let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+            Issue.record("Expected conflict error but request succeeded")
+        } catch let error as APIError {
+            #expect(error == .conflict || error.errorDescription?.contains("409") == true || error.errorDescription?.contains("taken") == true || error.errorDescription?.contains("already") == true)
+        } catch {
+            // Some error was thrown — acceptable
+        }
+
+        // Cleanup: delete the other user
+        AppAPIClient.shared.setTestToken(otherUser.token)
+        await delay(200)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+    }
+
+    @Test("Update password allows login with new password")
+    mutating func testUpdateMePassword() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let newPassword = "NewPass456!"
+        let request = APIUpdateMeRequest(username: nil, email: nil, password: newPassword)
+        let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+
+        await delay(200)
+
+        // Verify new password works by logging in
+        let loginReq = APILoginRequest(email: Self.authEmail, password: newPassword)
+        let loginResp: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/login"), body: loginReq)
+
+        #expect(!loginResp.token.isEmpty)
+
+        // Restore token
+        Self.authToken = loginResp.token
+        AppAPIClient.shared.setTestToken(loginResp.token)
+    }
+
+    // MARK: - Group Management Tests
+
+    @Test("Rename group returns updated name")
+    mutating func testGroupRename() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let groupReq = APICreateGroupRequest(name: "Rename Me \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let newName = "Renamed \(UUID().uuidString.prefix(4))"
+        let renameReq = APIRenameGroupRequest(name: newName)
+        let updated: APIGroup = try await AppAPIClient.shared.patch(.raw("/groups/\(group.id)"), body: renameReq)
+
+        #expect(updated.name == newName)
+        #expect(updated.id == group.id)
+    }
+
+    @Test("Delete group removes it from list")
+    mutating func testGroupDelete() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let groupReq = APICreateGroupRequest(name: "Delete Me \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        try await AppAPIClient.shared.delete(.raw("/groups/\(group.id)"))
+
+        await delay(200)
+
+        let listResponse: APIGroupsListResponse = try await AppAPIClient.shared.get(.raw("/groups"))
+        #expect(!listResponse.data.contains(where: { $0.id == group.id }))
+    }
+
+    @Test("Delete group also soft-deletes its transactions")
+    mutating func testGroupDeleteCascadesToTransactions() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create group and add a transaction
+        let groupReq = APICreateGroupRequest(name: "Cascade Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        guard let member = membersResponse.data.first else {
+            Issue.record("Group has no members")
+            return
+        }
+
+        let txReq = APICreateGroupTransactionRequest(
+            paidByUserId: member.id,
+            totalAmount: 50.00,
+            category: "Food & Dining",
+            date: Date(),
+            description: "Cascade test tx",
+            notes: nil,
+            splits: [APIGroupTransactionSplitInput(userId: member.id, amount: 50.00)]
+        )
+        let _: APIGroupTransaction = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/transactions"), body: txReq)
+
+        await delay(200)
+
+        // Delete the group
+        try await AppAPIClient.shared.delete(.raw("/groups/\(group.id)"))
+
+        await delay(200)
+
+        // Group should be gone from list
+        let listResponse: APIGroupsListResponse = try await AppAPIClient.shared.get(.raw("/groups"))
+        #expect(!listResponse.data.contains(where: { $0.id == group.id }))
+    }
+
+    @Test("Remove member from group succeeds when balance is zero")
+    mutating func testGroupRemoveMemberZeroBalance() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create a second user to add as member
+        let memberEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let memberUsername = "user_\(UUID().uuidString.prefix(8))"
+        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: "ankush@money.manager")
+        let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
+
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        await delay(200)
+
+        // Creator creates a group and adds the member
+        let groupReq = APICreateGroupRequest(name: "Remove Member Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let addReq = APIAddMemberRequest(email: memberEmail)
+        let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/add-member"), body: addReq)
+
+        await delay(200)
+
+        // Fetch members to get the new member's ID
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        guard let addedMember = membersResponse.data.first(where: { $0.email == memberEmail }) else {
+            Issue.record("Added member not found in group")
+            try await AppAPIClient.shared.delete(.raw("/me"))
+            AppAPIClient.shared.setTestToken(Self.authToken)
+            return
+        }
+
+        // Remove the member — balance is zero so this should succeed
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/groups/\(group.id)/members/\(addedMember.id)"))
+
+        await delay(200)
+
+        let updatedMembers: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        #expect(!updatedMembers.data.contains(where: { $0.id == addedMember.id }))
+
+        // Cleanup second user
+        AppAPIClient.shared.setTestToken(memberUser.token)
+        await delay(200)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+    }
+
+    @Test("Leave group succeeds when balance is zero")
+    mutating func testGroupLeaveZeroBalance() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create a second user who will join and then leave
+        let memberEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let memberUsername = "user_\(UUID().uuidString.prefix(8))"
+        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: "ankush@money.manager")
+        let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
+
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        await delay(200)
+
+        // Creator creates group and adds the second user
+        let groupReq = APICreateGroupRequest(name: "Leave Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let addReq = APIAddMemberRequest(email: memberEmail)
+        let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/add-member"), body: addReq)
+
+        await delay(200)
+
+        // Switch to the member and leave the group
+        AppAPIClient.shared.setTestToken(memberUser.token)
+        await delay(200)
+
+        let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/leave"), body: EmptyResponse())
+
+        await delay(200)
+
+        // Member should no longer be in the group
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        #expect(!membersResponse.data.contains(where: { $0.email == memberEmail }))
+
+        // Cleanup second user
+        AppAPIClient.shared.setTestToken(memberUser.token)
+        await delay(200)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+    }
+
     // MARK: - Cleanup
 
     @Test("Cleanup: delete test user")

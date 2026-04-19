@@ -20,6 +20,7 @@ struct SettingsView: View {
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
+    @State private var showEditProfile = false
     @State private var isSyncingManually = false
     #if DEBUG
     @State private var showSyncDebug = false
@@ -33,6 +34,7 @@ struct SettingsView: View {
                         ProfileSection(
                             username: user.username,
                             email: user.email,
+                            onEditProfile: { showEditProfile = true },
                             onLogOut: { showLogoutConfirmation = true }
                         )
                     }
@@ -85,6 +87,11 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showSignupSheet) {
                 SignupView()
+            }
+            .sheet(isPresented: $showEditProfile) {
+                if let user = authService.currentUser {
+                    EditProfileView(currentUsername: user.username, currentEmail: user.email)
+                }
             }
             .alert("Log Out", isPresented: $showLogoutConfirmation) {
                 Button("Log Out", role: .destructive) {
@@ -147,33 +154,45 @@ private struct LoginPromptSection: View {
 private struct ProfileSection: View {
     let username: String
     let email: String
+    let onEditProfile: () -> Void
     let onLogOut: () -> Void
 
     var body: some View {
         Section {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.accent.opacity(0.12))
-                        .frame(width: 56, height: 56)
+            Button(action: onEditProfile) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(AppColors.accent.opacity(0.12))
+                            .frame(width: 56, height: 56)
 
-                    Text(String(username.prefix(1)).uppercased())
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppColors.accent)
+                        Text(String(username.prefix(1)).uppercased())
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppColors.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(username)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(username)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-
-                    Text(email)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.edit-profile-button")
 
             Button(role: .destructive) {
                 onLogOut()
@@ -223,10 +242,12 @@ private struct PreferencesSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityIdentifier("settings.currency-row")
 
             NavigationLink(value: SettingsRoute.backup) {
                 Label("Backup", systemImage: "archivebox.fill")
             }
+            .accessibilityIdentifier("settings.backup-row")
         }
     }
 }

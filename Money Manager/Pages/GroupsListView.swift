@@ -32,7 +32,9 @@ struct GroupsListView: View {
                 prompt: viewModel.selectedTab == .groups ? "Search groups" : "Search activity"
             )
             .navigationDestination(for: APIGroupWithDetails.self) { group in
-                GroupDetailView(group: group, currentUserId: authService.currentUser?.id)
+                GroupDetailView(group: group, currentUserId: authService.currentUser?.id) { deletedId in
+                    viewModel.groups.removeAll { $0.id == deletedId }
+                }
             }
             .sheet(isPresented: $showCreateGroup) {
                 CreateGroupSheet(groupService: viewModel.groupService) { newGroup in

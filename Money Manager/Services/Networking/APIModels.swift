@@ -185,6 +185,12 @@ struct EmptyResponse: Codable {
     init(from decoder: Decoder) throws {}
 }
 
+struct APIUpdateMeRequest: Codable, Sendable {
+    let username: String?
+    let email: String?
+    let password: String?
+}
+
 struct APISignupRequest: Codable {
     let email: String
     let username: String
@@ -513,6 +519,10 @@ struct APIGroupTransactionSplitInput: Codable, Sendable {
 }
 
 struct APICreateGroupRequest: Codable, Sendable {
+    let name: String
+}
+
+struct APIRenameGroupRequest: Codable, Sendable {
     let name: String
 }
 

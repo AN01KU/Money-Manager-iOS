@@ -21,6 +21,15 @@ final class GroupService: GroupServiceProtocol {
         return try await apiClient.post(.groups, body: request)
     }
 
+    func renameGroup(groupId: UUID, name: String) async throws -> APIGroup {
+        let request = APIRenameGroupRequest(name: name)
+        return try await apiClient.patch(.group(groupId), body: request)
+    }
+
+    func deleteGroup(groupId: UUID) async throws {
+        try await apiClient.delete(.group(groupId))
+    }
+
     func fetchGroupDetails(groupId: UUID) async throws -> APIGroupDetails {
         try await apiClient.get(.group(groupId))
     }
@@ -33,6 +42,14 @@ final class GroupService: GroupServiceProtocol {
     func addMember(groupId: UUID, email: String) async throws {
         let request = APIAddMemberRequest(email: email)
         let _: APIMessageResponse = try await apiClient.post(.groupAddMember(groupId), body: request)
+    }
+
+    func removeMember(groupId: UUID, userId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.deleteMessage(.groupMember(groupId: groupId, userId: userId))
+    }
+
+    func leaveGroup(groupId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.post(.groupLeave(groupId), body: EmptyResponse())
     }
 
     func fetchBalances(groupId: UUID) async throws -> [APIGroupBalance] {
