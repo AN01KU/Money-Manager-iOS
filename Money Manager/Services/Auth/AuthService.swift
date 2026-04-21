@@ -73,6 +73,7 @@ final class AuthService: AuthServiceProtocol {
     func login(email: String, password: String) async throws {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
 
         // If a different user was previously logged in, wipe their local data first
         let normalizedEmail = email.lowercased()
@@ -87,9 +88,7 @@ final class AuthService: AuthServiceProtocol {
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
             authState = .authenticated(response.user)
-            isLoading = false
         } catch {
-            isLoading = false
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             throw error
         }
@@ -99,6 +98,7 @@ final class AuthService: AuthServiceProtocol {
     func signup(email: String, username: String, password: String, inviteCode: String) async throws {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
 
         do {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
@@ -107,9 +107,7 @@ final class AuthService: AuthServiceProtocol {
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(email.lowercased())
             authState = .authenticated(response.user)
-            isLoading = false
         } catch {
-            isLoading = false
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             throw error
         }
@@ -120,9 +118,7 @@ final class AuthService: AuthServiceProtocol {
         let request = APIUpdateMeRequest(username: username, email: email, password: password)
         let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
         authState = .authenticated(updatedUser)
-        if let email = updatedUser.email as String? {
-            session.saveLastLoggedInEmail(email.lowercased())
-        }
+        session.saveLastLoggedInEmail(updatedUser.email.lowercased())
     }
 
     @MainActor

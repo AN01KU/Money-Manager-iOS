@@ -149,7 +149,7 @@ final class GroupDetailViewModel {
                 )
                 isRenamed = true
             } catch {
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -162,7 +162,7 @@ final class GroupDetailViewModel {
                 try await groupService.deleteGroup(groupId: group.id)
                 didDeleteOrLeave = true
             } catch {
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -180,7 +180,7 @@ final class GroupDetailViewModel {
                 members = updated
             } catch {
                 members = original
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -193,7 +193,7 @@ final class GroupDetailViewModel {
                 try await groupService.leaveGroup(groupId: group.id)
                 didDeleteOrLeave = true
             } catch {
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -216,7 +216,7 @@ final class GroupDetailViewModel {
                 let updated = try await groupService.fetchMembers(groupId: group.id)
                 members = updated
             } catch {
-                addMemberError = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                addMemberError = errorDescription(error)
             }
             pendingMemberEmails.remove(trimmed)
         }
@@ -246,7 +246,7 @@ final class GroupDetailViewModel {
                     transactions[idx] = old
                 }
                 recalculateBalances()
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -264,7 +264,7 @@ final class GroupDetailViewModel {
                 // Restore on failure
                 transactions.insert(transaction, at: 0)
                 recalculateBalances()
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -291,6 +291,10 @@ final class GroupDetailViewModel {
     }
 
     // MARK: - Private
+
+    private func errorDescription(_ error: Error) -> String {
+        (error as? APIError)?.errorDescription ?? error.localizedDescription
+    }
 
     private func recalculateBalances() {
         var map: [UUID: Double] = [:]

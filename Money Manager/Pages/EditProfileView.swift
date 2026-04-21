@@ -19,6 +19,7 @@ struct EditProfileView: View {
     @State private var confirmPassword = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showError = false
     @State private var showSuccess = false
 
     init(currentUsername: String, currentEmail: String) {
@@ -80,11 +81,8 @@ struct EditProfileView: View {
                         .background(.ultraThinMaterial)
                 }
             }
-            .alert("Error", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("OK") { errorMessage = nil }
+            .alert("Error", isPresented: $showError) {
+                Button("OK") {}
             } message: {
                 Text(errorMessage ?? "")
             }
@@ -127,6 +125,7 @@ struct EditProfileView: View {
                 showSuccess = true
             } catch {
                 errorMessage = error.localizedDescription
+                showError = true
             }
             isLoading = false
         }
