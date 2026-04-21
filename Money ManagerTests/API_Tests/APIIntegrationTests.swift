@@ -1094,6 +1094,16 @@ struct APIIntegrationTests {
     @Test("Cleanup: delete test user")
     func testCleanupDeleteUser() async throws {
         guard !Self.authToken.isEmpty else { return }
+
+        // Delete all groups owned by the test user before deleting the account.
+        // The backend blocks DELETE /me if the user still owns any groups.
+        let me: APIUser? = try? await AppAPIClient.shared.get(.raw("/me"))
+        let groups: APIGroupsListResponse? = try? await AppAPIClient.shared.get(.raw("/groups"))
+        for group in groups?.data.filter({ $0.createdBy == me?.id }) ?? [] {
+            try? await AppAPIClient.shared.delete(.raw("/groups/\(group.id)"))
+            await delay(100)
+        }
+
         await delay(200)
         try await AppAPIClient.shared.delete(.raw("/me"))
     }
