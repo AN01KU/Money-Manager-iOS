@@ -96,6 +96,23 @@ final class MockGroupService: GroupServiceProtocol {
         )
     }
 
+    func updateGroupTransaction(_ request: APIUpdateGroupTransactionRequest, groupId: UUID, transactionId: UUID) async throws -> APIGroupTransaction {
+        APIGroupTransaction(
+            id: transactionId,
+            groupId: groupId,
+            paidByUserId: UUID(),
+            totalAmount: 0,
+            category: request.category ?? "",
+            date: request.date ?? Date(),
+            description: request.description,
+            notes: request.notes,
+            isDeleted: false,
+            createdAt: Date(),
+            updatedAt: Date(),
+            splits: []
+        )
+    }
+
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         APISettlement(
             id: UUID(),

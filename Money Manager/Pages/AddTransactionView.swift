@@ -25,11 +25,19 @@ struct AddTransactionView: View {
 
                 if viewModel.isShared {
                     AddTransactionSharedDescriptionSection(viewModel: viewModel)
-                    AddTransactionPaidBySection(viewModel: viewModel)
-                    AddTransactionSplitSection(viewModel: viewModel)
-                    AddTransactionSplitMembersSection(viewModel: viewModel)
-                    if viewModel.splitType == .custom && !viewModel.selectedMembers.isEmpty {
-                        AddTransactionSplitSummarySection(viewModel: viewModel)
+                    if viewModel.isEditingShared {
+                        Section {
+                            Label("Amount and split cannot be changed after creation.", systemImage: "lock.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        AddTransactionPaidBySection(viewModel: viewModel)
+                        AddTransactionSplitSection(viewModel: viewModel)
+                        AddTransactionSplitMembersSection(viewModel: viewModel)
+                        if viewModel.splitType == .custom && !viewModel.selectedMembers.isEmpty {
+                            AddTransactionSplitSummarySection(viewModel: viewModel)
+                        }
                     }
                 } else {
                     AddTransactionTypeSection(viewModel: viewModel)
@@ -118,15 +126,19 @@ private struct AddTransactionAmountSection: View {
                     .keyboardType(.decimalPad)
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .disabled(viewModel.isEditingShared)
+                    .foregroundStyle(viewModel.isEditingShared ? .secondary : .primary)
                     .accessibilityIdentifier("amount-field")
 
-                HStack(spacing: 12) {
-                    QuickAmountButton(amount: 100) { amount100Tapped += 1; viewModel.amount = "100" }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
-                    QuickAmountButton(amount: 500) { amount500Tapped += 1; viewModel.amount = "500" }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
-                    QuickAmountButton(amount: 1000) { amount1000Tapped += 1; viewModel.amount = "1000" }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amount1000Tapped)
+                if !viewModel.isEditingShared {
+                    HStack(spacing: 12) {
+                        QuickAmountButton(amount: 100) { amount100Tapped += 1; viewModel.amount = "100" }
+                            .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
+                        QuickAmountButton(amount: 500) { amount500Tapped += 1; viewModel.amount = "500" }
+                            .sensoryFeedback(.impact(weight: .light), trigger: amount500Tapped)
+                        QuickAmountButton(amount: 1000) { amount1000Tapped += 1; viewModel.amount = "1000" }
+                            .sensoryFeedback(.impact(weight: .light), trigger: amount1000Tapped)
+                    }
                 }
             }
             .padding(.vertical, 8)

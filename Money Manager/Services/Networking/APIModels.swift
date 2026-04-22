@@ -550,6 +550,13 @@ struct APICreateGroupTransactionRequest: Codable, Sendable {
     }
 }
 
+struct APIUpdateGroupTransactionRequest: Codable, Sendable {
+    let category: String?
+    let date: Date?
+    let description: String?
+    let notes: String?
+}
+
 struct APIGroupMembersResponse: Codable, Sendable {
     let members: [APIGroupMember]
 }

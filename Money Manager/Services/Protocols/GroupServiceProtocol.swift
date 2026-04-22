@@ -17,6 +17,7 @@ protocol GroupServiceProtocol: Sendable {
     func leaveGroup(groupId: UUID) async throws
     func fetchBalances(groupId: UUID) async throws -> [APIGroupBalance]
     func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction
+    func updateGroupTransaction(_ request: APIUpdateGroupTransactionRequest, groupId: UUID, transactionId: UUID) async throws -> APIGroupTransaction
     func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction]
     func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement

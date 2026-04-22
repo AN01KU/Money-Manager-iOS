@@ -60,6 +60,10 @@ final class GroupService: GroupServiceProtocol {
         try await apiClient.post(.groupTransactions(groupId), body: request)
     }
 
+    func updateGroupTransaction(_ request: APIUpdateGroupTransactionRequest, groupId: UUID, transactionId: UUID) async throws -> APIGroupTransaction {
+        try await apiClient.patch(.groupTransaction(groupId: groupId, transactionId: transactionId), body: request)
+    }
+
     func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
         let response: APIListResponse<APIGroupTransaction> = try await apiClient.get(.groupTransactions(groupId))
         return response.data
