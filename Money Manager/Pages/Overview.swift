@@ -171,21 +171,11 @@ private struct OverviewHeaderCard: View {
 
                 Spacer()
 
-                // Daily / Monthly toggle pill
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.filterMode = viewModel.filterMode == .daily ? .monthly : .daily
-                    }
-                } label: {
-                    Text(viewModel.filterMode == .daily ? "Daily" : "Monthly")
-                        .font(AppTypography.chip)
-                        .foregroundStyle(AppColors.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(AppColors.accentLight)
-                        .clipShape(Capsule())
+                // Daily / Monthly mode selector
+                HStack(spacing: 4) {
+                    FilterModeChip(label: "Daily",   isSelected: viewModel.filterMode == .daily)   { withAnimation(.easeInOut(duration: 0.2)) { viewModel.filterMode = .daily } }
+                    FilterModeChip(label: "Monthly", isSelected: viewModel.filterMode == .monthly) { withAnimation(.easeInOut(duration: 0.2)) { viewModel.filterMode = .monthly } }
                 }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -364,6 +354,27 @@ private struct BudgetInlineRow: View {
                 }
                 .frame(height: 5)
             }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Filter Mode Chip
+
+private struct FilterModeChip: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(isSelected ? AppTypography.chipSelected : AppTypography.chip)
+                .foregroundStyle(isSelected ? .white : AppColors.accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(isSelected ? AppColors.accent : AppColors.accentLight)
+                .clipShape(Capsule())
         }
         .buttonStyle(.plain)
     }

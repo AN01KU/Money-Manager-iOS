@@ -60,7 +60,7 @@ struct AddTransactionView: View {
                     }
                 }
             }
-            .sheet(isPresented: $viewModel.showCategoryPicker) {
+            .navigationDestination(isPresented: $viewModel.showCategoryPicker) {
                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
             }
             .alert("Update Recurring Transaction?", isPresented: $viewModel.showRecurringAmountAlert) {
