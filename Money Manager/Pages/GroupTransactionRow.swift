@@ -19,6 +19,11 @@ struct GroupTransactionRow: View {
         CategoryResolver.resolve(transaction.category, customCategories: [])
     }
 
+    private var currentUserShare: Double? {
+        guard let uid = currentUserId else { return nil }
+        return transaction.splits.first(where: { $0.userId == uid })?.amount
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
@@ -48,9 +53,17 @@ struct GroupTransactionRow: View {
 
             Spacer()
 
-            Text(CurrencyFormatter.format(amount, showDecimals: true))
-                .font(AppTypography.amount)
-                .foregroundStyle(isCurrentUserInvolved ? .primary : .secondary)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(CurrencyFormatter.format(amount, showDecimals: true))
+                    .font(AppTypography.amount)
+                    .foregroundStyle(isCurrentUserInvolved ? .primary : .secondary)
+
+                if let share = currentUserShare, share != amount {
+                    Text("your share: \(CurrencyFormatter.format(share, showDecimals: true))")
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

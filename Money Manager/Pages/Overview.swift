@@ -99,6 +99,14 @@ private struct OverviewScrollContent: View {
                 .accessibilityIdentifier("overview.empty-state")
                 .padding(.horizontal)
             }
+
+            if !viewModel.recentTransactions.isEmpty {
+                OverviewRecentTransactions(
+                    transactions: viewModel.recentTransactions,
+                    onGroupTapped: nil
+                )
+                .padding(.horizontal)
+            }
         }
         .padding(.bottom, 100)
     }
@@ -356,6 +364,39 @@ private struct BudgetInlineRow: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Recent Transactions
+
+private struct OverviewRecentTransactions: View {
+    let transactions: [Transaction]
+    let onGroupTapped: ((UUID) -> Void)?
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+
+    private var categoryLookup: [String: CustomCategory] {
+        CategoryResolver.makeLookup(from: customCategories)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("RECENT")
+                .font(AppTypography.sectionHeader)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(transactions.enumerated()), id: \.element.persistentModelID) { index, transaction in
+                    TransactionRow(transaction: transaction, categoryLookup: categoryLookup, onGroupTapped: onGroupTapped)
+
+                    if index < transactions.count - 1 {
+                        Divider().padding(.leading, 58)
+                    }
+                }
+            }
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 14))
+        }
     }
 }
 

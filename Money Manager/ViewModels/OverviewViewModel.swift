@@ -19,6 +19,7 @@ enum TransactionTypeFilter: String, CaseIterable {
     var transactionTypeFilter: TransactionTypeFilter = .all { didSet { if oldValue != transactionTypeFilter { recalculate() } } }
 
     var filteredTransactions: [Transaction] = []
+    var recentTransactions: [Transaction] = []
     var currentBudget: MonthlyBudget?
     var dailyBudgetLimit: Double = 0
     var totalSpent: Double = 0
@@ -148,6 +149,9 @@ enum TransactionTypeFilter: String, CaseIterable {
         } else {
             categorySpending = []
         }
+
+        // Recent transactions: up to 8 from the filtered period, unaffected by type/search filters
+        recentTransactions = Array(dateFiltered.prefix(8))
     }
 
     func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {

@@ -45,6 +45,17 @@ final class GroupDetailViewModel {
     }
     var pendingMemberEmails: Set<String> = []
 
+    // Transaction search
+    var transactionSearchText = ""
+
+    var filteredTransactions: [APIGroupTransaction] {
+        guard !transactionSearchText.isEmpty else { return transactions }
+        return transactions.filter { tx in
+            (tx.description?.localizedStandardContains(transactionSearchText) ?? false) ||
+            tx.category.localizedStandardContains(transactionSearchText)
+        }
+    }
+
     // Add transaction / settle
     var showAddTransaction = false
     var showSettlement = false

@@ -147,6 +147,11 @@ struct GroupDetailView: View {
                 groupService: viewModel.groupService
             )
         }
+        .searchable(text: $viewModel.transactionSearchText, prompt: "Search transactions")
+        .searchPresentationToolbarBehavior(.avoidHidingContent)
+        .onChange(of: viewModel.selectedSection) { _, _ in
+            viewModel.transactionSearchText = ""
+        }
         .task {
             await viewModel.loadData()
         }
@@ -182,6 +187,9 @@ struct GroupDetailView: View {
         Group {
             if viewModel.transactions.isEmpty {
                 EmptyStateView(icon: "receipt", title: "No Transactions", message: "Add the first transaction to this group.")
+                    .frame(maxHeight: .infinity)
+            } else if viewModel.filteredTransactions.isEmpty {
+                EmptyStateView(icon: "magnifyingglass", title: "No results", message: "No transactions match your search.")
                     .frame(maxHeight: .infinity)
             } else {
                 ScrollView {
@@ -240,7 +248,7 @@ struct GroupDetailView: View {
         let calendar = Calendar.current
         var grouped: [String: [APIGroupTransaction]] = [:]
 
-        for tx in viewModel.transactions {
+        for tx in viewModel.filteredTransactions {
             let key = calendar.dayKey(for: tx.date)
             grouped[key, default: []].append(tx)
         }
@@ -335,7 +343,8 @@ struct GroupDetailView: View {
                             GroupMemberRow(
                                 member: member,
                                 isAdmin: member.id == viewModel.group.createdBy,
-                                isPending: viewModel.isPending(member)
+                                isPending: viewModel.isPending(member),
+                                balance: viewModel.balances.first(where: { $0.userId == member.id })?.amount
                             )
                             .swipeActions(edge: .trailing) {
                                 if viewModel.currentUserId == viewModel.group.createdBy

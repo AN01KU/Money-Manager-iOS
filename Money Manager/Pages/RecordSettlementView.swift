@@ -42,10 +42,25 @@ struct RecordSettlementView: View {
         return suggested > 0 ? suggested : nil
     }
 
+    private var enteredAmount: Double? { Double(amount) }
+
+    private var maxSettlementAmount: Double? {
+        guard let fromId = fromUserId, let toId = toUserId else { return nil }
+        let fromBal = abs(balances.first(where: { $0.userId == fromId })?.amount ?? 0)
+        let toBal   = abs(balances.first(where: { $0.userId == toId })?.amount ?? 0)
+        let max = min(fromBal, toBal)
+        return max > 0 ? max : nil
+    }
+
+    private var amountExceedsBalance: Bool {
+        guard let entered = enteredAmount, let max = maxSettlementAmount else { return false }
+        return entered > max + 0.001
+    }
+
     private var isFormValid: Bool {
         guard let from = fromUserId, let to = toUserId,
               from != to,
-              let amt = Double(amount), amt > 0 else { return false }
+              let amt = enteredAmount, amt > 0 else { return false }
         return true
     }
 
@@ -116,6 +131,14 @@ struct RecordSettlementView: View {
                                     .font(.caption)
                                     .foregroundStyle(AppColors.accent)
                             }
+                        }
+                        if amountExceedsBalance, let max = maxSettlementAmount {
+                            Label(
+                                "Amount exceeds the owed balance of \(CurrencyFormatter.format(max, showDecimals: true))",
+                                systemImage: "exclamationmark.triangle.fill"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(AppColors.warning)
                         }
                     }
                     .padding(.vertical, 4)
