@@ -161,7 +161,8 @@ private struct TransactionsMonthSelector: View {
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
                 DatePicker("Select Month", selection: $viewModel.selectedDate, displayedComponents: [.date])
-                    .datePickerStyle(.graphical)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
                     .padding()
                     .navigationTitle("Select Month")
                     .navigationBarTitleDisplayMode(.inline)
@@ -171,7 +172,7 @@ private struct TransactionsMonthSelector: View {
                         }
                     }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.height(300)])
         }
     }
 }

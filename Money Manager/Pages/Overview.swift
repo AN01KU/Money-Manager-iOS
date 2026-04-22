@@ -275,9 +275,10 @@ private struct OverviewHeaderCard: View {
                 DatePicker(
                     "Select \(viewModel.filterMode == .daily ? "Date" : "Month")",
                     selection: $viewModel.selectedDate,
-                    displayedComponents: viewModel.filterMode == .daily ? [.date] : [.date]
+                    displayedComponents: [.date]
                 )
-                .datePickerStyle(.graphical)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
                 .padding()
                 .navigationTitle("Select \(viewModel.filterMode == .daily ? "Date" : "Month")")
                 .navigationBarTitleDisplayMode(.inline)
@@ -287,7 +288,7 @@ private struct OverviewHeaderCard: View {
                     }
                 }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.height(300)])
         }
     }
 

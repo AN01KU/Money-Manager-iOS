@@ -89,6 +89,20 @@ import SwiftData
         return totalSpent + (dailyRate * Double(daysLeft))
     }
 
+    var insightIcon: String {
+        guard let budget = currentBudget, budget.limit > 0 else { return "checkmark.circle.fill" }
+        if totalSpent >= budget.limit { return "exclamationmark.triangle.fill" }
+        if projectedMonthEnd > budget.limit { return "arrow.up.circle.fill" }
+        return "checkmark.circle.fill"
+    }
+
+    var insightColor: Color {
+        guard let budget = currentBudget, budget.limit > 0 else { return AppColors.positive }
+        if totalSpent >= budget.limit { return AppColors.expense }
+        if projectedMonthEnd > budget.limit { return AppColors.budgetCaution }
+        return AppColors.positive
+    }
+
     /// Human-readable spending insight for the current budget period.
     var spendingInsight: String? {
         guard let budget = currentBudget, budget.limit > 0 else { return nil }

@@ -199,6 +199,8 @@ private struct ProfileSection: View {
             } label: {
                 Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
             }
+        } footer: {
+            Text("Logging out will stop syncing on this device. Your local data is retained.")
         }
     }
 }

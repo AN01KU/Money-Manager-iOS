@@ -189,6 +189,7 @@ private struct AddTransactionDateTimeSection: View {
     @Bindable var viewModel: AddTransactionViewModel
 
     @State private var todayTapped = 0
+    @State private var yesterdayTapped = 0
 
     var body: some View {
         Section {
@@ -207,8 +208,10 @@ private struct AddTransactionDateTimeSection: View {
                     QuickDateButton(label: "Today") { todayTapped += 1; viewModel.selectedDate = Date() }
                         .sensoryFeedback(.impact(weight: .light), trigger: todayTapped)
                     QuickDateButton(label: "Yesterday") {
+                        yesterdayTapped += 1
                         viewModel.selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                     }
+                    .sensoryFeedback(.impact(weight: .light), trigger: yesterdayTapped)
                 }
             }
             .padding(.vertical, 8)
@@ -234,7 +237,7 @@ private struct AddTransactionDetailsSection: View {
     @Bindable var viewModel: AddTransactionViewModel
 
     var body: some View {
-        Section(viewModel.isRecurring ? "Details" : "Details") {
+        Section("Details") {
             TextField(
                 viewModel.isRecurring ? "Name * (e.g., Rent, Netflix)" : "Description (e.g., Lunch at cafe)",
                 text: $viewModel.description

@@ -38,8 +38,8 @@ struct BudgetsView: View {
 
                     if let insight = viewModel.spendingInsight {
                         HStack(spacing: 8) {
-                            Image(systemName: viewModel.totalSpent >= budget.limit ? "exclamationmark.triangle.fill" : viewModel.projectedMonthEnd > budget.limit ? "arrow.up.circle.fill" : "checkmark.circle.fill")
-                                .foregroundStyle(viewModel.totalSpent >= budget.limit ? AppColors.expense : viewModel.projectedMonthEnd > budget.limit ? AppColors.budgetCaution : AppColors.positive)
+                            Image(systemName: viewModel.insightIcon)
+                                .foregroundStyle(viewModel.insightColor)
                             Text(insight)
                                 .font(.subheadline)
                                 .foregroundStyle(.primary)
