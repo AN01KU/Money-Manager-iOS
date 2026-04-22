@@ -280,11 +280,27 @@ final class GroupDetailViewModel {
         }
     }
 
-    // MARK: - After settlement recorded
+    // MARK: - After settlement recorded / deleted
 
     func settlementRecorded(_ settlement: APISettlement) {
         settlements.insert(settlement, at: 0)
         Task { await loadData() }
+    }
+
+    func deleteSettlement(_ settlement: APISettlement) {
+        let original = settlements
+        settlements.removeAll { $0.id == settlement.id }
+
+        Task {
+            do {
+                try await groupService.deleteSettlement(settlementId: settlement.id)
+                // Reload to get authoritative balances from server
+                await loadData()
+            } catch {
+                settlements = original
+                errorMessage = errorDescription(error)
+            }
+        }
     }
 
     // MARK: - Helpers

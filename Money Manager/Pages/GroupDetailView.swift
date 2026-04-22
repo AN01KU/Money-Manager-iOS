@@ -313,6 +313,17 @@ struct GroupDetailView: View {
                                             members: viewModel.members,
                                             currentUserId: viewModel.currentUserId
                                         )
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            let isInvolved = settlement.fromUser == viewModel.currentUserId
+                                                || settlement.toUser == viewModel.currentUserId
+                                            if isInvolved {
+                                                Button(role: .destructive) {
+                                                    viewModel.deleteSettlement(settlement)
+                                                } label: {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                            }
+                                        }
                                         if index < viewModel.settlements.count - 1 {
                                             Divider().padding(.leading, 58)
                                         }

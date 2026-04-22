@@ -76,4 +76,8 @@ final class GroupService: GroupServiceProtocol {
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         try await apiClient.post(.settlements, body: request)
     }
+
+    func deleteSettlement(settlementId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.deleteMessage(.settlement(settlementId))
+    }
 }

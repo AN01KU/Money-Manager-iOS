@@ -113,6 +113,8 @@ final class MockGroupService: GroupServiceProtocol {
         )
     }
 
+    func deleteSettlement(settlementId: UUID) async throws {}
+
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         APISettlement(
             id: UUID(),

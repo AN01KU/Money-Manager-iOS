@@ -30,6 +30,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
     case groupTransactions(UUID)
     case groupTransaction(groupId: UUID, transactionId: UUID)
     case settlements
+    case settlement(UUID)
 
     // MARK: - Raw path escape (used by ChangeQueueManager replay)
     /// Allows the change-queue replay to use dynamically-built paths that cannot
@@ -67,6 +68,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .groupTransaction(let gid, let tid):
             return "/groups/\(gid.uuidString)/transactions/\(tid.uuidString)"
         case .settlements:                  return "/settlements"
+        case .settlement(let id):           return "/settlements/\(id.uuidString)"
         case .raw(let path):                return path
         }
     }
