@@ -136,7 +136,7 @@ struct BudgetSheet: View {
             existing.updatedAt = Date()
             budgetID = existing.id
             action = "update"
-            httpMethod = "PUT"
+            httpMethod = "PATCH"
         } else {
             let budget = MonthlyBudget(
                 year: year,

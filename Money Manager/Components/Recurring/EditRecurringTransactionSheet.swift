@@ -228,7 +228,7 @@ struct EditRecurringTransactionSheet: View {
                 entityID: recurring.id,
                 action: "update",
                 endpoint: "/recurring-transactions",
-                httpMethod: "PUT",
+                httpMethod: "PATCH",
                 payload: payload,
                 context: modelContext
             )

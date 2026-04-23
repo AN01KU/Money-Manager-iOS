@@ -88,7 +88,7 @@ final class PersistenceService {
             httpMethod = "POST"
             payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest())
         case "update":
-            httpMethod = "PUT"
+            httpMethod = "PATCH"
             payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
         case "delete":
             httpMethod = "DELETE"
@@ -116,7 +116,7 @@ final class PersistenceService {
             httpMethod = "POST"
             payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest())
         case "update":
-            httpMethod = "PUT"
+            httpMethod = "PATCH"
             payload = try? AppAPIClient.apiEncoder.encode(category.toUpdateRequest())
         case "delete":
             httpMethod = "DELETE"

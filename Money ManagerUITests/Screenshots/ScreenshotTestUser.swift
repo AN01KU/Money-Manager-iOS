@@ -179,7 +179,7 @@ final class ScreenshotTestUser {
         groupId = gid
 
         // Invite the second user so the Members tab shows 2 people.
-        try await post("/groups/\(gid)/add-member", body: ["email": memberEmail], token: token)
+        try await post("/groups/\(gid)/members", body: ["email": memberEmail], token: token)
 
         // Fetch members to resolve UUIDs for the split.
         let membersResponse = try await get("/groups/\(gid)/members", token: token)

@@ -61,7 +61,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .group(let id):                return "/groups/\(id.uuidString)"
         case .groupMembers(let id):         return "/groups/\(id.uuidString)/members"
         case .groupMember(let gid, let uid): return "/groups/\(gid.uuidString)/members/\(uid.uuidString)"
-        case .groupAddMember(let id):       return "/groups/\(id.uuidString)/add-member"
+        case .groupAddMember(let id):       return "/groups/\(id.uuidString)/members"
         case .groupLeave(let id):           return "/groups/\(id.uuidString)/leave"
         case .groupBalances(let id):        return "/groups/\(id.uuidString)/balances"
         case .groupTransactions(let id):    return "/groups/\(id.uuidString)/transactions"

@@ -93,7 +93,7 @@ struct MoneyManagerEndpointTests {
 
     @Test func testGroupAddMemberPath() {
         let id = UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
-        #expect(MoneyManagerEndpoint.groupAddMember(id).path == "/groups/00000000-0000-0000-0000-000000000005/add-member")
+        #expect(MoneyManagerEndpoint.groupAddMember(id).path == "/groups/00000000-0000-0000-0000-000000000005/members")
     }
 
     @Test func testGroupBalancesPath() {
