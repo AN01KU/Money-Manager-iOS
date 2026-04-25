@@ -8,10 +8,14 @@
 import SwiftUI
 
 struct CurrencyPickerView: View {
+    @Environment(\.authService) private var authService
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var searchText = ""
     @State private var selectionToggled = 0
-    
+    @State private var isUpdating = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+
     private var filteredCurrencies: [(code: String, name: String, symbol: String)] {
         if searchText.isEmpty {
             return CurrencyFormatter.supportedCurrencies
@@ -23,13 +27,14 @@ struct CurrencyPickerView: View {
             $0.symbol.contains(query)
         }
     }
-    
+
     var body: some View {
         List {
             ForEach(filteredCurrencies, id: \.code) { currency in
                 Button {
+                    guard !isUpdating, currency.code != selectedCurrency else { return }
                     selectionToggled += 1
-                    selectedCurrency = currency.code
+                    Task { await select(currency.code) }
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
@@ -55,10 +60,15 @@ struct CurrencyPickerView: View {
                         Spacer()
 
                         if selectedCurrency == currency.code {
-                            Image(systemName: "checkmark")
-                                .font(.body)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(AppColors.accent)
+                            if isUpdating {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "checkmark")
+                                    .font(.body)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppColors.accent)
+                            }
                         }
                     }
                 }
@@ -68,6 +78,25 @@ struct CurrencyPickerView: View {
         .searchable(text: $searchText, prompt: "Search currencies")
         .navigationTitle("Currency")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+    }
+
+    private func select(_ code: String) async {
+        let previous = selectedCurrency
+        selectedCurrency = code
+        isUpdating = true
+        do {
+            try await authService.updateCurrency(code)
+        } catch {
+            selectedCurrency = previous
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            showError = true
+        }
+        isUpdating = false
     }
 }
 

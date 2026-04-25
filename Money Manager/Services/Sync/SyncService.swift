@@ -397,16 +397,22 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        // Remove locally-generated recurring transactions that the server doesn't know about.
-        // These are orphans created by the iOS RecurringTransactionService before the
-        // "only generate when not logged in" guard was in place.
+        // Remove local transactions that the server no longer returns and have no pending upload.
+        // The server responds with is_deleted=false only, so anything missing from that set is
+        // either soft-deleted on the server or an orphan (e.g. stale settlement/group transactions).
+        //
+        // We only purge transactions that are server-owned (settlement, group, or recurring) —
+        // plain personal transactions without a pending change are left alone to avoid
+        // accidentally wiping entries created offline before a first sync.
         let serverIDs = Set(apiTransactions.map { $0.id })
         for local in localTransactions {
-            guard let _ = local.recurringExpenseId else { continue }   // only recurring-generated
-            guard !local.isSoftDeleted else { continue }
-            guard !serverIDs.contains(local.id) else { continue }      // not on server
-            guard !pendingIDs.contains(local.id) else { continue }     // no pending upload
-            AppLogger.sync.debug("Purging locally-generated recurring txn not on server: \(local.id)")
+            guard !serverIDs.contains(local.id) else { continue }      // still on server — keep
+            guard !pendingIDs.contains(local.id) else { continue }     // pending upload — keep
+            let isServerOwned = local.settlementId != nil
+                || local.groupTransactionId != nil
+                || local.recurringExpenseId != nil
+            guard isServerOwned else { continue }                      // personal offline txn — keep
+            AppLogger.sync.debug("Purging server-owned transaction not on server: \(local.id) settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
             context.delete(local)
         }
 
@@ -471,6 +477,15 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
+        // Purge local recurring transactions the server no longer returns and have no pending upload.
+        let serverRecurringIDs = Set(apiExpenses.map { $0.id })
+        for local in localRecurring {
+            guard !serverRecurringIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            AppLogger.sync.debug("Purging recurring not on server: \(local.id) name=\(local.name)")
+            context.delete(local)
+        }
+
         try? context.save()
         syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count, context: context)
     }
@@ -509,6 +524,15 @@ final class SyncService: SyncServiceProtocol {
                 )
                 context.insert(budget)
             }
+        }
+
+        // Purge local budgets the server no longer returns and have no pending upload.
+        let serverBudgetIDs = Set(apiBudgets.map { $0.id })
+        for local in localBudgets {
+            guard !serverBudgetIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            AppLogger.sync.debug("Purging budget not on server: \(local.id)")
+            context.delete(local)
         }
 
         try? context.save()
@@ -602,6 +626,17 @@ final class SyncService: SyncServiceProtocol {
                 category.updatedAt = remote.updatedAt
                 context.insert(category)
             }
+        }
+
+        // Purge local custom categories the server no longer returns and have no pending upload.
+        // Predefined categories are derived from the enum and never stored locally, so skip them.
+        let serverCategoryIDs = Set(apiCategories.map { $0.id })
+        for local in localCategories {
+            guard !local.isPredefined else { continue }
+            guard !serverCategoryIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            AppLogger.sync.debug("Purging custom category not on server: \(local.id) name=\(local.name)")
+            context.delete(local)
         }
 
         try? context.save()

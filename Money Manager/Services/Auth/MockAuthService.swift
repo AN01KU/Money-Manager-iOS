@@ -10,6 +10,8 @@ private let mockUser = APIUser(
     id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
     email: "test@example.com",
     username: "Test User",
+    emailVerified: true,
+    currency: "INR",
     createdAt: Date()
 )
 
@@ -40,7 +42,25 @@ final class MockAuthService: AuthServiceProtocol {
         isLoading = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         isLoading = false
-        authState = .authenticated(APIUser(id: UUID(), email: email, username: username, createdAt: Date()))
+        authState = .authenticated(APIUser(id: UUID(), email: email, username: username, emailVerified: false, currency: "INR", createdAt: Date()))
+    }
+
+    func verifyEmail(code: String) async throws {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        if case .authenticated(let user) = authState {
+            authState = .authenticated(APIUser(
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                emailVerified: true,
+                currency: user.currency,
+                createdAt: user.createdAt
+            ))
+        }
+    }
+
+    func resendVerification() async throws {
+        try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
     func updateProfile(username: String?, email: String?, password: String?) async throws {
@@ -49,6 +69,22 @@ final class MockAuthService: AuthServiceProtocol {
                 id: user.id,
                 email: email ?? user.email,
                 username: username ?? user.username,
+                emailVerified: user.emailVerified,
+                currency: user.currency,
+                createdAt: user.createdAt
+            ))
+        }
+    }
+
+    func updateCurrency(_ code: String) async throws {
+        if case .authenticated(let user) = authState {
+            UserDefaults.standard.set(code, forKey: "selectedCurrency")
+            authState = .authenticated(APIUser(
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                emailVerified: user.emailVerified,
+                currency: code,
                 createdAt: user.createdAt
             ))
         }

@@ -31,6 +31,9 @@ struct SettingsView: View {
             List {
                 if authService.isAuthenticated {
                     if let user = authService.currentUser {
+                        if !user.emailVerified {
+                            UnverifiedEmailBanner(email: user.email)
+                        }
                         ProfileSection(
                             username: user.username,
                             email: user.email,
@@ -328,6 +331,43 @@ private struct AboutSection: View {
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - Unverified Email Banner
+
+private struct UnverifiedEmailBanner: View {
+    let email: String
+    @Environment(\.authService) private var authService
+    @State private var showVerification = false
+
+    var body: some View {
+        Section {
+            Button {
+                showVerification = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Email not verified")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                        Text("Tap to verify \(email)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .fullScreenCover(isPresented: $showVerification) {
+                EmailVerificationView(email: email)
             }
         }
     }

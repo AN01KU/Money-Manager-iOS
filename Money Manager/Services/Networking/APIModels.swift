@@ -137,14 +137,22 @@ struct APIUser: Codable {
     let id: UUID
     let email: String
     let username: String
+    let emailVerified: Bool
+    let currency: String
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
         case email
         case username
+        case emailVerified = "email_verified"
+        case currency
         case createdAt = "created_at"
     }
+}
+
+struct APIVerifyEmailRequest: Codable {
+    let code: String
 }
 
 struct APIAuthResponse: Codable {
@@ -189,6 +197,7 @@ struct APIUpdateMeRequest: Codable, Sendable {
     let username: String?
     let email: String?
     let password: String?
+    let currency: String?
 }
 
 struct APISignupRequest: Codable {
@@ -608,12 +617,20 @@ struct APIMonthlyDashboardResponse: Codable {
     let transactionCount: Int?
     let categoryBreakdown: [APICategoryBreakdown]?
     let budgetStatus: APIBudgetStatus?
+    let groupExpensesTotal: Double?
+    let netOwed: Double?
+    let netOwing: Double?
+    let combinedTotal: Double?
 
     enum CodingKeys: String, CodingKey {
         case totalTransactions = "total_expenses"
         case transactionCount = "expenseCount"
         case categoryBreakdown = "category_breakdown"
         case budgetStatus = "budget_status"
+        case groupExpensesTotal = "group_expenses_total"
+        case netOwed = "net_owed"
+        case netOwing = "net_owing"
+        case combinedTotal = "combined_total"
     }
 }
 

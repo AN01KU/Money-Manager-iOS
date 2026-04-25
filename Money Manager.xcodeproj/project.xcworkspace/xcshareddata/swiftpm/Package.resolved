@@ -1,6 +1,15 @@
 {
-  "originHash" : "70445aa65d04d3c395387a3a4c1ca746d6118353f79d18b84628d932fede1ff0",
+  "originHash" : "922b952a59f91e80198d2b4ad466f2601cb86c7f1876bfd8bbf5b541e83412e4",
   "pins" : [
+    {
+      "identity" : "pushy-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pushy/pushy-sdk-ios",
+      "state" : {
+        "revision" : "2487db9eef596222111ceb85677dc8c729998672",
+        "version" : "1.0.64"
+      }
+    },
     {
       "identity" : "swift-api-client",
       "kind" : "remoteSourceControl",

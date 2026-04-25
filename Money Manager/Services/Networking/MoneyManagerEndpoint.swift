@@ -10,6 +10,8 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
     case signup
     case logout
     case health
+    case verifyEmail
+    case resendVerification
 
     // MARK: - Sync
     case syncPreflight
@@ -40,8 +42,9 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
     // MARK: - APIEndpoint
 
     var baseURL: URL {
+        let scheme = Bundle.main.object(forInfoDictionaryKey: "API_BASE_SCHEME") as? String ?? "https"
         let host = Bundle.main.object(forInfoDictionaryKey: "API_BASE_HOST") as? String ?? ""
-        return URL(string: "https://\(host)")!
+        return URL(string: "\(scheme)://\(host)")!
     }
 
     var path: String {
@@ -52,6 +55,8 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .signup:                       return "/auth/signup"
         case .logout:                       return "/auth/logout"
         case .health:                       return "/health"
+        case .verifyEmail:                  return "/auth/verify-email"
+        case .resendVerification:           return "/auth/resend-verification"
         case .syncPreflight:                return "/sync/preflight"
         case .syncCategories:               return "/categories"
         case .syncBudgets:                  return "/budgets"

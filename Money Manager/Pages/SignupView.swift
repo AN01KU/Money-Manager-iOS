@@ -17,6 +17,7 @@ struct SignupView: View {
     @State private var errorMessage: String?
     @State private var inviteCode = ""
     @State private var showingInviteCodeAlert = false
+    @State private var showingVerification = false
     
     var body: some View {
         NavigationStack {
@@ -51,6 +52,11 @@ struct SignupView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+            }
+            .fullScreenCover(isPresented: $showingVerification) {
+                EmailVerificationView(email: email) {
+                    dismiss()
                 }
             }
             .alert("Signup Error", isPresented: .constant(errorMessage != nil)) {
@@ -170,7 +176,7 @@ struct SignupView: View {
             do {
                 try await authService.signup(email: email, username: username, password: password, inviteCode: inviteCode)
                 await syncService.bootstrapAfterSignup()
-                dismiss()
+                showingVerification = true
             } catch {
                 errorMessage = error.localizedDescription
             }
