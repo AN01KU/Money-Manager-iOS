@@ -336,6 +336,7 @@ final class SyncService: SyncServiceProtocol {
             while true {
                 let response: APIPaginatedResponse<APITransaction> = try await apiClient.get(.syncTransactions(limit: limit, offset: offset))
                 allTransactions.append(contentsOf: response.data)
+                AppLogger.sync.info("pullTransactions: page offset=\(offset) returned=\(response.data.count) total=\(response.pagination.total)")
 
                 if response.data.count < limit || offset + response.data.count >= response.pagination.total {
                     break
@@ -343,7 +344,7 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
-            AppLogger.sync.debug("pullTransactions: fetched \(allTransactions.count) transactions from server")
+            AppLogger.sync.info("pullTransactions: fetched \(allTransactions.count) of \(allTransactions.isEmpty ? 0 : allTransactions.count) transactions from server")
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -358,6 +359,11 @@ final class SyncService: SyncServiceProtocol {
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
         let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
+
+        let failedDescriptor = FetchDescriptor<FailedChange>(
+            predicate: #Predicate { $0.entityType == "transaction" }
+        )
+        let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let descriptor = FetchDescriptor<Transaction>()
         let localTransactions = (try? context.fetch(descriptor)) ?? []
@@ -410,11 +416,12 @@ final class SyncService: SyncServiceProtocol {
         for local in localTransactions {
             guard !serverIDs.contains(local.id) else { continue }      // still on server — keep
             guard !pendingIDs.contains(local.id) else { continue }     // pending upload — keep
+            guard !failedIDs.contains(local.id) else { continue }      // failed upload — keep
             let isServerOwned = local.settlementId != nil
                 || local.groupTransactionId != nil
                 || local.recurringExpenseId != nil
             guard isServerOwned else { continue }                      // personal offline txn — keep
-            AppLogger.sync.debug("Purging server-owned transaction not on server: \(local.id) settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
+            AppLogger.sync.info("Purging server-owned transaction not returned by server: id=\(local.id) amount=\(local.amount) category=\(local.category) date=\(local.date) recurringId=\(local.recurringExpenseId?.uuidString ?? "nil") settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
             context.delete(local)
         }
 
@@ -429,6 +436,11 @@ final class SyncService: SyncServiceProtocol {
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
         let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
+
+        let failedDescriptor = FetchDescriptor<FailedChange>(
+            predicate: #Predicate { $0.entityType == "recurring" }
+        )
+        let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let localRecurring = (try? context.fetch(descriptor)) ?? []
@@ -480,11 +492,13 @@ final class SyncService: SyncServiceProtocol {
         }
 
         // Purge local recurring transactions the server no longer returns and have no pending upload.
+        // Also protect entities stuck in the dead-letter queue — their create may have failed transiently.
         let serverRecurringIDs = Set(apiExpenses.map { $0.id })
         for local in localRecurring {
             guard !serverRecurringIDs.contains(local.id) else { continue }
             guard !pendingIDs.contains(local.id) else { continue }
-            AppLogger.sync.debug("Purging recurring not on server: \(local.id) name=\(local.name)")
+            guard !failedIDs.contains(local.id) else { continue }
+            AppLogger.sync.info("Purging recurring not on server: id=\(local.id) name=\(local.name)")
             context.delete(local)
         }
 
