@@ -83,6 +83,7 @@ private struct GroupsListContent: View {
             ) {
                 onCreateGroup()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollView {
                 VStack(spacing: 16) {

@@ -42,6 +42,8 @@ struct EmptyStateView: View {
             Text(message)
                 .font(.body)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 280)
             
             if let actionTitle = actionTitle, let action = action {
                 Button(action: {
