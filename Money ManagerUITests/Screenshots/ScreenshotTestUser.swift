@@ -18,7 +18,7 @@ final class ScreenshotTestUser {
     let password = "Screenshot1!"
     let username = "ScreenshotUser"
 
-    private let inviteCode = "ankush@money.manager"
+    private let inviteCode: String
     private var token: String?
     private var groupId: String?
     // Second member created for realistic group splits — deleted after the run.
@@ -29,12 +29,13 @@ final class ScreenshotTestUser {
         let shortID = UUID().uuidString.prefix(8).lowercased()
         email = "screenshot_\(shortID)@test.internal"
 
-        let env = ProcessInfo.processInfo.environment
-        let host = Bundle(for: type(of: XCTestCase())).object(forInfoDictionaryKey: "API_BASE_HOST") as? String
-                ?? env["API_BASE_HOST"]
-                ?? env["TEST_RUNNER_API_BASE_HOST"]
-                ?? "moneymanager.ankushganesh.cloud"
-        baseURL = URL(string: "https://\(host)")!
+        // UI test targets can't import the app module, so read xcconfig-injected
+        // values from the host app's Info.plist via the XCTestCase bundle.
+        let bundle = Bundle(for: XCTestCase.self)
+        let scheme = bundle.object(forInfoDictionaryKey: "API_BASE_SCHEME") as? String ?? "https"
+        let host   = bundle.object(forInfoDictionaryKey: "API_BASE_HOST") as? String ?? "moneymanager.ankushganesh.cloud"
+        inviteCode = bundle.object(forInfoDictionaryKey: "TEST_INVITE_CODE") as? String ?? ""
+        baseURL    = URL(string: "\(scheme)://\(host)")!
     }
 
     // MARK: - Public API

@@ -7,6 +7,34 @@
 
 import Foundation
 
+/// Environment-driven configuration resolved from Info.plist (populated by xcconfig).
+/// Single source of truth for base URL and test credentials across the app and test targets.
+///
+/// Computed vars are used throughout so Bundle.main (which is @MainActor in Swift 6)
+/// is only accessed at call sites, avoiding static initializer isolation issues.
+enum AppConfig {
+    // nonisolated so these can be called from Sendable / nonisolated contexts
+    // (the project uses -default-isolation=MainActor).
+    // Bundle.main.object(forInfoDictionaryKey:) is safe to call from any thread
+    // because Info.plist is immutable after launch.
+    nonisolated(unsafe) private static func plistValue(_ key: String) -> String {
+        Bundle.main.object(forInfoDictionaryKey: key) as? String ?? ""
+    }
+
+    /// Full base URL assembled from API_BASE_SCHEME and API_BASE_HOST xcconfig keys.
+    nonisolated(unsafe) static var baseURL: URL {
+        let scheme = plistValue("API_BASE_SCHEME").isEmpty ? "https" : plistValue("API_BASE_SCHEME")
+        let host   = plistValue("API_BASE_HOST")
+        return URL(string: "\(scheme)://\(host)")!
+    }
+
+    #if DEBUG
+    nonisolated(unsafe) static var testInviteCode: String { plistValue("TEST_INVITE_CODE") }
+    nonisolated(unsafe) static var testEmail: String      { plistValue("TEST_EMAIL") }
+    nonisolated(unsafe) static var testPassword: String   { plistValue("TEST_PASSWORD") }
+    #endif
+}
+
 /// App-wide constants
 enum AppConstants {
     /// Animation durations

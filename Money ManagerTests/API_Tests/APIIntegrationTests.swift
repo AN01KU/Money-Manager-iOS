@@ -8,6 +8,7 @@ import Testing
 struct APIIntegrationTests {
 
     private let testPassword: String = "Test123!"
+    private let testInviteCode: String = AppConfig.testInviteCode
     private static var authEmail: String = ""
     private static var authToken: String = ""
     private static var authSyncSessionID: UUID? = nil
@@ -27,14 +28,20 @@ struct APIIntegrationTests {
         abs(a - b) < 0.001
     }
 
+    /// Generates a unique, lowercase test email. Always use this instead of inline UUID strings
+    /// so email case is consistent with what the backend stores after normalization.
+    private func makeTestEmail() -> String {
+        "api_\(UUID().uuidString.prefix(8).lowercased())@test.com"
+    }
+
     private func ensureAuthenticated() async throws {
         if Self.authToken.isEmpty {
             await delay(200)
 
-            let email = "api_\(UUID().uuidString.prefix(8))@test.com"
+            let email = makeTestEmail()
             let username = "user_\(UUID().uuidString.prefix(8))"
 
-            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "ankush@money.manager")
+            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
             let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
 
             Self.authToken = signupResponse.token
@@ -54,14 +61,14 @@ struct APIIntegrationTests {
 
     @Test("Signup creates user and returns token")
     mutating func testAuthSignup() async throws {
-        let email = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let email = makeTestEmail()
         let username = "user_\(UUID().uuidString.prefix(8))"
 
-        let request = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "ankush@money.manager")
+        let request = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
         let response: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: request)
 
         #expect(!response.token.isEmpty)
-        #expect(response.user.email == email)
+        #expect(response.user.email.lowercased() == email.lowercased())
         #expect(response.syncSessionId != UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))
 
         Self.authToken = response.token
@@ -147,9 +154,9 @@ struct APIIntegrationTests {
     mutating func testCategoryListFreshUserGetsPredefinedDefaults() async throws {
         // Sign up a brand-new user — no customisations yet
         await delay(200)
-        let email = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let email = makeTestEmail()
         let username = "user_\(UUID().uuidString.prefix(8))"
-        let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "ankush@money.manager")
+        let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
         let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
         AppAPIClient.shared.setTestToken(signupResponse.token)
 
@@ -844,7 +851,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let newUsername = "user_\(UUID().uuidString.prefix(8))"
-        let request = APIUpdateMeRequest(username: newUsername, email: nil, password: nil)
+        let request = APIUpdateMeRequest(username: newUsername, email: nil, password: nil, currency: nil)
         let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
 
         #expect(response.username == newUsername)
@@ -856,8 +863,8 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let newEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
-        let request = APIUpdateMeRequest(username: nil, email: newEmail, password: nil)
+        let newEmail = makeTestEmail()
+        let request = APIUpdateMeRequest(username: nil, email: newEmail, password: nil, currency: nil)
         let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
 
         #expect(response.email == newEmail)
@@ -871,16 +878,16 @@ struct APIIntegrationTests {
         await delay(200)
 
         // Create a second user whose email we'll try to steal
-        let otherEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let otherEmail = makeTestEmail()
         let otherUsername = "user_\(UUID().uuidString.prefix(8))"
-        let signupReq = APISignupRequest(email: otherEmail, username: otherUsername, password: testPassword, inviteCode: "ankush@money.manager")
+        let signupReq = APISignupRequest(email: otherEmail, username: otherUsername, password: testPassword, inviteCode: testInviteCode)
         let otherUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
 
         // Try to update our account's email to the other user's email
         AppAPIClient.shared.setTestToken(Self.authToken)
         await delay(200)
 
-        let request = APIUpdateMeRequest(username: nil, email: otherEmail, password: nil)
+        let request = APIUpdateMeRequest(username: nil, email: otherEmail, password: nil, currency: nil)
         do {
             let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
             Issue.record("Expected conflict error but request succeeded")
@@ -903,7 +910,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let newPassword = "NewPass456!"
-        let request = APIUpdateMeRequest(username: nil, email: nil, password: newPassword)
+        let request = APIUpdateMeRequest(username: nil, email: nil, password: newPassword, currency: nil)
         let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
 
         await delay(200)
@@ -1005,9 +1012,9 @@ struct APIIntegrationTests {
         await delay(200)
 
         // Create a second user to add as member
-        let memberEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let memberEmail = makeTestEmail()
         let memberUsername = "user_\(UUID().uuidString.prefix(8))"
-        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: "ankush@money.manager")
+        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: testInviteCode)
         let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
 
         AppAPIClient.shared.setTestToken(Self.authToken)
@@ -1054,9 +1061,9 @@ struct APIIntegrationTests {
         await delay(200)
 
         // Create a second user who will join and then leave
-        let memberEmail = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let memberEmail = makeTestEmail()
         let memberUsername = "user_\(UUID().uuidString.prefix(8))"
-        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: "ankush@money.manager")
+        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: testInviteCode)
         let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
 
         AppAPIClient.shared.setTestToken(Self.authToken)

@@ -198,6 +198,13 @@ struct APIUpdateMeRequest: Codable, Sendable {
     let email: String?
     let password: String?
     let currency: String?
+
+    init(username: String? = nil, email: String? = nil, password: String? = nil, currency: String? = nil) {
+        self.username = username
+        self.email = email?.lowercased()
+        self.password = password
+        self.currency = currency
+    }
 }
 
 struct APISignupRequest: Codable {
@@ -205,6 +212,13 @@ struct APISignupRequest: Codable {
     let username: String
     let password: String
     let inviteCode: String
+
+    init(email: String, username: String, password: String, inviteCode: String) {
+        self.email = email.lowercased()
+        self.username = username
+        self.password = password
+        self.inviteCode = inviteCode
+    }
 
     enum CodingKeys: String, CodingKey {
         case email
@@ -217,6 +231,11 @@ struct APISignupRequest: Codable {
 struct APILoginRequest: Codable {
     let email: String
     let password: String
+
+    init(email: String, password: String) {
+        self.email = email.lowercased()
+        self.password = password
+    }
 }
 
 struct APILogoutRequest: Codable {
@@ -537,6 +556,10 @@ struct APIRenameGroupRequest: Codable, Sendable {
 
 struct APIAddMemberRequest: Codable, Sendable {
     let email: String
+
+    init(email: String) {
+        self.email = email.lowercased()
+    }
 }
 
 struct APICreateGroupTransactionRequest: Codable, Sendable {

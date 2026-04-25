@@ -41,11 +41,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
 
     // MARK: - APIEndpoint
 
-    var baseURL: URL {
-        let scheme = Bundle.main.object(forInfoDictionaryKey: "API_BASE_SCHEME") as? String ?? "https"
-        let host = Bundle.main.object(forInfoDictionaryKey: "API_BASE_HOST") as? String ?? ""
-        return URL(string: "\(scheme)://\(host)")!
-    }
+    var baseURL: URL { AppConfig.baseURL }
 
     var path: String {
         switch self {

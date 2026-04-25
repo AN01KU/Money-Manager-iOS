@@ -114,8 +114,9 @@ struct MoneyManagerEndpointTests {
 
     // MARK: - baseURL
 
-    @Test func testBaseURLUsesHTTPS() {
+    @Test func testBaseURLIsValid() {
         let url = MoneyManagerEndpoint.me.baseURL
-        #expect(url.scheme == "https")
+        #expect(url.scheme == "https" || url.scheme == "http")
+        #expect(!(url.host ?? "").isEmpty)
     }
 }
