@@ -17,6 +17,7 @@ struct SettingsView: View {
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
+    @State private var authVersion = 0
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
@@ -104,7 +105,21 @@ struct SettingsView: View {
             } message: {
                 Text("Are you sure you want to log out?")
             }
+            .onReceive(NotificationCenter.default.publisher(for: .authStateDidChange)) { _ in
+                guard !showLoginSheet, !showSignupSheet, !showEditProfile else { return }
+                authVersion += 1
+            }
+            .onChange(of: showEditProfile) { _, isShowing in
+                if !isShowing { authVersion += 1 }
+            }
+            .onChange(of: showLoginSheet) { _, isShowing in
+                if !isShowing { authVersion += 1 }
+            }
+            .onChange(of: showSignupSheet) { _, isShowing in
+                if !isShowing { authVersion += 1 }
+            }
         }
+        .id(authVersion)
     }
 }
 

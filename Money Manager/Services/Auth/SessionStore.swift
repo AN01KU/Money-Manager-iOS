@@ -126,7 +126,7 @@ final class SessionStore {
         return UUID(uuidString: raw)
     }
 
-    private func clearSyncSessionID() {
+    func clearSyncSessionID() {
         UserDefaults.standard.removeObject(forKey: syncSessionIDKey)
     }
 

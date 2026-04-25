@@ -113,6 +113,7 @@ final class SyncService: SyncServiceProtocol {
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on launch: \(reason) — orphaning queue")
             changeQueueManager.orphanAll(context: context)
+            SessionStore.shared.clearSyncSessionID()
             NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
 
@@ -137,6 +138,7 @@ final class SyncService: SyncServiceProtocol {
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — orphaning queue")
             changeQueueManager.orphanAll(context: context)
+            SessionStore.shared.clearSyncSessionID()
             NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
 

@@ -9,6 +9,7 @@ struct EmailVerificationView: View {
     let email: String
     var onVerified: (() -> Void)?
 
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.authService) private var authService
     @State private var code = ""
     @State private var isVerifying = false
@@ -134,6 +135,7 @@ struct EmailVerificationView: View {
             do {
                 try await authService.verifyEmail(code: code)
                 onVerified?()
+                dismiss()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             }

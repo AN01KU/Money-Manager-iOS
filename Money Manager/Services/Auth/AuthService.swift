@@ -9,7 +9,9 @@ import Foundation
 final class AuthService: AuthServiceProtocol {
     static let shared = AuthService()
 
-    var authState: AuthState = .unknown
+    var authState: AuthState = .unknown {
+        didSet { NotificationCenter.default.post(name: .authStateDidChange, object: nil) }
+    }
     var hasCheckedAuth: Bool = false
     var isLoading: Bool = false
     var errorMessage: String?

@@ -89,7 +89,11 @@ struct EditProfileView: View {
             .alert("Profile Updated", isPresented: $showSuccess) {
                 Button("Done") { dismiss() }
             } message: {
-                Text("Your profile has been updated successfully.")
+                if email != currentEmail {
+                    Text("Your profile has been updated. Please verify your new email address.")
+                } else {
+                    Text("Your profile has been updated successfully.")
+                }
             }
         }
     }

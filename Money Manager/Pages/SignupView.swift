@@ -176,7 +176,11 @@ struct SignupView: View {
             do {
                 try await authService.signup(email: email, username: username, password: password, inviteCode: inviteCode)
                 await syncService.bootstrapAfterSignup()
-                showingVerification = true
+                if authService.currentUser?.emailVerified == false {
+                    showingVerification = true
+                } else {
+                    dismiss()
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

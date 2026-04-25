@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Observation
 
 enum AuthState: Equatable {
     case unknown
@@ -20,7 +21,7 @@ enum AuthState: Equatable {
     }
 }
 
-protocol AuthServiceProtocol: AnyObject {
+protocol AuthServiceProtocol: AnyObject, Observable {
     var authState: AuthState { get }
     var hasCheckedAuth: Bool { get }
     var isLoading: Bool { get }

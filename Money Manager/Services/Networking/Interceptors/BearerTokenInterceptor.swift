@@ -1,12 +1,16 @@
 import APIClient
 import Foundation
 
-/// Injects `Authorization: Bearer <token>` on every request that is NOT an auth endpoint.
+/// Injects `Authorization: Bearer <token>` on every request except public auth endpoints.
 ///
-/// Auth endpoints (`/auth/*`) are skipped to avoid sending a stale token on login/signup.
+/// Only `/auth/login` and `/auth/signup` are skipped — other `/auth/*` paths like
+/// `/auth/verify-email`, `/auth/logout`, and `/auth/resend-verification` are protected
+/// routes that require a valid token.
 struct BearerTokenInterceptor: BaseAPI.RequestInterceptor {
+    private static let publicPaths: Set<String> = ["/auth/login", "/auth/signup"]
+
     func adapt(_ request: URLRequest) async throws -> URLRequest {
-        guard let path = request.url?.path, !path.hasPrefix("/auth/") else {
+        guard let path = request.url?.path, !Self.publicPaths.contains(path) else {
             return request
         }
         #if DEBUG
