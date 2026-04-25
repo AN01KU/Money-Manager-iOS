@@ -22,7 +22,7 @@ final class SyncService: SyncServiceProtocol {
     var syncSuccessCount: Int = 0
     var syncFailureCount: Int = 0
 
-    private let apiClient = AppAPIClient.shared
+    var apiClient: any APIClientProtocol = AppAPIClient.shared
     private let groupService = GroupService.shared
     private let networkMonitor = NetworkMonitor.shared
     private var authService: AuthServiceProtocol?

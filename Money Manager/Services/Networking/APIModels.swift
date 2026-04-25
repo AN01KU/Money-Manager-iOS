@@ -188,7 +188,7 @@ struct APIMessageResponse: Codable, Sendable {
 
 /// Decodes successfully regardless of response body shape.
 /// Used when only success (2xx) matters, not the response payload.
-struct EmptyResponse: Codable {
+struct EmptyResponse: Codable, Sendable {
     init() {}
     init(from decoder: Decoder) throws {}
 }

@@ -13,11 +13,13 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     /// Base delay in seconds — actual delay is `baseRetryDelay * 2^retryCount + jitter`
     private static let baseRetryDelay: TimeInterval = 2.0
 
-    private var apiClient: AppAPIClient = AppAPIClient.shared
+    private var apiClient: any APIClientProtocol
     private var modelContainer: ModelContainer?
     private var isReplaying = false
 
-    init() {}
+    init(apiClient: any APIClientProtocol = AppAPIClient.shared) {
+        self.apiClient = apiClient
+    }
 
     func configure(container: ModelContainer) {
         self.modelContainer = container
