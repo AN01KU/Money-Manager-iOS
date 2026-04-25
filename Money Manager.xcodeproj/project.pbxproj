@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6B25C3692F9B1695007B6911 /* Pushy in Frameworks */ = {isa = PBXBuildFile; productRef = 6B25C3682F9B1695007B6911 /* Pushy */; };
 		6B3971CE2F8DDC99006BAFB8 /* APIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 6B3971CD2F8DDC99006BAFB8 /* APIClient */; };
 /* End PBXBuildFile section */
 
@@ -103,7 +102,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6B25C3692F9B1695007B6911 /* Pushy in Frameworks */,
 				6B3971CE2F8DDC99006BAFB8 /* APIClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -195,7 +193,6 @@
 			name = "Money Manager";
 			packageProductDependencies = (
 				6B3971CD2F8DDC99006BAFB8 /* APIClient */,
-				6B25C3682F9B1695007B6911 /* Pushy */,
 			);
 			productName = "Money Manager";
 			productReference = 6B6A4C4E2EFD151B00B81C49 /* Money Manager.app */;
@@ -258,7 +255,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6B3971CC2F8DDC99006BAFB8 /* XCRemoteSwiftPackageReference "Swift-API-Client" */,
-				6B25C3672F9B1695007B6911 /* XCRemoteSwiftPackageReference "pushy-sdk-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6B6A4C4F2EFD151B00B81C49 /* Products */;
@@ -661,14 +657,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6B25C3672F9B1695007B6911 /* XCRemoteSwiftPackageReference "pushy-sdk-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pushy/pushy-sdk-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.64;
-			};
-		};
 		6B3971CC2F8DDC99006BAFB8 /* XCRemoteSwiftPackageReference "Swift-API-Client" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/AN01KU/Swift-API-Client.git";
@@ -680,11 +668,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		6B25C3682F9B1695007B6911 /* Pushy */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B25C3672F9B1695007B6911 /* XCRemoteSwiftPackageReference "pushy-sdk-ios" */;
-			productName = Pushy;
-		};
 		6B3971CD2F8DDC99006BAFB8 /* APIClient */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6B3971CC2F8DDC99006BAFB8 /* XCRemoteSwiftPackageReference "Swift-API-Client" */;
