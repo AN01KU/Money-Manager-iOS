@@ -16,6 +16,11 @@ final class MockGroupService: GroupServiceProtocol {
     var stubbedBalances: [APIGroupBalance] = []
     var addMemberError: Error? = nil
     var createGroupResult: APIGroup? = nil
+    var renameGroupError: Error? = nil
+    var deleteGroupError: Error? = nil
+    var removeMemberError: Error? = nil
+    var leaveGroupError: Error? = nil
+    var deleteSettlementError: Error? = nil
 
     // Call tracking
     var addMemberCalls: [(groupId: UUID, email: String)] = []
@@ -37,14 +42,21 @@ final class MockGroupService: GroupServiceProtocol {
     }
 
     func renameGroup(groupId: UUID, name: String) async throws -> APIGroup {
-        APIGroup(id: groupId, name: name, createdBy: UUID(), createdAt: Date())
+        if let error = renameGroupError { throw error }
+        return APIGroup(id: groupId, name: name, createdBy: UUID(), createdAt: Date())
     }
 
-    func deleteGroup(groupId: UUID) async throws {}
+    func deleteGroup(groupId: UUID) async throws {
+        if let error = deleteGroupError { throw error }
+    }
 
-    func removeMember(groupId: UUID, userId: UUID) async throws {}
+    func removeMember(groupId: UUID, userId: UUID) async throws {
+        if let error = removeMemberError { throw error }
+    }
 
-    func leaveGroup(groupId: UUID) async throws {}
+    func leaveGroup(groupId: UUID) async throws {
+        if let error = leaveGroupError { throw error }
+    }
 
     func fetchGroupDetails(groupId: UUID) async throws -> APIGroupDetails {
         if let details = stubbedGroupDetails { return details }
@@ -70,6 +82,8 @@ final class MockGroupService: GroupServiceProtocol {
 
     var stubbedTransactions: [APIGroupTransaction] = []
     var deleteError: Error? = nil
+    var updateGroupTransactionError: Error? = nil
+    var lastUpdateRequest: APIUpdateGroupTransactionRequest? = nil
 
     func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
         stubbedTransactions
@@ -97,7 +111,9 @@ final class MockGroupService: GroupServiceProtocol {
     }
 
     func updateGroupTransaction(_ request: APIUpdateGroupTransactionRequest, groupId: UUID, transactionId: UUID) async throws -> APIGroupTransaction {
-        APIGroupTransaction(
+        lastUpdateRequest = request
+        if let error = updateGroupTransactionError { throw error }
+        return APIGroupTransaction(
             id: transactionId,
             groupId: groupId,
             paidByUserId: UUID(),
@@ -113,7 +129,9 @@ final class MockGroupService: GroupServiceProtocol {
         )
     }
 
-    func deleteSettlement(settlementId: UUID) async throws {}
+    func deleteSettlement(settlementId: UUID) async throws {
+        if let error = deleteSettlementError { throw error }
+    }
 
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
         APISettlement(
