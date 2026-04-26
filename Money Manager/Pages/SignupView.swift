@@ -29,12 +29,11 @@ struct SignupView: View {
                     
                     #if DEBUG
                     Button("Fill Test Credentials") {
-                        let info = Bundle.main.infoDictionary
-                        email = info?["TEST_EMAIL"] as? String ?? ""
-                        username = "Test"
-                        password = info?["TEST_PASSWORD"] as? String ?? ""
-                        confirmPassword = info?["TEST_PASSWORD"] as? String ?? ""
-                        inviteCode = info?["TEST_INVITE_CODE"] as? String ?? ""
+                        email = AppConfig.testEmail
+                        username = AppConfig.testUsername
+                        password = AppConfig.testPassword
+                        confirmPassword = AppConfig.testPassword
+                        inviteCode = AppConfig.testInviteCode
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)

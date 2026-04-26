@@ -30,6 +30,7 @@ enum AppConfig {
 
     #if DEBUG
     nonisolated(unsafe) static var testInviteCode: String { plistValue("TEST_INVITE_CODE") }
+    nonisolated(unsafe) static var testUsername: String   { plistValue("TEST_USERNAME") }
     nonisolated(unsafe) static var testEmail: String      { plistValue("TEST_EMAIL") }
     nonisolated(unsafe) static var testPassword: String   { plistValue("TEST_PASSWORD") }
     #endif

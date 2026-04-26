@@ -31,9 +31,8 @@ struct LoginView: View {
 
                     #if DEBUG
                     Button("Fill Test Credentials") {
-                        let info = Bundle.main.infoDictionary
-                        email = info?["TEST_EMAIL"] as? String ?? ""
-                        password = info?["TEST_PASSWORD"] as? String ?? ""
+                        email = AppConfig.testEmail
+                        password = AppConfig.testPassword
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)

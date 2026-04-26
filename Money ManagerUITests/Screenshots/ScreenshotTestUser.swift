@@ -27,7 +27,7 @@ final class ScreenshotTestUser {
 
     init() {
         let shortID = UUID().uuidString.prefix(8).lowercased()
-        email = "screenshot_\(shortID)@test.internal"
+        email = "screenshot_\(shortID)@test.com"
 
         // UI test targets can't import the app module, so read xcconfig-injected
         // values from the host app's Info.plist via the XCTestCase bundle.
@@ -171,7 +171,7 @@ final class ScreenshotTestUser {
 
         // Create a second throwaway user to be the group member.
         let shortID = UUID().uuidString.prefix(8).lowercased()
-        let memberEmail = "screenshot_member_\(shortID)@test.internal"
+        let memberEmail = "screenshot_member_\(shortID)@test.com"
         memberToken = try await signUp(email: memberEmail, username: "Rahul")
 
         // Create the group.
