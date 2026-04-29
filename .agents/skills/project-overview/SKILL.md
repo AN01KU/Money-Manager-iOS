@@ -172,11 +172,17 @@ Money Manager/
 │   │   └── SessionStore.swift            # Persisted session state
 │   │
 │   ├── Networking/
-│   │   ├── APIClient.swift               # URLSession-based HTTP client
+│   │   ├── AppAPIClient.swift            # Singleton wrapping Swift-APIClient with ms-epoch dates, interceptors, validator
+│   │   ├── MoneyManagerEndpoint.swift    # Typed APIEndpoint enum for all app routes
 │   │   ├── APIModels.swift               # Codable API request/response models (API prefix)
 │   │   ├── APIError.swift                # Typed API errors
 │   │   ├── GroupService.swift            # Group CRUD API calls
-│   │   └── MockGroupService.swift
+│   │   ├── MockGroupService.swift
+│   │   ├── Interceptors/
+│   │   │   ├── BearerTokenInterceptor.swift   # Injects Authorization: Bearer header
+│   │   │   └── SyncSessionInterceptor.swift   # Injects sync-session header
+│   │   └── Validators/
+│   │       └── MoneyManagerResponseValidator.swift  # App-specific error mapping
 │   │
 │   ├── Sync/
 │   │   ├── SyncService.swift             # Offline-first sync orchestration
@@ -199,8 +205,12 @@ Money Manager/
 │   ├── AppLogger.swift           # Structured logging (replaces ErrorHandler)
 │   ├── AppRoute.swift            # NavigationStack route enum
 │   ├── AppTypography.swift       # Shared text styles
+│   ├── Calendar+DayKey.swift     # Calendar.dayKey(for:) — shared TODAY/formatted-date key logic
 │   ├── CategoryResolver.swift    # O(1) category lookup by ID
-│   └── CategorySeeder.swift      # Default category seeding
+│   ├── CategorySeeder.swift      # Default category seeding
+│   ├── Double+EditableString.swift  # Double ↔ editable string conversion for form fields
+│   ├── String+EmailValidation.swift # Email format validation
+│   └── View+KeyboardDismiss.swift   # dismissKeyboardOnScroll() view modifier
 │
 └── Assets.xcassets/
 ```

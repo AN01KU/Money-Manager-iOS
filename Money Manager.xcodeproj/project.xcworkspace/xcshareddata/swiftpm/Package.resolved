@@ -1,0 +1,15 @@
+{
+  "originHash" : "70445aa65d04d3c395387a3a4c1ca746d6118353f79d18b84628d932fede1ff0",
+  "pins" : [
+    {
+      "identity" : "swift-api-client",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/AN01KU/Swift-API-Client.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "44803a2b077104aec09408fde91af46de662a582"
+      }
+    }
+  ],
+  "version" : 3
+}

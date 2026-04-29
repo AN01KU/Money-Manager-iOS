@@ -17,9 +17,11 @@ struct SettingsView: View {
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
+    @State private var authVersion = 0
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
+    @State private var showEditProfile = false
     @State private var isSyncingManually = false
     #if DEBUG
     @State private var showSyncDebug = false
@@ -30,9 +32,13 @@ struct SettingsView: View {
             List {
                 if authService.isAuthenticated {
                     if let user = authService.currentUser {
+                        if !user.emailVerified {
+                            UnverifiedEmailBanner(email: user.email)
+                        }
                         ProfileSection(
                             username: user.username,
                             email: user.email,
+                            onEditProfile: { showEditProfile = true },
                             onLogOut: { showLogoutConfirmation = true }
                         )
                     }
@@ -86,6 +92,11 @@ struct SettingsView: View {
             .sheet(isPresented: $showSignupSheet) {
                 SignupView()
             }
+            .sheet(isPresented: $showEditProfile) {
+                if let user = authService.currentUser {
+                    EditProfileView(currentUsername: user.username, currentEmail: user.email)
+                }
+            }
             .alert("Log Out", isPresented: $showLogoutConfirmation) {
                 Button("Log Out", role: .destructive) {
                     authService.logout()
@@ -94,7 +105,21 @@ struct SettingsView: View {
             } message: {
                 Text("Are you sure you want to log out?")
             }
+            .onReceive(NotificationCenter.default.publisher(for: .authStateDidChange)) { _ in
+                guard !showLoginSheet, !showSignupSheet, !showEditProfile else { return }
+                authVersion += 1
+            }
+            .onChange(of: showEditProfile) { _, isShowing in
+                if !isShowing { authVersion += 1 }
+            }
+            .onChange(of: showLoginSheet) { _, isShowing in
+                if !isShowing { authVersion += 1 }
+            }
+            .onChange(of: showSignupSheet) { _, isShowing in
+                if !isShowing { authVersion += 1 }
+            }
         }
+        .id(authVersion)
     }
 }
 
@@ -147,39 +172,53 @@ private struct LoginPromptSection: View {
 private struct ProfileSection: View {
     let username: String
     let email: String
+    let onEditProfile: () -> Void
     let onLogOut: () -> Void
 
     var body: some View {
         Section {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.accent.opacity(0.12))
-                        .frame(width: 56, height: 56)
+            Button(action: onEditProfile) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(AppColors.accent.opacity(0.12))
+                            .frame(width: 56, height: 56)
 
-                    Text(String(username.prefix(1)).uppercased())
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppColors.accent)
+                        Text(String(username.prefix(1)).uppercased())
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppColors.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(username)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(username)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-
-                    Text(email)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.edit-profile-button")
 
             Button(role: .destructive) {
                 onLogOut()
             } label: {
                 Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
             }
+        } footer: {
+            Text("Logging out will stop syncing on this device. Your local data is retained.")
         }
     }
 }
@@ -223,10 +262,12 @@ private struct PreferencesSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityIdentifier("settings.currency-row")
 
             NavigationLink(value: SettingsRoute.backup) {
                 Label("Backup", systemImage: "archivebox.fill")
             }
+            .accessibilityIdentifier("settings.backup-row")
         }
     }
 }
@@ -305,6 +346,43 @@ private struct AboutSection: View {
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - Unverified Email Banner
+
+private struct UnverifiedEmailBanner: View {
+    let email: String
+    @Environment(\.authService) private var authService
+    @State private var showVerification = false
+
+    var body: some View {
+        Section {
+            Button {
+                showVerification = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Email not verified")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                        Text("Tap to verify \(email)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .fullScreenCover(isPresented: $showVerification) {
+                EmailVerificationView(email: email)
             }
         }
     }

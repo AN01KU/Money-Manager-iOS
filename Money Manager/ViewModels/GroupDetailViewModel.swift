@@ -45,9 +45,29 @@ final class GroupDetailViewModel {
     }
     var pendingMemberEmails: Set<String> = []
 
+    // Transaction search
+    var transactionSearchText = ""
+
+    var filteredTransactions: [APIGroupTransaction] {
+        guard !transactionSearchText.isEmpty else { return transactions }
+        return transactions.filter { tx in
+            (tx.description?.localizedStandardContains(transactionSearchText) ?? false) ||
+            tx.category.localizedStandardContains(transactionSearchText)
+        }
+    }
+
     // Add transaction / settle
     var showAddTransaction = false
     var showSettlement = false
+
+    // Rename group
+    var showRenameGroup = false
+    var isRenamed = false
+
+    // Delete / leave group
+    var showDeleteGroup = false
+    var showLeaveGroup = false
+    var didDeleteOrLeave = false
 
     let groupService: GroupServiceProtocol
     let currentUserId: UUID?
@@ -122,6 +142,73 @@ final class GroupDetailViewModel {
         isLoading = false
     }
 
+    // MARK: - Rename Group
+
+    func renameGroup(to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        Task {
+            do {
+                let updated = try await groupService.renameGroup(groupId: group.id, name: trimmed)
+                group = APIGroupWithDetails(
+                    id: updated.id,
+                    name: updated.name,
+                    createdBy: updated.createdBy,
+                    createdAt: updated.createdAt,
+                    members: members,
+                    balances: balances
+                )
+                isRenamed = true
+            } catch {
+                errorMessage = errorDescription(error)
+            }
+        }
+    }
+
+    // MARK: - Delete Group
+
+    func deleteGroup() {
+        Task {
+            do {
+                try await groupService.deleteGroup(groupId: group.id)
+                didDeleteOrLeave = true
+            } catch {
+                errorMessage = errorDescription(error)
+            }
+        }
+    }
+
+    // MARK: - Remove Member
+
+    func removeMember(_ member: APIGroupMember) {
+        let original = members
+        members.removeAll { $0.id == member.id }
+
+        Task {
+            do {
+                try await groupService.removeMember(groupId: group.id, userId: member.id)
+                let updated = try await groupService.fetchMembers(groupId: group.id)
+                members = updated
+            } catch {
+                members = original
+                errorMessage = errorDescription(error)
+            }
+        }
+    }
+
+    // MARK: - Leave Group
+
+    func leaveGroup() {
+        Task {
+            do {
+                try await groupService.leaveGroup(groupId: group.id)
+                didDeleteOrLeave = true
+            } catch {
+                errorMessage = errorDescription(error)
+            }
+        }
+    }
+
     // MARK: - Add Member (optimistic, invite semantics)
 
     func addMember(email: String) {
@@ -140,7 +227,7 @@ final class GroupDetailViewModel {
                 let updated = try await groupService.fetchMembers(groupId: group.id)
                 members = updated
             } catch {
-                addMemberError = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                addMemberError = errorDescription(error)
             }
             pendingMemberEmails.remove(trimmed)
         }
@@ -170,7 +257,7 @@ final class GroupDetailViewModel {
                     transactions[idx] = old
                 }
                 recalculateBalances()
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
@@ -188,16 +275,32 @@ final class GroupDetailViewModel {
                 // Restore on failure
                 transactions.insert(transaction, at: 0)
                 recalculateBalances()
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                errorMessage = errorDescription(error)
             }
         }
     }
 
-    // MARK: - After settlement recorded
+    // MARK: - After settlement recorded / deleted
 
     func settlementRecorded(_ settlement: APISettlement) {
         settlements.insert(settlement, at: 0)
         Task { await loadData() }
+    }
+
+    func deleteSettlement(_ settlement: APISettlement) {
+        let original = settlements
+        settlements.removeAll { $0.id == settlement.id }
+
+        Task {
+            do {
+                try await groupService.deleteSettlement(settlementId: settlement.id)
+                // Reload to get authoritative balances from server
+                await loadData()
+            } catch {
+                settlements = original
+                errorMessage = errorDescription(error)
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -215,6 +318,10 @@ final class GroupDetailViewModel {
     }
 
     // MARK: - Private
+
+    private func errorDescription(_ error: Error) -> String {
+        (error as? APIError)?.errorDescription ?? error.localizedDescription
+    }
 
     private func recalculateBalances() {
         var map: [UUID: Double] = [:]

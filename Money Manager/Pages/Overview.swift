@@ -99,6 +99,14 @@ private struct OverviewScrollContent: View {
                 .accessibilityIdentifier("overview.empty-state")
                 .padding(.horizontal)
             }
+
+            if !viewModel.recentTransactions.isEmpty {
+                OverviewRecentTransactions(
+                    transactions: viewModel.recentTransactions,
+                    onGroupTapped: nil
+                )
+                .padding(.horizontal)
+            }
         }
         .padding(.bottom, 100)
     }
@@ -171,21 +179,11 @@ private struct OverviewHeaderCard: View {
 
                 Spacer()
 
-                // Daily / Monthly toggle pill
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.filterMode = viewModel.filterMode == .daily ? .monthly : .daily
-                    }
-                } label: {
-                    Text(viewModel.filterMode == .daily ? "Daily" : "Monthly")
-                        .font(AppTypography.chip)
-                        .foregroundStyle(AppColors.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(AppColors.accentLight)
-                        .clipShape(Capsule())
+                // Daily / Monthly mode selector
+                HStack(spacing: 4) {
+                    FilterModeChip(label: "Daily",   isSelected: viewModel.filterMode == .daily)   { withAnimation(.easeInOut(duration: 0.2)) { viewModel.filterMode = .daily } }
+                    FilterModeChip(label: "Monthly", isSelected: viewModel.filterMode == .monthly) { withAnimation(.easeInOut(duration: 0.2)) { viewModel.filterMode = .monthly } }
                 }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -275,9 +273,10 @@ private struct OverviewHeaderCard: View {
                 DatePicker(
                     "Select \(viewModel.filterMode == .daily ? "Date" : "Month")",
                     selection: $viewModel.selectedDate,
-                    displayedComponents: viewModel.filterMode == .daily ? [.date] : [.date]
+                    displayedComponents: [.date]
                 )
-                .datePickerStyle(.graphical)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
                 .padding()
                 .navigationTitle("Select \(viewModel.filterMode == .daily ? "Date" : "Month")")
                 .navigationBarTitleDisplayMode(.inline)
@@ -287,7 +286,7 @@ private struct OverviewHeaderCard: View {
                     }
                 }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.height(300)])
         }
     }
 
@@ -363,6 +362,60 @@ private struct BudgetInlineRow: View {
                 }
                 .frame(height: 5)
             }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Recent Transactions
+
+private struct OverviewRecentTransactions: View {
+    let transactions: [Transaction]
+    let onGroupTapped: ((UUID) -> Void)?
+    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+
+    private var categoryLookup: [String: CustomCategory] {
+        CategoryResolver.makeLookup(from: customCategories)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("RECENT")
+                .font(AppTypography.sectionHeader)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(transactions.enumerated()), id: \.element.persistentModelID) { index, transaction in
+                    TransactionRow(transaction: transaction, categoryLookup: categoryLookup, onGroupTapped: onGroupTapped)
+
+                    if index < transactions.count - 1 {
+                        Divider().padding(.leading, 58)
+                    }
+                }
+            }
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 14))
+        }
+    }
+}
+
+// MARK: - Filter Mode Chip
+
+private struct FilterModeChip: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(isSelected ? AppTypography.chipSelected : AppTypography.chip)
+                .foregroundStyle(isSelected ? .white : AppColors.accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(isSelected ? AppColors.accent : AppColors.accentLight)
+                .clipShape(Capsule())
         }
         .buttonStyle(.plain)
     }

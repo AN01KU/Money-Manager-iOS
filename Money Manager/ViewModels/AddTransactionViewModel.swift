@@ -81,6 +81,11 @@ enum SplitType: String, CaseIterable {
         return false
     }
 
+    var isEditingShared: Bool {
+        if case .shared(_, _, _, let editing, _) = mode { return editing != nil }
+        return false
+    }
+
     var navigationTitle: String {
         switch mode {
         case .personal(let editing):
@@ -108,6 +113,11 @@ enum SplitType: String, CaseIterable {
     }
 
     var isValid: Bool {
+        if isEditingShared {
+            return !selectedCategory.isEmpty &&
+                   !description.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+
         guard let amountValue = Double(amount), amountValue > 0,
               !selectedCategory.isEmpty else { return false }
 
@@ -385,6 +395,19 @@ enum SplitType: String, CaseIterable {
         onAdd: @escaping (APIGroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
+        if case .shared(_, _, _, let editing, _) = mode, let existing = editing {
+            saveSharedEdit(existing: existing, group: group, onAdd: onAdd, completion: completion)
+        } else {
+            saveSharedCreate(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
+        }
+    }
+
+    private func saveSharedCreate(
+        amountValue: Double,
+        group: APIGroupWithDetails,
+        onAdd: @escaping (APIGroupTransaction) -> Void,
+        completion: @escaping () -> Void
+    ) {
         guard let paidBy = paidByUserId else {
             errorMessage = "Please select who paid"
             showError = true
@@ -412,13 +435,44 @@ enum SplitType: String, CaseIterable {
             date: selectedDate,
             description: description.trimmingCharacters(in: .whitespaces),
             notes: nil,
-            splits: splits
+            splits: splits,
+            updatedAt: Date()
         )
 
         Task {
             do {
                 let expense = try await groupService.createGroupTransaction(request, groupId: group.id)
                 onAdd(expense)
+                isSaving = false
+                completion()
+            } catch {
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                showError = true
+                isSaving = false
+            }
+        }
+    }
+
+    private func saveSharedEdit(
+        existing: APIGroupTransaction,
+        group: APIGroupWithDetails,
+        onAdd: @escaping (APIGroupTransaction) -> Void,
+        completion: @escaping () -> Void
+    ) {
+        let trimmedDescription = description.trimmingCharacters(in: .whitespaces)
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespaces)
+
+        let request = APIUpdateGroupTransactionRequest(
+            category: selectedCategory != existing.category ? selectedCategory : nil,
+            date: selectedDate != existing.date ? selectedDate : nil,
+            description: trimmedDescription != (existing.description ?? "") ? trimmedDescription : nil,
+            notes: trimmedNotes.isEmpty ? nil : (trimmedNotes != (existing.notes ?? "") ? trimmedNotes : nil)
+        )
+
+        Task {
+            do {
+                let updated = try await groupService.updateGroupTransaction(request, groupId: group.id, transactionId: existing.id)
+                onAdd(updated)
                 isSaving = false
                 completion()
             } catch {

@@ -7,52 +7,77 @@ import Foundation
 
 final class GroupService: GroupServiceProtocol {
     static let shared = GroupService()
-    private let apiClient = APIClient.shared
+    private let apiClient = AppAPIClient.shared
 
     private init() {}
 
     func fetchGroups() async throws -> [APIGroupWithDetails] {
-        let response: APIGroupsListResponse = try await apiClient.get("/groups")
+        let response: APIGroupsListResponse = try await apiClient.get(.groups)
         return response.data
     }
 
     func createGroup(name: String) async throws -> APIGroup {
         let request = APICreateGroupRequest(name: name)
-        return try await apiClient.post("/groups", body: request)
+        return try await apiClient.post(.groups, body: request)
+    }
+
+    func renameGroup(groupId: UUID, name: String) async throws -> APIGroup {
+        let request = APIRenameGroupRequest(name: name)
+        return try await apiClient.patch(.group(groupId), body: request)
+    }
+
+    func deleteGroup(groupId: UUID) async throws {
+        try await apiClient.delete(.group(groupId))
     }
 
     func fetchGroupDetails(groupId: UUID) async throws -> APIGroupDetails {
-        try await apiClient.get("/groups/\(groupId.uuidString)")
+        try await apiClient.get(.group(groupId))
     }
 
     func fetchMembers(groupId: UUID) async throws -> [APIGroupMember] {
-        let response: APIListResponse<APIGroupMember> = try await apiClient.get("/groups/\(groupId.uuidString)/members")
+        let response: APIListResponse<APIGroupMember> = try await apiClient.get(.groupMembers(groupId))
         return response.data
     }
 
     func addMember(groupId: UUID, email: String) async throws {
         let request = APIAddMemberRequest(email: email)
-        let _: APIMessageResponse = try await apiClient.post("/groups/\(groupId.uuidString)/add-member", body: request)
+        let _: APIMessageResponse = try await apiClient.post(.groupAddMember(groupId), body: request)
+    }
+
+    func removeMember(groupId: UUID, userId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.deleteMessage(.groupMember(groupId: groupId, userId: userId))
+    }
+
+    func leaveGroup(groupId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.post(.groupLeave(groupId), body: EmptyResponse())
     }
 
     func fetchBalances(groupId: UUID) async throws -> [APIGroupBalance] {
-        try await apiClient.get("/groups/\(groupId.uuidString)/balances")
+        try await apiClient.get(.groupBalances(groupId))
     }
 
     func createGroupTransaction(_ request: APICreateGroupTransactionRequest, groupId: UUID) async throws -> APIGroupTransaction {
-        try await apiClient.post("/groups/\(groupId.uuidString)/transactions", body: request)
+        try await apiClient.post(.groupTransactions(groupId), body: request)
+    }
+
+    func updateGroupTransaction(_ request: APIUpdateGroupTransactionRequest, groupId: UUID, transactionId: UUID) async throws -> APIGroupTransaction {
+        try await apiClient.patch(.groupTransaction(groupId: groupId, transactionId: transactionId), body: request)
     }
 
     func fetchGroupTransactions(groupId: UUID) async throws -> [APIGroupTransaction] {
-        let response: APIListResponse<APIGroupTransaction> = try await apiClient.get("/groups/\(groupId.uuidString)/transactions")
+        let response: APIListResponse<APIGroupTransaction> = try await apiClient.get(.groupTransactions(groupId))
         return response.data
     }
 
     func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {
-        let _: APIMessageResponse = try await apiClient.deleteMessage("/groups/\(groupId.uuidString)/transactions/\(transactionId.uuidString)")
+        let _: APIMessageResponse = try await apiClient.deleteMessage(.groupTransaction(groupId: groupId, transactionId: transactionId))
     }
 
     func createSettlement(_ request: APICreateSettlementRequest) async throws -> APISettlement {
-        try await apiClient.post("/settlements", body: request)
+        try await apiClient.post(.settlements, body: request)
+    }
+
+    func deleteSettlement(settlementId: UUID) async throws {
+        let _: APIMessageResponse = try await apiClient.deleteMessage(.settlement(settlementId))
     }
 }

@@ -284,7 +284,9 @@ final class RecurringTransactionsTests: XCTestCase {
     // MARK: - Helper Methods
     
     private func navigateToRecurring() {
-        app.tabBars.buttons["Settings"].tap()
+        let settingsTab = app.tabBars.buttons["Settings"]
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5), "Settings tab should exist")
+        settingsTab.tap()
         _ = app.navigationBars["Settings"].waitForExistence(timeout: 3)
         
         let recurringButton = app.buttons["settings.recurring-row"]

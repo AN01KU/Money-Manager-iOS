@@ -2,6 +2,7 @@
 """
 Reads manifest.json from xcresulttool export attachments output,
 renames UUID files to their tag names, and copies to Screenshots/.
+Skips non-image attachments (crash logs, screen recordings, etc).
 """
 import json
 import os
@@ -19,6 +20,14 @@ count = 0
 
 for group in groups:
     for att in group.get("attachments", []):
+        # Only export image attachments — skip crash logs (.ips), screen recordings, etc.
+        uniform_type = att.get("uniformTypeIdentifier", "")
+        if not uniform_type.startswith("public.image") and uniform_type != "com.apple.png":
+            # Fall back to checking the suggested name extension
+            name = att.get("suggestedHumanReadableName", "")
+            if not name.lower().endswith((".png", ".jpg", ".jpeg")):
+                continue
+
         src = os.path.join(tmp_dir, att["exportedFileName"])
         name = att.get("suggestedHumanReadableName", att["exportedFileName"])
         # name is like "overview_0_<UUID>.png" — take the part before "_0_"

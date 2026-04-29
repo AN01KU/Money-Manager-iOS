@@ -93,7 +93,15 @@ final class SessionStore {
     }
 
     func getToken() -> String? {
-        tokenStorage.load()
+        #if DEBUG
+        // During screenshot UI tests, keychain writes fail under CODE_SIGNING_ALLOWED=NO.
+        // The app stores the token in UserDefaults instead; read it here as a fallback.
+        if let override = UserDefaults.standard.string(forKey: "screenshot_token_override"),
+           !override.isEmpty {
+            return override
+        }
+        #endif
+        return tokenStorage.load()
     }
 
     var isLoggedIn: Bool {
@@ -118,7 +126,7 @@ final class SessionStore {
         return UUID(uuidString: raw)
     }
 
-    private func clearSyncSessionID() {
+    func clearSyncSessionID() {
         UserDefaults.standard.removeObject(forKey: syncSessionIDKey)
     }
 

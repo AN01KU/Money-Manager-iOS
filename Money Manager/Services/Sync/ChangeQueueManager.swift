@@ -13,17 +13,13 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     /// Base delay in seconds — actual delay is `baseRetryDelay * 2^retryCount + jitter`
     private static let baseRetryDelay: TimeInterval = 2.0
 
-    private var apiClient: APIClient = APIClient.shared
+    private var apiClient: any APIClientProtocol
     private var modelContainer: ModelContainer?
     private var isReplaying = false
 
-    init() {}
-
-    #if DEBUG
-    func setAPIClientForTesting(_ client: APIClient) {
-        apiClient = client
+    init(apiClient: any APIClientProtocol = AppAPIClient.shared) {
+        self.apiClient = apiClient
     }
-    #endif
 
     func configure(container: ModelContainer) {
         self.modelContainer = container
@@ -146,6 +142,24 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     return
                 }
 
+                // 502 = transient DB blip on the server. Stop this replay batch entirely;
+                // the change stays queued and will be retried on the next sync trigger.
+                // Do NOT orphan the queue — the server never processed the write.
+                if case APIError.transientError = error {
+                    AppLogger.sync.warning("[ReplayDebug] 502 transient error for \(change.entityType)=\(change.entityID) — backing off, will retry")
+                    return
+                }
+
+                // 409 STALE_WRITE = server already has a newer version of this entity.
+                // Discard the pending change so the stale local write is not retried;
+                // the next full sync will pull down the authoritative server version.
+                if case APIError.staleWrite = error {
+                    AppLogger.sync.warning("[ReplayDebug] STALE_WRITE for \(change.entityType)=\(change.entityID) — discarding stale pending change, server version wins")
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
                 // A 404 on a delete means the entity never reached the server — treat as success
                 if case APIError.notFound = error, change.action == "delete" {
                     AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
@@ -155,10 +169,27 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     continue
                 }
 
+                // A 409 on a create means the entity already exists on the server — treat as success
+                if case APIError.conflict = error, change.action == "create" {
+                    AppLogger.sync.warning("[ReplayDebug] 409 on create for \(change.entityType)=\(change.entityID) — entity already on server, discarding pending change")
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
+                let errorDetail: String
+                if let apiError = error as? APIError, case .httpError(let code, let msg) = apiError {
+                    errorDetail = "HTTP \(code): \(msg ?? "(no body)")"
+                } else {
+                    errorDetail = error.localizedDescription
+                }
+
                 change.retryCount += 1
+                AppLogger.sync.warning("replayAll: retry \(change.retryCount)/\(ChangeQueueManager.maxRetryCount) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) error=\(errorDetail)")
 
                 if change.retryCount >= ChangeQueueManager.maxRetryCount {
-                    moveToDeadLetter(change, lastError: error.localizedDescription, context: context)
+                    AppLogger.sync.error("replayAll: dead-lettering entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) after \(change.retryCount) retries — final error: \(errorDetail)")
+                    moveToDeadLetter(change, lastError: errorDetail, context: context)
                 } else {
                     change.nextRetryAt = Self.backoffDate(forRetry: change.retryCount)
                     try? context.save()
@@ -221,15 +252,15 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.post(endpoint, rawBody: payload)
+            let _: EmptyResponse = try await apiClient.post(.raw(endpoint), rawBody: payload)
         case "PUT":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.put(endpoint, rawBody: payload)
+            let _: EmptyResponse = try await apiClient.put(.raw(endpoint), rawBody: payload)
         case "PATCH":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.patch(endpoint, rawBody: payload)
+            let _: EmptyResponse = try await apiClient.patch(.raw(endpoint), rawBody: payload)
         case "DELETE":
-            let _: APIMessageResponse = try await apiClient.deleteMessage(endpoint)
+            let _: APIMessageResponse = try await apiClient.deleteMessage(.raw(endpoint))
         default:
             AppLogger.sync.warning("[ReplayDebug] unhandled httpMethod=\(change.httpMethod) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action)")
             return

@@ -17,6 +17,7 @@ struct SignupView: View {
     @State private var errorMessage: String?
     @State private var inviteCode = ""
     @State private var showingInviteCodeAlert = false
+    @State private var showingVerification = false
     
     var body: some View {
         NavigationStack {
@@ -28,12 +29,11 @@ struct SignupView: View {
                     
                     #if DEBUG
                     Button("Fill Test Credentials") {
-                        let info = Bundle.main.infoDictionary
-                        email = info?["TEST_EMAIL"] as? String ?? ""
-                        username = "Test"
-                        password = info?["TEST_PASSWORD"] as? String ?? ""
-                        confirmPassword = info?["TEST_PASSWORD"] as? String ?? ""
-                        inviteCode = info?["TEST_INVITE_CODE"] as? String ?? ""
+                        email = AppConfig.testEmail
+                        username = AppConfig.testUsername
+                        password = AppConfig.testPassword
+                        confirmPassword = AppConfig.testPassword
+                        inviteCode = AppConfig.testInviteCode
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -51,6 +51,11 @@ struct SignupView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+            }
+            .fullScreenCover(isPresented: $showingVerification) {
+                EmailVerificationView(email: email) {
+                    dismiss()
                 }
             }
             .alert("Signup Error", isPresented: .constant(errorMessage != nil)) {
@@ -170,7 +175,11 @@ struct SignupView: View {
             do {
                 try await authService.signup(email: email, username: username, password: password, inviteCode: inviteCode)
                 await syncService.bootstrapAfterSignup()
-                dismiss()
+                if authService.currentUser?.emailVerified == false {
+                    showingVerification = true
+                } else {
+                    dismiss()
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

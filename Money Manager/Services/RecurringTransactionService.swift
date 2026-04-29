@@ -29,6 +29,7 @@ struct RecurringTransactionService {
                 recurringExpenseId: recurring.id
             )
             context.insert(transaction)
+            AppLogger.data.info("RecurringTransactionService: created txn id=\(transaction.id) name=\(recurring.name) amount=\(recurring.amount) category=\(recurring.category) date=\(nextDate) recurringId=\(recurring.id)")
 
             recurring.lastAddedDate = nextDate
             recurring.updatedAt = Date()
@@ -43,7 +44,7 @@ struct RecurringTransactionService {
                 AppLogger.data.error("RecurringTransactionService: failed to save generated transactions: \(error)")
             }
         } else {
-            AppLogger.data.debug("RecurringTransactionService: no pending recurring transactions to generate")
+            AppLogger.data.info("RecurringTransactionService: no pending recurring transactions to generate (checked \(allRecurring.count) rules)")
         }
     }
 }

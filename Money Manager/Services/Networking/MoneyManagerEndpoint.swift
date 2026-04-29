@@ -1,0 +1,89 @@
+import APIClient
+import Foundation
+
+enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
+
+    // MARK: - Auth
+    case me
+    case updateMe
+    case login
+    case signup
+    case logout
+    case health
+    case verifyEmail
+    case resendVerification
+
+    // MARK: - Sync
+    case syncPreflight
+    case syncCategories
+    case syncBudgets
+    case syncRecurring
+    /// Paginated transaction fetch. `limit` and `offset` are passed as query parameters.
+    case syncTransactions(limit: Int, offset: Int)
+
+    // MARK: - Groups
+    case groups
+    case group(UUID)
+    case groupMembers(UUID)
+    case groupMember(groupId: UUID, userId: UUID)
+    case groupAddMember(UUID)
+    case groupLeave(UUID)
+    case groupBalances(UUID)
+    case groupTransactions(UUID)
+    case groupTransaction(groupId: UUID, transactionId: UUID)
+    case settlements
+    case settlement(UUID)
+
+    // MARK: - Raw path escape (used by ChangeQueueManager replay)
+    /// Allows the change-queue replay to use dynamically-built paths that cannot
+    /// be expressed as typed cases (e.g. "/transactions/<uuid>").
+    case raw(String)
+
+    // MARK: - APIEndpoint
+
+    var baseURL: URL { AppConfig.baseURL }
+
+    var path: String {
+        switch self {
+        case .me:                           return "/me"
+        case .updateMe:                     return "/me"
+        case .login:                        return "/auth/login"
+        case .signup:                       return "/auth/signup"
+        case .logout:                       return "/auth/logout"
+        case .health:                       return "/health"
+        case .verifyEmail:                  return "/auth/verify-email"
+        case .resendVerification:           return "/auth/resend-verification"
+        case .syncPreflight:                return "/sync/preflight"
+        case .syncCategories:               return "/categories"
+        case .syncBudgets:                  return "/budgets"
+        case .syncRecurring:                return "/recurring-transactions"
+        case .syncTransactions:             return "/transactions"
+        case .groups:                       return "/groups"
+        case .group(let id):                return "/groups/\(id.uuidString)"
+        case .groupMembers(let id):         return "/groups/\(id.uuidString)/members"
+        case .groupMember(let gid, let uid): return "/groups/\(gid.uuidString)/members/\(uid.uuidString)"
+        case .groupAddMember(let id):       return "/groups/\(id.uuidString)/members"
+        case .groupLeave(let id):           return "/groups/\(id.uuidString)/leave"
+        case .groupBalances(let id):        return "/groups/\(id.uuidString)/balances"
+        case .groupTransactions(let id):    return "/groups/\(id.uuidString)/transactions"
+        case .groupTransaction(let gid, let tid):
+            return "/groups/\(gid.uuidString)/transactions/\(tid.uuidString)"
+        case .settlements:                  return "/settlements"
+        case .settlement(let id):           return "/settlements/\(id.uuidString)"
+        case .raw(let path):                return path
+        }
+    }
+
+    var queryParameters: [String: String]? {
+        switch self {
+        case .syncTransactions(let limit, let offset):
+            return [
+                "limit": "\(limit)",
+                "offset": "\(offset)",
+                "is_deleted": "false"
+            ]
+        default:
+            return nil
+        }
+    }
+}

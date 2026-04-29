@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Observation
 
 enum AuthState: Equatable {
     case unknown
@@ -20,7 +21,7 @@ enum AuthState: Equatable {
     }
 }
 
-protocol AuthServiceProtocol: AnyObject {
+protocol AuthServiceProtocol: AnyObject, Observable {
     var authState: AuthState { get }
     var hasCheckedAuth: Bool { get }
     var isLoading: Bool { get }
@@ -33,6 +34,10 @@ protocol AuthServiceProtocol: AnyObject {
     func checkAuthState() async
     func login(email: String, password: String) async throws
     func signup(email: String, username: String, password: String, inviteCode: String) async throws
+    func verifyEmail(code: String) async throws
+    func resendVerification() async throws
+    func updateProfile(username: String?, email: String?, password: String?, currentPassword: String?) async throws
+    func updateCurrency(_ code: String) async throws
     func logout()
 }
 

@@ -23,7 +23,7 @@ BUILD_DIR := $(shell xcodebuild build \
 APP_PATH = $(BUILD_DIR)/Money Manager.app
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
 
-.PHONY: build test test-unit test-ui coverage clean release
+.PHONY: build test test-unit test-ui test-api test-one coverage clean screenshots screenshot-one _export-screenshots
 
 build:
 	xcodebuild build \
@@ -35,21 +35,21 @@ build:
 test:
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -skip-testing:"Money ManagerUITests/ScreenshotGenerator"
-	
+
 test-unit:
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests" -skip-testing:"Money ManagerTests/APIIntegrationTests"
-	
+
 test-ui:
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests" -skip-testing:"Money ManagerUITests/ScreenshotGenerator"
-	
+
 test-api:
 	@echo "Running API integration tests sequentially"
 	@echo ""
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/APIIntegrationTests" -parallel-testing-enabled NO
-	
+
 test-one:
 	@echo "Usage: make test-one TEST=BackupViewModelTests"
 	rm -rf $(TEST_RESULTS)
@@ -57,8 +57,6 @@ test-one:
 
 coverage:
 	xcrun xccov view --report $(TEST_RESULTS) 2>/dev/null | head -10
-
-.PHONY: build test test-unit test-ui test-api test-one coverage clean screenshots screenshot-one _export-screenshots
 
 # ── Screenshots ───────────────────────────────────────────────────────────────
 # Captures all app screens using a real test account (requires backend reachable).
@@ -77,8 +75,9 @@ screenshots:
 		$(SIGNING) \
 		-only-testing:"Money ManagerUITests/ScreenshotGenerator/testGenerateAllScreenshots" \
 		-parallel-testing-enabled NO \
-		-resultBundlePath "$(TEST_RESULTS)" 2>&1 | tail -5 || true
-	@$(MAKE) _export-screenshots
+		-resultBundlePath "$(TEST_RESULTS)" 2>&1 | tee /tmp/xcodebuild-screenshots.log | tail -5; \
+	STATUS=$${PIPESTATUS[0]}; \
+	$(MAKE) _export-screenshots TEST_PASSED=$$STATUS
 
 screenshot-one:
 	@echo "▶ Capturing screenshot for tag: $(TAG)"
@@ -91,8 +90,11 @@ screenshot-one:
 		-only-testing:"Money ManagerUITests/ScreenshotGenerator/testCaptureSingleScreen" \
 		-parallel-testing-enabled NO \
 		-resultBundlePath "$(TEST_RESULTS)" \
-		TEST_RUNNER_SCREENSHOT_TAG=$(TAG) 2>&1 | tail -5 || true
-	@$(MAKE) _export-screenshots
+		TEST_RUNNER_SCREENSHOT_TAG=$(TAG) 2>&1 | tee /tmp/xcodebuild-screenshots.log | tail -5; \
+	STATUS=$${PIPESTATUS[0]}; \
+	$(MAKE) _export-screenshots TEST_PASSED=$$STATUS
+
+TEST_PASSED ?= 1
 
 _export-screenshots:
 	@echo "▶ Exporting screenshots from test result bundle..."
@@ -100,12 +102,13 @@ _export-screenshots:
 	xcrun xcresulttool export attachments \
 		--path "$(TEST_RESULTS)" \
 		--output-path "$$TMP" 2>/dev/null; \
-	if python3 scripts/export_screenshots.py "$$TMP" "Screenshots"; then \
+	python3 scripts/export_screenshots.py "$$TMP" "Screenshots"; \
+	rm -rf "$$TMP"; \
+	if [ "$(TEST_PASSED)" = "0" ]; then \
 		rm -rf "$(TEST_RESULTS)"; \
 	else \
-		echo "⚠ Export failed — test results kept at $(TEST_RESULTS)"; \
-	fi; \
-	rm -rf "$$TMP"
+		echo "⚠ Tests failed — test results kept at $(TEST_RESULTS) for debugging"; \
+	fi
 
 release:
 	xcodebuild build \

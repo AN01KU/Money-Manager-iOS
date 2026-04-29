@@ -22,7 +22,7 @@ final class SyncService: SyncServiceProtocol {
     var syncSuccessCount: Int = 0
     var syncFailureCount: Int = 0
 
-    private let apiClient = APIClient.shared
+    var apiClient: any APIClientProtocol = AppAPIClient.shared
     private let groupService = GroupService.shared
     private let networkMonitor = NetworkMonitor.shared
     private var authService: AuthServiceProtocol?
@@ -113,6 +113,7 @@ final class SyncService: SyncServiceProtocol {
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on launch: \(reason) — orphaning queue")
             changeQueueManager.orphanAll(context: context)
+            SessionStore.shared.clearSyncSessionID()
             NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
 
@@ -137,6 +138,7 @@ final class SyncService: SyncServiceProtocol {
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — orphaning queue")
             changeQueueManager.orphanAll(context: context)
+            SessionStore.shared.clearSyncSessionID()
             NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
 
@@ -153,7 +155,7 @@ final class SyncService: SyncServiceProtocol {
 
         do {
             let body = APISyncPreflightRequest(syncSessionId: sessionID)
-            let response: APISyncPreflightResponse = try await apiClient.post("/sync/preflight", body: body)
+            let response: APISyncPreflightResponse = try await apiClient.post(.syncPreflight, body: body)
             return response.valid ? .valid : .invalid(reason: response.reason ?? "UNKNOWN")
         } catch let error as APIError {
             if case .syncSessionInvalid(let reason) = error {
@@ -211,7 +213,7 @@ final class SyncService: SyncServiceProtocol {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for transaction in transactions where !transaction.isSoftDeleted {
             do {
-                let payload = try APIClient.apiEncoder.encode(transaction.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "transaction",
                     entityID: transaction.id,
@@ -231,7 +233,7 @@ final class SyncService: SyncServiceProtocol {
         for category in categories {
             AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
             do {
-                let payload = try APIClient.apiEncoder.encode(category.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(category.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "category",
                     entityID: category.id,
@@ -249,7 +251,7 @@ final class SyncService: SyncServiceProtocol {
         let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
         for budget in budgets {
             do {
-                let payload = try APIClient.apiEncoder.encode(budget.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(budget.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "budget",
                     entityID: budget.id,
@@ -267,7 +269,7 @@ final class SyncService: SyncServiceProtocol {
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
             do {
-                let payload = try APIClient.apiEncoder.encode(item.toCreateRequest())
+                let payload = try AppAPIClient.apiEncoder.encode(item.toCreateRequest())
                 changeQueueManager.enqueue(
                     entityType: "recurring",
                     entityID: item.id,
@@ -297,7 +299,7 @@ final class SyncService: SyncServiceProtocol {
     
     private func pullCategories(context: ModelContext) async {
         do {
-            let response: APIListResponse<APICustomCategory> = try await apiClient.get("/categories")
+            let response: APIListResponse<APICustomCategory> = try await apiClient.get(.syncCategories)
             upsertCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull categories: \(error)")
@@ -307,7 +309,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func pullBudgets(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get("/budgets")
+            let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get(.syncBudgets)
             upsertBudgets(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull budgets: \(error)")
@@ -317,7 +319,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func pullRecurring(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get("/recurring-transactions")
+            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get(.syncRecurring)
             upsertRecurring(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull recurring: \(error)")
@@ -332,14 +334,9 @@ final class SyncService: SyncServiceProtocol {
             let limit = 100
 
             while true {
-                let queryItems = [
-                    URLQueryItem(name: "limit", value: "\(limit)"),
-                    URLQueryItem(name: "offset", value: "\(offset)"),
-                    URLQueryItem(name: "is_deleted", value: "false")  // query param, not a Swift property access
-                ]
-
-                let response: APIPaginatedResponse<APITransaction> = try await apiClient.get("/transactions", queryItems: queryItems)
+                let response: APIPaginatedResponse<APITransaction> = try await apiClient.get(.syncTransactions(limit: limit, offset: offset))
                 allTransactions.append(contentsOf: response.data)
+                AppLogger.sync.info("pullTransactions: page offset=\(offset) returned=\(response.data.count) total=\(response.pagination.total)")
 
                 if response.data.count < limit || offset + response.data.count >= response.pagination.total {
                     break
@@ -347,7 +344,7 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
-            AppLogger.sync.debug("pullTransactions: fetched \(allTransactions.count) transactions from server")
+            AppLogger.sync.info("pullTransactions: fetched \(allTransactions.count) of \(allTransactions.isEmpty ? 0 : allTransactions.count) transactions from server")
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -362,6 +359,11 @@ final class SyncService: SyncServiceProtocol {
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
         let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
+
+        let failedDescriptor = FetchDescriptor<FailedChange>(
+            predicate: #Predicate { $0.entityType == "transaction" }
+        )
+        let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let descriptor = FetchDescriptor<Transaction>()
         let localTransactions = (try? context.fetch(descriptor)) ?? []
@@ -403,16 +405,23 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        // Remove locally-generated recurring transactions that the server doesn't know about.
-        // These are orphans created by the iOS RecurringTransactionService before the
-        // "only generate when not logged in" guard was in place.
+        // Remove local transactions that the server no longer returns and have no pending upload.
+        // The server responds with is_deleted=false only, so anything missing from that set is
+        // either soft-deleted on the server or an orphan (e.g. stale settlement/group transactions).
+        //
+        // We only purge transactions that are server-owned (settlement, group, or recurring) —
+        // plain personal transactions without a pending change are left alone to avoid
+        // accidentally wiping entries created offline before a first sync.
         let serverIDs = Set(apiTransactions.map { $0.id })
         for local in localTransactions {
-            guard let _ = local.recurringExpenseId else { continue }   // only recurring-generated
-            guard !local.isSoftDeleted else { continue }
-            guard !serverIDs.contains(local.id) else { continue }      // not on server
-            guard !pendingIDs.contains(local.id) else { continue }     // no pending upload
-            AppLogger.sync.debug("Purging locally-generated recurring txn not on server: \(local.id)")
+            guard !serverIDs.contains(local.id) else { continue }      // still on server — keep
+            guard !pendingIDs.contains(local.id) else { continue }     // pending upload — keep
+            guard !failedIDs.contains(local.id) else { continue }      // failed upload — keep
+            let isServerOwned = local.settlementId != nil
+                || local.groupTransactionId != nil
+                || local.recurringExpenseId != nil
+            guard isServerOwned else { continue }                      // personal offline txn — keep
+            AppLogger.sync.info("Purging server-owned transaction not returned by server: id=\(local.id) amount=\(local.amount) category=\(local.category) date=\(local.date) recurringId=\(local.recurringExpenseId?.uuidString ?? "nil") settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
             context.delete(local)
         }
 
@@ -427,6 +436,11 @@ final class SyncService: SyncServiceProtocol {
         let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
         let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
+
+        let failedDescriptor = FetchDescriptor<FailedChange>(
+            predicate: #Predicate { $0.entityType == "recurring" }
+        )
+        let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let localRecurring = (try? context.fetch(descriptor)) ?? []
@@ -477,6 +491,17 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
+        // Purge local recurring transactions the server no longer returns and have no pending upload.
+        // Also protect entities stuck in the dead-letter queue — their create may have failed transiently.
+        let serverRecurringIDs = Set(apiExpenses.map { $0.id })
+        for local in localRecurring {
+            guard !serverRecurringIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            guard !failedIDs.contains(local.id) else { continue }
+            AppLogger.sync.info("Purging recurring not on server: id=\(local.id) name=\(local.name)")
+            context.delete(local)
+        }
+
         try? context.save()
         syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count, context: context)
     }
@@ -515,6 +540,15 @@ final class SyncService: SyncServiceProtocol {
                 )
                 context.insert(budget)
             }
+        }
+
+        // Purge local budgets the server no longer returns and have no pending upload.
+        let serverBudgetIDs = Set(apiBudgets.map { $0.id })
+        for local in localBudgets {
+            guard !serverBudgetIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            AppLogger.sync.debug("Purging budget not on server: \(local.id)")
+            context.delete(local)
         }
 
         try? context.save()
@@ -608,6 +642,17 @@ final class SyncService: SyncServiceProtocol {
                 category.updatedAt = remote.updatedAt
                 context.insert(category)
             }
+        }
+
+        // Purge local custom categories the server no longer returns and have no pending upload.
+        // Predefined categories are derived from the enum and never stored locally, so skip them.
+        let serverCategoryIDs = Set(apiCategories.map { $0.id })
+        for local in localCategories {
+            guard !local.isPredefined else { continue }
+            guard !serverCategoryIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            AppLogger.sync.debug("Purging custom category not on server: \(local.id) name=\(local.name)")
+            context.delete(local)
         }
 
         try? context.save()

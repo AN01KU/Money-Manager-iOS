@@ -67,6 +67,11 @@ import SwiftData
 
     func deleteItem(_ item: RecurringTransaction) {
         let recurringId = item.id
+
+        // Remove from the in-memory array first so computed properties (upcomingThisMonth, etc.)
+        // never access the item's attributes after SwiftData detaches its backing store.
+        recurring.removeAll { $0.id == recurringId }
+
         item.isSoftDeleted = true
         item.updatedAt = Date()
 

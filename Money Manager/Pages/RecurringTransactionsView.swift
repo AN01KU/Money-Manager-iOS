@@ -113,6 +113,7 @@ struct RecurringTransactionsView: View {
         } label: {
             Label("Delete", systemImage: "trash")
         }
+        .tint(AppColors.expense)
     }
 }
 

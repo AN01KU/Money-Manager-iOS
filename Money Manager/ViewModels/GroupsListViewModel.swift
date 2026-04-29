@@ -92,10 +92,7 @@ final class GroupsListViewModel {
         var grouped: [String: [ActivityItem]] = [:]
 
         for item in filteredActivity {
-            let day = calendar.startOfDay(for: item.date)
-            let key = calendar.isDateInToday(day)
-                ? "TODAY"
-                : day.formatted(.dateTime.month(.wide).day()).uppercased()
+            let key = calendar.dayKey(for: item.date)
             grouped[key, default: []].append(item)
         }
 

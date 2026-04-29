@@ -58,10 +58,10 @@ final class PersistenceService {
         switch action {
         case "create":
             httpMethod = "POST"
-            payload = try? APIClient.apiEncoder.encode(transaction.toCreateRequest())
+            payload = try? AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
         case "update":
             httpMethod = "PATCH"
-            payload = try? APIClient.apiEncoder.encode(transaction.toUpdateRequest())
+            payload = try? AppAPIClient.apiEncoder.encode(transaction.toUpdateRequest())
         case "delete":
             httpMethod = "DELETE"
             payload = nil
@@ -86,10 +86,10 @@ final class PersistenceService {
         switch action {
         case "create":
             httpMethod = "POST"
-            payload = try? APIClient.apiEncoder.encode(recurring.toCreateRequest())
+            payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest())
         case "update":
-            httpMethod = "PUT"
-            payload = try? APIClient.apiEncoder.encode(recurring.toUpdateRequest())
+            httpMethod = "PATCH"
+            payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
         case "delete":
             httpMethod = "DELETE"
             payload = nil
@@ -114,10 +114,10 @@ final class PersistenceService {
         switch action {
         case "create":
             httpMethod = "POST"
-            payload = try? APIClient.apiEncoder.encode(category.toCreateRequest())
+            payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest())
         case "update":
-            httpMethod = "PUT"
-            payload = try? APIClient.apiEncoder.encode(category.toUpdateRequest())
+            httpMethod = "PATCH"
+            payload = try? AppAPIClient.apiEncoder.encode(category.toUpdateRequest())
         case "delete":
             httpMethod = "DELETE"
             payload = nil

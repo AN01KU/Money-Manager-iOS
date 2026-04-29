@@ -137,14 +137,24 @@ struct APIUser: Codable {
     let id: UUID
     let email: String
     let username: String
+    let emailVerified: Bool
+    let currency: String
+    let timezone: String
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
         case email
         case username
+        case emailVerified = "email_verified"
+        case currency
+        case timezone
         case createdAt = "created_at"
     }
+}
+
+struct APIVerifyEmailRequest: Codable {
+    let code: String
 }
 
 struct APIAuthResponse: Codable {
@@ -174,8 +184,29 @@ struct APIPagination: Codable {
     let total: Int
 }
 
-struct APIMessageResponse: Codable {
+struct APIMessageResponse: Codable, Sendable {
     let message: String
+}
+
+/// Decodes successfully regardless of response body shape.
+/// Used when only success (2xx) matters, not the response payload.
+struct EmptyResponse: Codable, Sendable {
+    init() {}
+    init(from decoder: Decoder) throws {}
+}
+
+struct APIUpdateMeRequest: Codable, Sendable {
+    let username: String?
+    let email: String?
+    let password: String?
+    let currency: String?
+
+    init(username: String? = nil, email: String? = nil, password: String? = nil, currency: String? = nil) {
+        self.username = username
+        self.email = email?.lowercased()
+        self.password = password
+        self.currency = currency
+    }
 }
 
 struct APISignupRequest: Codable {
@@ -183,18 +214,33 @@ struct APISignupRequest: Codable {
     let username: String
     let password: String
     let inviteCode: String
+    let timezone: String
+
+    init(email: String, username: String, password: String, inviteCode: String) {
+        self.email = email.lowercased()
+        self.username = username
+        self.password = password
+        self.inviteCode = inviteCode
+        self.timezone = TimeZone.current.identifier
+    }
 
     enum CodingKeys: String, CodingKey {
         case email
         case username
         case password
         case inviteCode = "invite_code"
+        case timezone
     }
 }
 
 struct APILoginRequest: Codable {
     let email: String
     let password: String
+
+    init(email: String, password: String) {
+        self.email = email.lowercased()
+        self.password = password
+    }
 }
 
 struct APILogoutRequest: Codable {
@@ -228,6 +274,7 @@ struct APICreateTransactionRequest: Codable {
     let description: String?
     let notes: String?
     let recurringExpenseId: UUID?
+    var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -239,6 +286,7 @@ struct APICreateTransactionRequest: Codable {
         case description
         case notes
         case recurringExpenseId = "recurring_transaction_id"
+        case updatedAt = "updated_at"
     }
 }
 
@@ -265,6 +313,7 @@ struct APICreateRecurringTransactionRequest: Codable {
     let isActive: Bool
     let notes: String?
     let type: String
+    var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -279,6 +328,7 @@ struct APICreateRecurringTransactionRequest: Codable {
         case isActive = "is_active"
         case notes
         case type
+        case updatedAt = "updated_at"
     }
 }
 
@@ -347,7 +397,14 @@ struct APIUpdateCategoryRequest: Codable {
     let name: String?
     let icon: String?
     let color: String?
-    let is_hidden: Bool?
+    let isHidden: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case icon
+        case color
+        case isHidden = "is_hidden"
+    }
 }
 
 // MARK: - Group API Models
@@ -502,8 +559,16 @@ struct APICreateGroupRequest: Codable, Sendable {
     let name: String
 }
 
+struct APIRenameGroupRequest: Codable, Sendable {
+    let name: String
+}
+
 struct APIAddMemberRequest: Codable, Sendable {
     let email: String
+
+    init(email: String) {
+        self.email = email.lowercased()
+    }
 }
 
 struct APICreateGroupTransactionRequest: Codable, Sendable {
@@ -514,6 +579,7 @@ struct APICreateGroupTransactionRequest: Codable, Sendable {
     let description: String?
     let notes: String?
     let splits: [APIGroupTransactionSplitInput]
+    var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case paidByUserId = "paid_by_user_id"
@@ -523,7 +589,15 @@ struct APICreateGroupTransactionRequest: Codable, Sendable {
         case description
         case notes
         case splits
+        case updatedAt = "updated_at"
     }
+}
+
+struct APIUpdateGroupTransactionRequest: Codable, Sendable {
+    let category: String?
+    let date: Date?
+    let description: String?
+    let notes: String?
 }
 
 struct APIGroupMembersResponse: Codable, Sendable {
@@ -577,12 +651,20 @@ struct APIMonthlyDashboardResponse: Codable {
     let transactionCount: Int?
     let categoryBreakdown: [APICategoryBreakdown]?
     let budgetStatus: APIBudgetStatus?
+    let groupExpensesTotal: Double?
+    let netOwed: Double?
+    let netOwing: Double?
+    let combinedTotal: Double?
 
     enum CodingKeys: String, CodingKey {
         case totalTransactions = "total_expenses"
         case transactionCount = "expenseCount"
         case categoryBreakdown = "category_breakdown"
         case budgetStatus = "budget_status"
+        case groupExpensesTotal = "group_expenses_total"
+        case netOwed = "net_owed"
+        case netOwing = "net_owing"
+        case combinedTotal = "combined_total"
     }
 }
 

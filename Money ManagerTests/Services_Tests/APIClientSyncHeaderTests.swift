@@ -7,92 +7,73 @@ import Foundation
 import Testing
 @testable import Money_Manager
 
-/// Tests that APIClient attaches the correct sync headers on write requests.
-///
-/// Tests `buildRequest` directly to avoid network calls and concurrency issues
-/// with shared URLProtocol stubs.
+/// Tests that SyncSessionInterceptor attaches the correct sync headers on write requests.
 @MainActor
 struct APIClientSyncHeaderTests {
 
     // MARK: - Helper
 
-    private func makeClient(syncSessionID: UUID?) -> APIClient {
-        // Ensure shared SessionStore doesn't leak a stale value into the test
-        UserDefaults.standard.removeObject(forKey: "sync_session_id")
+    private func makeRequest(method: String, path: String = "/transactions") -> URLRequest {
+        var request = URLRequest(url: URL(string: "https://example.com\(path)")!)
+        request.httpMethod = method
+        return request
+    }
 
-        let client = APIClient.makeForTesting(session: .shared)
-        client.setTestToken("test-jwt")
-        client.setTestSyncSessionID(syncSessionID)
-        return client
+    private func adapted(_ request: URLRequest, syncSessionID: UUID?) async throws -> URLRequest {
+        // Set up SessionStore state
+        UserDefaults.standard.removeObject(forKey: "sync_session_id")
+        if let id = syncSessionID {
+            SessionStore.shared.saveSyncSessionID(id)
+        }
+        return try await SyncSessionInterceptor().adapt(request)
     }
 
     // MARK: - Tests
 
     @Test
-    func testPostRequestIncludesSyncSessionIDWhenSet() throws {
+    func testPostRequestIncludesSyncSessionIDWhenSet() async throws {
         let id = UUID()
-        let client = makeClient(syncSessionID: id)
-
-        let request = try client.buildRequest(endpoint: "/transactions", method: "POST")
-
+        let request = try await adapted(makeRequest(method: "POST"), syncSessionID: id)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Session-ID") == id.uuidString)
     }
 
     @Test
-    func testPostRequestIncludesSyncVersionWhenSessionSet() throws {
-        let client = makeClient(syncSessionID: UUID())
-
-        let request = try client.buildRequest(endpoint: "/transactions", method: "POST")
-
+    func testPostRequestIncludesSyncVersionWhenSessionSet() async throws {
+        let request = try await adapted(makeRequest(method: "POST"), syncSessionID: UUID())
         #expect(request.value(forHTTPHeaderField: "X-Sync-Version") == "1")
     }
 
     @Test
-    func testGetRequestDoesNotIncludeSyncSessionIDHeader() throws {
-        let client = makeClient(syncSessionID: UUID())
-
-        let request = try client.buildRequest(endpoint: "/transactions", method: "GET")
-
+    func testGetRequestDoesNotIncludeSyncSessionIDHeader() async throws {
+        let request = try await adapted(makeRequest(method: "GET"), syncSessionID: UUID())
         #expect(request.value(forHTTPHeaderField: "X-Sync-Session-ID") == nil)
     }
 
     @Test
-    func testGetRequestDoesNotIncludeSyncVersionHeader() throws {
-        let client = makeClient(syncSessionID: UUID())
-
-        let request = try client.buildRequest(endpoint: "/transactions", method: "GET")
-
+    func testGetRequestDoesNotIncludeSyncVersionHeader() async throws {
+        let request = try await adapted(makeRequest(method: "GET"), syncSessionID: UUID())
         #expect(request.value(forHTTPHeaderField: "X-Sync-Version") == nil)
     }
 
     @Test
-    func testPostRequestOmitsSyncHeadersWhenNoSessionIDSet() throws {
-        let client = makeClient(syncSessionID: nil)
-
-        let request = try client.buildRequest(endpoint: "/transactions", method: "POST")
-
+    func testPostRequestOmitsSyncHeadersWhenNoSessionIDSet() async throws {
+        let request = try await adapted(makeRequest(method: "POST"), syncSessionID: nil)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Session-ID") == nil)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Version") == nil)
     }
 
     @Test
-    func testPutRequestIncludesSyncHeadersWhenSessionSet() throws {
+    func testPutRequestIncludesSyncHeadersWhenSessionSet() async throws {
         let id = UUID()
-        let client = makeClient(syncSessionID: id)
-
-        let request = try client.buildRequest(endpoint: "/budgets/1", method: "PUT")
-
+        let request = try await adapted(makeRequest(method: "PUT", path: "/budgets/1"), syncSessionID: id)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Session-ID") == id.uuidString)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Version") == "1")
     }
 
     @Test
-    func testDeleteRequestIncludesSyncHeadersWhenSessionSet() throws {
+    func testDeleteRequestIncludesSyncHeadersWhenSessionSet() async throws {
         let id = UUID()
-        let client = makeClient(syncSessionID: id)
-
-        let request = try client.buildRequest(endpoint: "/transactions/1", method: "DELETE")
-
+        let request = try await adapted(makeRequest(method: "DELETE", path: "/transactions/1"), syncSessionID: id)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Session-ID") == id.uuidString)
         #expect(request.value(forHTTPHeaderField: "X-Sync-Version") == "1")
     }

@@ -8,7 +8,7 @@ import SwiftData
 func makeTestContainer() throws -> ModelContainer {
     let schema = Schema([
         Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self,
-        PendingChange.self, FailedChange.self,
+        PendingChange.self, FailedChange.self, OrphanedChange.self,
         SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
     ])
     let config = ModelConfiguration(isStoredInMemoryOnly: true)

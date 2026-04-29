@@ -15,8 +15,10 @@ enum APIError: Error, LocalizedError, Equatable {
     case unauthorized
     case notFound
     case conflict
+    case staleWrite          // 409 with code "STALE_WRITE" — server has a newer version
     case syncSessionInvalid(reason: String)
     case serverError
+    case transientError      // 502 — server-side blip; client should back off and retry
     case unknown
     case missingTestData(String)
     
@@ -40,10 +42,14 @@ enum APIError: Error, LocalizedError, Equatable {
             return "Resource not found"
         case .conflict:
             return "Conflict detected. Data will be synced."
+        case .staleWrite:
+            return "A newer version of this item exists on the server."
         case .syncSessionInvalid(let reason):
             return "Sync session rejected: \(reason)"
         case .serverError:
             return "Server error. Please try again later."
+        case .transientError:
+            return "Server temporarily unavailable. Will retry shortly."
         case .unknown:
             return "An unknown error occurred"
         case .missingTestData(let context):
@@ -58,7 +64,9 @@ enum APIError: Error, LocalizedError, Equatable {
              (.unauthorized, .unauthorized),
              (.notFound, .notFound),
              (.conflict, .conflict),
+             (.staleWrite, .staleWrite),
              (.serverError, .serverError),
+             (.transientError, .transientError),
              (.unknown, .unknown):
             return true
         case let (.httpError(lCode, lMsg), .httpError(rCode, rMsg)):
@@ -93,9 +101,15 @@ extension APIError {
         case 409:
             if let reason = Self.parseSyncSessionReason(from: data) {
                 self = .syncSessionInvalid(reason: reason)
+            } else if Self.parseErrorCode(from: data) == "STALE_WRITE" {
+                self = .staleWrite
             } else {
                 self = .conflict
             }
+        case 502:
+            // Backend signals a transient DB blip. Client must NOT orphan its
+            // queue — back off and retry the same batch later.
+            self = .transientError
         case 500...599:
             self = .serverError
         default:
@@ -123,5 +137,12 @@ extension APIError {
               syncSessionReasons.contains(reason)
         else { return nil }
         return reason
+    }
+
+    private static func parseErrorCode(from data: Data?) -> String? {
+        guard let data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return json["code"] as? String
     }
 }

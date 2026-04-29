@@ -305,10 +305,10 @@ struct ImportService {
             category: dict["category"] ?? "Other",
             date: date,
             time: time,
-            transactionDescription: dict["description"]?.isEmpty == false ? dict["description"] : nil,
-            notes: dict["notes"]?.isEmpty == false ? dict["notes"] : nil,
-            recurringExpenseId: dict["recurring expense id"]?.isEmpty == false ? dict["recurring expense id"] : nil,
-            groupTransactionId: dict["group transaction id"]?.isEmpty == false ? dict["group transaction id"] : nil
+            transactionDescription: nonEmpty(dict["description"]),
+            notes: nonEmpty(dict["notes"]),
+            recurringExpenseId: nonEmpty(dict["recurring expense id"]),
+            groupTransactionId: nonEmpty(dict["group transaction id"])
         )
     }
 
@@ -337,8 +337,14 @@ struct ImportService {
             color: dict["color"] ?? "#808080",
             isHidden: dict["is hidden"]?.lowercased() == "true",
             isPredefined: dict["is predefined"]?.lowercased() == "true",
-            predefinedKey: dict["predefined key"]?.isEmpty == false ? dict["predefined key"] : nil
+            predefinedKey: nonEmpty(dict["predefined key"])
         )
+    }
+
+    // MARK: - Helpers
+
+    private func nonEmpty(_ value: String?) -> String? {
+        value?.isEmpty == false ? value : nil
     }
 
     // MARK: - Date Parsing

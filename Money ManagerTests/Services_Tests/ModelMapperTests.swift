@@ -146,4 +146,172 @@ struct ModelMapperTests {
         #expect(request.id == recurring.id)
         #expect(request.frequency == "monthly")
     }
+
+    // MARK: - Transaction.toUpdateRequest
+
+    @Test
+    func testTransactionToUpdateRequestIncludesFields() {
+        let tx = Transaction(amount: 250, category: "Transport", date: Date(), transactionDescription: "Bus fare")
+        let req = tx.toUpdateRequest()
+        #expect(req.amount == 250)
+        #expect(req.category == "Transport")
+        #expect(req.description == "Bus fare")
+        #expect(req.type == "expense")
+    }
+
+    // MARK: - RecurringTransaction.toUpdateRequest
+
+    @Test
+    func testRecurringTransactionToUpdateRequestIncludesFields() {
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .weekly, isActive: false, type: .expense)
+        let req = recurring.toUpdateRequest()
+        #expect(req.name == "Gym")
+        #expect(req.amount == 500)
+        #expect(req.frequency == "weekly")
+        #expect(req.isActive == false)
+    }
+
+    // MARK: - MonthlyBudget mappers
+
+    @Test
+    func testMonthlyBudgetToCreateRequestIncludesFields() {
+        let budget = MonthlyBudget(year: 2024, month: 6, limit: 5000)
+        let req = budget.toCreateRequest()
+        #expect(req.year == 2024)
+        #expect(req.month == 6)
+        #expect(req.limit == 5000)
+        #expect(req.id == budget.id)
+    }
+
+    @Test
+    func testMonthlyBudgetToUpdateRequestIncludesFields() {
+        let budget = MonthlyBudget(year: 2024, month: 6, limit: 8000)
+        let req = budget.toUpdateRequest()
+        #expect(req.year == 2024)
+        #expect(req.month == 6)
+        #expect(req.limit == 8000)
+    }
+
+    @Test
+    func testMonthlyBudgetApplyRemoteUpdatesFields() throws {
+        let budget = MonthlyBudget(year: 2024, month: 1, limit: 1000)
+        let json = """
+        {
+            "id": "\(UUID().uuidString)",
+            "user_id": "\(UUID().uuidString)",
+            "year": 2024,
+            "month": 6,
+            "limit": 9000,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-06-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+        let api = try Self.decoder.decode(APIMonthlyBudget.self, from: json)
+        budget.applyRemote(api)
+        #expect(budget.month == 6)
+        #expect(budget.limit == 9000)
+    }
+
+    // MARK: - CustomCategory mappers
+
+    @Test
+    func testCustomCategoryToCreateRequestIncludesFields() {
+        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000", isPredefined: false)
+        let req = cat.toCreateRequest()
+        #expect(req.name == "Fitness")
+        #expect(req.icon == "🏋️")
+        #expect(req.color == "#FF0000")
+        #expect(req.id == cat.id)
+    }
+
+    @Test
+    func testCustomCategoryToUpdateRequestIncludesFields() {
+        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#00FF00", isPredefined: false)
+        cat.isHidden = true
+        let req = cat.toUpdateRequest()
+        #expect(req.name == "Fitness")
+        #expect(req.isHidden == true)
+        #expect(req.color == "#00FF00")
+    }
+
+    @Test
+    func testCustomCategoryApplyRemoteUpdatesFields() throws {
+        let cat = CustomCategory(name: "Old", icon: "⬛️", color: "#000000", isPredefined: false)
+        let json = """
+        {
+            "id": "\(UUID().uuidString)",
+            "user_id": "\(UUID().uuidString)",
+            "name": "Fitness",
+            "icon": "🏋️",
+            "color": "#FF0000",
+            "is_hidden": false,
+            "is_predefined": false,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-06-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+        let api = try Self.decoder.decode(APICustomCategory.self, from: json)
+        cat.applyRemote(api)
+        #expect(cat.name == "Fitness")
+        #expect(cat.icon == "🏋️")
+        #expect(cat.color == "#FF0000")
+    }
+
+    // MARK: - Transaction.applyRemote — group/settlement fields
+
+    @Test
+    func testApplyRemoteSetsGroupAndSettlementIds() throws {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let groupTxId = UUID()
+        let settlementId = UUID()
+        let groupId = UUID()
+
+        let json = """
+        {
+            "id": "\(transaction.id.uuidString)",
+            "user_id": "\(UUID().uuidString)",
+            "type": "expense",
+            "amount": 100,
+            "category": "Food",
+            "date": "2024-06-01T00:00:00Z",
+            "is_deleted": false,
+            "group_transaction_id": "\(groupTxId.uuidString)",
+            "settlement_id": "\(settlementId.uuidString)",
+            "group_id": "\(groupId.uuidString)",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-06-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+        let api = try Self.decoder.decode(APITransaction.self, from: json)
+        transaction.applyRemote(api)
+
+        #expect(transaction.groupTransactionId == groupTxId)
+        #expect(transaction.settlementId == settlementId)
+        #expect(transaction.groupId == groupId)
+    }
+
+    @Test
+    func testApplyRemoteSetsRecurringExpenseId() throws {
+        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let recurringId = UUID()
+
+        let json = """
+        {
+            "id": "\(transaction.id.uuidString)",
+            "user_id": "\(UUID().uuidString)",
+            "type": "expense",
+            "amount": 100,
+            "category": "Food",
+            "date": "2024-06-01T00:00:00Z",
+            "is_deleted": false,
+            "recurring_transaction_id": "\(recurringId.uuidString)",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-06-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+        let api = try Self.decoder.decode(APITransaction.self, from: json)
+        transaction.applyRemote(api)
+
+        #expect(transaction.recurringExpenseId == recurringId)
+    }
 }

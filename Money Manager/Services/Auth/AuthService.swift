@@ -9,13 +9,15 @@ import Foundation
 final class AuthService: AuthServiceProtocol {
     static let shared = AuthService()
 
-    var authState: AuthState = .unknown
+    var authState: AuthState = .unknown {
+        didSet { NotificationCenter.default.post(name: .authStateDidChange, object: nil) }
+    }
     var hasCheckedAuth: Bool = false
     var isLoading: Bool = false
     var errorMessage: String?
 
     private let session = SessionStore.shared
-    private let apiClient = APIClient.shared
+    private let apiClient = AppAPIClient.shared
 
     nonisolated(unsafe) private var sessionExpiredObserver: Any?
 
@@ -48,9 +50,11 @@ final class AuthService: AuthServiceProtocol {
             return
         }
         do {
-            let user: APIUser = try await apiClient.get("/me")
+            let user: APIUser = try await apiClient.get(.me)
             AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             session.saveLastLoggedInEmail(user.email.lowercased())
+            UserDefaults.standard.set(user.currency, forKey: "selectedCurrency")
+            UserDefaults.standard.set(user.timezone, forKey: "userTimezone")
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
             AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
@@ -73,6 +77,7 @@ final class AuthService: AuthServiceProtocol {
     func login(email: String, password: String) async throws {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
 
         // If a different user was previously logged in, wipe their local data first
         let normalizedEmail = email.lowercased()
@@ -82,14 +87,14 @@ final class AuthService: AuthServiceProtocol {
 
         do {
             let request = APILoginRequest(email: email, password: password)
-            let response: APIAuthResponse = try await apiClient.post("/auth/login", body: request)
+            let response: APIAuthResponse = try await apiClient.post(.login, body: request)
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
+            UserDefaults.standard.set(response.user.currency, forKey: "selectedCurrency")
+            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
             authState = .authenticated(response.user)
-            isLoading = false
         } catch {
-            isLoading = false
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             throw error
         }
@@ -99,20 +104,64 @@ final class AuthService: AuthServiceProtocol {
     func signup(email: String, username: String, password: String, inviteCode: String) async throws {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
 
         do {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
-            let response: APIAuthResponse = try await apiClient.post("/auth/signup", body: request)
+            let response: APIAuthResponse = try await apiClient.post(.signup, body: request)
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(email.lowercased())
+            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
             authState = .authenticated(response.user)
-            isLoading = false
         } catch {
-            isLoading = false
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             throw error
         }
+    }
+
+    @MainActor
+    func verifyEmail(code: String) async throws {
+        let request = APIVerifyEmailRequest(code: code)
+        let _: APIMessageResponse = try await apiClient.post(.verifyEmail, body: request)
+        // Refresh the user object so email_verified flips to true in authState
+        let updatedUser: APIUser = try await apiClient.get(.me)
+        authState = .authenticated(updatedUser)
+    }
+
+    @MainActor
+    func resendVerification() async throws {
+        let _: EmptyResponse = try await apiClient.post(.resendVerification, body: EmptyResponse())
+    }
+
+    @MainActor
+    func updateProfile(username: String?, email: String?, password: String?, currentPassword: String?) async throws {
+        let request = APIUpdateMeRequest(username: username, email: email, password: password, currency: nil)
+        let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
+
+        // Email or password change bumps tokens_invalidated_after on the server,
+        // which immediately revokes the current JWT. Re-login silently so the
+        // session stays alive — otherwise the next request fires a 401 and
+        // forces the user back to the login screen.
+        if (email != nil || password != nil), let currentPwd = currentPassword {
+            let loginEmail = updatedUser.email
+            let loginPassword = password ?? currentPwd
+            let loginReq = APILoginRequest(email: loginEmail, password: loginPassword)
+            let loginResp: APIAuthResponse = try await apiClient.post(.login, body: loginReq)
+            session.saveToken(loginResp.token)
+            session.saveSyncSessionID(loginResp.syncSessionId)
+        }
+
+        authState = .authenticated(updatedUser)
+        session.saveLastLoggedInEmail(updatedUser.email.lowercased())
+    }
+
+    @MainActor
+    func updateCurrency(_ code: String) async throws {
+        let request = APIUpdateMeRequest(username: nil, email: nil, password: nil, currency: code)
+        let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
+        UserDefaults.standard.set(updatedUser.currency, forKey: "selectedCurrency")
+        authState = .authenticated(updatedUser)
     }
 
     @MainActor
@@ -126,7 +175,7 @@ final class AuthService: AuthServiceProtocol {
         if let id = syncSessionID {
             Task {
                 let body = APILogoutRequest(syncSessionId: id)
-                try? await apiClient.post("/auth/logout", body: body) as EmptyResponse
+                let _: EmptyResponse = try await apiClient.post(.logout, body: body)
             }
         }
     }

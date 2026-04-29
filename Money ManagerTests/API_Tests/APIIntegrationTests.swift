@@ -1,3 +1,4 @@
+import APIClient
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -7,14 +8,15 @@ import Testing
 struct APIIntegrationTests {
 
     private let testPassword: String = "Test123!"
+    private let testInviteCode: String = AppConfig.testInviteCode
     private static var authEmail: String = ""
     private static var authToken: String = ""
     private static var authSyncSessionID: UUID? = nil
 
     init() {
-        APIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken)
+        AppAPIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken)
         if let sid = Self.authSyncSessionID {
-            APIClient.shared.setTestSyncSessionID(sid)
+            AppAPIClient.shared.setTestSyncSessionID(sid)
         }
     }
 
@@ -26,25 +28,31 @@ struct APIIntegrationTests {
         abs(a - b) < 0.001
     }
 
+    /// Generates a unique, lowercase test email. Always use this instead of inline UUID strings
+    /// so email case is consistent with what the backend stores after normalization.
+    private func makeTestEmail() -> String {
+        "api_\(UUID().uuidString.prefix(8).lowercased())@test.com"
+    }
+
     private func ensureAuthenticated() async throws {
         if Self.authToken.isEmpty {
             await delay(200)
 
-            let email = "api_\(UUID().uuidString.prefix(8))@test.com"
+            let email = makeTestEmail()
             let username = "user_\(UUID().uuidString.prefix(8))"
 
-            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "FIN-INVITE-2026")
-            let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
+            let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
+            let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
 
             Self.authToken = signupResponse.token
             Self.authSyncSessionID = signupResponse.syncSessionId
             Self.authEmail = email
-            APIClient.shared.setTestToken(Self.authToken)
-            APIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
+            AppAPIClient.shared.setTestToken(Self.authToken)
+            AppAPIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
         } else {
-            APIClient.shared.setTestToken(Self.authToken)
+            AppAPIClient.shared.setTestToken(Self.authToken)
             if let sid = Self.authSyncSessionID {
-                APIClient.shared.setTestSyncSessionID(sid)
+                AppAPIClient.shared.setTestSyncSessionID(sid)
             }
         }
     }
@@ -53,21 +61,21 @@ struct APIIntegrationTests {
 
     @Test("Signup creates user and returns token")
     mutating func testAuthSignup() async throws {
-        let email = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let email = makeTestEmail()
         let username = "user_\(UUID().uuidString.prefix(8))"
 
-        let request = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "FIN-INVITE-2026")
-        let response: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: request)
+        let request = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
+        let response: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: request)
 
         #expect(!response.token.isEmpty)
-        #expect(response.user.email == email)
+        #expect(response.user.email.lowercased() == email.lowercased())
         #expect(response.syncSessionId != UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))
 
         Self.authToken = response.token
         Self.authSyncSessionID = response.syncSessionId
         Self.authEmail = email
-        APIClient.shared.setTestToken(response.token)
-        APIClient.shared.setTestSyncSessionID(response.syncSessionId)
+        AppAPIClient.shared.setTestToken(response.token)
+        AppAPIClient.shared.setTestSyncSessionID(response.syncSessionId)
     }
 
     @Test("Preflight returns valid for fresh sync session")
@@ -81,7 +89,7 @@ struct APIIntegrationTests {
         }
 
         let body = APISyncPreflightRequest(syncSessionId: sessionID)
-        let response: APISyncPreflightResponse = try await APIClient.shared.post("/sync/preflight", body: body)
+        let response: APISyncPreflightResponse = try await AppAPIClient.shared.post(.raw("/sync/preflight"), body: body)
 
         #expect(response.valid == true)
         #expect(response.reason == nil)
@@ -103,7 +111,7 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let response: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == request.name)
         #expect(response.icon == request.icon)
@@ -135,7 +143,7 @@ struct APIIntegrationTests {
             color: "#FF6B6B",
             predefined_key: "foodDining"
         )
-        let response: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == "Eating Out")
         #expect(response.isPredefined == true)
@@ -146,15 +154,16 @@ struct APIIntegrationTests {
     mutating func testCategoryListFreshUserGetsPredefinedDefaults() async throws {
         // Sign up a brand-new user — no customisations yet
         await delay(200)
-        let email = "api_\(UUID().uuidString.prefix(8))@test.com"
+        let email = makeTestEmail()
         let username = "user_\(UUID().uuidString.prefix(8))"
-        let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: "FIN-INVITE-2026")
-        let signupResponse: APIAuthResponse = try await APIClient.shared.post("/auth/signup", body: signupRequest)
-        APIClient.shared.setTestToken(signupResponse.token)
+        let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
+        let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
+        AppAPIClient.shared.setTestToken(signupResponse.token)
+        AppAPIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         // New architecture: no DB seeding — backend returns 15 predefined categories in-memory
         #expect(response.data.count == 15)
@@ -162,8 +171,9 @@ struct APIIntegrationTests {
         #expect(response.data.allSatisfy { $0.predefinedKey != nil })
 
         // Cleanup
-        try await APIClient.shared.delete("/me")
-        APIClient.shared.setTestToken(Self.authToken)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
     }
 
     @Test("List categories returns created custom categories")
@@ -173,11 +183,11 @@ struct APIIntegrationTests {
 
         let name = "ListTest \(UUID().uuidString.prefix(8))"
         let request = APICreateCategoryRequest(id: nil, name: name, icon: "star.circle.fill", color: "#4ECDC4", isHidden: nil, isPredefined: nil, predefinedKey: nil)
-        let _: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let _: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         #expect(response.data.contains(where: { $0.name == name }))
     }
@@ -196,11 +206,11 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         let found = response.data.first(where: { $0.id == created.id })
 
         #expect(found != nil)
@@ -223,13 +233,13 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         let updateName = "Updated \(UUID().uuidString.prefix(4))"
-        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, is_hidden: nil)
-        let updated: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: updateRequest)
+        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, isHidden: nil)
+        let updated: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: updateRequest)
 
         #expect(updated.name == updateName)
         #expect(updated.icon == "heart.fill")
@@ -249,20 +259,20 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         // Hide it
-        let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, is_hidden: true)
-        let hidden: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: hideRequest)
+        let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: true)
+        let hidden: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: hideRequest)
         #expect(hidden.isHidden == true)
 
         await delay(200)
 
         // Unhide it
-        let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, is_hidden: false)
-        let restored: APICustomCategory = try await APIClient.shared.put("/categories/\(created.id)", body: unhideRequest)
+        let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: false)
+        let restored: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: unhideRequest)
         #expect(restored.isHidden == false)
     }
 
@@ -280,15 +290,15 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: createRequest)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
-        let _: APIMessageResponse = try await APIClient.shared.deleteMessage("/categories/\(created.id)")
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(created.id)"))
 
         await delay(200)
 
-        let categories: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
@@ -313,17 +323,17 @@ struct APIIntegrationTests {
             color: "#4ECDC4",
             predefined_key: "transport"
         )
-        let created: APICustomCategory = try await APIClient.shared.post("/categories", body: request)
+        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
         // Delete the override → should reset to default (row removed server-side)
-        let _: APIMessageResponse = try await APIClient.shared.deleteMessage("/categories/\(created.id)")
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(created.id)"))
 
         await delay(200)
 
         // Override row should be gone
-        let categories: APIListResponse<APICustomCategory> = try await APIClient.shared.get("/categories")
+        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
@@ -335,7 +345,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: 5000.00)
-        let response: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
+        let response: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
 
         #expect(compareAmount(response.limit, request.limit))
     }
@@ -345,7 +355,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APIMonthlyBudget> = try await APIClient.shared.get("/budgets")
+        let response: APIListResponse<APIMonthlyBudget> = try await AppAPIClient.shared.get(.raw("/budgets"))
 
         #expect(!response.data.isEmpty)
     }
@@ -356,12 +366,12 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: 1000.00)
-        let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: createRequest)
+        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: createRequest)
 
         await delay(200)
 
         let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: 1500.00)
-        let updated: APIMonthlyBudget = try await APIClient.shared.put("/budgets/\(created.id)", body: updateRequest)
+        let updated: APIMonthlyBudget = try await AppAPIClient.shared.patch(.raw("/budgets/\(created.id)"), body: updateRequest)
 
         #expect(compareAmount(updated.limit, 1500))
     }
@@ -372,11 +382,11 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: 999.00)
-        let created: APIMonthlyBudget = try await APIClient.shared.post("/budgets", body: request)
+        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
 
         await delay(200)
 
-        try await APIClient.shared.delete("/budgets/\(created.id)")
+        try await AppAPIClient.shared.delete(.raw("/budgets/\(created.id)"))
     }
 
     // MARK: - Recurring Transaction Tests
@@ -402,7 +412,7 @@ struct APIIntegrationTests {
             type: "expense"
         )
 
-        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: request)
+        let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
 
         #expect(response.name == request.name)
         #expect(compareAmount(response.amount, request.amount))
@@ -429,7 +439,7 @@ struct APIIntegrationTests {
             type: "expense"
         )
 
-        let response: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: request)
+        let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
 
         #expect(response.frequency == "weekly")
         #expect(response.daysOfWeek == [1, 3, 5])
@@ -441,7 +451,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APIRecurringTransaction> = try await APIClient.shared.get("/recurring-transactions")
+        let response: APIListResponse<APIRecurringTransaction> = try await AppAPIClient.shared.get(.raw("/recurring-transactions"))
 
         #expect(!response.data.isEmpty)
     }
@@ -466,11 +476,11 @@ struct APIIntegrationTests {
             notes: nil,
             type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
+        let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
         await delay(200)
 
-        let response: APIRecurringTransaction = try await APIClient.shared.get("/recurring-transactions/\(created.id)")
+        let response: APIRecurringTransaction = try await AppAPIClient.shared.get(.raw("/recurring-transactions/\(created.id)"))
 
         #expect(response.id == created.id)
     }
@@ -495,7 +505,7 @@ struct APIIntegrationTests {
             notes: nil,
             type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
+        let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
         await delay(200)
 
@@ -505,7 +515,7 @@ struct APIIntegrationTests {
             isActive: false, notes: nil,
             type: "expense"
         )
-        let updated: APIRecurringTransaction = try await APIClient.shared.put("/recurring-transactions/\(created.id)", body: updateRequest)
+        let updated: APIRecurringTransaction = try await AppAPIClient.shared.patch(.raw("/recurring-transactions/\(created.id)"), body: updateRequest)
 
         #expect(compareAmount(updated.amount, 12))
         #expect(updated.isActive == false)
@@ -531,11 +541,11 @@ struct APIIntegrationTests {
             notes: nil,
             type: "expense"
         )
-        let created: APIRecurringTransaction = try await APIClient.shared.post("/recurring-transactions", body: createRequest)
+        let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
         await delay(200)
 
-        try await APIClient.shared.delete("/recurring-transactions/\(created.id)")
+        try await AppAPIClient.shared.delete(.raw("/recurring-transactions/\(created.id)"))
     }
 
     // MARK: - Transaction Tests
@@ -557,7 +567,7 @@ struct APIIntegrationTests {
             recurringExpenseId: nil
         )
 
-        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+        let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.category == request.category)
@@ -582,7 +592,7 @@ struct APIIntegrationTests {
             recurringExpenseId: nil
         )
 
-        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+        let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.type == "income")
@@ -605,7 +615,7 @@ struct APIIntegrationTests {
             recurringExpenseId: nil
         )
 
-        let response: APITransaction = try await APIClient.shared.post("/transactions", body: request)
+        let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.description == request.description)
@@ -617,7 +627,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get("/transactions")
+        let response: APIPaginatedResponse<APITransaction> = try await AppAPIClient.shared.get(.raw("/transactions"))
 
         #expect(!response.data.isEmpty)
     }
@@ -627,10 +637,10 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get(
-            "/transactions",
-            queryItems: [URLQueryItem(name: "type", value: "expense")]
-        )
+        let (response, _): BaseAPI.APIResponse<APIPaginatedResponse<APITransaction>> = try await AppAPIClient.shared.client
+            .request(.raw("/transactions"))
+            .queryParameters(["type": "expense"])
+            .response()
 
         #expect(response.data.allSatisfy { $0.type == "expense" })
     }
@@ -640,10 +650,10 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIPaginatedResponse<APITransaction> = try await APIClient.shared.get(
-            "/transactions",
-            queryItems: [URLQueryItem(name: "type", value: "income")]
-        )
+        let (response, _): BaseAPI.APIResponse<APIPaginatedResponse<APITransaction>> = try await AppAPIClient.shared.client
+            .request(.raw("/transactions"))
+            .queryParameters(["type": "income"])
+            .response()
 
         #expect(response.data.allSatisfy { $0.type == "income" })
     }
@@ -664,11 +674,11 @@ struct APIIntegrationTests {
             notes: nil,
             recurringExpenseId: nil
         )
-        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+        let created: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: createRequest)
 
         await delay(200)
 
-        let response: APITransaction = try await APIClient.shared.get("/transactions/\(created.id)")
+        let response: APITransaction = try await AppAPIClient.shared.get(.raw("/transactions/\(created.id)"))
 
         #expect(response.id == created.id)
         #expect(response.type == "expense")
@@ -690,7 +700,7 @@ struct APIIntegrationTests {
             notes: nil,
             recurringExpenseId: nil
         )
-        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+        let created: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: createRequest)
 
         await delay(200)
 
@@ -703,7 +713,7 @@ struct APIIntegrationTests {
             description: "After update",
             notes: nil
         )
-        let updated: APITransaction = try await APIClient.shared.patch("/transactions/\(created.id)", body: updateRequest)
+        let updated: APITransaction = try await AppAPIClient.shared.patch(.raw("/transactions/\(created.id)"), body: updateRequest)
 
         #expect(compareAmount(updated.amount, 55))
         #expect(updated.description == "After update")
@@ -725,16 +735,18 @@ struct APIIntegrationTests {
             notes: nil,
             recurringExpenseId: nil
         )
-        let created: APITransaction = try await APIClient.shared.post("/transactions", body: createRequest)
+        let created: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: createRequest)
 
         await delay(200)
 
-        try await APIClient.shared.delete("/transactions/\(created.id)")
+        try await AppAPIClient.shared.delete(.raw("/transactions/\(created.id)"))
 
         await delay(200)
 
-        let response: APITransaction = try await APIClient.shared.get("/transactions/\(created.id)")
-        #expect(response.isDeleted == true)
+        // Backend filters is_deleted = FALSE on GET /transactions/:id, so deleted transactions return 404
+        await #expect(throws: (any Error).self) {
+            let _: APITransaction = try await AppAPIClient.shared.get(.raw("/transactions/\(created.id)"))
+        }
     }
 
     // MARK: - Group Transaction Tests
@@ -745,11 +757,11 @@ struct APIIntegrationTests {
         await delay(200)
 
         let groupRequest = APICreateGroupRequest(name: "Test Group \(UUID().uuidString.prefix(4))")
-        let group: APIGroup = try await APIClient.shared.post("/groups", body: groupRequest)
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupRequest)
 
         await delay(200)
 
-        let membersResponse: APIListResponse<APIGroupMember> = try await APIClient.shared.get("/groups/\(group.id)/members")
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
         guard let member = membersResponse.data.first else {
             Issue.record("Group has no members")
             return
@@ -767,8 +779,8 @@ struct APIIntegrationTests {
             ]
         )
 
-        let response: APIGroupTransaction = try await APIClient.shared.post(
-            "/groups/\(group.id)/transactions",
+        let response: APIGroupTransaction = try await AppAPIClient.shared.post(
+            .raw("/groups/\(group.id)/transactions"),
             body: txRequest
         )
 
@@ -784,11 +796,11 @@ struct APIIntegrationTests {
         await delay(200)
 
         let groupRequest = APICreateGroupRequest(name: "List Test \(UUID().uuidString.prefix(4))")
-        let group: APIGroup = try await APIClient.shared.post("/groups", body: groupRequest)
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupRequest)
 
         await delay(200)
 
-        let membersResponse: APIListResponse<APIGroupMember> = try await APIClient.shared.get("/groups/\(group.id)/members")
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
         guard let member = membersResponse.data.first else {
             Issue.record("Group has no members")
             return
@@ -805,12 +817,12 @@ struct APIIntegrationTests {
                 APIGroupTransactionSplitInput(userId: member.id, amount: 30.00)
             ]
         )
-        let _: APIGroupTransaction = try await APIClient.shared.post("/groups/\(group.id)/transactions", body: txRequest)
+        let _: APIGroupTransaction = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/transactions"), body: txRequest)
 
         await delay(200)
 
         struct GroupTransactionsResponse: Codable { let data: [APIGroupTransaction] }
-        let response: GroupTransactionsResponse = try await APIClient.shared.get("/groups/\(group.id)/transactions")
+        let response: GroupTransactionsResponse = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/transactions"))
 
         #expect(!response.data.isEmpty)
     }
@@ -825,12 +837,291 @@ struct APIIntegrationTests {
         let month = Calendar.current.component(.month, from: Date())
         let year = Calendar.current.component(.year, from: Date())
 
-        let response: APIMonthlyDashboardResponse = try await APIClient.shared.get("/dashboard/monthly", queryItems: [
-            URLQueryItem(name: "month", value: "\(month)"),
-            URLQueryItem(name: "year", value: "\(year)")
-        ])
+        let (response, _): BaseAPI.APIResponse<APIMonthlyDashboardResponse> = try await AppAPIClient.shared.client
+            .request(.raw("/dashboard/monthly"))
+            .queryParameters(["month": "\(month)", "year": "\(year)"])
+            .response()
 
         #expect(response.totalTransactions != nil)
+    }
+
+    // MARK: - PATCH /me Tests
+
+    @Test("Update username returns updated user")
+    mutating func testUpdateMeUsername() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let newUsername = "user_\(UUID().uuidString.prefix(8))"
+        let request = APIUpdateMeRequest(username: newUsername, email: nil, password: nil, currency: nil)
+        let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+
+        #expect(response.username == newUsername)
+        #expect(response.email == Self.authEmail)
+    }
+
+    @Test("Update email returns updated user")
+    mutating func testUpdateMeEmail() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let newEmail = makeTestEmail()
+        let request = APIUpdateMeRequest(username: nil, email: newEmail, password: nil, currency: nil)
+        let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+
+        #expect(response.email == newEmail)
+
+        // Email change invalidates all JWTs — wait >1s before re-login so the
+        // new JWT's iat is strictly after tokens_invalidated_after (second precision).
+        await delay(1200)
+        let loginReq = APILoginRequest(email: newEmail, password: testPassword)
+        let loginResp: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/login"), body: loginReq)
+        Self.authToken = loginResp.token
+        Self.authSyncSessionID = loginResp.syncSessionId
+        Self.authEmail = newEmail
+        AppAPIClient.shared.setTestToken(loginResp.token)
+        AppAPIClient.shared.setTestSyncSessionID(loginResp.syncSessionId)
+    }
+
+    @Test("Update email to already-taken address returns 409")
+    mutating func testUpdateMeEmailConflict() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create a second user whose email we'll try to steal
+        let otherEmail = makeTestEmail()
+        let otherUsername = "user_\(UUID().uuidString.prefix(8))"
+        let signupReq = APISignupRequest(email: otherEmail, username: otherUsername, password: testPassword, inviteCode: testInviteCode)
+        let otherUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
+
+        // Try to update our account's email to the other user's email
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
+        await delay(200)
+
+        let request = APIUpdateMeRequest(username: nil, email: otherEmail, password: nil, currency: nil)
+        do {
+            let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+            Issue.record("Expected conflict error but request succeeded")
+        } catch let error as APIError {
+            #expect(error == .conflict || error.errorDescription?.contains("409") == true || error.errorDescription?.contains("taken") == true || error.errorDescription?.contains("already") == true)
+        } catch {
+            // Some error was thrown — acceptable
+        }
+
+        // Cleanup: delete the other user
+        AppAPIClient.shared.setTestToken(otherUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(otherUser.syncSessionId)
+        await delay(200)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
+    }
+
+    @Test("Update password allows login with new password")
+    mutating func testUpdateMePassword() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let newPassword = "NewPass456!"
+        let request = APIUpdateMeRequest(username: nil, email: nil, password: newPassword, currency: nil)
+        let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
+
+        // Password change invalidates all JWTs — wait >1s before re-login so the
+        // new JWT's iat is strictly after tokens_invalidated_after (second precision).
+        await delay(1200)
+
+        // Verify new password works by logging in
+        let loginReq = APILoginRequest(email: Self.authEmail, password: newPassword)
+        let loginResp: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/login"), body: loginReq)
+
+        #expect(!loginResp.token.isEmpty)
+
+        // Restore token and sync session (password change invalidates all sessions)
+        Self.authToken = loginResp.token
+        Self.authSyncSessionID = loginResp.syncSessionId
+        AppAPIClient.shared.setTestToken(loginResp.token)
+        AppAPIClient.shared.setTestSyncSessionID(loginResp.syncSessionId)
+    }
+
+    // MARK: - Group Management Tests
+
+    @Test("Rename group returns updated name")
+    mutating func testGroupRename() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let groupReq = APICreateGroupRequest(name: "Rename Me \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let newName = "Renamed \(UUID().uuidString.prefix(4))"
+        let renameReq = APIRenameGroupRequest(name: newName)
+        let updated: APIGroup = try await AppAPIClient.shared.patch(.raw("/groups/\(group.id)"), body: renameReq)
+
+        #expect(updated.name == newName)
+        #expect(updated.id == group.id)
+    }
+
+    @Test("Delete group removes it from list")
+    mutating func testGroupDelete() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let groupReq = APICreateGroupRequest(name: "Delete Me \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        try await AppAPIClient.shared.delete(.raw("/groups/\(group.id)"))
+
+        await delay(200)
+
+        let listResponse: APIGroupsListResponse = try await AppAPIClient.shared.get(.raw("/groups"))
+        #expect(!listResponse.data.contains(where: { $0.id == group.id }))
+    }
+
+    @Test("Delete group also soft-deletes its transactions")
+    mutating func testGroupDeleteCascadesToTransactions() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create group and add a transaction
+        let groupReq = APICreateGroupRequest(name: "Cascade Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        guard let member = membersResponse.data.first else {
+            Issue.record("Group has no members")
+            return
+        }
+
+        let txReq = APICreateGroupTransactionRequest(
+            paidByUserId: member.id,
+            totalAmount: 50.00,
+            category: "Food & Dining",
+            date: Date(),
+            description: "Cascade test tx",
+            notes: nil,
+            splits: [APIGroupTransactionSplitInput(userId: member.id, amount: 50.00)]
+        )
+        let _: APIGroupTransaction = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/transactions"), body: txReq)
+
+        await delay(200)
+
+        // Delete the group
+        try await AppAPIClient.shared.delete(.raw("/groups/\(group.id)"))
+
+        await delay(200)
+
+        // Group should be gone from list
+        let listResponse: APIGroupsListResponse = try await AppAPIClient.shared.get(.raw("/groups"))
+        #expect(!listResponse.data.contains(where: { $0.id == group.id }))
+    }
+
+    @Test("Remove member from group succeeds when balance is zero")
+    mutating func testGroupRemoveMemberZeroBalance() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create a second user to add as member
+        let memberEmail = makeTestEmail()
+        let memberUsername = "user_\(UUID().uuidString.prefix(8))"
+        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: testInviteCode)
+        let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
+
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
+        await delay(200)
+
+        // Creator creates a group and adds the member
+        let groupReq = APICreateGroupRequest(name: "Remove Member Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let addReq = APIAddMemberRequest(email: memberEmail)
+        let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/members"), body: addReq)
+
+        await delay(200)
+
+        // Fetch members to get the new member's ID
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        guard let addedMember = membersResponse.data.first(where: { $0.email == memberEmail }) else {
+            Issue.record("Added member not found in group")
+            try await AppAPIClient.shared.delete(.raw("/me"))
+            AppAPIClient.shared.setTestToken(Self.authToken)
+            return
+        }
+
+        // Remove the member — balance is zero so this should succeed
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/groups/\(group.id)/members/\(addedMember.id)"))
+
+        await delay(200)
+
+        let updatedMembers: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        #expect(!updatedMembers.data.contains(where: { $0.id == addedMember.id }))
+
+        // Cleanup second user
+        AppAPIClient.shared.setTestToken(memberUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(memberUser.syncSessionId)
+        await delay(200)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
+    }
+
+    @Test("Leave group succeeds when balance is zero")
+    mutating func testGroupLeaveZeroBalance() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        // Create a second user who will join and then leave
+        let memberEmail = makeTestEmail()
+        let memberUsername = "user_\(UUID().uuidString.prefix(8))"
+        let signupReq = APISignupRequest(email: memberEmail, username: memberUsername, password: testPassword, inviteCode: testInviteCode)
+        let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
+
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
+        await delay(200)
+
+        // Creator creates group and adds the second user
+        let groupReq = APICreateGroupRequest(name: "Leave Test \(UUID().uuidString.prefix(4))")
+        let group: APIGroup = try await AppAPIClient.shared.post(.raw("/groups"), body: groupReq)
+
+        await delay(200)
+
+        let addReq = APIAddMemberRequest(email: memberEmail)
+        let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/members"), body: addReq)
+
+        await delay(200)
+
+        // Switch to the member and leave the group
+        AppAPIClient.shared.setTestToken(memberUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(memberUser.syncSessionId)
+        await delay(200)
+
+        let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/leave"), body: EmptyResponse())
+
+        await delay(200)
+
+        // Member should no longer be in the group
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
+        let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
+        #expect(!membersResponse.data.contains(where: { $0.email == memberEmail }))
+
+        // Cleanup second user
+        AppAPIClient.shared.setTestToken(memberUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(memberUser.syncSessionId)
+        await delay(200)
+        try await AppAPIClient.shared.delete(.raw("/me"))
+        AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
     }
 
     // MARK: - Cleanup
@@ -838,7 +1129,17 @@ struct APIIntegrationTests {
     @Test("Cleanup: delete test user")
     func testCleanupDeleteUser() async throws {
         guard !Self.authToken.isEmpty else { return }
+
+        // Delete all groups owned by the test user before deleting the account.
+        // The backend blocks DELETE /me if the user still owns any groups.
+        let me: APIUser? = try? await AppAPIClient.shared.get(.raw("/me"))
+        let groups: APIGroupsListResponse? = try? await AppAPIClient.shared.get(.raw("/groups"))
+        for group in groups?.data.filter({ $0.createdBy == me?.id }) ?? [] {
+            try? await AppAPIClient.shared.delete(.raw("/groups/\(group.id)"))
+            await delay(100)
+        }
+
         await delay(200)
-        try await APIClient.shared.delete("/me")
+        try await AppAPIClient.shared.delete(.raw("/me"))
     }
 }

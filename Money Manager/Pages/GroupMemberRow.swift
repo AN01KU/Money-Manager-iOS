@@ -9,6 +9,7 @@ struct GroupMemberRow: View {
     let member: APIGroupMember
     let isAdmin: Bool
     var isPending: Bool = false
+    var balance: Double? = nil
 
     private var displayName: String {
         member.username
@@ -39,22 +40,35 @@ struct GroupMemberRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            if isPending {
-                Text("Invited")
-                    .font(AppTypography.rowMeta)
-                    .foregroundStyle(AppColors.warning)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(AppColors.warning.opacity(0.1))
-                    .clipShape(.rect(cornerRadius: 6))
-            } else if isAdmin {
-                Text("Admin")
-                    .font(AppTypography.rowMeta)
-                    .foregroundStyle(AppColors.accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(AppColors.accentSubtle)
-                    .clipShape(.rect(cornerRadius: 6))
+            HStack(spacing: 8) {
+                if let bal = balance, abs(bal) > 0.01 {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(CurrencyFormatter.format(abs(bal), showDecimals: true))
+                            .font(AppTypography.rowMeta)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(bal > 0 ? AppColors.positive : AppColors.expense)
+                        Text(bal > 0 ? "is owed" : "owes")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if isPending {
+                    Text("Invited")
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(AppColors.warning)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppColors.warning.opacity(0.1))
+                        .clipShape(.rect(cornerRadius: 6))
+                } else if isAdmin {
+                    Text("Admin")
+                        .font(AppTypography.rowMeta)
+                        .foregroundStyle(AppColors.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppColors.accentSubtle)
+                        .clipShape(.rect(cornerRadius: 6))
+                }
             }
         }
         .padding(.horizontal, 12)

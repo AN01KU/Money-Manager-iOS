@@ -32,7 +32,9 @@ struct GroupsListView: View {
                 prompt: viewModel.selectedTab == .groups ? "Search groups" : "Search activity"
             )
             .navigationDestination(for: APIGroupWithDetails.self) { group in
-                GroupDetailView(group: group, currentUserId: authService.currentUser?.id)
+                GroupDetailView(group: group, currentUserId: authService.currentUser?.id) { deletedId in
+                    viewModel.groups.removeAll { $0.id == deletedId }
+                }
             }
             .sheet(isPresented: $showCreateGroup) {
                 CreateGroupSheet(groupService: viewModel.groupService) { newGroup in
@@ -81,6 +83,7 @@ private struct GroupsListContent: View {
             ) {
                 onCreateGroup()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollView {
                 VStack(spacing: 16) {
@@ -113,17 +116,11 @@ private struct GroupsGroupsContent: View {
                 .padding(.horizontal)
 
             if viewModel.filteredGroups.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 32))
-                        .foregroundStyle(AppColors.accent)
-                    Text("No groups found")
-                        .font(.headline)
-                    Text("Try a different search term")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+                EmptyStateView(
+                    icon: "magnifyingglass",
+                    title: "No groups found",
+                    message: "Try a different search term"
+                )
                 .padding(.vertical, 32)
             } else {
                 LazyVStack(spacing: 0) {

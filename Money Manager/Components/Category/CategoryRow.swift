@@ -44,5 +44,6 @@ struct CategoryRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(category.name), \(usageCount) transactions, \(category.isPredefined ? "Default category" : "Custom category")")
+        .accessibilityIdentifier("category.row")
     }
 }

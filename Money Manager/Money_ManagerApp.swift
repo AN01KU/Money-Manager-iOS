@@ -142,19 +142,18 @@ struct Money_ManagerApp: App {
                 .onAppear {
                     Task {
                         #if DEBUG
-                        if isScreenshotMode {
-                            let args = ProcessInfo.processInfo.arguments
-                            if let emailIdx = args.firstIndex(of: LaunchArguments.testEmail.rawValue),
-                               let passIdx = args.firstIndex(of: LaunchArguments.testPassword.rawValue),
-                               args.indices.contains(emailIdx + 1),
-                               args.indices.contains(passIdx + 1) {
-                                try? await authService.login(
-                                    email: args[emailIdx + 1],
-                                    password: args[passIdx + 1]
-                                )
-                                await syncService.fullSync()
-                                return
-                            }
+                        if isScreenshotMode,
+                           let token = ProcessInfo.processInfo.environment["SCREENSHOT_TOKEN"],
+                           !token.isEmpty {
+                            // Store in UserDefaults so APIClient can read it without keychain
+                            // (keychain writes fail under CODE_SIGNING_ALLOWED=NO in UI tests).
+                            UserDefaults.standard.set(token, forKey: "screenshot_token_override")
+                            // Each run uses a fresh throwaway user — wipe any leftover local
+                            // SwiftData from the previous run so we don't see stale/duplicate data.
+                            SyncService.shared.clearAllUserData()
+                            await authService.checkAuthState()
+                            await syncService.fullSync()
+                            return
                         }
                         #endif
                         await authService.checkAuthState()

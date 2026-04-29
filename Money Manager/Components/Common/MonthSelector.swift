@@ -34,15 +34,14 @@ struct MonthSelector: View {
         .accessibilityIdentifier("budget.month-selector")
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
-                VStack {
-                    DatePicker(
-                        "Select Month",
-                        selection: $selectedMonth,
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding()
-                }
+                DatePicker(
+                    "Select Month",
+                    selection: $selectedMonth,
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .padding()
                 .navigationTitle("Select Month")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -53,7 +52,7 @@ struct MonthSelector: View {
                     }
                 }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.height(300)])
         }
     }
     

@@ -46,6 +46,11 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { _, _ in
             tabChanged += 1
         }
+        .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated && selectedTab == .groups {
+                selectedTab = .overview
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .appRouteReceived)) { notification in
             guard let route = notification.object as? AppRoute else { return }
             switch route {

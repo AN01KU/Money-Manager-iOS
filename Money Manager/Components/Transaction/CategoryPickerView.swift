@@ -20,23 +20,10 @@ struct CategoryPickerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                if !visibleCustom.isEmpty {
-                    Section("Your Categories") {
-                        ForEach(visibleCustom) { category in
-                            CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
-                                selectionToggled += 1
-                                selectedCategory = category.name
-                                dismiss()
-                            }
-                            .sensoryFeedback(.selection, trigger: selectionToggled)
-                        }
-                    }
-                }
-
-                Section("Default Categories") {
-                    ForEach(visiblePredefined) { category in
+        List {
+            if !visibleCustom.isEmpty {
+                Section("Your Categories") {
+                    ForEach(visibleCustom) { category in
                         CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
                             selectionToggled += 1
                             selectedCategory = category.name
@@ -46,13 +33,19 @@ struct CategoryPickerView: View {
                     }
                 }
             }
-            .navigationTitle("Select Category")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+
+            Section("Default Categories") {
+                ForEach(visiblePredefined) { category in
+                    CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
+                        selectionToggled += 1
+                        selectedCategory = category.name
+                        dismiss()
+                    }
+                    .sensoryFeedback(.selection, trigger: selectionToggled)
                 }
             }
         }
+        .navigationTitle("Select Category")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
