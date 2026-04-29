@@ -159,6 +159,7 @@ struct APIIntegrationTests {
         let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
         let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
         AppAPIClient.shared.setTestToken(signupResponse.token)
+        AppAPIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
 
         await delay(200)
 
@@ -172,6 +173,7 @@ struct APIIntegrationTests {
         // Cleanup
         try await AppAPIClient.shared.delete(.raw("/me"))
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
     }
 
     @Test("List categories returns created custom categories")
@@ -868,8 +870,17 @@ struct APIIntegrationTests {
         let response: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
 
         #expect(response.email == newEmail)
-        // Update stored email so subsequent ensureAuthenticated calls stay consistent
+
+        // Email change invalidates all JWTs — wait >1s before re-login so the
+        // new JWT's iat is strictly after tokens_invalidated_after (second precision).
+        await delay(1200)
+        let loginReq = APILoginRequest(email: newEmail, password: testPassword)
+        let loginResp: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/login"), body: loginReq)
+        Self.authToken = loginResp.token
+        Self.authSyncSessionID = loginResp.syncSessionId
         Self.authEmail = newEmail
+        AppAPIClient.shared.setTestToken(loginResp.token)
+        AppAPIClient.shared.setTestSyncSessionID(loginResp.syncSessionId)
     }
 
     @Test("Update email to already-taken address returns 409")
@@ -885,6 +896,7 @@ struct APIIntegrationTests {
 
         // Try to update our account's email to the other user's email
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
         await delay(200)
 
         let request = APIUpdateMeRequest(username: nil, email: otherEmail, password: nil, currency: nil)
@@ -899,9 +911,11 @@ struct APIIntegrationTests {
 
         // Cleanup: delete the other user
         AppAPIClient.shared.setTestToken(otherUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(otherUser.syncSessionId)
         await delay(200)
         try await AppAPIClient.shared.delete(.raw("/me"))
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
     }
 
     @Test("Update password allows login with new password")
@@ -913,7 +927,9 @@ struct APIIntegrationTests {
         let request = APIUpdateMeRequest(username: nil, email: nil, password: newPassword, currency: nil)
         let _: APIUser = try await AppAPIClient.shared.patch(.raw("/me"), body: request)
 
-        await delay(200)
+        // Password change invalidates all JWTs — wait >1s before re-login so the
+        // new JWT's iat is strictly after tokens_invalidated_after (second precision).
+        await delay(1200)
 
         // Verify new password works by logging in
         let loginReq = APILoginRequest(email: Self.authEmail, password: newPassword)
@@ -1018,6 +1034,7 @@ struct APIIntegrationTests {
         let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
 
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
         await delay(200)
 
         // Creator creates a group and adds the member
@@ -1050,9 +1067,11 @@ struct APIIntegrationTests {
 
         // Cleanup second user
         AppAPIClient.shared.setTestToken(memberUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(memberUser.syncSessionId)
         await delay(200)
         try await AppAPIClient.shared.delete(.raw("/me"))
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
     }
 
     @Test("Leave group succeeds when balance is zero")
@@ -1067,6 +1086,7 @@ struct APIIntegrationTests {
         let memberUser: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupReq)
 
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
         await delay(200)
 
         // Creator creates group and adds the second user
@@ -1082,6 +1102,7 @@ struct APIIntegrationTests {
 
         // Switch to the member and leave the group
         AppAPIClient.shared.setTestToken(memberUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(memberUser.syncSessionId)
         await delay(200)
 
         let _: APIMessageResponse = try await AppAPIClient.shared.post(.raw("/groups/\(group.id)/leave"), body: EmptyResponse())
@@ -1090,14 +1111,17 @@ struct APIIntegrationTests {
 
         // Member should no longer be in the group
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
         let membersResponse: APIListResponse<APIGroupMember> = try await AppAPIClient.shared.get(.raw("/groups/\(group.id)/members"))
         #expect(!membersResponse.data.contains(where: { $0.email == memberEmail }))
 
         // Cleanup second user
         AppAPIClient.shared.setTestToken(memberUser.token)
+        AppAPIClient.shared.setTestSyncSessionID(memberUser.syncSessionId)
         await delay(200)
         try await AppAPIClient.shared.delete(.raw("/me"))
         AppAPIClient.shared.setTestToken(Self.authToken)
+        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
     }
 
     // MARK: - Cleanup
