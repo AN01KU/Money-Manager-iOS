@@ -9,100 +9,144 @@ struct CategoryEditorView: View {
     let onSelectColor: (String) -> Void
 
     var body: some View {
-        Form {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Name")
-                        .font(AppTypography.subhead)
-                        .foregroundStyle(AppColors.label2)
-                    TextField("e.g., Subscriptions, Pets", text: $name)
-                        .textInputAutocapitalization(.words)
-                }
-                .padding(.vertical, 4)
+        ScrollView {
+            VStack(spacing: AppConstants.UI.spacing20) {
+                nameCard
+                iconCard
+                colorCard
+                previewCard
             }
-
-            Section("Icon") {
-                iconGrid
-            }
-
-            Section("Color") {
-                colorGrid
-            }
-
-            Section("Preview") {
-                previewView
-            }
+            .padding(.horizontal, AppConstants.UI.padding)
+            .padding(.top, AppConstants.UI.spacing12)
+            .padding(.bottom, AppConstants.UI.spacingXL)
         }
+        .background(AppColors.background)
         .dismissKeyboardOnScroll()
     }
 
-    @ViewBuilder
-    private var iconGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 16) {
-            ForEach(CategoryEditorViewModel.iconOptions, id: \.self) { icon in
-                Button {
-                    onSelectIcon(icon)
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: AppConstants.UI.radius10)
-                            .fill(selectedIcon == icon
-                                  ? Color(hex: selectedColor)
-                                  : Color(hex: selectedColor).opacity(0.12))
-                            .frame(width: 44, height: 44)
-                        AppIcon(name: icon, size: 22,
-                                color: selectedIcon == icon ? .white : Color(hex: selectedColor))
+    // MARK: - Name
+
+    private var nameCard: some View {
+        EditorSection(header: nil) {
+            VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+                Text("Name")
+                    .font(AppTypography.subhead)
+                    .foregroundStyle(AppColors.label2)
+                TextField("e.g., Subscriptions, Pets", text: $name)
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.label)
+                    .textInputAutocapitalization(.words)
+            }
+            .padding(AppConstants.UI.padding)
+        }
+    }
+
+    // MARK: - Icon grid
+
+    private var iconCard: some View {
+        EditorSection(header: "ICON") {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: AppConstants.UI.spacing12), count: 6),
+                spacing: AppConstants.UI.spacing12
+            ) {
+                ForEach(CategoryEditorViewModel.iconOptions, id: \.self) { icon in
+                    Button { onSelectIcon(icon) } label: {
+                        let selected = selectedIcon == icon
+                        let tint = Color(hex: selectedColor)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppConstants.UI.radius10)
+                                .fill(selected ? tint : tint.opacity(0.12))
+                                .frame(width: 44, height: 44)
+                            AppIcon(name: icon, size: 22,
+                                    color: selected ? .white : tint)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(AppConstants.UI.padding)
+        }
+    }
+
+    // MARK: - Color grid
+
+    private var colorCard: some View {
+        EditorSection(header: "COLOR") {
+            VStack(spacing: AppConstants.UI.spacing12) {
+                if let conflict = colorConflictCategory {
+                    HStack(spacing: 6) {
+                        AppIcon(name: AppIcons.UI.warningIcon, size: 14, color: AppColors.warning)
+                        Text("Also used by \"\(conflict)\"")
+                            .font(AppTypography.caption1)
+                            .foregroundStyle(AppColors.warning)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                let palette = CategoryEditorViewModel.colorPalette
+                let columns = Array(repeating: GridItem(.flexible(), spacing: AppConstants.UI.spacing12), count: 8)
+                LazyVGrid(columns: columns, spacing: AppConstants.UI.spacing12) {
+                    ForEach(palette, id: \.hex) { entry in
+                        Button { onSelectColor(entry.hex) } label: {
+                            Circle()
+                                .fill(entry.color)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.primary, lineWidth: selectedColor.lowercased() == entry.hex.lowercased() ? 2.5 : 0)
+                                        .padding(-3)
+                                )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .buttonStyle(.plain)
             }
+            .padding(AppConstants.UI.padding)
         }
-        .padding(.vertical, 4)
     }
 
-    @ViewBuilder
-    private var colorGrid: some View {
-        if let conflict = colorConflictCategory {
-            HStack(spacing: 6) {
-                AppIcon(name: AppIcons.UI.warningIcon, size: 14, color: AppColors.warning)
-                Text("Also used by \"\(conflict)\"")
-                    .font(AppTypography.caption1)
-                    .foregroundStyle(AppColors.warning)
-            }
-        }
+    // MARK: - Preview
 
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 12) {
-            ForEach(CategoryEditorViewModel.colorOptions, id: \.self) { color in
-                Button {
-                    onSelectColor(color)
-                } label: {
+    private var previewCard: some View {
+        EditorSection(header: "PREVIEW") {
+            HStack(spacing: AppConstants.UI.spacing12) {
+                ZStack {
                     Circle()
-                        .fill(Color(hex: color))
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.primary, lineWidth: selectedColor == color ? 2.5 : 0)
-                                .padding(-3)
-                        )
+                        .fill(Color(hex: selectedColor).opacity(0.15))
+                        .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                    AppIcon(name: selectedIcon,
+                            size: AppConstants.UI.iconBadgeSize * 0.52,
+                            color: Color(hex: selectedColor))
                 }
-                .buttonStyle(.plain)
+                Text(name.isEmpty ? "Category Name" : name)
+                    .font(AppTypography.body)
+                    .foregroundStyle(name.isEmpty ? AppColors.label2 : AppColors.label)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(AppConstants.UI.padding)
         }
-        .padding(.vertical, 4)
     }
+}
 
-    @ViewBuilder
-    private var previewView: some View {
-        HStack(spacing: AppConstants.UI.spacing12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: AppConstants.UI.radius10)
-                    .fill(Color(hex: selectedColor))
-                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
-                AppIcon(name: selectedIcon, size: AppConstants.UI.iconBadgeSize * 0.50, color: .white)
+// MARK: - Section wrapper
+
+private struct EditorSection<Content: View>: View {
+    let header: String?
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+            if let header {
+                Text(header)
+                    .font(AppTypography.footnote)
+                    .fontWeight(.semibold)
+                    .tracking(AppTypography.trackingFootnote)
+                    .foregroundStyle(AppColors.label2)
+                    .padding(.leading, AppConstants.UI.spacingXS)
             }
-            Text(name.isEmpty ? "Category Name" : name)
-                .font(AppTypography.body)
-                .foregroundStyle(name.isEmpty ? AppColors.label2 : AppColors.label)
+            content
+                .background(AppColors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
         }
-        .padding(.vertical, 4)
     }
 }

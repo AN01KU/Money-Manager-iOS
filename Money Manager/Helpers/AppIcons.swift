@@ -107,6 +107,27 @@ enum AppIcons {
             pink, indigo, sky, yellow, mint, coral,
             brown, gray, dark, gold
         ]
+
+        /// Ordered palette for the category color picker.
+        /// Each entry pairs the xcassets Color with its hex equivalent for storage.
+        static let palette: [(color: Color, hex: String)] = [
+            (coral,  "#FF6B6B"),
+            (teal,   "#16C5CC"),
+            (sky,    "#5AC7F9"),
+            (green,  "#34C658"),
+            (yellow, "#FFD509"),
+            (orange, "#FF9400"),
+            (red,    "#FF3A2F"),
+            (purple, "#BE5AF1"),
+            (blue,   "#0079FF"),
+            (pink,   "#FF2C54"),
+            (indigo, "#5755D5"),
+            (mint,   "#00C6BD"),
+            (gold,   "#D39F16"),
+            (brown,  "#A1845E"),
+            (gray,   "#8E8E92"),
+            (dark,   "#39393B"),
+        ]
     }
 }
 

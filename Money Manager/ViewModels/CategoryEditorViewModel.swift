@@ -11,12 +11,7 @@ import SwiftData
     var allCategories: [CustomCategory] = []
     private var pendingSaveAfterWarning = false
     
-    static let colorOptions = [
-        "#17C5CC", "#FF3B30", "#34C759", "#FF9500",
-        "#BF5AF2", "#007AFF", "#FF2D55", "#5856D6",
-        "#5AC8FA", "#FFD60A", "#00C7BE", "#FF6B6B",
-        "#A2845E", "#8E8E93", "#3A3A3C", "#D4A017"
-    ]
+    static var colorPalette: [(color: Color, hex: String)] { AppIcons.CategoryColor.palette }
 
     static let iconOptions = [
         AppIcons.Category.food,        AppIcons.Category.coffee,
