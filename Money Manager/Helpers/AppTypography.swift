@@ -6,17 +6,26 @@ import SwiftUI
 enum AppTypography {
 
     // MARK: - Base scale (design spec)
-    static let largeTitle = Font.system(size: 34, weight: .bold)        // page titles
-    static let title1     = Font.system(size: 28, weight: .bold)        // section headings, month/year
-    static let title2     = Font.system(size: 22, weight: .bold)        // hero amounts
-    static let title3     = Font.system(size: 20, weight: .semibold)    // card titles
-    static let headline   = Font.system(size: 17, weight: .semibold)    // list primary, category name
-    static let body       = Font.system(size: 17, weight: .regular)     // default text
-    static let callout    = Font.system(size: 16, weight: .regular)     // supporting body text
-    static let subhead    = Font.system(size: 15, weight: .regular)     // secondary labels
-    static let footnote   = Font.system(size: 13, weight: .regular)     // dates, metadata
-    static let caption1   = Font.system(size: 12, weight: .regular)     // captions, row meta
-    static let caption2   = Font.system(size: 11, weight: .regular)     // badges, smallest text
+    // Sizes and tracking match design token spec exactly.
+    static let largeTitle = Font.system(size: 34, weight: .bold)        // tracking: -0.5
+    static let title1     = Font.system(size: 28, weight: .bold)        // tracking: -0.5
+    static let title2     = Font.system(size: 22, weight: .bold)        // tracking: -0.3
+    static let title3     = Font.system(size: 20, weight: .semibold)    // tracking: -0.2
+    static let headline   = Font.system(size: 17, weight: .semibold)
+    static let body       = Font.system(size: 17, weight: .regular)
+    static let callout    = Font.system(size: 16, weight: .regular)
+    static let subhead    = Font.system(size: 15, weight: .regular)
+    static let footnote   = Font.system(size: 13, weight: .regular)     // tracking: +0.1
+    static let caption1   = Font.system(size: 12, weight: .regular)
+    static let caption2   = Font.system(size: 11, weight: .regular)     // tracking: +0.2
+
+    // MARK: - Tracking (kern) values from design spec
+    static let trackingLargeTitle: CGFloat = -0.5
+    static let trackingTitle1:     CGFloat = -0.5
+    static let trackingTitle2:     CGFloat = -0.3
+    static let trackingTitle3:     CGFloat = -0.2
+    static let trackingFootnote:   CGFloat =  0.1
+    static let trackingCaption2:   CGFloat =  0.2
 
     // MARK: - Role aliases (map semantic use onto scale)
 

@@ -93,10 +93,12 @@ enum AppConstants {
         static let radiusFAB:  CGFloat = 28  // FAB (56 ÷ 2)
 
         // MARK: Component sizes
-        static let fabSize:    CGFloat = 56
-        static let iconSize:   CGFloat = 24  // standard icon canvas
-        static let iconSizeSM: CGFloat = 20  // compact icon (transaction rows)
-        static let avatarSize: CGFloat = 38  // category avatar in list rows
+        static let fabSize:       CGFloat = 56
+        static let iconSize:      CGFloat = 24  // standard icon canvas
+        static let iconSizeSM:    CGFloat = 20  // compact icon (transaction rows)
+        static let avatarSize:    CGFloat = 38  // category avatar in list rows
+        static let iconBadgeSize: CGFloat = 36  // settings / list icon badge (rounded square)
+        static let profileAvatarSize: CGFloat = 46  // profile circle in settings / profile card
     }
     
     /// Validation
