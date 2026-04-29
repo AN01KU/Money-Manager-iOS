@@ -53,6 +53,7 @@ private struct OverviewBody: View {
         ScrollView {
             OverviewScrollContent(viewModel: viewModel, onCategoryTapped: onCategoryTapped)
         }
+        .background(AppColors.background)
         .navigationTitle("Overview")
         .toolbar { overviewToolbar }
         .sheet(isPresented: $viewModel.showBudgetSheet) {
@@ -67,7 +68,12 @@ private struct OverviewBody: View {
     private var overviewToolbar: some ToolbarContent {
         if authService.isAuthenticated {
             ToolbarItem(placement: .topBarTrailing) {
-                SyncStatusView()
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primaryBg)
+                        .frame(width: 36, height: 36)
+                    SyncStatusView()
+                }
             }
         }
     }
@@ -80,16 +86,16 @@ private struct OverviewScrollContent: View {
     let onCategoryTapped: ((String) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: AppConstants.UI.spacing20) {
             OverviewHeaderCard(viewModel: viewModel)
-                .padding(.horizontal)
-                .padding(.top, 8)
+                .padding(.horizontal, AppConstants.UI.padding)
+                .padding(.top, AppConstants.UI.spacingSM)
 
             if !viewModel.categorySpending.isEmpty {
                 CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
                     onCategoryTapped?(categoryName)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, AppConstants.UI.padding)
             } else {
                 EmptyStateView(
                     icon: "chart.pie",
@@ -97,7 +103,7 @@ private struct OverviewScrollContent: View {
                     message: "Tap + to add your first transaction"
                 )
                 .accessibilityIdentifier("overview.empty-state")
-                .padding(.horizontal)
+                .padding(.horizontal, AppConstants.UI.padding)
             }
 
             if !viewModel.recentTransactions.isEmpty {
@@ -105,7 +111,7 @@ private struct OverviewScrollContent: View {
                     transactions: viewModel.recentTransactions,
                     onGroupTapped: nil
                 )
-                .padding(.horizontal)
+                .padding(.horizontal, AppConstants.UI.padding)
             }
         }
         .padding(.bottom, 100)
@@ -248,10 +254,9 @@ private struct OverviewHeaderCard: View {
                     viewModel.showBudgetSheet = true
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "plus.circle")
-                            .font(AppTypography.infoLabel)
+                        AppIcon(name: AppIcons.UI.add, size: 16, color: AppColors.accent)
                         Text("Set a budget")
-                            .font(AppTypography.infoLabel)
+                            .font(AppTypography.subhead)
                     }
                     .foregroundStyle(AppColors.accent)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -262,12 +267,8 @@ private struct OverviewHeaderCard: View {
                 .padding(.vertical, 12)
             }
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(.rect(cornerRadius: 16))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 1)
-        }
+        .background(AppColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
                 DatePicker(
@@ -334,12 +335,10 @@ private struct BudgetInlineRow: View {
             VStack(spacing: 6) {
                 HStack {
                     HStack(spacing: 4) {
-                        Image(systemName: "chart.bar.fill")
-                            .font(AppTypography.cardMeta)
-                            .foregroundStyle(color)
+                        AppIcon(name: AppIcons.UI.budget, size: 14, color: color)
                         Text("Budget")
                             .font(AppTypography.cardLabel)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColors.label2)
                     }
                     Spacer()
                     Text("\(CurrencyFormatter.format(spent)) / \(CurrencyFormatter.format(limit))")
@@ -353,7 +352,7 @@ private struct BudgetInlineRow: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color(.systemGray5))
+                            .fill(AppColors.surface2)
                             .frame(height: 5)
                         Capsule()
                             .fill(color)
@@ -379,11 +378,13 @@ private struct OverviewRecentTransactions: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
             Text("RECENT")
-                .font(AppTypography.sectionHeader)
-                .foregroundStyle(.secondary)
-                .padding(.leading, 4)
+                .font(AppTypography.footnote)
+                .fontWeight(.semibold)
+                .tracking(AppTypography.trackingFootnote)
+                .foregroundStyle(AppColors.label2)
+                .padding(.leading, AppConstants.UI.spacingXS)
 
             VStack(spacing: 0) {
                 ForEach(Array(transactions.enumerated()), id: \.element.persistentModelID) { index, transaction in
@@ -394,8 +395,8 @@ private struct OverviewRecentTransactions: View {
                     }
                 }
             }
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(.rect(cornerRadius: 14))
+            .background(AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
         }
     }
 }

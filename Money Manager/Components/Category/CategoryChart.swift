@@ -31,7 +31,8 @@ struct CategoryChart: View {
     }
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: AppConstants.UI.spacing20) {
+            // Donut chart card
             HStack(alignment: .top, spacing: 20) {
                 Chart(pieData) { spending in
                     SectorMark(
@@ -40,20 +41,22 @@ struct CategoryChart: View {
                         angularInset: 2
                     )
                     .foregroundStyle(spending.color)
-                    .opacity(0.8)
+                    .opacity(0.9)
                 }
-                .frame(width: 140, height: 140)
-                
-                VStack(alignment: .leading, spacing: 12) {
+                .frame(width: 130, height: 130)
+
+                VStack(alignment: .leading, spacing: 10) {
                     ForEach(pieData) { spending in
                         CategorySpendingRow(spending: spending)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            
+            .padding(AppConstants.UI.padding)
+            .background(AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+
+            // Category breakdown card
             if !categorySpending.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(categorySpending) { spending in
@@ -63,16 +66,14 @@ struct CategoryChart: View {
                             CategoryDetailRow(spending: spending, maxAmount: categorySpending.first?.amount ?? 1)
                         }
                         .buttonStyle(.plain)
-                        
+
                         if spending.id != categorySpending.last?.id {
-                            Divider()
-                                .padding(.leading, 52)
+                            Divider().padding(.leading, 64)
                         }
                     }
                 }
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .background(AppColors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
             }
         }
     }
@@ -112,46 +113,46 @@ struct CategoryDetailRow: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppConstants.UI.spacing12) {
             ZStack {
                 Circle()
-                    .fill(spending.color.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                
-                AppIcon(name: spending.icon, size: 40 * 0.52, color: spending.color)
+                    .fill(spending.color.opacity(0.15))
+                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                AppIcon(name: spending.icon, size: AppConstants.UI.iconBadgeSize * 0.52, color: spending.color)
             }
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(spending.categoryName)
-                        .font(.subheadline)
+                        .font(AppTypography.body)
                         .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-                    
+                        .foregroundStyle(AppColors.label)
+
                     Spacer()
-                    
+
                     Text(CurrencyFormatter.format(spending.amount))
-                        .font(.subheadline)
+                        .font(AppTypography.body)
                         .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AppColors.label)
+
+                    AppIcon(name: AppIcons.UI.chevron, size: 14, color: AppColors.label3)
                 }
-                
+
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color(.systemGray4))
-                            .frame(height: 6)
-                        
+                            .fill(AppColors.surface2)
+                            .frame(height: 5)
                         Capsule()
                             .fill(spending.color)
-                            .frame(width: geometry.size.width * barFraction, height: 6)
+                            .frame(width: geometry.size.width * barFraction, height: 5)
                     }
                 }
-                .frame(height: 6)
+                .frame(height: 5)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, AppConstants.UI.padding)
+        .padding(.vertical, AppConstants.UI.spacing12)
     }
 }
 
