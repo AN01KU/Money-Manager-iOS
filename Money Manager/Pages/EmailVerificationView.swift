@@ -173,7 +173,9 @@ struct EmailVerificationView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     EmailVerificationView(email: "user@example.com")
         .environment(\.authService, MockAuthService.shared)
 }
+#endif
