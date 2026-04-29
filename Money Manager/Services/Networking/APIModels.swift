@@ -139,6 +139,7 @@ struct APIUser: Codable {
     let username: String
     let emailVerified: Bool
     let currency: String
+    let timezone: String
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -147,6 +148,7 @@ struct APIUser: Codable {
         case username
         case emailVerified = "email_verified"
         case currency
+        case timezone
         case createdAt = "created_at"
     }
 }
@@ -212,12 +214,14 @@ struct APISignupRequest: Codable {
     let username: String
     let password: String
     let inviteCode: String
+    let timezone: String
 
     init(email: String, username: String, password: String, inviteCode: String) {
         self.email = email.lowercased()
         self.username = username
         self.password = password
         self.inviteCode = inviteCode
+        self.timezone = TimeZone.current.identifier
     }
 
     enum CodingKeys: String, CodingKey {
@@ -225,6 +229,7 @@ struct APISignupRequest: Codable {
         case username
         case password
         case inviteCode = "invite_code"
+        case timezone
     }
 }
 
@@ -269,6 +274,7 @@ struct APICreateTransactionRequest: Codable {
     let description: String?
     let notes: String?
     let recurringExpenseId: UUID?
+    var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -280,6 +286,7 @@ struct APICreateTransactionRequest: Codable {
         case description
         case notes
         case recurringExpenseId = "recurring_transaction_id"
+        case updatedAt = "updated_at"
     }
 }
 
@@ -306,6 +313,7 @@ struct APICreateRecurringTransactionRequest: Codable {
     let isActive: Bool
     let notes: String?
     let type: String
+    var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -320,6 +328,7 @@ struct APICreateRecurringTransactionRequest: Codable {
         case isActive = "is_active"
         case notes
         case type
+        case updatedAt = "updated_at"
     }
 }
 
@@ -570,6 +579,7 @@ struct APICreateGroupTransactionRequest: Codable, Sendable {
     let description: String?
     let notes: String?
     let splits: [APIGroupTransactionSplitInput]
+    var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case paidByUserId = "paid_by_user_id"
@@ -579,6 +589,7 @@ struct APICreateGroupTransactionRequest: Codable, Sendable {
         case description
         case notes
         case splits
+        case updatedAt = "updated_at"
     }
 }
 

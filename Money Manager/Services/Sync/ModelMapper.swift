@@ -16,7 +16,8 @@ extension Transaction {
             time: time,
             description: transactionDescription,
             notes: notes,
-            recurringExpenseId: recurringExpenseId
+            recurringExpenseId: recurringExpenseId,
+            updatedAt: updatedAt
         )
     }
 
@@ -64,7 +65,8 @@ extension RecurringTransaction {
             endDate: endDate,
             isActive: isActive,
             notes: notes,
-            type: type.rawValue
+            type: type.rawValue,
+            updatedAt: updatedAt
         )
     }
 

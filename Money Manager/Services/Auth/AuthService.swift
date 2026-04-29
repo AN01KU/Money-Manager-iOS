@@ -54,6 +54,7 @@ final class AuthService: AuthServiceProtocol {
             AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             session.saveLastLoggedInEmail(user.email.lowercased())
             UserDefaults.standard.set(user.currency, forKey: "selectedCurrency")
+            UserDefaults.standard.set(user.timezone, forKey: "userTimezone")
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
             AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
@@ -91,6 +92,7 @@ final class AuthService: AuthServiceProtocol {
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
             UserDefaults.standard.set(response.user.currency, forKey: "selectedCurrency")
+            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
             authState = .authenticated(response.user)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -110,6 +112,7 @@ final class AuthService: AuthServiceProtocol {
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(email.lowercased())
+            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
             authState = .authenticated(response.user)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription

@@ -12,6 +12,7 @@ private let mockUser = APIUser(
     username: "Test User",
     emailVerified: true,
     currency: "INR",
+    timezone: TimeZone.current.identifier,
     createdAt: Date()
 )
 
@@ -42,7 +43,7 @@ final class MockAuthService: AuthServiceProtocol {
         isLoading = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         isLoading = false
-        authState = .authenticated(APIUser(id: UUID(), email: email, username: username, emailVerified: false, currency: "INR", createdAt: Date()))
+        authState = .authenticated(APIUser(id: UUID(), email: email, username: username, emailVerified: false, currency: "INR", timezone: TimeZone.current.identifier, createdAt: Date()))
     }
 
     func verifyEmail(code: String) async throws {
@@ -54,6 +55,7 @@ final class MockAuthService: AuthServiceProtocol {
                 username: user.username,
                 emailVerified: true,
                 currency: user.currency,
+                timezone: user.timezone,
                 createdAt: user.createdAt
             ))
         }
@@ -71,6 +73,7 @@ final class MockAuthService: AuthServiceProtocol {
                 username: username ?? user.username,
                 emailVerified: user.emailVerified,
                 currency: user.currency,
+                timezone: user.timezone,
                 createdAt: user.createdAt
             ))
         }
@@ -85,6 +88,7 @@ final class MockAuthService: AuthServiceProtocol {
                 username: user.username,
                 emailVerified: user.emailVerified,
                 currency: code,
+                timezone: user.timezone,
                 createdAt: user.createdAt
             ))
         }

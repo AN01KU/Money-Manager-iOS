@@ -435,7 +435,8 @@ enum SplitType: String, CaseIterable {
             date: selectedDate,
             description: description.trimmingCharacters(in: .whitespaces),
             notes: nil,
-            splits: splits
+            splits: splits,
+            updatedAt: Date()
         )
 
         Task {

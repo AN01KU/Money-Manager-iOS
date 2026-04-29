@@ -142,6 +142,24 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     return
                 }
 
+                // 502 = transient DB blip on the server. Stop this replay batch entirely;
+                // the change stays queued and will be retried on the next sync trigger.
+                // Do NOT orphan the queue — the server never processed the write.
+                if case APIError.transientError = error {
+                    AppLogger.sync.warning("[ReplayDebug] 502 transient error for \(change.entityType)=\(change.entityID) — backing off, will retry")
+                    return
+                }
+
+                // 409 STALE_WRITE = server already has a newer version of this entity.
+                // Discard the pending change so the stale local write is not retried;
+                // the next full sync will pull down the authoritative server version.
+                if case APIError.staleWrite = error {
+                    AppLogger.sync.warning("[ReplayDebug] STALE_WRITE for \(change.entityType)=\(change.entityID) — discarding stale pending change, server version wins")
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
                 // A 404 on a delete means the entity never reached the server — treat as success
                 if case APIError.notFound = error, change.action == "delete" {
                     AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
