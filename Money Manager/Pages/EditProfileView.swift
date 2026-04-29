@@ -124,7 +124,8 @@ struct EditProfileView: View {
                 try await authService.updateProfile(
                     username: newUsername,
                     email: newEmail,
-                    password: passwordToSend
+                    password: passwordToSend,
+                    currentPassword: currentPassword.isEmpty ? nil : currentPassword
                 )
                 showSuccess = true
             } catch {

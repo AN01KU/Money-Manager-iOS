@@ -65,7 +65,7 @@ final class MockAuthService: AuthServiceProtocol {
         try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
-    func updateProfile(username: String?, email: String?, password: String?) async throws {
+    func updateProfile(username: String?, email: String?, password: String?, currentPassword: String?) async throws {
         if case .authenticated(let user) = authState {
             authState = .authenticated(APIUser(
                 id: user.id,

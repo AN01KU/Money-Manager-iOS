@@ -135,9 +135,23 @@ final class AuthService: AuthServiceProtocol {
     }
 
     @MainActor
-    func updateProfile(username: String?, email: String?, password: String?) async throws {
+    func updateProfile(username: String?, email: String?, password: String?, currentPassword: String?) async throws {
         let request = APIUpdateMeRequest(username: username, email: email, password: password, currency: nil)
         let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
+
+        // Email or password change bumps tokens_invalidated_after on the server,
+        // which immediately revokes the current JWT. Re-login silently so the
+        // session stays alive — otherwise the next request fires a 401 and
+        // forces the user back to the login screen.
+        if (email != nil || password != nil), let currentPwd = currentPassword {
+            let loginEmail = updatedUser.email
+            let loginPassword = password ?? currentPwd
+            let loginReq = APILoginRequest(email: loginEmail, password: loginPassword)
+            let loginResp: APIAuthResponse = try await apiClient.post(.login, body: loginReq)
+            session.saveToken(loginResp.token)
+            session.saveSyncSessionID(loginResp.syncSessionId)
+        }
+
         authState = .authenticated(updatedUser)
         session.saveLastLoggedInEmail(updatedUser.email.lowercased())
     }
