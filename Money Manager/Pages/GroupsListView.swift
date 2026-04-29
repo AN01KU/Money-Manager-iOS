@@ -19,7 +19,7 @@ struct GroupsListView: View {
                     .background(Color(.systemGroupedBackground))
 
                 if !viewModel.groups.isEmpty {
-                    FloatingActionButton(icon: "plus") {
+                    FloatingActionButton {
                         showCreateGroup = true
                     }
                     .padding(.trailing, 24)

@@ -170,15 +170,15 @@ struct GroupDetailView: View {
     private var fabView: some View {
         switch viewModel.selectedSection {
         case .transactions:
-            FloatingActionButton(icon: "plus") { viewModel.showAddTransaction = true }
+            FloatingActionButton { viewModel.showAddTransaction = true }
                 .accessibilityIdentifier("group-detail.add-transaction-button")
         case .balances:
             if viewModel.hasUnsettledBalances {
-                FloatingActionButton(icon: "arrow.left.arrow.right") { viewModel.showSettlement = true }
+                FloatingActionButton(icon: AppIcons.UI.settle) { viewModel.showSettlement = true }
                     .accessibilityIdentifier("group-detail.settle-button")
             }
         case .members:
-            FloatingActionButton(icon: "person.badge.plus") { viewModel.showAddMember = true }
+            FloatingActionButton(icon: AppIcons.UI.profile) { viewModel.showAddMember = true }
                 .accessibilityIdentifier("group-detail.add-member-button")
         }
     }

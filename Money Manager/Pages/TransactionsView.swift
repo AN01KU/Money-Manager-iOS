@@ -50,15 +50,14 @@ private struct TransactionsBody: View {
 
                     if let categoryFilter = viewModel.selectedCategoryFilter {
                         HStack(spacing: 8) {
-                            Label(categoryFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
+                            Text(categoryFilter)
                                 .font(AppTypography.infoValue)
+                                .foregroundStyle(AppColors.accent)
 
                             Button {
                                 withAnimation { viewModel.selectedCategoryFilter = nil }
                             } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(AppTypography.infoLabel)
-                                    .foregroundStyle(.secondary)
+                                AppIcon(name: AppIcons.UI.close, size: 12, color: AppColors.label2)
                             }
                             .buttonStyle(.plain)
                         }
@@ -90,14 +89,14 @@ private struct TransactionsBody: View {
                 .padding(.bottom, 100)
             }
 
-            FloatingActionButton(icon: "plus") {
+            FloatingActionButton {
                 viewModel.showAddTransaction = true
             }
             .padding(.trailing, 24)
             .padding(.bottom, 24)
             .accessibilityIdentifier("transactions.add-button")
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppColors.background)
         .searchable(text: $viewModel.searchText, prompt: "Search transactions")
         .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
         .alert("Delete Transaction?", isPresented: $viewModel.isConfirmingDelete) {
@@ -126,9 +125,8 @@ private struct TransactionsMonthSelector: View {
                     tapped += 1
                 }
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(AppTypography.cardLabel)
-                    .foregroundStyle(AppColors.accent)
+                AppIcon(name: AppIcons.UI.chevron, size: 14, color: AppColors.accent)
+                    .rotationEffect(.degrees(180))
                     .padding(6)
             }
             .buttonStyle(.borderless)
@@ -138,7 +136,7 @@ private struct TransactionsMonthSelector: View {
             } label: {
                 Text(viewModel.selectedDate, format: .dateTime.month(.wide).year())
                     .font(AppTypography.chipSelected)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(AppColors.accent)
             }
             .buttonStyle(.borderless)
 
@@ -148,9 +146,7 @@ private struct TransactionsMonthSelector: View {
                     tapped += 1
                 }
             } label: {
-                Image(systemName: "chevron.right")
-                    .font(AppTypography.cardLabel)
-                    .foregroundStyle(AppColors.accent)
+                AppIcon(name: AppIcons.UI.chevron, size: 14, color: AppColors.accent)
                     .padding(6)
             }
             .buttonStyle(.borderless)
@@ -192,12 +188,17 @@ private struct TransactionsFilterBar: View {
                     }
                     selectionChanged += 1
                 } label: {
+                    let isSelected = viewModel.transactionTypeFilter == filter
                     Text(filter.rawValue)
-                        .font(viewModel.transactionTypeFilter == filter ? AppTypography.chipSelected : AppTypography.chip)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(viewModel.transactionTypeFilter == filter ? AppColors.accent : Color(.systemGray5))
-                        .foregroundStyle(viewModel.transactionTypeFilter == filter ? .white : .primary)
+                        .font(isSelected ? AppTypography.chipSelected : AppTypography.chip)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(isSelected ? AppColors.accent : Color.clear)
+                        .foregroundStyle(isSelected ? .white : AppColors.label)
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(isSelected ? Color.clear : AppColors.label.opacity(0.25), lineWidth: 1.5)
+                        )
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)

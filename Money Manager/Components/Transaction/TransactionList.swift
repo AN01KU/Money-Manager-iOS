@@ -80,12 +80,12 @@ struct TransactionList: View {
 
                             if transaction.persistentModelID != section.transactions.last?.persistentModelID {
                                 Divider()
-                                    .padding(.leading, 58)
+                                    .padding(.leading, AppConstants.UI.iconBadgeSize + AppConstants.UI.spacing12 + AppConstants.UI.padding)
                             }
                         }
                     }
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .background(AppColors.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
                 }
             }
         }
