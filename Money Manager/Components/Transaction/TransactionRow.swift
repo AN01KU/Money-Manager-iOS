@@ -26,9 +26,9 @@ struct TransactionRow: View {
                     .fill(resolvedColor.opacity(0.15))
                     .frame(width: 36, height: 36)
 
-                Image(systemName: resolvedIcon)
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(resolvedColor)
+                AppIcon(name: resolvedIcon,
+                        size: 36 * 0.52,
+                        color: resolvedColor)
             }
             .accessibilityHidden(true)
 

@@ -80,9 +80,7 @@ struct TransactionDetailView: View {
                 Circle()
                     .fill(viewModel.categoryColor.opacity(0.15))
                     .frame(width: 72, height: 72)
-                Image(systemName: viewModel.categoryIcon)
-                    .font(.system(size: 32))
-                    .foregroundStyle(viewModel.categoryColor)
+                AppIcon(name: viewModel.categoryIcon, size: 32, color: viewModel.categoryColor)
             }
 
             Text(transaction.category)

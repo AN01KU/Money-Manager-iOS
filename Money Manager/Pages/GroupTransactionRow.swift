@@ -30,9 +30,7 @@ struct GroupTransactionRow: View {
                 Circle()
                     .fill(resolved.color.opacity(0.15))
                     .frame(width: 36, height: 36)
-                Image(systemName: resolved.icon)
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(resolved.color)
+                AppIcon(name: resolved.icon, size: 36 * 0.52, color: resolved.color)
             }
             .accessibilityHidden(true)
 

@@ -42,9 +42,7 @@ private struct TransactionActivityRow: View {
                 Circle()
                     .fill(resolved.color.opacity(0.15))
                     .frame(width: 40, height: 40)
-                Image(systemName: resolved.icon)
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(resolved.color)
+                AppIcon(name: resolved.icon, size: 40 * 0.52, color: resolved.color)
             }
 
             VStack(alignment: .leading, spacing: 2) {

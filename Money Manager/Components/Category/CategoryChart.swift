@@ -118,9 +118,7 @@ struct CategoryDetailRow: View {
                     .fill(spending.color.opacity(0.2))
                     .frame(width: 40, height: 40)
                 
-                Image(systemName: spending.icon)
-                    .font(.body)
-                    .foregroundStyle(spending.color)
+                AppIcon(name: spending.icon, size: 40 * 0.52, color: spending.color)
             }
             
             VStack(alignment: .leading, spacing: 6) {

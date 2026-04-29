@@ -154,10 +154,10 @@ private struct AddTransactionAmountSection: View {
                 } label: {
                     HStack {
                         if let custom = customCategories.first(where: { $0.name == viewModel.selectedCategory && !$0.isHidden }) {
-                            Image(systemName: custom.icon).foregroundStyle(Color(hex: custom.color))
+                            AppIcon(name: custom.icon, size: 20, color: Color(hex: custom.color))
                             Text(viewModel.selectedCategory)
                         } else if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
-                            Image(systemName: predefined.icon).foregroundStyle(predefined.color)
+                            AppIcon(name: predefined.icon, size: 20, color: predefined.color)
                             Text(viewModel.selectedCategory)
                         } else {
                             Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)

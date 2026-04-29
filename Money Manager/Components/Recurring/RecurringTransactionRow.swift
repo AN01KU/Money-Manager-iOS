@@ -7,10 +7,6 @@ struct RecurringTransactionRow: View {
     let onTap: () -> Void
     let onToggle: () -> Void
 
-    private var displayName: String {
-        recurring.name
-    }
-
     private var categoryIcon: String {
         if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == recurring.category }) {
             return predefined.icon
@@ -18,7 +14,7 @@ struct RecurringTransactionRow: View {
         if let custom = customCategories.first(where: { $0.name == recurring.category }) {
             return custom.icon
         }
-        return "ellipsis.circle.fill"
+        return AppIcons.Category.misc
     }
 
     private var categoryColor: Color {
@@ -28,7 +24,7 @@ struct RecurringTransactionRow: View {
         if let custom = customCategories.first(where: { $0.name == recurring.category }) {
             return Color(hex: custom.color)
         }
-        return .secondary
+        return AppColors.label3
     }
 
     var body: some View {
@@ -36,47 +32,53 @@ struct RecurringTransactionRow: View {
             EmptyView()
         } else {
             Button(action: onTap) {
-                HStack(spacing: 12) {
-                    Image(systemName: categoryIcon)
-                        .foregroundStyle(recurring.isActive ? categoryColor : .secondary)
-                        .frame(width: 28)
+                HStack(spacing: AppConstants.UI.spacing12) {
+                    ZStack {
+                        Circle()
+                            .fill(categoryColor.opacity(recurring.isActive ? 0.15 : 0.08))
+                            .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                        AppIcon(name: categoryIcon,
+                                size: AppConstants.UI.iconBadgeSize * 0.52,
+                                color: categoryColor.opacity(recurring.isActive ? 1 : 0.4))
+                    }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(displayName)
-                            .font(.body)
-                            .foregroundStyle(recurring.isActive ? .primary : .secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(recurring.name)
+                            .font(AppTypography.body)
+                            .foregroundStyle(recurring.isActive ? AppColors.label : AppColors.label2)
 
-                        HStack(spacing: 6) {
+                        HStack(spacing: AppConstants.UI.spacingXS) {
                             Text(recurring.frequency.rawValue.capitalized)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
+                                .font(AppTypography.caption1)
+                                .foregroundStyle(AppColors.label2)
+                                .padding(.horizontal, AppConstants.UI.spacingSM)
                                 .padding(.vertical, 3)
-                                .background(Color(.systemGray5))
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .background(AppColors.surface2)
+                                .clipShape(Capsule())
 
                             if !recurring.isActive {
                                 Text("Paused")
-                                    .font(.caption2)
+                                    .font(AppTypography.caption1)
                                     .foregroundStyle(AppColors.warning)
-                                    .padding(.horizontal, 8)
+                                    .padding(.horizontal, AppConstants.UI.spacingSM)
                                     .padding(.vertical, 3)
                                     .background(AppColors.warning.opacity(0.1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                            } else if let next = recurring.nextOccurrence {
-                                Text("Next: \(next.formatted(date: .abbreviated, time: .omitted))")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .clipShape(Capsule())
                             }
                         }
                     }
 
                     Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
+                    HStack(spacing: AppConstants.UI.spacing12) {
                         Text(CurrencyFormatter.format(recurring.amount))
-                            .font(.body)
-                            .foregroundStyle(recurring.isActive ? (recurring.type == .income ? AppColors.income : AppColors.expense) : .secondary)
+                            .font(AppTypography.body)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(
+                                recurring.isActive
+                                    ? (recurring.type == .income ? AppColors.income : AppColors.expense)
+                                    : AppColors.label3
+                            )
 
                         Toggle("", isOn: Binding(
                             get: { recurring.isActive },
@@ -87,9 +89,11 @@ struct RecurringTransactionRow: View {
                         .accessibilityRemoveTraits(.isButton)
                     }
                 }
+                .padding(.horizontal, AppConstants.UI.padding)
+                .padding(.vertical, AppConstants.UI.spacing12)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(displayName), \(CurrencyFormatter.format(recurring.amount)), \(recurring.isActive ? "Active" : "Paused")")
+            .accessibilityLabel("\(recurring.name), \(CurrencyFormatter.format(recurring.amount)), \(recurring.isActive ? "Active" : "Paused")")
             .accessibilityIdentifier("recurring.row")
         }
     }
