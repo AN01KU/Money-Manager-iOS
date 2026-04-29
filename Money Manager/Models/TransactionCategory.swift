@@ -49,7 +49,7 @@ struct TransactionCategory: Identifiable {
                 colorHex: ov?.color ?? predefined.defaultColorHex,
                 isHidden: ov?.isHidden ?? false,
                 isPredefined: true,
-                isDeletable: predefined != .other,
+                isDeletable: predefined != .miscellaneous,
                 overrideRow: ov
             )
         }

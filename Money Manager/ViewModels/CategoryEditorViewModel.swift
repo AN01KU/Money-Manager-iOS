@@ -12,21 +12,35 @@ import SwiftData
     private var pendingSaveAfterWarning = false
     
     static let colorOptions = [
-        "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4",
-        "#FFEAA7", "#DDA15E", "#BC6C25", "#8E44AD",
-        "#3498DB", "#E74C3C", "#F39C12", "#E91E63",
-        "#2ECC71", "#1ABC9C", "#9B59B6", "#34495E"
+        "#17C5CC", "#FF3B30", "#34C759", "#FF9500",
+        "#BF5AF2", "#007AFF", "#FF2D55", "#5856D6",
+        "#5AC8FA", "#FFD60A", "#00C7BE", "#FF6B6B",
+        "#A2845E", "#8E8E93", "#3A3A3C", "#D4A017"
     ]
-    
+
     static let iconOptions = [
-        "tag.circle.fill", "cart.circle.fill", "heart.circle.fill",
-        "star.circle.fill", "flame.circle.fill", "drop.circle.fill",
-        "leaf.circle.fill", "pawprint.circle.fill", "cup.and.saucer.fill",
-        "tshirt.fill", "dumbbell.fill", "music.note",
-        "film.circle.fill", "bicycle.circle.fill", "bus.fill", "fuelpump.circle.fill",
-        "wrench.and.screwdriver.fill", "camera.circle.fill", "phone.circle.fill",
-        "wifi.circle.fill", "banknote.fill", "giftcard.fill",
-        "stroller.fill"
+        AppIcons.Category.food,        AppIcons.Category.coffee,
+        AppIcons.Category.groceries,   AppIcons.Category.dining,
+        AppIcons.Category.transport,   AppIcons.Category.fuel,
+        AppIcons.Category.transit,     AppIcons.Category.flights,
+        AppIcons.Category.housing,     AppIcons.Category.health,
+        AppIcons.Category.pharmacy,    AppIcons.Category.gym,
+        AppIcons.Category.yoga,        AppIcons.Category.shopping,
+        AppIcons.Category.clothing,    AppIcons.Category.electronics,
+        AppIcons.Category.entertainment, AppIcons.Category.music,
+        AppIcons.Category.gaming,      AppIcons.Category.books,
+        AppIcons.Category.travel,      AppIcons.Category.hotels,
+        AppIcons.Category.subscriptions, AppIcons.Category.streaming,
+        AppIcons.Category.bills,       AppIcons.Category.phone,
+        AppIcons.Category.electricity, AppIcons.Category.insurance,
+        AppIcons.Category.education,   AppIcons.Category.courses,
+        AppIcons.Category.investments, AppIcons.Category.salary,
+        AppIcons.Category.savings,     AppIcons.Category.personalCare,
+        AppIcons.Category.haircut,     AppIcons.Category.pets,
+        AppIcons.Category.gifts,       AppIcons.Category.work,
+        AppIcons.Category.freelance,   AppIcons.Category.atm,
+        AppIcons.Category.taxes,       AppIcons.Category.donation,
+        AppIcons.Category.baby,        AppIcons.Category.misc,
     ]
     
     var colorConflictCategory: String? { nil }
@@ -91,6 +105,6 @@ import SwiftData
     }
     
     convenience init() {
-        self.init(icon: "tag.circle.fill", color: "#4ECDC4")
+        self.init(icon: AppIcons.Category.misc, color: "#17C5CC")
     }
 }

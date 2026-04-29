@@ -39,6 +39,6 @@ final class CustomCategory {
     
     /// "Other" category can never be deleted.
     var isDeletable: Bool {
-        predefinedKey != "other"
+        predefinedKey != "miscellaneous"
     }
 }

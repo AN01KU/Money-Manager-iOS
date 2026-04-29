@@ -7,15 +7,14 @@ struct CategoryEditorView: View {
     let colorConflictCategory: String?
     let onSelectIcon: (String) -> Void
     let onSelectColor: (String) -> Void
-    
+
     var body: some View {
         Form {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Name")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
+                        .font(AppTypography.subhead)
+                        .foregroundStyle(AppColors.label2)
                     TextField("e.g., Subscriptions, Pets", text: $name)
                         .textInputAutocapitalization(.words)
                 }
@@ -36,7 +35,7 @@ struct CategoryEditorView: View {
         }
         .dismissKeyboardOnScroll()
     }
-    
+
     @ViewBuilder
     private var iconGrid: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 16) {
@@ -44,32 +43,33 @@ struct CategoryEditorView: View {
                 Button {
                     onSelectIcon(icon)
                 } label: {
-                    Image(systemName: icon)
-                        .font(.title2)
-                        .foregroundStyle(selectedIcon == icon ? Color(hex: selectedColor) : .secondary)
-                        .frame(width: 44, height: 44)
-                        .background(selectedIcon == icon ? Color(hex: selectedColor).opacity(0.12) : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    ZStack {
+                        RoundedRectangle(cornerRadius: AppConstants.UI.radius10)
+                            .fill(selectedIcon == icon
+                                  ? Color(hex: selectedColor)
+                                  : Color(hex: selectedColor).opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        AppIcon(name: icon, size: 22,
+                                color: selectedIcon == icon ? .white : Color(hex: selectedColor))
+                    }
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private var colorGrid: some View {
         if let conflict = colorConflictCategory {
             HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(AppColors.warning)
-                    .font(.caption)
+                AppIcon(name: AppIcons.UI.warningIcon, size: 14, color: AppColors.warning)
                 Text("Also used by \"\(conflict)\"")
-                    .font(.caption)
+                    .font(AppTypography.caption1)
                     .foregroundStyle(AppColors.warning)
             }
         }
-        
+
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 12) {
             ForEach(CategoryEditorViewModel.colorOptions, id: \.self) { color in
                 Button {
@@ -89,18 +89,19 @@ struct CategoryEditorView: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private var previewView: some View {
-        HStack(spacing: 12) {
-            Image(systemName: selectedIcon)
-                .font(.title2)
-                .foregroundStyle(Color(hex: selectedColor))
-                .frame(width: 36)
-            
+        HStack(spacing: AppConstants.UI.spacing12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: AppConstants.UI.radius10)
+                    .fill(Color(hex: selectedColor))
+                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                AppIcon(name: selectedIcon, size: AppConstants.UI.iconBadgeSize * 0.50, color: .white)
+            }
             Text(name.isEmpty ? "Category Name" : name)
-                .font(.body)
-                .foregroundStyle(name.isEmpty ? .secondary : .primary)
+                .font(AppTypography.body)
+                .foregroundStyle(name.isEmpty ? AppColors.label2 : AppColors.label)
         }
         .padding(.vertical, 4)
     }
