@@ -16,15 +16,13 @@ struct GroupsListView: View {
         NavigationStack(path: $navigationPath) {
             ZStack(alignment: .bottomTrailing) {
                 GroupsListContent(viewModel: viewModel, onCreateGroup: { showCreateGroup = true })
-                    .background(Color(.systemGroupedBackground))
+                    .background(AppColors.background)
 
-                if !viewModel.groups.isEmpty {
-                    FloatingActionButton {
-                        showCreateGroup = true
-                    }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 24)
+                FloatingActionButton {
+                    showCreateGroup = true
                 }
+                .padding(.trailing, 24)
+                .padding(.bottom, 24)
             }
             .navigationTitle("Groups")
             .searchable(
@@ -86,13 +84,31 @@ private struct GroupsListContent: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollView {
-                VStack(spacing: 16) {
-                    Picker("View", selection: $viewModel.selectedTab) {
-                        Text("Groups").tag(GroupsTab.groups)
-                        Text("Activity").tag(GroupsTab.activities)
+                VStack(spacing: AppConstants.UI.spacing20) {
+                    // Pill tab selector
+                    HStack(spacing: 0) {
+                        ForEach([GroupsTab.groups, GroupsTab.activities], id: \.self) { tab in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    viewModel.selectedTab = tab
+                                }
+                            } label: {
+                                Text(tab == .groups ? "Groups" : "Activity")
+                                    .font(viewModel.selectedTab == tab ? AppTypography.chipSelected : AppTypography.chip)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(viewModel.selectedTab == tab ? AppColors.surface : Color.clear)
+                                    .foregroundStyle(viewModel.selectedTab == tab ? AppColors.label : AppColors.label2)
+                                    .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.radius10))
+                                    .shadow(color: viewModel.selectedTab == tab ? .black.opacity(0.08) : .clear, radius: 4, x: 0, y: 2)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
+                    .padding(4)
+                    .background(AppColors.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.radius10 + 4))
+                    .padding(.horizontal, AppConstants.UI.padding)
 
                     if viewModel.selectedTab == .groups {
                         GroupsGroupsContent(viewModel: viewModel, onCreateGroup: onCreateGroup)
@@ -111,9 +127,9 @@ private struct GroupsGroupsContent: View {
     let onCreateGroup: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: AppConstants.UI.spacing20) {
             NetBalanceCard(netBalance: viewModel.netBalance, groupCount: viewModel.groups.count)
-                .padding(.horizontal)
+                .padding(.horizontal, AppConstants.UI.padding)
 
             if viewModel.filteredGroups.isEmpty {
                 EmptyStateView(
@@ -141,9 +157,9 @@ private struct GroupsGroupsContent: View {
                         }
                     }
                 }
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(.rect(cornerRadius: 12))
-                .padding(.horizontal)
+                .background(AppColors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+                .padding(.horizontal, AppConstants.UI.padding)
             }
         }
     }
@@ -167,9 +183,8 @@ private struct GroupsActivitiesContent: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(section.label)
                                 .font(AppTypography.sectionHeader)
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 4)
-                                .padding(.horizontal)
+                                .foregroundStyle(AppColors.label2)
+                                .padding(.horizontal, AppConstants.UI.padding)
 
                             VStack(spacing: 0) {
                                 ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
@@ -180,9 +195,9 @@ private struct GroupsActivitiesContent: View {
                                     }
                                 }
                             }
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(.rect(cornerRadius: 12))
-                            .padding(.horizontal)
+                            .background(AppColors.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+                            .padding(.horizontal, AppConstants.UI.padding)
                         }
                     }
                 }

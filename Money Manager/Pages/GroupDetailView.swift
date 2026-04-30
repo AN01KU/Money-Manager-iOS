@@ -178,7 +178,7 @@ struct GroupDetailView: View {
                     .accessibilityIdentifier("group-detail.settle-button")
             }
         case .members:
-            FloatingActionButton(icon: AppIcons.UI.profile) { viewModel.showAddMember = true }
+            FloatingActionButton(systemIcon: "person.badge.plus") { viewModel.showAddMember = true }
                 .accessibilityIdentifier("group-detail.add-member-button")
         }
     }

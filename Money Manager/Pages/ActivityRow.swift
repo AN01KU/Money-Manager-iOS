@@ -105,9 +105,7 @@ private struct SettlementActivityRow: View {
                 Circle()
                     .fill(accentColor.opacity(0.15))
                     .frame(width: 40, height: 40)
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(accentColor)
+                AppIcon(name: AppIcons.UI.settle, size: 40 * 0.52, color: accentColor)
             }
 
             VStack(alignment: .leading, spacing: 2) {
