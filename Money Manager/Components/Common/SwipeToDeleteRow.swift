@@ -1,28 +1,55 @@
 import SwiftUI
 
+struct SwipeAction {
+    let icon: String
+    let color: Color
+    let action: () -> Void
+}
+
 struct SwipeToDeleteRow<Content: View>: View {
     @Binding var isRevealed: Bool
     let onDelete: () -> Void
+    var deleteIcon: String = "trash.fill"
+    var deleteColor: Color = AppColors.expense
+    var secondaryAction: SwipeAction? = nil
     var onTap: (() -> Void)? = nil
     @ViewBuilder let content: () -> Content
 
     @State private var offset: CGFloat = 0
     private let buttonWidth: CGFloat = 80
+    private var totalWidth: CGFloat { secondaryAction != nil ? buttonWidth * 2 : buttonWidth }
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            Button {
-                onDelete()
-                resetSwipe()
-            } label: {
-                Image(systemName: "trash.fill")
-                    .font(AppTypography.destructiveIcon)
-                    .foregroundStyle(.white)
-                    .frame(width: buttonWidth)
-                    .frame(maxHeight: .infinity)
+            HStack(spacing: 0) {
+                if let secondary = secondaryAction {
+                    Button {
+                        secondary.action()
+                        resetSwipe()
+                    } label: {
+                        Image(systemName: secondary.icon)
+                            .font(AppTypography.destructiveIcon)
+                            .foregroundStyle(.white)
+                            .frame(width: buttonWidth)
+                            .frame(maxHeight: .infinity)
+                    }
+                    .background(secondary.color)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                Button {
+                    onDelete()
+                    resetSwipe()
+                } label: {
+                    Image(systemName: deleteIcon)
+                        .font(AppTypography.destructiveIcon)
+                        .foregroundStyle(.white)
+                        .frame(width: buttonWidth)
+                        .frame(maxHeight: .infinity)
+                }
+                .background(deleteColor)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .background(AppColors.expense)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
             .opacity(offset < 0 ? 1 : 0)
 
             content()
@@ -32,9 +59,9 @@ struct SwipeToDeleteRow<Content: View>: View {
                         .onChanged { value in
                             let translation = value.translation.width
                             if isRevealed {
-                                offset = min(0, -buttonWidth + translation)
+                                offset = min(0, -totalWidth + translation)
                             } else if translation < 0 {
-                                offset = max(-buttonWidth, translation)
+                                offset = max(-totalWidth, translation)
                             }
                         }
                         .onEnded { value in
@@ -62,7 +89,7 @@ struct SwipeToDeleteRow<Content: View>: View {
     }
 
     private func revealButton() {
-        withAnimation(.easeOut(duration: 0.2)) { offset = -buttonWidth }
+        withAnimation(.easeOut(duration: 0.2)) { offset = -totalWidth }
         isRevealed = true
     }
 

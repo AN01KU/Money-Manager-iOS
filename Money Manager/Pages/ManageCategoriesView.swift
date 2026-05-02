@@ -10,6 +10,7 @@ struct ManageCategoriesView: View {
     @State private var rowTapped = 0
     @State private var addTriggered = 0
     @State private var showResetMenu = 0
+    @State private var swipedItemID: String?
 
     private var allCategories: [TransactionCategory] {
         TransactionCategory.merge(overrides: overrides)
@@ -33,23 +34,23 @@ struct ManageCategoriesView: View {
                 if !predefinedCategories.isEmpty {
                     CategoryCardSection(header: "DEFAULT CATEGORIES", footer: "Tap to edit icon, color or name. Swipe left to hide.") {
                         ForEach(predefinedCategories) { category in
-                            CategoryRow(
-                                category: category,
-                                usageCount: usageCounts[category.name, default: 0],
-                                onTap: {
-                                    rowTapped += 1
-                                    viewModel.categoryToEdit = category
-                                }
-                            )
-                            .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    viewModel.hideCategory(category)
-                                } label: {
-                                    Label("Hide", systemImage: "eye.slash")
-                                }
-                                .tint(.orange)
+                            SwipeToDeleteRow(
+                                isRevealed: Binding(
+                                    get: { swipedItemID == category.id },
+                                    set: { swipedItemID = $0 ? category.id : nil }
+                                ),
+                                onDelete: { viewModel.hideCategory(category) },
+                                deleteIcon: "eye.slash",
+                                deleteColor: .orange,
+                                onTap: { rowTapped += 1; viewModel.categoryToEdit = category }
+                            ) {
+                                CategoryRow(
+                                    category: category,
+                                    usageCount: usageCounts[category.name, default: 0],
+                                    onTap: {}
+                                )
                             }
+                            .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                             if category.id != predefinedCategories.last?.id {
                                 Divider().padding(.leading, 64)
                             }
@@ -60,28 +61,24 @@ struct ManageCategoriesView: View {
                 if !userCategories.isEmpty {
                     CategoryCardSection(header: "YOUR CATEGORIES") {
                         ForEach(userCategories) { category in
-                            CategoryRow(
-                                category: category,
-                                usageCount: usageCounts[category.name, default: 0],
-                                onTap: {
-                                    rowTapped += 1
-                                    viewModel.categoryToEdit = category
-                                }
-                            )
-                            .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    viewModel.deleteCategory(category)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                Button {
+                            SwipeToDeleteRow(
+                                isRevealed: Binding(
+                                    get: { swipedItemID == category.id },
+                                    set: { swipedItemID = $0 ? category.id : nil }
+                                ),
+                                onDelete: { viewModel.deleteCategory(category) },
+                                secondaryAction: SwipeAction(icon: "eye.slash", color: .orange) {
                                     viewModel.hideCategory(category)
-                                } label: {
-                                    Label("Hide", systemImage: "eye.slash")
-                                }
-                                .tint(.orange)
+                                },
+                                onTap: { rowTapped += 1; viewModel.categoryToEdit = category }
+                            ) {
+                                CategoryRow(
+                                    category: category,
+                                    usageCount: usageCounts[category.name, default: 0],
+                                    onTap: {}
+                                )
                             }
+                            .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                             if category.id != userCategories.last?.id {
                                 Divider().padding(.leading, 64)
                             }
@@ -92,15 +89,20 @@ struct ManageCategoriesView: View {
                 if !hiddenCategories.isEmpty {
                     CategoryCardSection(header: "HIDDEN") {
                         ForEach(hiddenCategories) { category in
-                            HiddenCategoryRow(category: category) {
-                                viewModel.restoreCategory(category)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if !category.isPredefined {
-                                    Button(role: .destructive) {
-                                        viewModel.deleteCategory(category)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                            if category.isPredefined {
+                                HiddenCategoryRow(category: category) {
+                                    viewModel.restoreCategory(category)
+                                }
+                            } else {
+                                SwipeToDeleteRow(
+                                    isRevealed: Binding(
+                                        get: { swipedItemID == category.id },
+                                        set: { swipedItemID = $0 ? category.id : nil }
+                                    ),
+                                    onDelete: { viewModel.deleteCategory(category) }
+                                ) {
+                                    HiddenCategoryRow(category: category) {
+                                        viewModel.restoreCategory(category)
                                     }
                                 }
                             }
