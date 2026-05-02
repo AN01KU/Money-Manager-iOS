@@ -8,13 +8,15 @@ struct TransactionDetailView: View {
     @Query private var allRecurring: [RecurringTransaction]
 
     let transaction: Transaction
+    var onEdit: ((Transaction) -> Void)?
     @State private var viewModel: TransactionDetailViewModel
     @State private var editTapped = 0
     @State private var deleteTapped = 0
     @State private var deleteSuccess = false
 
-    init(transaction: Transaction) {
+    init(transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
         self.transaction = transaction
+        self.onEdit = onEdit
         self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction))
     }
 
@@ -60,9 +62,6 @@ struct TransactionDetailView: View {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
-            }
-            .sheet(isPresented: $viewModel.showEditSheet) {
-                AddTransactionView(transactionToEdit: transaction)
             }
             .alert("Delete transaction?", isPresented: $viewModel.showDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -191,7 +190,7 @@ struct TransactionDetailView: View {
         HStack(spacing: AppConstants.UI.spacing12) {
             Button {
                 editTapped += 1
-                viewModel.showEditSheet = true
+                onEdit?(transaction)
             } label: {
                 HStack(spacing: AppConstants.UI.spacingSM) {
                     AppIcon(name: AppIcons.UI.edit, size: 18, color: .white)

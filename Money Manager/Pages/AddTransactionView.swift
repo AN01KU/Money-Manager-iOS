@@ -17,7 +17,6 @@ struct AddTransactionView: View {
     }
     @State private var saveSuccess = false
     @State private var errorTriggered = 0
-    @State private var showRecurringAmountAlert = false
 
     init(mode: AddTransactionMode = .personal(), groupService: GroupServiceProtocol = GroupService.shared) {
         _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode, groupService: groupService))
@@ -34,6 +33,27 @@ struct AddTransactionView: View {
             } else {
                 personalScrollView
             }
+        }
+        .alert(item: $viewModel.activeAlert) { alert in
+            switch alert {
+            case .recurringAmount:
+                return Alert(
+                    title: Text("Update Recurring Transaction?"),
+                    message: Text("You changed the amount. Do you want to update the recurring transaction template as well?"),
+                    primaryButton: .default(Text("Update Recurring Too")) {
+                        viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() }
+                    },
+                    secondaryButton: .cancel(Text("Just This Transaction")) {
+                        viewModel.saveThisTransactionOnly(); saveSuccess = true; dismiss()
+                    }
+                )
+            case .error(let msg):
+                return Alert(title: Text("Error"), message: Text(msg), dismissButton: .cancel(Text("OK")))
+            }
+        }
+        .sensoryFeedback(.error, trigger: errorTriggered)
+        .onChange(of: viewModel.activeAlert) { _, newVal in
+            if case .error = newVal { errorTriggered += 1 }
         }
     }
 
@@ -61,20 +81,6 @@ struct AddTransactionView: View {
         .navigationDestination(isPresented: $viewModel.showCategoryPicker) {
             CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
         }
-        .alert("Update Recurring Transaction?", isPresented: $showRecurringAmountAlert) {
-            Button("Update Recurring Too") { viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() } }
-            Button("Just This Transaction") { viewModel.saveThisTransactionOnly(); saveSuccess = true; dismiss() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("You changed the amount. Do you want to update the recurring transaction template as well?")
-        }
-        .alert("Error", isPresented: $viewModel.showError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage)
-        }
-        .onChange(of: viewModel.showError) { _, show in if show { errorTriggered += 1 } }
-        .sensoryFeedback(.error, trigger: errorTriggered)
         .task { viewModel.modelContext = modelContext; viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
     }
@@ -334,10 +340,12 @@ struct AddTransactionView: View {
             if viewModel.isSaving {
                 ProgressView()
             } else {
-                Button("Save") { viewModel.save(completion: { saveSuccess = true; dismiss() }, onNeedsRecurringConfirmation: { showRecurringAmountAlert = true }) }
-                    .fontWeight(.semibold)
-                    .disabled(!viewModel.isValid)
-                    .accessibilityIdentifier("save-button")
+                Button("Save") {
+                    viewModel.save(completion: { saveSuccess = true; dismiss() })
+                }
+                .fontWeight(.semibold)
+                .disabled(!viewModel.isValid)
+                .accessibilityIdentifier("save-button")
             }
         }
     }
@@ -388,20 +396,13 @@ struct AddTransactionView: View {
                 if viewModel.isSaving {
                     ProgressView()
                 } else {
-                    Button("Save") { viewModel.save(completion: { saveSuccess = true; dismiss() }, onNeedsRecurringConfirmation: { showRecurringAmountAlert = true }) }
+                    Button("Save") { viewModel.save(completion: { saveSuccess = true; dismiss() }) }
                         .fontWeight(.semibold)
                         .disabled(!viewModel.isValid)
                         .accessibilityIdentifier("save-button")
                 }
             }
         }
-        .alert("Error", isPresented: $viewModel.showError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage)
-        }
-        .onChange(of: viewModel.showError) { _, show in if show { errorTriggered += 1 } }
-        .sensoryFeedback(.error, trigger: errorTriggered)
         .task { viewModel.modelContext = modelContext; viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
     }

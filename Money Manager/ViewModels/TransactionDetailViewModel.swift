@@ -3,7 +3,6 @@ import SwiftData
 
 @MainActor
 @Observable class TransactionDetailViewModel {
-    var showEditSheet = false
     var showDeleteAlert = false
 
 

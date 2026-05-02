@@ -11,6 +11,7 @@ struct Overview: View {
 
     @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []
+    @State private var editingTransaction: Transaction?
     var pendingRoute: Binding<AppRoute?>?
     var onCategoryTapped: ((String) -> Void)?
 
@@ -24,8 +25,13 @@ struct Overview: View {
                 .navigationDestination(for: AppRoute.self) { route in
                     if case .transaction(let id) = route,
                        let transaction = allTransactions.first(where: { $0.id == id }) {
-                        TransactionDetailView(transaction: transaction)
+                        TransactionDetailView(transaction: transaction, onEdit: { txn in
+                            editingTransaction = txn
+                        })
                     }
+                }
+                .sheet(item: $editingTransaction) { txn in
+                    AddTransactionView(transactionToEdit: txn)
                 }
         }
         .onChange(of: pendingRoute?.wrappedValue) { _, route in

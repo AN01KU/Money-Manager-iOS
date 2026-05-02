@@ -30,6 +30,12 @@ enum SplitType: String, CaseIterable {
     case custom = "Custom"
 }
 
+enum AddTransactionAlert: Identifiable, Equatable {
+    case recurringAmount
+    case error(String)
+    var id: Int { switch self { case .recurringAmount: 0; case .error: 1 } }
+}
+
 
 @MainActor
 @Observable class AddTransactionViewModel {
@@ -39,7 +45,20 @@ enum SplitType: String, CaseIterable {
     var notes = ""
     var transactionType: TransactionType = .expense
     var showCategoryPicker = false
-    var showError = false
+    var activeAlert: AddTransactionAlert?
+
+    var showError: Bool {
+        get { if case .error = activeAlert { return true }; return false }
+        set { if !newValue, case .error = activeAlert { activeAlert = nil } }
+    }
+    var errorMessage: String {
+        get { if case .error(let msg) = activeAlert { return msg }; return "" }
+        set { activeAlert = .error(newValue) }
+    }
+    var showRecurringAmountAlert: Bool {
+        get { activeAlert == .recurringAmount }
+        set { activeAlert = newValue ? .recurringAmount : nil }
+    }
 
     // Inline recurring fields
     var isRecurring = false
@@ -47,7 +66,6 @@ enum SplitType: String, CaseIterable {
     var recurringDayOfMonth: Int = 1
     var recurringHasEndDate = false
     var recurringEndDate: Date = Date()
-    var errorMessage = ""
     var isSaving = false
 
     var selectedDate = Date()
@@ -221,7 +239,7 @@ enum SplitType: String, CaseIterable {
 
     // MARK: - Save
 
-    func save(completion: @escaping () -> Void, onNeedsRecurringConfirmation: (() -> Void)? = nil) {
+    func save(completion: @escaping () -> Void) {
         guard let amountValue = Double(amount), amountValue > 0 else {
             errorMessage = "Please enter a valid amount"
             showError = true
@@ -234,7 +252,7 @@ enum SplitType: String, CaseIterable {
            let original = originalAmount,
            amountValue != original {
             pendingSaveCompletion = completion
-            onNeedsRecurringConfirmation?()
+            showRecurringAmountAlert = true
             return
         }
 
