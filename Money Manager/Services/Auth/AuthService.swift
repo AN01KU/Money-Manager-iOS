@@ -79,15 +79,21 @@ final class AuthService: AuthServiceProtocol {
         errorMessage = nil
         defer { isLoading = false }
 
-        // If a different user was previously logged in, wipe their local data first
         let normalizedEmail = email.lowercased()
-        if let lastEmail = session.getLastLoggedInEmail(), lastEmail != normalizedEmail {
-            SyncService.shared.clearAllUserData()
-        }
+        let isDifferentUser = session.getLastLoggedInEmail().map { $0 != normalizedEmail } ?? false
 
         do {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post(.login, body: request)
+
+            // Wipe old user's data only after the new login succeeds,
+            // so a failed login never destroys the current user's data.
+            // clearAllUserData deletes PendingChange records, so no stale
+            // changes can be replayed for the old user after this point.
+            if isDifferentUser {
+                SyncService.shared.clearAllUserData()
+            }
+
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
@@ -106,12 +112,18 @@ final class AuthService: AuthServiceProtocol {
         errorMessage = nil
         defer { isLoading = false }
 
+        let normalizedEmail = email.lowercased()
+        let isDifferentUser = session.getLastLoggedInEmail().map { $0 != normalizedEmail } ?? false
+
         do {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post(.signup, body: request)
+            if isDifferentUser {
+                SyncService.shared.clearAllUserData()
+            }
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
-            session.saveLastLoggedInEmail(email.lowercased())
+            session.saveLastLoggedInEmail(normalizedEmail)
             UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
             authState = .authenticated(response.user)
         } catch {

@@ -16,6 +16,7 @@ struct TransactionList: View {
     let transactions: [Transaction]
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
     @State private var selectedTransaction: Transaction?
+    @State private var editingTransaction: Transaction?
     @State private var swipedTransactionID: PersistentIdentifier?
     @State private var rowTapped = 0
     @State private var deleteTriggered = false  // Used as binding for swipe UI
@@ -66,13 +67,13 @@ struct TransactionList: View {
                                         swipedTransactionID = revealed ? transaction.persistentModelID : nil
                                     }
                                 ),
-                                onTap: {
-                                    rowTapped += 1
-                                    selectedTransaction = transaction
-                                },
                                 onDelete: {
                                     deleteTriggered = true
                                     onDelete?(transaction)
+                                },
+                                onTap: {
+                                    rowTapped += 1
+                                    selectedTransaction = transaction
                                 }
                             ) {
                                 TransactionRow(transaction: transaction, categoryLookup: categoryLookup, onGroupTapped: onGroupTapped)
@@ -80,18 +81,24 @@ struct TransactionList: View {
 
                             if transaction.persistentModelID != section.transactions.last?.persistentModelID {
                                 Divider()
-                                    .padding(.leading, 58)
+                                    .padding(.leading, AppConstants.UI.iconBadgeSize + AppConstants.UI.spacing12 + AppConstants.UI.padding)
                             }
                         }
                     }
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .background(AppColors.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
                 }
             }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
         .sheet(item: $selectedTransaction) { transaction in
-            TransactionDetailView(transaction: transaction)
+            TransactionDetailView(transaction: transaction, onEdit: { txn in
+                selectedTransaction = nil
+                editingTransaction = txn
+            })
+        }
+        .sheet(item: $editingTransaction) { txn in
+            AddTransactionView(transactionToEdit: txn)
         }
         .onChange(of: transactions.map(\.persistentModelID)) { _, _ in
             swipedTransactionID = nil
@@ -99,90 +106,6 @@ struct TransactionList: View {
     }
 }
 
-// MARK: - Swipe to Delete
-
-private struct SwipeToDeleteRow<Content: View>: View {
-    @Binding var isRevealed: Bool
-    let onTap: () -> Void
-    let onDelete: () -> Void
-    @ViewBuilder let content: () -> Content
-
-    @State private var offset: CGFloat = 0
-
-    private let buttonWidth: CGFloat = 80
-
-    var body: some View {
-        ZStack(alignment: .trailing) {
-            // Delete button behind
-            Button {
-                onDelete()
-                resetSwipe()
-            } label: {
-                Image(systemName: "trash.fill")
-                    .font(AppTypography.destructiveIcon)
-                    .foregroundStyle(.white)
-                    .frame(width: buttonWidth)
-                    .frame(maxHeight: .infinity)
-            }
-            .background(AppColors.expense)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .opacity(offset < 0 ? 1 : 0)
-
-            // Content on top
-            content()
-                .offset(x: offset)
-                .highPriorityGesture(
-                    DragGesture(minimumDistance: 20)
-                        .onChanged { value in
-                            let translation = value.translation.width
-                            if isRevealed {
-                                // Already open — allow dragging from revealed position
-                                let newOffset = -buttonWidth + translation
-                                offset = min(0, newOffset)
-                            } else if translation < 0 {
-                                // Swiping left to reveal
-                                offset = max(-buttonWidth, translation)
-                            }
-                        }
-                        .onEnded { value in
-                            let snapThreshold: CGFloat = -40
-                            if offset < snapThreshold {
-                                revealButton()
-                            } else {
-                                resetSwipe()
-                            }
-                        }
-                )
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        if isRevealed {
-                            resetSwipe()
-                        } else {
-                            onTap()
-                        }
-                    }
-                )
-        }
-        .onChange(of: isRevealed) { _, newValue in
-            if !newValue && offset != 0 {
-                withAnimation(.easeOut(duration: 0.2)) { offset = 0 }
-            }
-        }
-        .accessibilityAction(named: "Delete") {
-            onDelete()
-        }
-    }
-
-    private func revealButton() {
-        withAnimation(.easeOut(duration: 0.2)) { offset = -buttonWidth }
-        isRevealed = true
-    }
-
-    private func resetSwipe() {
-        withAnimation(.easeOut(duration: 0.2)) { offset = 0 }
-        isRevealed = false
-    }
-}
 
 #Preview {
     TransactionList(transactions: [

@@ -5,6 +5,7 @@
 //  Created for centralized app constants and configuration
 //
 
+import CryptoKit
 import Foundation
 
 /// Environment-driven configuration resolved from Info.plist (populated by xcconfig).
@@ -70,11 +71,35 @@ enum AppConstants {
         static let iso8601 = ISO8601DateFormatter()
     }
     
-    /// UI measurements
+    /// UI measurements — sourced from design token spec (4pt base grid)
     enum UI {
-        static let cornerRadius: CGFloat = 12
-        static let fabSize: CGFloat = 56
-        static let padding: CGFloat = 16
+        // MARK: Spacing
+        static let spacingXS:  CGFloat = 4   // icon inner padding, micro gaps
+        static let spacingSM:  CGFloat = 8   // icon-to-label gap
+        static let spacing12:  CGFloat = 12  // compact card padding
+        static let spacing14:  CGFloat = 14  // row vertical padding
+        static let padding:    CGFloat = 16  // card padding, section inset
+        static let spacing20:  CGFloat = 20  // large title padding, FAB margin
+        static let spacing24:  CGFloat = 24  // between card sections
+        static let spacing32:  CGFloat = 32  // between major groups
+        static let spacingXL:  CGFloat = 40  // page top/bottom breathing room
+
+        // MARK: Corner Radii
+        static let radiusXS:   CGFloat = 8   // chips, period pickers
+        static let radius10:   CGFloat = 10  // segment controls
+        static let radiusSM:   CGFloat = 12  // search bar, inputs
+        static let radius14:   CGFloat = 14  // buttons, action rows
+        static let cornerRadius: CGFloat = 16 // cards, list groups
+        static let radiusSheet: CGFloat = 20 // bottom sheets, modals
+        static let radiusFAB:  CGFloat = 28  // FAB (56 ÷ 2)
+
+        // MARK: Component sizes
+        static let fabSize:       CGFloat = 56
+        static let iconSize:      CGFloat = 24  // standard icon canvas
+        static let iconSizeSM:    CGFloat = 20  // compact icon (transaction rows)
+        static let avatarSize:    CGFloat = 38  // category avatar in list rows
+        static let iconBadgeSize: CGFloat = 36  // settings / list icon badge (rounded square)
+        static let profileAvatarSize: CGFloat = 46  // profile circle in settings / profile card
     }
     
     /// Validation

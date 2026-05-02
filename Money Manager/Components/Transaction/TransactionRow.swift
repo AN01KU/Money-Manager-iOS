@@ -12,28 +12,29 @@ struct TransactionRow: View {
     let categoryLookup: [String: CustomCategory]
     var onGroupTapped: ((UUID) -> Void)?
 
-    private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, lookup: categoryLookup)
+    private var resolved: (name: String, icon: String, color: Color) {
+        CategoryResolver.resolveAll(transaction.category, lookup: categoryLookup)
     }
 
     private var resolvedIcon: String { resolved.icon }
     private var resolvedColor: Color { resolved.color }
+    private var resolvedName: String { resolved.name }
 
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(resolvedColor.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
 
-                Image(systemName: resolvedIcon)
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(resolvedColor)
+                AppIcon(name: resolvedIcon,
+                        size: AppConstants.UI.iconBadgeSize * 0.52,
+                        color: resolvedColor)
             }
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(transaction.transactionDescription ?? transaction.category)
+                Text(transaction.transactionDescription ?? resolvedName)
                     .font(AppTypography.rowPrimary)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -69,7 +70,7 @@ struct TransactionRow: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(transaction.transactionDescription ?? transaction.category), \(transaction.category), \(CurrencyFormatter.format(transaction.amount))")
+        .accessibilityLabel("\(transaction.transactionDescription ?? resolvedName), \(resolvedName), \(CurrencyFormatter.format(transaction.amount))")
         .accessibilityIdentifier("transaction.row")
     }
 
@@ -82,13 +83,12 @@ struct TransactionRow: View {
 
 private struct RecurringBadge: View {
     var body: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "repeat")
-                .font(AppTypography.rowMeta)
+        HStack(spacing: 4) {
+            AppIcon(name: AppIcons.UI.recurring, size: 11, color: AppColors.accent)
             Text("Recurring")
                 .font(AppTypography.rowMeta)
+                .foregroundStyle(AppColors.accent)
         }
-        .foregroundStyle(.secondary)
     }
 }
 
@@ -99,15 +99,14 @@ private struct SettlementBadge: View {
     let groupName: String
 
     var body: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "arrow.left.arrow.right")
-                .font(AppTypography.rowMeta)
+        let color: Color = authService.isAuthenticated ? AppColors.warning : AppColors.label2
+        HStack(spacing: 4) {
+            AppIcon(name: AppIcons.UI.settle, size: 11, color: color)
             Text(groupName)
                 .font(AppTypography.rowMeta)
-            Image(systemName: authService.isAuthenticated ? "chevron.right" : "lock.fill")
-                .font(AppTypography.badgeIcon)
+                .foregroundStyle(color)
+            AppIcon(name: authService.isAuthenticated ? AppIcons.UI.chevron : AppIcons.UI.close, size: 10, color: color)
         }
-        .foregroundStyle(authService.isAuthenticated ? AppColors.warning : .secondary)
     }
 }
 
@@ -120,19 +119,18 @@ private struct GroupBadge: View {
     var onGroupTapped: ((UUID) -> Void)?
 
     var body: some View {
+        let color: Color = authService.isAuthenticated ? AppColors.accent : AppColors.label2
         Button {
             guard authService.isAuthenticated else { return }
             onGroupTapped?(groupID)
         } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "person.2.fill")
-                    .font(AppTypography.rowMeta)
+            HStack(spacing: 4) {
+                AppIcon(name: AppIcons.UI.groups, size: 11, color: color)
                 Text(groupName)
                     .font(AppTypography.rowMeta)
-                Image(systemName: authService.isAuthenticated ? "chevron.right" : "lock.fill")
-                    .font(AppTypography.badgeIcon)
+                    .foregroundStyle(color)
+                AppIcon(name: authService.isAuthenticated ? AppIcons.UI.chevron : AppIcons.UI.close, size: 10, color: color)
             }
-            .foregroundStyle(authService.isAuthenticated ? AppColors.accent : .secondary)
         }
         .buttonStyle(.plain)
     }

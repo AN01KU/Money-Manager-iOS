@@ -24,6 +24,8 @@ final class MockSyncService: SyncServiceProtocol {
         self.modelContainer = container
     }
     
+    func bootstrapPredefinedCategories() async {}
+
     func syncOnLaunch() async {}
     
     func syncOnReconnect() async {}

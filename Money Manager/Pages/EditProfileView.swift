@@ -31,47 +31,79 @@ struct EditProfileView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Profile") {
-                    LabeledContent("Username") {
-                        TextField("Username", text: $username)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-                    LabeledContent("Email") {
-                        TextField("Email", text: $email)
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-                }
+            ScrollView {
+                VStack(spacing: AppConstants.UI.spacing20) {
+                    // PROFILE section
+                    VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+                        Text("PROFILE")
+                            .font(AppTypography.sectionHeader)
+                            .foregroundStyle(AppColors.label2)
 
-                Section {
-                    SecureField("Current Password", text: $currentPassword)
-                        .textContentType(.password)
-                    SecureField("New Password", text: $newPassword)
-                        .textContentType(.newPassword)
-                    SecureField("Confirm New Password", text: $confirmPassword)
-                        .textContentType(.newPassword)
-                } header: {
-                    Text("Change Password")
-                } footer: {
-                    Text("Leave blank to keep your current password.")
-                        .font(.caption)
+                        VStack(spacing: 0) {
+                            ProfileFieldRow(label: "Username") {
+                                TextField("Username", text: $username)
+                                    .multilineTextAlignment(.trailing)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .font(AppTypography.body)
+                                    .foregroundStyle(AppColors.label)
+                            }
+                            Divider().padding(.leading, AppConstants.UI.padding)
+                            ProfileFieldRow(label: "Email") {
+                                TextField("Email", text: $email)
+                                    .multilineTextAlignment(.trailing)
+                                    .keyboardType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .font(AppTypography.body)
+                                    .foregroundStyle(AppColors.label)
+                            }
+                        }
+                        .background(AppColors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+                    }
+
+                    // CHANGE PASSWORD section
+                    VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+                        Text("CHANGE PASSWORD")
+                            .font(AppTypography.sectionHeader)
+                            .foregroundStyle(AppColors.label2)
+
+                        VStack(spacing: 0) {
+                            ProfileSecureRow(placeholder: "Current Password", text: $currentPassword)
+                                .textContentType(.password)
+                            Divider().padding(.leading, AppConstants.UI.padding)
+                            ProfileSecureRow(placeholder: "New Password", text: $newPassword)
+                                .textContentType(.newPassword)
+                            Divider().padding(.leading, AppConstants.UI.padding)
+                            ProfileSecureRow(placeholder: "Confirm New Password", text: $confirmPassword)
+                                .textContentType(.newPassword)
+                        }
+                        .background(AppColors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+
+                        Text("Leave blank to keep your current password.")
+                            .font(AppTypography.caption1)
+                            .foregroundStyle(AppColors.label2)
+                            .padding(.horizontal, AppConstants.UI.spacingSM)
+                    }
                 }
+                .padding(.horizontal, AppConstants.UI.padding)
+                .padding(.vertical, AppConstants.UI.spacing20)
             }
+            .background(AppColors.background)
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(AppColors.accent)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
                         .disabled(!hasChanges || !isValid || isLoading)
                         .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.accent)
                 }
             }
             .overlay {
@@ -134,6 +166,36 @@ struct EditProfileView: View {
             }
             isLoading = false
         }
+    }
+}
+
+private struct ProfileFieldRow<Content: View>: View {
+    let label: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.label2)
+            Spacer()
+            content()
+        }
+        .padding(.horizontal, AppConstants.UI.padding)
+        .padding(.vertical, 14)
+    }
+}
+
+private struct ProfileSecureRow: View {
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        SecureField(placeholder, text: $text)
+            .font(AppTypography.body)
+            .foregroundStyle(AppColors.label)
+            .padding(.horizontal, AppConstants.UI.padding)
+            .padding(.vertical, 14)
     }
 }
 

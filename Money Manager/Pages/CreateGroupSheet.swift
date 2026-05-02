@@ -18,17 +18,12 @@ struct CreateGroupSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Group Name")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        TextField("e.g., Weekend Trip", text: $groupName)
-                            .textInputAutocapitalization(.words)
-                    }
-                    .padding(.vertical, 8)
-                } footer: {
-                    Text("Create a group to start tracking shared transactions with friends.")
+                Section(
+                    header: Text("Group Name"),
+                    footer: Text("Create a group to start tracking shared transactions with friends.")
+                ) {
+                    TextField("e.g., Weekend Trip", text: $groupName)
+                        .textInputAutocapitalization(.words)
                 }
             }
             .dismissKeyboardOnScroll()

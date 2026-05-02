@@ -54,16 +54,12 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         resetColorWarning()
 
         if let row = category.overrideRow {
-            // Update existing override row
-            let oldName = row.name
+            // Update existing override row — transactions are keyed by server key, not name,
+            // so renaming the display name requires no cascade update.
             row.name = trimmedName
             row.icon = selectedIcon
             row.color = selectedColor
             row.updatedAt = Date()
-
-            if oldName != trimmedName {
-                renameCategoryInTransactions(from: oldName, to: trimmedName, categoryId: row.id, context: context)
-            }
 
             do {
                 try persistence.saveCategory(row, action: "update")
@@ -77,17 +73,14 @@ class EditCategoryViewModel: CategoryEditorViewModel {
                   let predefined = predefinedCase(for: category) {
             // No override row yet — create one to record the user's changes
             let row = CustomCategory(
+                key: predefined.serverKey,
                 name: trimmedName,
                 icon: selectedIcon,
                 color: selectedColor,
                 isPredefined: true,
-                predefinedKey: predefined.key
+                predefinedKey: predefined.serverKey
             )
             context.insert(row)
-
-            if trimmedName != predefined.rawValue {
-                renameCategoryInTransactions(from: predefined.rawValue, to: trimmedName, categoryId: row.id, context: context)
-            }
 
             do {
                 try persistence.saveCategory(row, action: "create")
@@ -105,28 +98,10 @@ class EditCategoryViewModel: CategoryEditorViewModel {
 
     // MARK: - Private
 
-    private func renameCategoryInTransactions(from oldName: String, to newName: String, categoryId: UUID, context: ModelContext) {
-        let txDescriptor = FetchDescriptor<Transaction>()
-        if let transactions = try? context.fetch(txDescriptor) {
-            for tx in transactions where tx.categoryId == categoryId {
-                tx.category = newName
-                tx.updatedAt = Date()
-            }
-        }
-
-        let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
-        if let recurrings = try? context.fetch(recurringDescriptor) {
-            for r in recurrings where r.categoryId == categoryId {
-                r.category = newName
-                r.updatedAt = Date()
-            }
-        }
-    }
-
     private func predefinedCase(for category: TransactionCategory) -> PredefinedCategory? {
         let prefix = "predefined:"
         guard category.id.hasPrefix(prefix) else { return nil }
         let key = String(category.id.dropFirst(prefix.count))
-        return PredefinedCategory.allCases.first { $0.key == key }
+        return PredefinedCategory.allCases.first { $0.serverKey == key }
     }
 }

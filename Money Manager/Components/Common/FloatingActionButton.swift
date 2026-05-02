@@ -8,27 +8,33 @@
 import SwiftUI
 
 struct FloatingActionButton: View {
-    let icon: String
+    var icon: String = AppIcons.UI.add
+    var systemIcon: String? = nil
     let action: () -> Void
-    var color: Color = .teal
+    var color: Color = AppColors.accent
     @State private var tapped = 0
-    
+
     var body: some View {
         Button(action: {
             tapped += 1
             action()
         }) {
-            Image(systemName: icon)
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .frame(width: 60, height: 60)
-                .background(color)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+            Group {
+                if let sf = systemIcon {
+                    Image(systemName: sf)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.white)
+                } else {
+                    AppIcon(name: icon, size: 24, color: .white)
+                }
+            }
+            .frame(width: 60, height: 60)
+            .background(color)
+            .clipShape(Circle())
+            .shadow(color: color.opacity(0.35), radius: 8, x: 0, y: 4)
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: tapped)
-        .accessibilityLabel("Add new transaction")
+        .accessibilityLabel("Add")
         .accessibilityIdentifier("fab-add")
     }
 }
@@ -36,7 +42,7 @@ struct FloatingActionButton: View {
 #Preview {
     ZStack(alignment: .bottomTrailing) {
         AppColors.grayLight
-        FloatingActionButton(icon: "plus", action: {})
+        FloatingActionButton(action: {})
             .padding()
     }
 }

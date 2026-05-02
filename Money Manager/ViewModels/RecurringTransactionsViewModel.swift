@@ -105,6 +105,10 @@ import SwiftData
     var name: String = ""
     var amount: String = ""
     var selectedCategory: String = ""
+    var selectedCategoryName: String {
+        let lookup = CategoryResolver.makeLookup(from: customCategories)
+        return CategoryResolver.resolveAll(selectedCategory, lookup: lookup).name
+    }
     var transactionType: TransactionKind = .expense
     var frequency: RecurringFrequency = .monthly
     var startDate: Date = Date()
@@ -165,7 +169,7 @@ import SwiftData
         guard let modelContext = modelContext else { return true }
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+        let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
 
         let recurringTransaction = RecurringTransaction(
             name: trimmedName,

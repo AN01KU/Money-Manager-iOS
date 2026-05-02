@@ -1,8 +1,3 @@
-//
-//  LoginView.swift
-//  Money Manager
-//
-
 import SwiftUI
 
 struct LoginView: View {
@@ -12,6 +7,7 @@ struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var email = ""
     @State private var password = ""
     @State private var showSignup = false
@@ -21,50 +17,130 @@ struct LoginView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 32) {
-                    LoginHeaderSection()
+            ZStack(alignment: .top) {
+                // Outer background — matches phone chrome grey
+                AppColors.background
+                    .ignoresSafeArea()
 
-                    LoginFormSection(email: $email, password: $password)
-
-                    LoginButton(isLoading: isLoading, isFormValid: isFormValid, onTap: login)
-
-                    #if DEBUG
-                    Button("Fill Test Credentials") {
-                        email = AppConfig.testEmail
-                        password = AppConfig.testPassword
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    #endif
-
-                    LoginSignupLink(onSignUp: { showSignup = true })
-
-                    if let onSkip {
-                        Button("Continue without account") {
-                            onSkip()
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Cancel pill — always shown at top-left
+                        HStack {
+                            Button("Cancel") { dismiss() }
+                                .font(AppTypography.callout.weight(.medium))
+                                .foregroundStyle(AppColors.primary)
+                                .padding(.horizontal, AppConstants.UI.spacing20)
+                                .padding(.vertical, AppConstants.UI.spacingSM)
+                                .background(.white)
+                                .clipShape(Capsule())
+                                .shadow(color: .black.opacity(0.10), radius: 3, y: 1)
+                            Spacer()
                         }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("onboarding.skip-login-button")
+                        .padding(.horizontal, AppConstants.UI.padding)
+                        .padding(.top, AppConstants.UI.spacing12)
+                        .padding(.bottom, AppConstants.UI.spacing12)
+
+                        // Content card
+                        VStack(spacing: 0) {
+                            // App icon
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.primary)
+                                    .frame(width: 74, height: 74)
+                                    .shadow(color: AppColors.primary.opacity(0.35), radius: 16, y: 8)
+                                Text("₹")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            .padding(.bottom, 22)
+
+                            Text("Money Manager")
+                                .font(AppTypography.title1)
+                                .foregroundStyle(AppColors.label)
+                                .padding(.bottom, 6)
+
+                            Text("Sign in to continue")
+                                .font(AppTypography.subhead)
+                                .foregroundStyle(AppColors.label2)
+                                .padding(.bottom, 36)
+
+                            // Fields
+                            VStack(spacing: AppConstants.UI.spacing12) {
+                                LoginField(placeholder: "Email", text: $email)
+                                    .keyboardType(.emailAddress)
+                                    .textContentType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+
+                                LoginField(placeholder: "Password", text: $password, isSecure: true)
+                                    .textContentType(.password)
+                            }
+                            .padding(.bottom, AppConstants.UI.spacing20)
+
+                            // Sign In button — dark charcoal per design spec
+                            Button { login() } label: {
+                                Group {
+                                    if isLoading {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Text("Sign In")
+                                            .font(AppTypography.button)
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(Color("CatDark", bundle: .main))
+                                .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.radius14))
+                                .shadow(color: .black.opacity(0.20), radius: 6, y: 2)
+                            }
+                            .disabled(isLoading)
+                            .padding(.bottom, AppConstants.UI.padding)
+
+                            #if DEBUG
+                            Button("Fill Test Credentials") {
+                                email = AppConfig.testEmail
+                                password = AppConfig.testPassword
+                            }
+                            .font(AppTypography.footnote)
+                            .foregroundStyle(AppColors.label2)
+                            .padding(.bottom, 28)
+                            #endif
+
+                            // Sign up link
+                            HStack(spacing: 4) {
+                                Text("Don't have an account?")
+                                    .foregroundStyle(AppColors.label2)
+                                Button("Sign Up") { showSignup = true }
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppColors.primary)
+                            }
+                            .font(AppTypography.subhead)
+                            .padding(.bottom, AppConstants.UI.spacing20)
+
+                            if let onSkip {
+                                Button("Continue without account") { onSkip() }
+                                    .font(AppTypography.subhead)
+                                    .foregroundStyle(AppColors.label2)
+                                    .accessibilityIdentifier("onboarding.skip-login-button")
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, AppConstants.UI.spacing24)
+                        .padding(.bottom, AppConstants.UI.spacingXL)
+                        .frame(maxWidth: .infinity)
+                        .background(AppColors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.radiusSheet))
+                        .padding(.horizontal, AppConstants.UI.spacingXS)
                     }
                 }
-                .padding(24)
+                .dismissKeyboardOnScroll()
             }
-            .dismissKeyboardOnScroll()
-            .background(Color(.systemBackground))
-            .toolbar(isDismissable ? .visible : .hidden, for: .navigationBar)
-            .toolbar {
-                if isDismissable {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
-                    }
-                }
-            }
-            .sheet(isPresented: $showSignup, onDismiss: {
-                if authService.isAuthenticated { dismiss() }
-            }) {
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showSignup) {
                 SignupView()
+            }
+            .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated { dismiss() }
             }
             .alert("Login Error", isPresented: Binding(
                 get: { errorMessage != nil },
@@ -76,9 +152,7 @@ struct LoginView: View {
             }
             .alert("Switch Account?", isPresented: $showDataWipeAlert) {
                 Button("Cancel", role: .cancel) {}
-                Button("Continue", role: .destructive) {
-                    performLogin()
-                }
+                Button("Continue", role: .destructive) { performLogin() }
             } message: {
                 Text("You were previously signed in with a different account. All local data will be cleared before signing in.")
             }
@@ -101,12 +175,12 @@ struct LoginView: View {
     private func performLogin() {
         isLoading = true
         errorMessage = nil
-
         Task {
             do {
                 try await authService.login(email: email, password: password)
                 await syncService.fullSync()
-                dismiss()
+                hasCompletedOnboarding = true
+                if isDismissable { dismiss() }
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -115,96 +189,34 @@ struct LoginView: View {
     }
 }
 
-private struct LoginHeaderSection: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "indianrupeesign.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(AppColors.accent)
-
-            Text("Money Manager")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-
-            Text("Sign in to continue")
-                .font(.body)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.top, 40)
-    }
-}
-
-private struct LoginFormSection: View {
-    @Binding var email: String
-    @Binding var password: String
+// MARK: - Field component
+private struct LoginField: View {
+    let placeholder: String
+    @Binding var text: String
+    var isSecure: Bool = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            TextField("Email", text: $email)
-                .textFieldStyle(.plain)
-                .keyboardType(.emailAddress)
-                .textContentType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            SecureField("Password", text: $password)
-                .textFieldStyle(.plain)
-                .textContentType(.password)
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-}
-
-private struct LoginButton: View {
-    let isLoading: Bool
-    let isFormValid: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button {
-            onTap()
-        } label: {
-            Group {
-                if isLoading {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Text("Sign In")
-                        .fontWeight(.semibold)
-                }
+        Group {
+            if isSecure {
+                SecureField(placeholder, text: $text)
+            } else {
+                TextField(placeholder, text: $text)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(isFormValid ? AppColors.accent : Color.gray)
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .disabled(!isFormValid || isLoading)
-    }
-}
-
-private struct LoginSignupLink: View {
-    let onSignUp: () -> Void
-
-    var body: some View {
-        HStack {
-            Text("Don't have an account?")
-                .foregroundStyle(.secondary)
-
-            Button("Sign Up") {
-                onSignUp()
-            }
-            .fontWeight(.semibold)
-            .foregroundStyle(AppColors.accent)
-        }
-        .font(.subheadline)
+        .textFieldStyle(.plain)
+        .font(AppTypography.body)
+        .foregroundStyle(AppColors.label)
+        .frame(height: 52)
+        .padding(.horizontal, AppConstants.UI.padding)
+        .background(Color(white: 0.5, opacity: 0.12))
+        .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.radius14))
     }
 }
 
 #Preview {
     LoginView()
+}
+
+#Preview("Dismissable") {
+    LoginView(isDismissable: true)
 }

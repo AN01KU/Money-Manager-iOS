@@ -15,11 +15,16 @@ struct ExportDataView: View {
     @State private var showImportPicker = false
     
     var body: some View {
-        List {
-            exportSection
-            importSection
-            dataSummarySection
+        ScrollView {
+            VStack(spacing: AppConstants.UI.spacing20) {
+                exportSection
+                importSection
+                dataSummarySection
+            }
+            .padding(.horizontal, AppConstants.UI.padding)
+            .padding(.vertical, AppConstants.UI.spacing20)
         }
+        .background(AppColors.background)
         .navigationTitle("Backup")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $viewModel.showShareSheet) {
@@ -50,97 +55,171 @@ struct ExportDataView: View {
     }
     
     private var exportSection: some View {
-        Section {
-            Picker("Format", selection: $viewModel.selectedExportFormat) {
-                ForEach(ExportFormat.allCases) { format in
-                    Text(format.rawValue).tag(format)
-                }
-            }
-            
-            Picker("Data Type", selection: $viewModel.selectedDataType) {
-                ForEach(ExportDataType.allCases) { dataType in
-                    Label(dataType.rawValue, systemImage: dataType.icon).tag(dataType)
-                }
-            }
-            
-            Button {
-                Task {
-                    await viewModel.exportData(
-                        transactions: transactions,
-                        recurringTransactions: recurringTransactions,
-                        budgets: budgets,
-                        categories: categories,
-                        groups: groups
-                    )
-                }
-            } label: {
-                HStack {
-                    if viewModel.isExporting {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "square.and.arrow.up")
+        VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+            Text("EXPORT")
+                .font(AppTypography.sectionHeader)
+                .foregroundStyle(AppColors.label2)
+
+            VStack(spacing: 0) {
+                BackupPickerRow(label: "Format", value: viewModel.selectedExportFormat.rawValue) {
+                    Picker("", selection: $viewModel.selectedExportFormat) {
+                        ForEach(ExportFormat.allCases) { Text($0.rawValue).tag($0) }
                     }
-                    Text("Export \(viewModel.selectedDataType.rawValue)")
+                    .labelsHidden()
                 }
+
+                Divider().padding(.leading, AppConstants.UI.padding)
+
+                BackupPickerRow(label: "Data Type", value: viewModel.selectedDataType.rawValue) {
+                    Picker("", selection: $viewModel.selectedDataType) {
+                        ForEach(ExportDataType.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .labelsHidden()
+                }
+
+                Divider().padding(.leading, AppConstants.UI.padding)
+
+                Button {
+                    Task {
+                        await viewModel.exportData(
+                            transactions: transactions,
+                            recurringTransactions: recurringTransactions,
+                            budgets: budgets,
+                            categories: categories,
+                            groups: groups
+                        )
+                    }
+                } label: {
+                    HStack(spacing: AppConstants.UI.spacingSM) {
+                        if viewModel.isExporting {
+                            ProgressView().tint(AppColors.accent)
+                        } else {
+                            AppIcon(name: AppIcons.UI.export, size: 18, color: AppColors.accent)
+                        }
+                        Text("Export \(viewModel.selectedDataType.rawValue)")
+                            .font(AppTypography.body)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppColors.accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(AppConstants.UI.padding)
+                }
+                .buttonStyle(.plain)
+                .disabled(transactions.isEmpty && recurringTransactions.isEmpty && budgets.isEmpty && categories.isEmpty)
             }
-            .disabled(transactions.isEmpty && recurringTransactions.isEmpty && budgets.isEmpty && categories.isEmpty)
-        } header: {
-            Text("Export")
-        } footer: {
+            .background(AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+
             Text(viewModel.exportDescription)
+                .font(AppTypography.caption1)
+                .foregroundStyle(AppColors.label2)
+                .padding(.horizontal, AppConstants.UI.spacingSM)
         }
     }
-    
+
     private var importSection: some View {
-        Section {
-            Picker("Format", selection: $viewModel.selectedImportFormat) {
-                ForEach(ExportFormat.allCases) { format in
-                    Text(format.rawValue).tag(format)
-                }
-            }
-            
-            Button {
-                showImportPicker = true
-            } label: {
-                HStack {
-                    if viewModel.isImporting {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "square.and.arrow.down")
+        VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+            Text("IMPORT")
+                .font(AppTypography.sectionHeader)
+                .foregroundStyle(AppColors.label2)
+
+            VStack(spacing: 0) {
+                BackupPickerRow(label: "Format", value: viewModel.selectedImportFormat.rawValue) {
+                    Picker("", selection: $viewModel.selectedImportFormat) {
+                        ForEach(ExportFormat.allCases) { Text($0.rawValue).tag($0) }
                     }
-                    Text("Import from \(viewModel.selectedImportFormat.rawValue)")
+                    .labelsHidden()
                 }
+
+                Divider().padding(.leading, AppConstants.UI.padding)
+
+                Button {
+                    showImportPicker = true
+                } label: {
+                    HStack(spacing: AppConstants.UI.spacingSM) {
+                        if viewModel.isImporting {
+                            ProgressView().tint(AppColors.accent)
+                        } else {
+                            AppIcon(name: AppIcons.UI.sync, size: 18, color: AppColors.accent)
+                        }
+                        Text("Import from \(viewModel.selectedImportFormat.rawValue)")
+                            .font(AppTypography.body)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppColors.accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(AppConstants.UI.padding)
+                }
+                .buttonStyle(.plain)
             }
-        } header: {
-            Text("Import")
-        } footer: {
-            Text(viewModel.importDescription)
+            .background(AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
         }
     }
-    
+
     private var dataSummarySection: some View {
-        Section("Data Summary") {
-            HStack {
-                Label("Transactions", systemImage: "creditcard.fill")
-                Spacer()
-                Text("\(transactions.count)")
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: AppConstants.UI.spacingSM) {
+            Text("DATA SUMMARY")
+                .font(AppTypography.sectionHeader)
+                .foregroundStyle(AppColors.label2)
+
+            VStack(spacing: 0) {
+                SummaryRow(icon: AppIcons.UI.transactions, label: "Transactions", count: transactions.count)
+                Divider().padding(.leading, AppConstants.UI.iconBadgeSize + AppConstants.UI.padding + AppConstants.UI.spacing12)
+                SummaryRow(icon: AppIcons.UI.budget, label: "Budgets", count: budgets.count)
+                Divider().padding(.leading, AppConstants.UI.iconBadgeSize + AppConstants.UI.padding + AppConstants.UI.spacing12)
+                SummaryRow(icon: AppIcons.UI.categories, label: "Categories", count: categories.count)
             }
-            
-            HStack {
-                Label("Budgets", systemImage: "chart.bar.fill")
-                Spacer()
-                Text("\(budgets.count)")
-                    .foregroundStyle(.secondary)
-            }
-            
-            HStack {
-                Label("Categories", systemImage: "folder.fill")
-                Spacer()
-                Text("\(categories.count)")
-                    .foregroundStyle(.secondary)
-            }
+            .background(AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
         }
+    }
+}
+
+private struct BackupPickerRow<Content: View>: View {
+    let label: String
+    let value: String
+    @ViewBuilder let picker: () -> Content
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.label)
+            Spacer()
+            picker()
+                .tint(AppColors.accent)
+                .font(AppTypography.body)
+        }
+        .padding(.horizontal, AppConstants.UI.padding)
+        .padding(.vertical, 14)
+    }
+}
+
+private struct SummaryRow: View {
+    let icon: String
+    let label: String
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: AppConstants.UI.spacing12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(AppColors.accent)
+                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                AppIcon(name: icon, size: AppConstants.UI.iconBadgeSize * 0.52, color: .white)
+            }
+            Text(label)
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.label)
+            Spacer()
+            Text("\(count)")
+                .font(AppTypography.body)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.label)
+        }
+        .padding(.horizontal, AppConstants.UI.padding)
+        .padding(.vertical, AppConstants.UI.spacing12)
     }
 }
 

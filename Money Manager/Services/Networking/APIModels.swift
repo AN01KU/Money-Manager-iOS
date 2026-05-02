@@ -110,24 +110,48 @@ struct APIMonthlyBudget: Codable {
 struct APICustomCategory: Codable {
     let id: UUID
     let userId: UUID
+    let key: String
     let name: String
     let icon: String
     let color: String
-    let isHidden: Bool
-    let isPredefined: Bool
+    let isHidden: Bool?
+    let isPredefined: Bool?
     let predefinedKey: String?
-    let createdAt: Date
+    let createdAt: Date?
     let updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
+        case key
         case name
         case icon
         case color
         case isHidden = "is_hidden"
         case isPredefined = "is_predefined"
         case predefinedKey = "predefined_key"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct APIPredefinedCategory: Codable {
+    let id: UUID
+    let key: String
+    let name: String
+    let icon: String
+    let color: String
+    let isHidden: Bool?
+    let createdAt: Date?
+    let updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case key
+        case name
+        case icon
+        case color
+        case isHidden = "is_hidden"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

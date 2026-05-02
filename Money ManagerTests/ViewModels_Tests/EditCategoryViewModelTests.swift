@@ -19,6 +19,7 @@ struct EditCategoryViewModelRenameTests {
     private func makeTransactionCategory(row: CustomCategory) -> TransactionCategory {
         TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: row.key.isEmpty ? "local:\(row.id.uuidString)" : row.key,
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: false, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -74,13 +75,15 @@ struct EditCategoryViewModelRenameTests {
         #expect(saved == false)
     }
 
-    @Test func testSaveRenamesTransactionsCategoryName() throws {
+    @Test func testSaveDoesNotUpdateTransactionCategoryOnRename() throws {
+        // Transactions store the stable server key, so renaming a category's display name
+        // does not cascade to transactions.
         let context = try makeContext()
         let row = makeCustomCategory(name: "Coffee")
+        row.key = "coffee-custom"
         context.insert(row)
 
-        // Insert a transaction that references this category
-        let tx = Transaction(amount: 5, category: "Coffee", date: Date())
+        let tx = Transaction(amount: 5, category: "coffee-custom", date: Date())
         tx.categoryId = row.id
         context.insert(tx)
 
@@ -94,18 +97,20 @@ struct EditCategoryViewModelRenameTests {
 
         let saved = vm.save()
         #expect(saved == true)
-        #expect(tx.category == "Tea")
+        // category key on transaction is unchanged — only display name changed
+        #expect(tx.category == "coffee-custom")
     }
 
-    @Test func testSaveRenamesRecurringTransactionsCategoryName() throws {
+    @Test func testSaveDoesNotUpdateRecurringTransactionCategoryOnRename() throws {
         let context = try makeContext()
         let row = makeCustomCategory(name: "Coffee")
+        row.key = "coffee-custom"
         context.insert(row)
 
         let recurring = RecurringTransaction(
             name: "Daily Coffee",
             amount: 5,
-            category: "Coffee",
+            category: "coffee-custom",
             frequency: .daily,
             startDate: Date(),
             categoryId: row.id
@@ -122,7 +127,7 @@ struct EditCategoryViewModelRenameTests {
 
         let saved = vm.save()
         #expect(saved == true)
-        #expect(recurring.category == "Tea")
+        #expect(recurring.category == "coffee-custom")
     }
 
     @Test func testSaveDoesNotRenameTransactionsWithDifferentCategoryId() throws {

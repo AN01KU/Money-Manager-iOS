@@ -14,9 +14,7 @@ struct TransactionDetailViewModelTests {
         let transaction = Transaction(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        // Sheets must start closed — opening one before the view has appeared would
-        // present immediately and skip the transition animation.
-        #expect(viewModel.showEditSheet == false)
+        // Delete alert must start closed — opening before view appears would skip animation.
         #expect(viewModel.showDeleteAlert == false)
         #expect(viewModel.customCategories.isEmpty)
     }
@@ -72,26 +70,26 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testCategoryIconForPredefinedCategory() {
-        let transaction = Transaction(amount: 100, category: "Food & Dining", date: Date())
+        let transaction = Transaction(amount: 100, category: "food-dining", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        #expect(viewModel.categoryIcon == "fork.knife.circle.fill")
+        #expect(viewModel.categoryIcon == PredefinedCategory.foodDining.icon)
     }
 
     @Test
     func testCategoryIconFallbackForUnknownCategory() {
-        let transaction = Transaction(amount: 100, category: "Unknown Category", date: Date())
+        let transaction = Transaction(amount: 100, category: "unknown-category", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
+        #expect(viewModel.categoryIcon == AppIcons.Category.other)
     }
 
     @Test
     func testCategoryIconPrefersCustomCategory() {
-        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let transaction = Transaction(amount: 100, category: "pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = CustomCategory(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         viewModel.customCategories = [custom]
 
         #expect(viewModel.categoryIcon == "pawprint.fill")
@@ -99,21 +97,21 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testCategoryIconIgnoresHiddenCustomCategory() {
-        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let transaction = Transaction(amount: 100, category: "my-custom-pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = CustomCategory(key: "my-custom-pets", name: "My Custom Pets", icon: "pawprint.fill", color: "#FF0000")
         custom.isHidden = true
         viewModel.customCategories = [custom]
 
-        #expect(viewModel.categoryIcon == "ellipsis.circle.fill")
+        #expect(viewModel.categoryIcon == AppIcons.Category.other)
     }
 
     // MARK: - categoryColor
 
     @Test
     func testCategoryColorForPredefinedCategory() {
-        let transaction = Transaction(amount: 100, category: "Food & Dining", date: Date())
+        let transaction = Transaction(amount: 100, category: "food-dining", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
         #expect(viewModel.categoryColor == PredefinedCategory.foodDining.color)
@@ -121,7 +119,7 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testCategoryColorFallbackForUnknownCategory() {
-        let transaction = Transaction(amount: 100, category: "Unknown Category", date: Date())
+        let transaction = Transaction(amount: 100, category: "unknown-category", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
         #expect(viewModel.categoryColor == .gray)
@@ -129,10 +127,10 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testCategoryColorPrefersCustomCategory() {
-        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let transaction = Transaction(amount: 100, category: "pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = CustomCategory(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         viewModel.customCategories = [custom]
 
         #expect(viewModel.categoryColor == Color(hex: "#FF0000"))
@@ -140,10 +138,10 @@ struct TransactionDetailViewModelTests {
 
     @Test
     func testCategoryColorIgnoresHiddenCustomCategory() {
-        let transaction = Transaction(amount: 100, category: "Pets", date: Date())
+        let transaction = Transaction(amount: 100, category: "my-custom-pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = CustomCategory(key: "my-custom-pets", name: "My Custom Pets", icon: "pawprint.fill", color: "#FF0000")
         custom.isHidden = true
         viewModel.customCategories = [custom]
 

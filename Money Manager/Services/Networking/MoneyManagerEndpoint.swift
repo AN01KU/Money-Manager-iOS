@@ -15,6 +15,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
 
     // MARK: - Sync
     case syncPreflight
+    case predefinedCategories
     case syncCategories
     case syncBudgets
     case syncRecurring
@@ -54,6 +55,7 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .verifyEmail:                  return "/auth/verify-email"
         case .resendVerification:           return "/auth/resend-verification"
         case .syncPreflight:                return "/sync/preflight"
+        case .predefinedCategories:         return "/predefined-categories"
         case .syncCategories:               return "/categories"
         case .syncBudgets:                  return "/budgets"
         case .syncRecurring:                return "/recurring-transactions"

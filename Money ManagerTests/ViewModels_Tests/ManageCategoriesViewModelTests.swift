@@ -22,6 +22,7 @@ struct ManageCategoriesViewModelTests {
         row.isHidden = hidden
         return TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name,
             icon: row.icon,
             colorHex: row.color,
@@ -40,6 +41,7 @@ struct ManageCategoriesViewModelTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: false, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -59,7 +61,8 @@ struct ManageCategoriesViewModelTests {
 
         // Predefined category with NO override row yet
         let category = TransactionCategory(
-            id: "predefined:\(predefined.key)",
+            id: "predefined:\(predefined.serverKey)",
+            key: "test-key",
             name: predefined.rawValue,
             icon: predefined.icon,
             colorHex: predefined.defaultColorHex,
@@ -76,7 +79,7 @@ struct ManageCategoriesViewModelTests {
         let rows = try context.fetch(FetchDescriptor<CustomCategory>())
         #expect(rows.count == 1)
         #expect(rows.first?.isHidden == true)
-        #expect(rows.first?.predefinedKey == predefined.key)
+        #expect(rows.first?.predefinedKey == predefined.serverKey)
         #expect(rows.first?.isPredefined == true)
     }
 
@@ -89,6 +92,7 @@ struct ManageCategoriesViewModelTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: true, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -106,6 +110,7 @@ struct ManageCategoriesViewModelTests {
         let viewModel = ManageCategoriesViewModel()
         let category = TransactionCategory(
             id: "predefined:other",
+            key: "test-key",
             name: "Other", icon: "ellipsis.circle.fill", colorHex: "#95A5A6",
             isHidden: false, isPredefined: true, isDeletable: false,
             overrideRow: nil
@@ -123,6 +128,7 @@ struct ManageCategoriesViewModelTests {
         let row = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000")
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: false, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -149,6 +155,7 @@ struct ManageCategoriesViewModelTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: false, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -162,7 +169,7 @@ struct ManageCategoriesViewModelTests {
         #expect(viewModel.categoryToDelete == nil)
         #expect(viewModel.showDeleteConfirmation == false)
         #expect(viewModel.deleteConfirmedTrigger == 1)
-        #expect(foodExpense.category == "Other")
+        #expect(foodExpense.category == "other")
         #expect(otherExpense.category == "Transport")
 
         let remaining = try context.fetch(FetchDescriptor<CustomCategory>())
@@ -183,6 +190,7 @@ struct ManageCategoriesViewModelTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: false, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -193,7 +201,7 @@ struct ManageCategoriesViewModelTests {
         viewModel.deleteCategory(category)
         viewModel.confirmDelete()
 
-        #expect(recurring.category == "Other")
+        #expect(recurring.category == "other")
         #expect(recurring.categoryId == nil)
     }
 
@@ -214,7 +222,7 @@ struct ManageCategoriesViewModelTests {
             icon: "xmark",
             color: "#000000",
             isPredefined: true,
-            predefinedKey: PredefinedCategory.allCases.first!.key
+            predefinedKey: PredefinedCategory.allCases.first!.serverKey
         )
         override.isHidden = true
         context.insert(override)
@@ -243,7 +251,7 @@ struct ManageCategoriesViewModelTests {
         let context = try makeContext()
 
         let custom = CustomCategory(name: "My Custom", icon: "star", color: "#FF0000")
-        let override = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "foodDining")
+        let override = CustomCategory(name: "Food", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "food-dining")
         context.insert(custom)
         context.insert(override)
         try context.save()
@@ -276,8 +284,8 @@ struct AddCategoryViewModelTests {
     @Test
     func testDefaultValues() {
         let viewModel = AddCategoryViewModel()
-        #expect(viewModel.selectedIcon == "tag.circle.fill")
-        #expect(viewModel.selectedColor == "#4ECDC4")
+        #expect(viewModel.selectedIcon == AppIcons.Category.other)
+        #expect(viewModel.selectedColor == "#17C5CC")
         #expect(viewModel.name == "")
         #expect(viewModel.isSaving == false)
         #expect(viewModel.showError == false)
@@ -365,11 +373,16 @@ struct AddCategoryViewModelTests {
     }
 
     @Test
-    func testSaveBlockedByDuplicatePredefinedName() async throws {
+    func testSaveBlockedByDuplicateCustomName() async throws {
         let context = try makeContext()
+        let existing = CustomCategory(name: "Coffee", icon: "cup.and.saucer", color: "#123456")
+        context.insert(existing)
+        try context.save()
+
         let viewModel = AddCategoryViewModel()
         viewModel.modelContext = context
-        viewModel.name = "Food & Dining"  // matches PredefinedCategory.foodDining.rawValue
+        viewModel.allCategories = [existing]
+        viewModel.name = "Coffee"
 
         let result = await viewModel.save()
 
@@ -390,6 +403,7 @@ struct EditCategoryViewModelTests {
     private func makeTransactionCategory(from row: CustomCategory) -> TransactionCategory {
         TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name, icon: row.icon, colorHex: row.color,
             isHidden: row.isHidden, isPredefined: false, isDeletable: true,
             overrideRow: row
@@ -517,7 +531,8 @@ struct EditCategoryViewModelTests {
         // Predefined with no override row yet
         let predefined = PredefinedCategory.foodDining
         let category = TransactionCategory(
-            id: "predefined:\(predefined.key)",
+            id: "predefined:\(predefined.serverKey)",
+            key: "test-key",
             name: predefined.rawValue,
             icon: predefined.icon,
             colorHex: predefined.defaultColorHex,
@@ -537,7 +552,7 @@ struct EditCategoryViewModelTests {
         let rows = try context.fetch(FetchDescriptor<CustomCategory>())
         #expect(rows.count == 1)
         #expect(rows.first?.name == "Eating Out")
-        #expect(rows.first?.predefinedKey == predefined.key)
+        #expect(rows.first?.predefinedKey == predefined.serverKey)
         #expect(rows.first?.isPredefined == true)
     }
 }
@@ -563,21 +578,23 @@ struct CategoryEditorViewModelTests {
 
     @Test
     func testStaticOptionsAreNonEmpty() {
-        #expect(!CategoryEditorViewModel.colorOptions.isEmpty)
+        #expect(!AppIcons.CategoryColor.palette.isEmpty)
         #expect(!CategoryEditorViewModel.iconOptions.isEmpty)
     }
 
     @Test
-    func testValidateNameRejectsPredefinedName() {
+    func testValidateNameRejectsDuplicateCustomName() {
         let viewModel = CategoryEditorViewModel()
+        let existing = CustomCategory(name: "Food & Dining", icon: "fork.knife", color: "#FF0000")
+        viewModel.allCategories = [existing]
         let (_, error) = viewModel.validateName("Food & Dining")
         #expect(error != nil)
     }
 
     @Test
-    func testValidateNameAllowsPredefinedNameWhenEditing() {
+    func testValidateNameAllowsPredefinedNameWithNoConflict() {
         let viewModel = CategoryEditorViewModel()
-        viewModel.editingPredefinedKey = PredefinedCategory.foodDining.key
+        // No custom categories with this name — predefined names are no longer blocked
         let (_, error) = viewModel.validateName("Food & Dining")
         #expect(error == nil)
     }

@@ -6,37 +6,37 @@ import Testing
 @MainActor
 struct CategoryResolverTests {
 
-    // MARK: - Predefined category
+    // MARK: - Predefined category (resolved by server key)
 
     @Test
     func testResolveKnownPredefinedCategoryReturnsCorrectIconAndColor() {
-        let result = CategoryResolver.resolve("Food & Dining", customCategories: [])
+        let result = CategoryResolver.resolve("food-dining", customCategories: [])
         #expect(result.icon == PredefinedCategory.foodDining.icon)
         #expect(result.color == PredefinedCategory.foodDining.color)
     }
 
     @Test
-    func testResolveAllPredefinedCategoriesNoneReturnFallback() {
+    func testResolveAllPredefinedCategoriesNoneReturnGray() {
         for category in PredefinedCategory.allCases {
-            let result = CategoryResolver.resolve(category.rawValue, customCategories: [])
-            #expect(result.icon != "ellipsis.circle.fill" || category == .other,
-                    "Category \(category.rawValue) unexpectedly returned fallback icon")
+            let result = CategoryResolver.resolve(category.serverKey, customCategories: [])
+            #expect(result.color != .gray,
+                    "Category \(category.serverKey) unexpectedly returned gray fallback color")
         }
     }
 
     // MARK: - Unknown category fallback
 
     @Test
-    func testResolveUnknownCategoryReturnsGrayAndEllipsisIcon() {
-        let result = CategoryResolver.resolve("Some Unknown Category", customCategories: [])
-        #expect(result.icon == "ellipsis.circle.fill")
+    func testResolveUnknownCategoryReturnsGrayAndMiscIcon() {
+        let result = CategoryResolver.resolve("totally-unknown-key", customCategories: [])
+        #expect(result.icon == AppIcons.Category.other)
         #expect(result.color == .gray)
     }
 
     @Test
     func testResolveEmptyCategoryReturnsGrayFallback() {
         let result = CategoryResolver.resolve("", customCategories: [])
-        #expect(result.icon == "ellipsis.circle.fill")
+        #expect(result.icon == AppIcons.Category.other)
         #expect(result.color == .gray)
     }
 
@@ -44,35 +44,35 @@ struct CategoryResolverTests {
 
     @Test
     func testResolvePrefersVisibleCustomCategoryOverPredefined() {
-        let custom = CustomCategory(name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
-        let result = CategoryResolver.resolve("Food & Dining", customCategories: [custom])
+        let custom = CustomCategory(key: "food-dining", name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
+        let result = CategoryResolver.resolve("food-dining", customCategories: [custom])
         #expect(result.icon == "custom.icon")
         #expect(result.color == Color(hex: "#FF0000"))
     }
 
     @Test
     func testResolveIgnoresHiddenCustomCategoryFallsBackToPredefined() {
-        let hidden = CustomCategory(name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
+        let hidden = CustomCategory(key: "food-dining", name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
         hidden.isHidden = true
-        let result = CategoryResolver.resolve("Food & Dining", customCategories: [hidden])
+        let result = CategoryResolver.resolve("food-dining", customCategories: [hidden])
         #expect(result.icon == PredefinedCategory.foodDining.icon)
         #expect(result.color == PredefinedCategory.foodDining.color)
     }
 
     @Test
     func testResolveIgnoresHiddenCustomCategoryFallsBackToGrayWhenNoPredefined() {
-        let hidden = CustomCategory(name: "My Custom", icon: "custom.icon", color: "#FF0000")
+        let hidden = CustomCategory(key: "my-custom", name: "My Custom", icon: "custom.icon", color: "#FF0000")
         hidden.isHidden = true
-        let result = CategoryResolver.resolve("My Custom", customCategories: [hidden])
-        #expect(result.icon == "ellipsis.circle.fill")
+        let result = CategoryResolver.resolve("my-custom", customCategories: [hidden])
+        #expect(result.icon == AppIcons.Category.other)
         #expect(result.color == .gray)
     }
 
     @Test
     func testResolveWithMultipleCustomCategoriesPicksMatchingOne() {
-        let wrong = CustomCategory(name: "Transport", icon: "wrong.icon", color: "#000000")
-        let correct = CustomCategory(name: "Pets", icon: "pawprint.fill", color: "#FF00FF")
-        let result = CategoryResolver.resolve("Pets", customCategories: [wrong, correct])
+        let wrong = CustomCategory(key: "transport", name: "Transport", icon: "wrong.icon", color: "#000000")
+        let correct = CustomCategory(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF00FF")
+        let result = CategoryResolver.resolve("pets", customCategories: [wrong, correct])
         #expect(result.icon == "pawprint.fill")
         #expect(result.color == Color(hex: "#FF00FF"))
     }
@@ -81,36 +81,36 @@ struct CategoryResolverTests {
 
     @Test
     func testResolveLookupMatchesConvenienceOverload() {
-        let custom = CustomCategory(name: "Food & Dining", icon: "fork.knife", color: "#AABBCC")
+        let custom = CustomCategory(key: "food-dining", name: "Food & Dining", icon: "fork.knife", color: "#AABBCC")
         let lookup = CategoryResolver.makeLookup(from: [custom])
-        let fast = CategoryResolver.resolve("Food & Dining", lookup: lookup)
-        let slow = CategoryResolver.resolve("Food & Dining", customCategories: [custom])
+        let fast = CategoryResolver.resolve("food-dining", lookup: lookup)
+        let slow = CategoryResolver.resolve("food-dining", customCategories: [custom])
         #expect(fast.icon == slow.icon)
         #expect(fast.color == slow.color)
     }
 
     @Test
     func testMakeLookupExcludesHiddenCategories() {
-        let hidden = CustomCategory(name: "Hidden", icon: "eye.slash", color: "#000000")
+        let hidden = CustomCategory(key: "hidden-key", name: "Hidden", icon: "eye.slash", color: "#000000")
         hidden.isHidden = true
-        let visible = CustomCategory(name: "Visible", icon: "eye", color: "#FFFFFF")
+        let visible = CustomCategory(key: "visible-key", name: "Visible", icon: "eye", color: "#FFFFFF")
         let lookup = CategoryResolver.makeLookup(from: [hidden, visible])
-        #expect(lookup["Hidden"] == nil)
-        #expect(lookup["Visible"] != nil)
+        #expect(lookup["hidden-key"] == nil)
+        #expect(lookup["visible-key"] != nil)
     }
 
     @Test
     func testResolveLookupFallsBackToPredefinedWhenNotInLookup() {
         let lookup = CategoryResolver.makeLookup(from: [])
-        let result = CategoryResolver.resolve("Food & Dining", lookup: lookup)
+        let result = CategoryResolver.resolve("food-dining", lookup: lookup)
         #expect(result.icon == PredefinedCategory.foodDining.icon)
     }
 
     @Test
     func testResolveLookupReturnsDefaultForUnknownCategory() {
         let lookup = CategoryResolver.makeLookup(from: [])
-        let result = CategoryResolver.resolve("Unknown Category XYZ", lookup: lookup)
-        #expect(result.icon == "ellipsis.circle.fill")
+        let result = CategoryResolver.resolve("unknown-xyz", lookup: lookup)
+        #expect(result.icon == AppIcons.Category.other)
         #expect(result.color == .gray)
     }
 }

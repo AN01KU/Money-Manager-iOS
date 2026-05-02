@@ -10,7 +10,9 @@
 import SwiftUI
 
 struct TransactionCategory: Identifiable {
-    let id: String          // "predefined:foodDining" or "custom:<uuid>"
+    let id: String          // "predefined:food-dining" or "custom:<uuid>"
+    /// The stable server key used in API payloads (e.g. "food-dining" or "Ankush-cc-<uuid>").
+    let key: String
     let name: String
     let icon: String
     let colorHex: String
@@ -33,17 +35,19 @@ struct TransactionCategory: Identifiable {
         var customRows = [CustomCategory]()
 
         for row in overrides {
-            if let key = row.predefinedKey {
-                overrideByKey[key] = row
+            if let predKey = row.predefinedKey,
+               let normalized = PredefinedCategory.normalizeKey(predKey) {
+                overrideByKey[normalized] = row
             } else {
                 customRows.append(row)
             }
         }
 
         var result = PredefinedCategory.allCases.map { predefined -> TransactionCategory in
-            let ov = overrideByKey[predefined.key]
+            let ov = overrideByKey[predefined.serverKey]
             return TransactionCategory(
-                id: "predefined:\(predefined.key)",
+                id: "predefined:\(predefined.serverKey)",
+                key: predefined.serverKey,
                 name: ov?.name ?? predefined.rawValue,
                 icon: ov?.icon ?? predefined.icon,
                 colorHex: ov?.color ?? predefined.defaultColorHex,
@@ -55,8 +59,12 @@ struct TransactionCategory: Identifiable {
         }
 
         result += customRows.map { row in
-            TransactionCategory(
+            // Use the server-assigned key when available; fall back to a local identifier
+            // until the first sync fills in the real key.
+            let resolvedKey = row.key.isEmpty ? "local:\(row.id.uuidString)" : row.key
+            return TransactionCategory(
                 id: "custom:\(row.id.uuidString)",
+                key: resolvedKey,
                 name: row.name,
                 icon: row.icon,
                 colorHex: row.color,
