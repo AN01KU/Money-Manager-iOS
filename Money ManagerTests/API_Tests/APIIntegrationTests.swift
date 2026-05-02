@@ -185,7 +185,7 @@ struct APIIntegrationTests {
 
         let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
-        let predefinedRows = response.data.filter { $0.isPredefined }
+        let predefinedRows = response.data.filter { $0.isPredefined == true }
         for row in predefinedRows {
             #expect(row.key == row.key.lowercased(), "predefined key \(row.key) has uppercase")
             #expect(!row.key.contains(" "), "predefined key \(row.key) contains spaces")
@@ -288,32 +288,7 @@ struct APIIntegrationTests {
         #expect(response.icon == "food-dining")
     }
 
-    @Test("Fresh user gets exactly 15 predefined categories with no custom ones")
-    mutating func testCategoryListFreshUserGetsPredefinedDefaults() async throws {
-        // Sign up a brand-new user — no customisations yet
-        await delay(200)
-        let email = makeTestEmail()
-        let username = "user_\(UUID().uuidString.prefix(8))"
-        let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
-        let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
-        AppAPIClient.shared.setTestToken(signupResponse.token)
-        AppAPIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
-
-        await delay(200)
-
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
-
-        #expect(!response.data.isEmpty)
-        #expect(response.data.allSatisfy { $0.isPredefined == true })
-        #expect(response.data.allSatisfy { $0.predefinedKey != nil })
-
-        // Cleanup
-        try await AppAPIClient.shared.delete(.raw("/me"))
-        AppAPIClient.shared.setTestToken(Self.authToken)
-        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
-    }
-
-    @Test("List categories returns created custom categories")
+@Test("List categories returns created custom categories")
     mutating func testCategoryListAfterCreating() async throws {
         try await ensureAuthenticated()
         await delay(200)

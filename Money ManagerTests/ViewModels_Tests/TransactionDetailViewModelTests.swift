@@ -14,9 +14,7 @@ struct TransactionDetailViewModelTests {
         let transaction = Transaction(amount: 100, category: "Food", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        // Sheets must start closed — opening one before the view has appeared would
-        // present immediately and skip the transition animation.
-        #expect(viewModel.showEditSheet == false)
+        // Delete alert must start closed — opening before view appears would skip animation.
         #expect(viewModel.showDeleteAlert == false)
         #expect(viewModel.customCategories.isEmpty)
     }

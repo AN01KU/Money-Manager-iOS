@@ -16,10 +16,10 @@ struct AddTransactionViewModelTests {
     func testIsValidRequiresPositiveAmountAndCategory() {
         let vm = AddTransactionViewModel(mode: .personal())
 
-        #expect(vm.isValid == false) // empty amount + category
+        #expect(vm.isValid == false) // empty amount
 
         vm.amount = "500"
-        #expect(vm.isValid == false) // empty category
+        #expect(vm.isValid == true) // default category "other" is valid
 
         vm.selectedCategory = "Food"
         #expect(vm.isValid == true)
@@ -111,7 +111,7 @@ struct AddTransactionViewModelTests {
         vm.setup()
 
         #expect(vm.amount.isEmpty)
-        #expect(vm.selectedCategory.isEmpty)
+        #expect(vm.selectedCategory == "other")
     }
 
     // MARK: - Format helpers
