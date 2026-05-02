@@ -12,12 +12,13 @@ struct TransactionRow: View {
     let categoryLookup: [String: CustomCategory]
     var onGroupTapped: ((UUID) -> Void)?
 
-    private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, lookup: categoryLookup)
+    private var resolved: (name: String, icon: String, color: Color) {
+        CategoryResolver.resolveAll(transaction.category, lookup: categoryLookup)
     }
 
     private var resolvedIcon: String { resolved.icon }
     private var resolvedColor: Color { resolved.color }
+    private var resolvedName: String { resolved.name }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -33,7 +34,7 @@ struct TransactionRow: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(transaction.transactionDescription ?? transaction.category)
+                Text(transaction.transactionDescription ?? resolvedName)
                     .font(AppTypography.rowPrimary)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -69,7 +70,7 @@ struct TransactionRow: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(transaction.transactionDescription ?? transaction.category), \(transaction.category), \(CurrencyFormatter.format(transaction.amount))")
+        .accessibilityLabel("\(transaction.transactionDescription ?? resolvedName), \(resolvedName), \(CurrencyFormatter.format(transaction.amount))")
         .accessibilityIdentifier("transaction.row")
     }
 

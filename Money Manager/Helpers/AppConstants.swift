@@ -5,6 +5,7 @@
 //  Created for centralized app constants and configuration
 //
 
+import CryptoKit
 import Foundation
 
 /// Environment-driven configuration resolved from Info.plist (populated by xcconfig).

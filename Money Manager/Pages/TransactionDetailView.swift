@@ -93,7 +93,7 @@ struct TransactionDetailView: View {
                 AppIcon(name: viewModel.categoryIcon, size: 32, color: viewModel.categoryColor)
             }
 
-            Text(transaction.category)
+            Text(viewModel.categoryName)
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.label2)
 
@@ -165,7 +165,7 @@ struct TransactionDetailView: View {
             )
             Divider().padding(.leading, AppConstants.UI.padding)
 
-            DetailInfoRow(label: "Category", value: transaction.category)
+            DetailInfoRow(label: "Category", value: viewModel.categoryName)
 
             if let recurring = linkedRecurring {
                 Divider().padding(.leading, AppConstants.UI.padding)

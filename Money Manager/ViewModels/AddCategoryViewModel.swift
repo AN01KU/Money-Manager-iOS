@@ -23,7 +23,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
 
     init(persistence: PersistenceService = PersistenceService()) {
         self.persistence = persistence
-        super.init(icon: AppIcons.Category.misc, color: "#17C5CC")
+        super.init(icon: AppIcons.Category.other, color: "#17C5CC")
     }
     
     func save() async -> Bool {

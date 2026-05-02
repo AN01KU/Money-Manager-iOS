@@ -24,9 +24,13 @@ struct EditRecurringTransactionSheet: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var categoryTapped = 0
-    @State private var saveSuccess = 0
 
     private let frequencies = RecurringFrequency.allCases
+
+    private var selectedCategoryName: String {
+        let lookup = CategoryResolver.makeLookup(from: customCategories)
+        return CategoryResolver.resolveAll(selectedCategory, lookup: lookup).name
+    }
 
     private var isValid: Bool {
         guard let amountValue = Double(amount), amountValue > 0 else {
@@ -74,7 +78,7 @@ struct EditRecurringTransactionSheet: View {
                         }) {
                             HStack {
                                 if !selectedCategory.isEmpty {
-                                    Text(selectedCategory)
+                                    Text(selectedCategoryName)
                                 } else {
                                     Text("Select Category")
                                         .foregroundStyle(.secondary)
@@ -210,7 +214,7 @@ struct EditRecurringTransactionSheet: View {
         recurring.name = name.trimmingCharacters(in: .whitespaces)
         recurring.amount = amountValue
         recurring.category = selectedCategory
-        recurring.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
+        recurring.categoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
         recurring.type = transactionType
         recurring.frequency = frequency
         recurring.startDate = startDate
@@ -239,7 +243,6 @@ struct EditRecurringTransactionSheet: View {
                 }
             }
 
-            saveSuccess += 1
             dismiss()
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"

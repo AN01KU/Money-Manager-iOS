@@ -80,7 +80,7 @@ enum AppIcons {
         static let taxes         = "Icons/Category/taxes"
         static let donation      = "Icons/Category/donation-charity"
         static let baby          = "Icons/Category/baby-kids"
-        static let misc          = "Icons/Category/miscellaneous"
+        static let other         = "Icons/Category/other"
     }
 
     // MARK: - Category tint colors (design-spec palette)
@@ -141,7 +141,10 @@ struct AppIcon: View {
     var color: Color = .primary
 
     var body: some View {
-        Image(name, bundle: .main)
+        // Server-stored icons are bare kebab-case keys (e.g. "food-dining").
+        // Asset catalog paths need the "Icons/Category/" prefix.
+        let resolvedName = name.hasPrefix("Icons/") ? name : "Icons/Category/\(name)"
+        Image(resolvedName, bundle: .main)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()

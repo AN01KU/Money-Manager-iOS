@@ -290,7 +290,6 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                 predicate: #Predicate { $0.id == entityID }
             )
             if let record = try? context.fetch(descriptor), let item = record.first {
-                AppLogger.sync.debug("[TxnDebug] hardDeleteEntity: hard-deleting txn=\(entityID) category=\(item.category) amount=\(item.amount)")
                 context.delete(item)
             }
         default:

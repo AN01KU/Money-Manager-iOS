@@ -28,11 +28,12 @@ import SwiftData
                   let predefined = predefinedCase(for: category),
                   let context = modelContext {
             let row = CustomCategory(
+                key: predefined.serverKey,
                 name: predefined.rawValue,
                 icon: predefined.icon,
                 color: predefined.defaultColorHex,
                 isPredefined: true,
-                predefinedKey: predefined.key
+                predefinedKey: predefined.serverKey
             )
             row.isHidden = true
             context.insert(row)
@@ -62,10 +63,11 @@ import SwiftData
             let categoryName = row.name
             let categoryId = row.id
 
+            let fallback = PredefinedCategory.other.serverKey
             let txDescriptor = FetchDescriptor<Transaction>()
             if let transactions = try? context.fetch(txDescriptor) {
                 for tx in transactions where tx.categoryId == categoryId {
-                    tx.category = "Other"
+                    tx.category = fallback
                     tx.categoryId = nil
                     tx.updatedAt = Date()
                 }
@@ -74,7 +76,7 @@ import SwiftData
             let recurringDescriptor = FetchDescriptor<RecurringTransaction>()
             if let recurrings = try? context.fetch(recurringDescriptor) {
                 for r in recurrings where r.categoryId == categoryId {
-                    r.category = "Other"
+                    r.category = fallback
                     r.categoryId = nil
                     r.updatedAt = Date()
                 }
@@ -139,10 +141,10 @@ import SwiftData
     // MARK: - Helpers
 
     private func predefinedCase(for category: TransactionCategory) -> PredefinedCategory? {
-        // id format: "predefined:<key>"
+        // id format: "predefined:<serverKey>"
         let prefix = "predefined:"
         guard category.id.hasPrefix(prefix) else { return nil }
         let key = String(category.id.dropFirst(prefix.count))
-        return PredefinedCategory.allCases.first { $0.key == key }
+        return PredefinedCategory.allCases.first { $0.serverKey == key }
     }
 }

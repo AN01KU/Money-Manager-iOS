@@ -7,30 +7,12 @@ struct RecurringTransactionRow: View {
     let onTap: () -> Void
     let onToggle: () -> Void
 
-    private var categoryIcon: String {
-        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == recurring.category }) {
-            return predefined.icon
-        }
-        if let custom = customCategories.first(where: { $0.name == recurring.category }) {
-            return custom.icon
-        }
-        return AppIcons.Category.misc
-    }
-
-    private var categoryColor: Color {
-        if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == recurring.category }) {
-            return predefined.color
-        }
-        if let custom = customCategories.first(where: { $0.name == recurring.category }) {
-            return Color(hex: custom.color)
-        }
-        return AppColors.label3
-    }
-
     var body: some View {
         if recurring.modelContext == nil {
             EmptyView()
         } else {
+            let lookup = CategoryResolver.makeLookup(from: customCategories)
+            let (categoryIcon, categoryColor) = CategoryResolver.resolve(recurring.category, lookup: lookup)
             Button(action: onTap) {
                 HStack(spacing: AppConstants.UI.spacing12) {
                     ZStack {

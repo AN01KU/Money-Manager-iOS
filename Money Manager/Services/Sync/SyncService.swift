@@ -229,9 +229,9 @@ final class SyncService: SyncServiceProtocol {
         }
 
         let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
-        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count)")
-        for category in categories {
-            AppLogger.sync.debug("[EnqueueLocalData] enqueuing category id=\(category.id) name=\(category.name) isPredefined=\(category.isPredefined)")
+        let customOnly = categories.filter { !$0.isPredefined }
+        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count) uploading custom-only=\(customOnly.count)")
+        for category in customOnly {
             do {
                 let payload = try AppAPIClient.apiEncoder.encode(category.toCreateRequest())
                 changeQueueManager.enqueue(
@@ -307,6 +307,44 @@ final class SyncService: SyncServiceProtocol {
         }
     }
 
+    func bootstrapPredefinedCategories() async {
+        guard let container = modelContainer else { return }
+        let context = ModelContext(container)
+        do {
+            let response: APIListResponse<APIPredefinedCategory> = try await apiClient.get(.predefinedCategories)
+            upsertPredefinedCategories(response.data, context: context)
+            AppLogger.sync.info("Bootstrapped \(response.data.count) predefined categories")
+        } catch {
+            AppLogger.sync.error("Failed to fetch predefined categories: \(error)")
+        }
+    }
+
+    private func upsertPredefinedCategories(_ categories: [APIPredefinedCategory], context: ModelContext) {
+        // Predefined categories are owned by the server and backed by the PredefinedCategory
+        // enum as an offline fallback. We never insert them into SwiftData.
+        // The only thing to do here is update any existing local override rows whose
+        // server-side defaults changed (e.g. the backend renamed a predefined category).
+        let localCategories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
+        let localOverridesByKey = Dictionary(
+            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, CustomCategory)? in
+                guard cat.isPredefined, !cat.key.isEmpty else { return nil }
+                return (cat.key, cat)
+            }
+        )
+
+        for remote in categories {
+            guard let local = localOverridesByKey[remote.key] else { continue }
+            if let remoteUpdatedAt = remote.updatedAt, remoteUpdatedAt > local.updatedAt {
+                local.name = remote.name
+                local.icon = remote.icon
+                local.color = remote.color
+                local.isHidden = remote.isHidden ?? false
+                local.updatedAt = remoteUpdatedAt
+            }
+        }
+        try? context.save()
+    }
+
     private func pullBudgets(context: ModelContext) async {
         do {
             let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get(.syncBudgets)
@@ -344,7 +382,7 @@ final class SyncService: SyncServiceProtocol {
                 offset += limit
             }
 
-            AppLogger.sync.info("pullTransactions: fetched \(allTransactions.count) of \(allTransactions.isEmpty ? 0 : allTransactions.count) transactions from server")
+            AppLogger.sync.info("pullTransactions: fetched \(allTransactions.count) transactions from server")
             upsertTransactions(allTransactions, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull transactions: \(error)")
@@ -426,7 +464,7 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
-        syncCheckpoint(entityType: "transaction", serverCount: apiTransactions.count, localCount: localTransactions.count, context: context)
+        syncCheckpoint(entityType: "transaction", serverCount: apiTransactions.count, localCount: localTransactions.count)
     }
 
     private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
@@ -503,7 +541,7 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
-        syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count, context: context)
+        syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count)
     }
 
     private func upsertBudgets(_ apiBudgets: [APIMonthlyBudget], context: ModelContext) {
@@ -552,7 +590,7 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
-        syncCheckpoint(entityType: "budget", serverCount: apiBudgets.count, localCount: localBudgets.count, context: context)
+        syncCheckpoint(entityType: "budget", serverCount: apiBudgets.count, localCount: localBudgets.count)
     }
 
     private func upsertCategories(_ apiCategories: [APICustomCategory], context: ModelContext) {
@@ -566,37 +604,29 @@ final class SyncService: SyncServiceProtocol {
         let descriptor = FetchDescriptor<CustomCategory>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
-        let localByPredefinedKey = Dictionary(uniqueKeysWithValues: localCategories.compactMap { cat -> (String, CustomCategory)? in
-            guard let key = cat.predefinedKey else { return nil }
-            return (key, cat)
-        })
-
-        // Build a lookup of predefined defaults for comparison
-        let predefinedDefaults = Dictionary(uniqueKeysWithValues: PredefinedCategory.allCases.map { ($0.key, $0) })
+        // Predefined rows always store the canonical serverKey in `key`, so we can
+        // dedupe by it without consulting the legacy camelCase `predefinedKey` field.
+        let localByPredServerKey = Dictionary(
+            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, CustomCategory)? in
+                guard cat.isPredefined, !cat.key.isEmpty else { return nil }
+                return (cat.key, cat)
+            }
+        )
 
         AppLogger.sync.debug("[UpsertCategories] server returned \(apiCategories.count) categories")
         for remote in apiCategories {
             guard isValid(remote) else { continue }
 
-            AppLogger.sync.debug("[UpsertCategories] remote id=\(remote.id) name=\(remote.name) isPredefined=\(remote.isPredefined) predefinedKey=\(remote.predefinedKey ?? "nil") isHidden=\(remote.isHidden)")
+            // Always store the canonical serverKey form locally, even if the server
+            // returned a legacy camelCase value (e.g. "foodDining").
+            let normalizedPredefinedKey = remote.predefinedKey
+                .flatMap { PredefinedCategory.normalizeKey($0) }
+                ?? remote.predefinedKey
 
-            // Skip predefined rows that are identical to the enum default —
-            // the client derives these from PredefinedCategory and doesn't store them locally.
-            if remote.isPredefined,
-               let key = remote.predefinedKey,
-               let defaults = predefinedDefaults[key],
-               remote.name == defaults.rawValue,
-               remote.icon == defaults.icon,
-               remote.color == defaults.defaultColorHex,
-               !remote.isHidden {
-                // Plain default — remove any stale local row that was previously seeded,
-                // but only if there's no pending change waiting to be pushed for it.
-                if let staleLocal = localByPredefinedKey[key], !pendingIDs.contains(staleLocal.id) {
-                    context.delete(staleLocal)
-                }
-                AppLogger.sync.debug("[UpsertCategories] skipped (identical to enum default): \(remote.name)")
-                continue
-            }
+            let remoteIsHidden = remote.isHidden ?? false
+            let remoteIsPredefined = remote.isPredefined ?? false
+
+            AppLogger.sync.debug("[UpsertCategories] remote id=\(remote.id) key=\(remote.key) name=\(remote.name) isPredefined=\(remoteIsPredefined) predefinedKey=\(normalizedPredefinedKey ?? "nil") isHidden=\(remoteIsHidden)")
 
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
@@ -604,48 +634,50 @@ final class SyncService: SyncServiceProtocol {
                         AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — deleting stale pending change")
                         context.delete(stale)
                     }
-                    AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remote.isHidden) predefinedKey=\(remote.predefinedKey ?? "nil")")
+                    AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remoteIsHidden) predefinedKey=\(normalizedPredefinedKey ?? "nil")")
+                    local.key = remote.key
                     local.name = remote.name
                     local.icon = remote.icon
                     local.color = remote.color
-                    local.isHidden = remote.isHidden
-                    local.isPredefined = remote.isPredefined
-                    local.predefinedKey = remote.predefinedKey
+                    local.isHidden = remoteIsHidden
+                    local.isPredefined = remoteIsPredefined
+                    local.predefinedKey = normalizedPredefinedKey
                     local.updatedAt = remote.updatedAt
                 }
-            } else if let key = remote.predefinedKey,
-                      let local = localByPredefinedKey[key] {
-                AppLogger.sync.debug("[UpsertCategories] updating by predefinedKey=\(key): \(remote.name) isHidden=\(remote.isHidden)")
+            } else if remoteIsPredefined,
+                      let local = localByPredServerKey[remote.key] {
+                AppLogger.sync.debug("[UpsertCategories] updating by serverKey=\(remote.key): \(remote.name) isHidden=\(remoteIsHidden)")
                 if let stale = pendingByID[local.id] {
-                    AppLogger.sync.warning("Conflict: server wins for category (predefinedKey=\(key)) — deleting stale pending change")
+                    AppLogger.sync.warning("Conflict: server wins for category (serverKey=\(remote.key)) — deleting stale pending change")
                     context.delete(stale)
                 }
                 local.id = remote.id
+                local.key = remote.key
                 local.name = remote.name
                 local.icon = remote.icon
                 local.color = remote.color
-                local.isHidden = remote.isHidden
-                local.isPredefined = remote.isPredefined
-                local.predefinedKey = remote.predefinedKey
+                local.isHidden = remoteIsHidden
+                local.isPredefined = remoteIsPredefined
+                local.predefinedKey = normalizedPredefinedKey
                 local.updatedAt = remote.updatedAt
             } else {
-                AppLogger.sync.debug("[UpsertCategories] inserting new row: \(remote.name) isPredefined=\(remote.isPredefined) predefinedKey=\(remote.predefinedKey ?? "nil") isHidden=\(remote.isHidden)")
+                AppLogger.sync.debug("[UpsertCategories] inserting new row: \(remote.name) isPredefined=\(remoteIsPredefined) predefinedKey=\(normalizedPredefinedKey ?? "nil") isHidden=\(remoteIsHidden)")
                 let category = CustomCategory(
                     id: remote.id,
+                    key: remote.key,
                     name: remote.name,
                     icon: remote.icon,
                     color: remote.color,
-                    isPredefined: remote.isPredefined,
-                    predefinedKey: remote.predefinedKey
+                    isPredefined: remoteIsPredefined,
+                    predefinedKey: normalizedPredefinedKey
                 )
-                category.isHidden = remote.isHidden
+                category.isHidden = remoteIsHidden
                 category.updatedAt = remote.updatedAt
                 context.insert(category)
             }
         }
 
         // Purge local custom categories the server no longer returns and have no pending upload.
-        // Predefined categories are derived from the enum and never stored locally, so skip them.
         let serverCategoryIDs = Set(apiCategories.map { $0.id })
         for local in localCategories {
             guard !local.isPredefined else { continue }
@@ -656,7 +688,7 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
-        syncCheckpoint(entityType: "category", serverCount: apiCategories.count, localCount: localCategories.count, context: context)
+        syncCheckpoint(entityType: "category", serverCount: apiCategories.count, localCount: localCategories.count)
     }
     
     private func pullGroups(context: ModelContext) async {
@@ -810,9 +842,9 @@ final class SyncService: SyncServiceProtocol {
 
     // MARK: - Sync Checkpoint
 
-    private func syncCheckpoint(entityType: String, serverCount: Int, localCount: Int, context: ModelContext) {
+    private func syncCheckpoint(entityType: String, serverCount: Int, localCount: Int) {
         let delta = abs(serverCount - localCount)
-        if delta > 10 {
+        if delta > 10 && localCount > 0 {
             AppLogger.sync.warning("Sync checkpoint: \(entityType) divergence — server=\(serverCount) local=\(localCount) delta=\(delta)")
         } else {
             AppLogger.sync.debug("Sync checkpoint: \(entityType) ok — server=\(serverCount) local=\(localCount)")

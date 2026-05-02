@@ -7,8 +7,17 @@ struct AddTransactionView: View {
     @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
 
     @State private var viewModel: AddTransactionViewModel
+
+    private var categoryByKey: [String: TransactionCategory] {
+        Dictionary(
+            uniqueKeysWithValues: TransactionCategory.merge(overrides: customCategories)
+                .filter { !$0.isHidden }
+                .map { ($0.key, $0) }
+        )
+    }
     @State private var saveSuccess = false
     @State private var errorTriggered = 0
+    @State private var showRecurringAmountAlert = false
 
     init(mode: AddTransactionMode = .personal(), groupService: GroupServiceProtocol = GroupService.shared) {
         _viewModel = State(wrappedValue: AddTransactionViewModel(mode: mode, groupService: groupService))
@@ -52,7 +61,7 @@ struct AddTransactionView: View {
         .navigationDestination(isPresented: $viewModel.showCategoryPicker) {
             CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
         }
-        .alert("Update Recurring Transaction?", isPresented: $viewModel.showRecurringAmountAlert) {
+        .alert("Update Recurring Transaction?", isPresented: $showRecurringAmountAlert) {
             Button("Update Recurring Too") { viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() } }
             Button("Just This Transaction") { viewModel.saveThisTransactionOnly(); saveSuccess = true; dismiss() }
             Button("Cancel", role: .cancel) { }
@@ -115,14 +124,9 @@ struct AddTransactionView: View {
                         viewModel.showCategoryPicker = true
                     } label: {
                         HStack(spacing: AppConstants.UI.spacingSM) {
-                            if let custom = customCategories.first(where: { $0.name == viewModel.selectedCategory && !$0.isHidden }) {
-                                AppIcon(name: custom.icon, size: 20, color: Color(hex: custom.color))
-                                Text(viewModel.selectedCategory)
-                                    .font(AppTypography.body)
-                                    .foregroundStyle(AppColors.label)
-                            } else if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
-                                AppIcon(name: predefined.icon, size: 20, color: predefined.color)
-                                Text(viewModel.selectedCategory)
+                            if let cat = categoryByKey[viewModel.selectedCategory] {
+                                AppIcon(name: cat.icon, size: 20, color: cat.color)
+                                Text(cat.name)
                                     .font(AppTypography.body)
                                     .foregroundStyle(AppColors.label)
                             } else {
@@ -330,7 +334,7 @@ struct AddTransactionView: View {
             if viewModel.isSaving {
                 ProgressView()
             } else {
-                Button("Save") { viewModel.save { saveSuccess = true; dismiss() } }
+                Button("Save") { viewModel.save(completion: { saveSuccess = true; dismiss() }, onNeedsRecurringConfirmation: { showRecurringAmountAlert = true }) }
                     .fontWeight(.semibold)
                     .disabled(!viewModel.isValid)
                     .accessibilityIdentifier("save-button")
@@ -384,7 +388,7 @@ struct AddTransactionView: View {
                 if viewModel.isSaving {
                     ProgressView()
                 } else {
-                    Button("Save") { viewModel.save { saveSuccess = true; dismiss() } }
+                    Button("Save") { viewModel.save(completion: { saveSuccess = true; dismiss() }, onNeedsRecurringConfirmation: { showRecurringAmountAlert = true }) }
                         .fontWeight(.semibold)
                         .disabled(!viewModel.isValid)
                         .accessibilityIdentifier("save-button")
@@ -440,6 +444,14 @@ private struct AddTransactionAmountSection: View {
     let customCategories: [CustomCategory]
     @State private var categoryTapped = 0
 
+    private var categoryByKey: [String: TransactionCategory] {
+        Dictionary(
+            uniqueKeysWithValues: TransactionCategory.merge(overrides: customCategories)
+                .filter { !$0.isHidden }
+                .map { ($0.key, $0) }
+        )
+    }
+
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
@@ -460,12 +472,9 @@ private struct AddTransactionAmountSection: View {
                     viewModel.showCategoryPicker = true
                 } label: {
                     HStack {
-                        if let custom = customCategories.first(where: { $0.name == viewModel.selectedCategory && !$0.isHidden }) {
-                            AppIcon(name: custom.icon, size: 20, color: Color(hex: custom.color))
-                            Text(viewModel.selectedCategory)
-                        } else if let predefined = PredefinedCategory.allCases.first(where: { $0.rawValue == viewModel.selectedCategory }) {
-                            AppIcon(name: predefined.icon, size: 20, color: predefined.color)
-                            Text(viewModel.selectedCategory)
+                        if let cat = categoryByKey[viewModel.selectedCategory] {
+                            AppIcon(name: cat.icon, size: 20, color: cat.color)
+                            Text(cat.name)
                         } else {
                             Text(viewModel.selectedCategory.isEmpty ? "Select Category" : viewModel.selectedCategory)
                                 .foregroundStyle(viewModel.selectedCategory.isEmpty ? .secondary : .primary)

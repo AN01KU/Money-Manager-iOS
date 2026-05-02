@@ -154,12 +154,17 @@ extension CustomCategory {
     }
     
     func applyRemote(_ api: APICustomCategory) {
+        self.key = api.key
         self.name = api.name
         self.icon = api.icon
         self.color = api.color
-        self.isHidden = api.isHidden
-        self.isPredefined = api.isPredefined
+        self.isHidden = api.isHidden ?? false
+        self.isPredefined = api.isPredefined ?? false
+        // Normalize legacy camelCase predefinedKey ("foodDining") into the
+        // canonical serverKey ("food-dining") so local rows stay consistent.
         self.predefinedKey = api.predefinedKey
+            .flatMap { PredefinedCategory.normalizeKey($0) }
+            ?? api.predefinedKey
         self.updatedAt = api.updatedAt
     }
 }

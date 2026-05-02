@@ -208,6 +208,7 @@ struct ManageCategoriesSwiftDataTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name,
             icon: row.icon,
             colorHex: row.color,
@@ -239,6 +240,7 @@ struct ManageCategoriesSwiftDataTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name,
             icon: row.icon,
             colorHex: row.color,
@@ -272,6 +274,7 @@ struct ManageCategoriesSwiftDataTests {
 
         let category = TransactionCategory(
             id: "custom:\(row.id.uuidString)",
+            key: "test-key",
             name: row.name,
             icon: row.icon,
             colorHex: row.color,

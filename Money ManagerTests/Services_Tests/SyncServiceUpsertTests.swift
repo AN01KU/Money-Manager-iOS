@@ -83,6 +83,7 @@ struct SyncServiceUpsertTests {
 
     private func apiCategory(
         id: UUID = UUID(),
+        key: String = "custom-key",
         name: String = "Custom",
         icon: String = "star",
         color: String = "#FF0000",
@@ -93,6 +94,7 @@ struct SyncServiceUpsertTests {
     ) -> APICustomCategory {
         APICustomCategory(
             id: id, userId: UUID(),
+            key: key,
             name: name, icon: icon, color: color,
             isHidden: isHidden,
             isPredefined: isPredefined,

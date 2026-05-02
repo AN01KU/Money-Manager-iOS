@@ -134,12 +134,12 @@ enum TransactionTypeFilter: String, CaseIterable {
         let grouped = Dictionary(grouping: categoryBase, by: { $0.category })
 
         if categoryTotal > 0 {
-            categorySpending = grouped.map { categoryName, transactions in
+            categorySpending = grouped.map { categoryKey, transactions in
                 let amount = transactions.reduce(0) { $0 + $1.amount }
                 let percentage = Int((amount / categoryTotal) * 100)
-                let (icon, color) = resolveCategory(categoryName)
+                let (name, icon, color) = CategoryResolver.resolveAll(categoryKey, lookup: categoryLookup)
                 return CategorySpending(
-                    categoryName: categoryName,
+                    categoryName: name,
                     icon: icon,
                     color: color,
                     amount: amount,

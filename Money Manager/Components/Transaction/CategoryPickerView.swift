@@ -26,7 +26,7 @@ struct CategoryPickerView: View {
                     ForEach(visibleCustom) { category in
                         CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
                             selectionToggled += 1
-                            selectedCategory = category.name
+                            selectedCategory = category.key
                             dismiss()
                         }
                         .sensoryFeedback(.selection, trigger: selectionToggled)
@@ -38,7 +38,7 @@ struct CategoryPickerView: View {
                 ForEach(visiblePredefined) { category in
                     CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
                         selectionToggled += 1
-                        selectedCategory = category.name
+                        selectedCategory = category.key
                         dismiss()
                     }
                     .sensoryFeedback(.selection, trigger: selectionToggled)

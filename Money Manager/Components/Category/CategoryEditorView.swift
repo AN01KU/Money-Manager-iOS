@@ -83,7 +83,7 @@ struct CategoryEditorView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                let palette = CategoryEditorViewModel.colorPalette
+                let palette = AppIcons.CategoryColor.palette
                 let columns = Array(repeating: GridItem(.flexible(), spacing: AppConstants.UI.spacing12), count: 8)
                 LazyVGrid(columns: columns, spacing: AppConstants.UI.spacing12) {
                     ForEach(palette, id: \.hex) { entry in

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import SwiftData
 import Testing
 @testable import Money_Manager
@@ -491,49 +492,52 @@ struct OverviewViewModelTests {
     @Test
     func testResolveCategoryReturnsCustomCategoryIconAndColor() {
         let viewModel = OverviewViewModel()
-        
+
         let customCategory = CustomCategory(
+            key: "my-groceries",
             name: "My Groceries",
             icon: "cart.fill",
             color: "#FF0000",
             isPredefined: false,
             predefinedKey: nil
         )
-        
+
         viewModel.update(allTransactions: [], budgets: [], customCategories: [customCategory])
-        
-        let result = viewModel.resolveCategory("My Groceries")
-        
+
+        let result = viewModel.resolveCategory("my-groceries")
+
         #expect(result.icon == "cart.fill")
     }
-    
+
     @Test
     func testResolveCategoryReturnsPredefinedCategoryIconAndColor() {
         let viewModel = OverviewViewModel()
-        
+
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
-        
-        let result = viewModel.resolveCategory("Food & Dining")
-        
+
+        let result = viewModel.resolveCategory("food-dining")
+
         #expect(!result.icon.isEmpty)
+        #expect(result.color != .gray)
     }
-    
+
     @Test
     func testResolveCategoryReturnsFallbackForUnknown() {
         let viewModel = OverviewViewModel()
-        
+
         viewModel.update(allTransactions: [], budgets: [], customCategories: [])
-        
-        let result = viewModel.resolveCategory("Unknown Category")
-        
-        #expect(result.icon == "ellipsis.circle.fill")
+
+        let result = viewModel.resolveCategory("unknown-category")
+
+        #expect(result.icon == AppIcons.Category.other)
     }
-    
+
     @Test
     func testResolveCategoryIgnoresHiddenCustomCategories() {
         let viewModel = OverviewViewModel()
-        
+
         let hiddenCategory = CustomCategory(
+            key: "hidden-cat",
             name: "Hidden Cat",
             icon: "star.fill",
             color: "#000000",
@@ -541,12 +545,12 @@ struct OverviewViewModelTests {
             predefinedKey: nil
         )
         hiddenCategory.isHidden = true
-        
+
         viewModel.update(allTransactions: [], budgets: [], customCategories: [hiddenCategory])
-        
-        let result = viewModel.resolveCategory("Hidden Cat")
-        
-        #expect(result.icon == "ellipsis.circle.fill")
+
+        let result = viewModel.resolveCategory("hidden-cat")
+
+        #expect(result.icon == AppIcons.Category.other)
     }
     
     // MARK: - Ensure Budget Exists Tests

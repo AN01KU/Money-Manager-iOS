@@ -156,6 +156,7 @@ struct Money_ManagerApp: App {
                             return
                         }
                         #endif
+                        await syncService.bootstrapPredefinedCategories()
                         await authService.checkAuthState()
                         if authService.isAuthenticated {
                             await syncService.syncOnLaunch()

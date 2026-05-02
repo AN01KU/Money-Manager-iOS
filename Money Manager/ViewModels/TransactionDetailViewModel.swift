@@ -6,6 +6,7 @@ import SwiftData
     var showEditSheet = false
     var showDeleteAlert = false
 
+
     let transaction: Transaction
     var modelContext: ModelContext? {
         get { persistence.modelContext }
@@ -16,11 +17,12 @@ import SwiftData
     }
     private var categoryLookup: [String: CustomCategory] = [:]
 
+    var categoryName: String { resolvedCategory.name }
     var categoryIcon: String { resolvedCategory.icon }
     var categoryColor: Color { resolvedCategory.color }
 
-    private var resolvedCategory: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, lookup: categoryLookup)
+    private var resolvedCategory: (name: String, icon: String, color: Color) {
+        CategoryResolver.resolveAll(transaction.category, lookup: categoryLookup)
     }
 
     var isGroupTransaction: Bool {

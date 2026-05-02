@@ -82,7 +82,7 @@ struct AddRecurringTransactionSheet: View {
                         }) {
                             HStack {
                                 if !viewModel.selectedCategory.isEmpty {
-                                    Text(viewModel.selectedCategory)
+                                    Text(viewModel.selectedCategoryName)
                                 } else {
                                     Text("Select Category")
                                         .foregroundStyle(.secondary)

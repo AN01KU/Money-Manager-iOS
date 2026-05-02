@@ -57,7 +57,7 @@ enum PredefinedCategory: String, CaseIterable, Identifiable {
     case taxes           = "Taxes"
     case donationCharity = "Donation & Charity"
     case babyKids        = "Baby & Kids"
-    case miscellaneous   = "Miscellaneous"
+    case other           = "Other"
 
     var id: String { rawValue }
 
@@ -106,7 +106,7 @@ enum PredefinedCategory: String, CaseIterable, Identifiable {
         case .taxes:           return AppIcons.Category.taxes
         case .donationCharity: return AppIcons.Category.donation
         case .babyKids:        return AppIcons.Category.baby
-        case .miscellaneous:   return AppIcons.Category.misc
+        case .other:           return AppIcons.Category.other
         }
     }
 
@@ -155,12 +155,72 @@ enum PredefinedCategory: String, CaseIterable, Identifiable {
         case .taxes:           return "#3A3A3C"
         case .donationCharity: return "#FF3B30"
         case .babyKids:        return "#FF9500"
-        case .miscellaneous:   return "#8E8E93"
+        case .other:           return "#8E8E93"
         }
     }
 
     var color: Color { Color(hex: defaultColorHex) }
-    var key: String { String(describing: self) }
+
+    /// The kebab-case server key (e.g. "food-dining"). Used everywhere as the
+    /// stable identifier for a predefined category — in API payloads, in
+    /// `CustomCategory.predefinedKey`, and in `TransactionCategory.id`.
+    nonisolated var serverKey: String {
+        switch self {
+        case .foodDining:      return "food-dining"
+        case .coffeeCafe:      return "coffee-cafe"
+        case .groceries:       return "groceries"
+        case .diningOut:       return "dining-out"
+        case .transport:       return "transport"
+        case .fuelPetrol:      return "fuel-petrol"
+        case .publicTransit:   return "public-transit"
+        case .flights:         return "flights"
+        case .housingRent:     return "housing-rent"
+        case .healthMedical:   return "health-medical"
+        case .pharmacy:        return "pharmacy"
+        case .gymFitness:      return "gym-fitness"
+        case .yogaWellness:    return "yoga-wellness"
+        case .shopping:        return "shopping"
+        case .clothing:        return "clothing"
+        case .electronics:     return "electronics"
+        case .entertainment:   return "entertainment"
+        case .music:           return "music"
+        case .gaming:          return "gaming"
+        case .booksReading:    return "books-reading"
+        case .travel:          return "travel"
+        case .hotels:          return "hotels"
+        case .subscriptions:   return "subscriptions"
+        case .streaming:       return "streaming"
+        case .billsUtilities:  return "bills-utilities"
+        case .phoneInternet:   return "phone-internet"
+        case .electricityGas:  return "electricity-gas"
+        case .insurance:       return "insurance"
+        case .education:       return "education"
+        case .onlineCourses:   return "online-courses"
+        case .investments:     return "investments"
+        case .salaryIncome:    return "salary-income"
+        case .savings:         return "savings"
+        case .personalCare:    return "personal-care"
+        case .haircutSalon:    return "haircut-salon"
+        case .pets:            return "pets"
+        case .gifts:           return "gifts"
+        case .workOffice:      return "work-office"
+        case .freelance:       return "freelance"
+        case .atmCash:         return "atm-cash"
+        case .taxes:           return "taxes"
+        case .donationCharity: return "donation-charity"
+        case .babyKids:        return "baby-kids"
+        case .other:           return "other"
+        }
+    }
+
+    /// Translates a stored `predefinedKey` value (which may be a legacy
+    /// camelCase enum case name like `"foodDining"`, or the canonical kebab-case
+    /// `serverKey` like `"food-dining"`) into the canonical `serverKey` form.
+    /// Returns `nil` when the input matches no known case.
+    nonisolated static func normalizeKey(_ raw: String) -> String? {
+        if allCases.contains(where: { $0.serverKey == raw }) { return raw }
+        return allCases.first { String(describing: $0) == raw }?.serverKey
+    }
 }
 
 extension Color {

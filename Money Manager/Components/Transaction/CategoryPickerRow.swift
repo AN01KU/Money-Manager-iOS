@@ -21,7 +21,7 @@ struct CategoryPickerRow: View {
                     .font(AppTypography.body)
                     .foregroundStyle(AppColors.label)
                 Spacer()
-                if selectedCategory == category.name {
+                if selectedCategory == category.key {
                     Image(systemName: "checkmark")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppColors.accent)

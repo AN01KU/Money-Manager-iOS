@@ -241,6 +241,7 @@ struct ModelMapperTests {
         {
             "id": "\(UUID().uuidString)",
             "user_id": "\(UUID().uuidString)",
+            "key": "fitness-custom",
             "name": "Fitness",
             "icon": "🏋️",
             "color": "#FF0000",
