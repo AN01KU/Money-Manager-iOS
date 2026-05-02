@@ -48,7 +48,7 @@ private struct TransactionsBody: View {
                     TransactionsMonthSelector(viewModel: viewModel)
                         .padding(.horizontal)
 
-                    if let categoryFilter = viewModel.selectedCategoryFilter {
+                    if let categoryFilter = viewModel.selectedCategoryFilterName {
                         HStack(spacing: 8) {
                             Text(categoryFilter)
                                 .font(AppTypography.infoValue)

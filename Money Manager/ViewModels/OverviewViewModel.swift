@@ -139,6 +139,7 @@ enum TransactionTypeFilter: String, CaseIterable {
                 let percentage = Int((amount / categoryTotal) * 100)
                 let (name, icon, color) = CategoryResolver.resolveAll(categoryKey, lookup: categoryLookup)
                 return CategorySpending(
+                    categoryKey: categoryKey,
                     categoryName: name,
                     icon: icon,
                     color: color,

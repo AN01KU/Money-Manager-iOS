@@ -13,6 +13,13 @@ import SwiftData
     var filteredTransactions: [Transaction] = []
     var transactionToDelete: Transaction?
 
+    var selectedCategoryFilterName: String? {
+        guard let key = selectedCategoryFilter else { return nil }
+        let lookup = CategoryResolver.makeLookup(from: customCategories)
+        let (name, _, _) = CategoryResolver.resolveAll(key, lookup: lookup)
+        return name
+    }
+
     var modelContext: ModelContext? {
         get { persistence.modelContext }
         set { persistence.modelContext = newValue }

@@ -61,7 +61,7 @@ struct CategoryChart: View {
                 VStack(spacing: 0) {
                     ForEach(categorySpending) { spending in
                         Button {
-                            onCategoryTapped?(spending.categoryName)
+                            onCategoryTapped?(spending.categoryKey)
                         } label: {
                             CategoryDetailRow(spending: spending, maxAmount: categorySpending.first?.amount ?? 1)
                         }
