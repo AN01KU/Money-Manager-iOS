@@ -28,6 +28,7 @@ struct RecurringTransactionRow: View {
                         Text(recurring.name)
                             .font(AppTypography.body)
                             .foregroundStyle(recurring.isActive ? AppColors.label : AppColors.label2)
+                            .lineLimit(1)
 
                         HStack(spacing: AppConstants.UI.spacingXS) {
                             Text(recurring.frequency.rawValue.capitalized)
@@ -61,6 +62,8 @@ struct RecurringTransactionRow: View {
                                     ? (recurring.type == .income ? AppColors.income : AppColors.expense)
                                     : AppColors.label3
                             )
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
 
                         Toggle("", isOn: Binding(
                             get: { recurring.isActive },

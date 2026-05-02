@@ -79,6 +79,8 @@ enum AddTransactionAlert: Identifiable, Equatable {
     var customAmounts: [UUID: String] = [:]
 
     private var originalAmount: Double?
+    private var originalCategory: String?
+    private var originalType: TransactionType?
     private var pendingSaveCompletion: (() -> Void)?
     private(set) var editingRecurringExpenseId: UUID?
 
@@ -182,7 +184,10 @@ enum AddTransactionAlert: Identifiable, Equatable {
         case .personal(let editing):
             guard let expense = editing else { return }
             originalAmount = expense.amount
+            originalCategory = expense.category
+            originalType = TransactionType(kind: expense.type)
             editingRecurringExpenseId = expense.recurringExpenseId
+            isRecurring = expense.recurringExpenseId != nil
             amount = expense.amount.editableString
             selectedCategory = expense.category
             selectedDate = expense.date
@@ -246,14 +251,16 @@ enum AddTransactionAlert: Identifiable, Equatable {
             return
         }
 
-        // If editing a recurring-linked transaction and amount changed, ask the user.
-        if case .personal = mode,
-           editingRecurringExpenseId != nil,
-           let original = originalAmount,
-           amountValue != original {
-            pendingSaveCompletion = completion
-            showRecurringAmountAlert = true
-            return
+        // If editing a recurring-linked transaction and anything synced to the template changed, ask the user.
+        if case .personal = mode, editingRecurringExpenseId != nil {
+            let amountChanged = originalAmount.map { amountValue != $0 } ?? false
+            let categoryChanged = originalCategory.map { selectedCategory != $0 } ?? false
+            let typeChanged = originalType.map { transactionType != $0 } ?? false
+            if amountChanged || categoryChanged || typeChanged {
+                pendingSaveCompletion = completion
+                showRecurringAmountAlert = true
+                return
+            }
         }
 
         isSaving = true
@@ -290,9 +297,10 @@ enum AddTransactionAlert: Identifiable, Equatable {
         let transaction: Transaction
         let action: String
 
-        // If recurring is toggled on, create the template first so we can link it atomically.
-        var recurringExpenseId: UUID? = nil
-        if isRecurring {
+        // If recurring is toggled on for a NEW transaction, create the template first so we can link it atomically.
+        // Skip if editing an existing recurring-linked transaction — template was already updated in saveAlsoUpdatingRecurring.
+        var recurringExpenseId: UUID? = editingRecurringExpenseId
+        if isRecurring && editingRecurringExpenseId == nil {
             let trimmedName = description.trimmingCharacters(in: .whitespaces)
             let resolvedCategoryIdForRecurring = customCategories.first(where: { $0.key == selectedCategory })?.id
             let recurring = RecurringTransaction(
@@ -383,14 +391,14 @@ enum AddTransactionAlert: Identifiable, Equatable {
 
     func saveAlsoUpdatingRecurring(completion: @escaping () -> Void) {
         pendingSaveCompletion = nil
-        if let recurringId = editingRecurringExpenseId,
-           let newAmount = Double(amount),
-           let ctx = persistence.modelContext {
+        if let recurringId = editingRecurringExpenseId, let ctx = persistence.modelContext {
             let descriptor = FetchDescriptor<RecurringTransaction>(
                 predicate: #Predicate { $0.id == recurringId && !$0.isSoftDeleted }
             )
             if let recurring = try? ctx.fetch(descriptor).first {
-                recurring.amount = newAmount
+                if let newAmount = Double(amount) { recurring.amount = newAmount }
+                recurring.category = selectedCategory
+                recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
                 try? persistence.saveRecurring(recurring, action: "update")
             }
