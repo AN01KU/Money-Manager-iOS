@@ -94,7 +94,9 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: GroupTransactionModel.self)
         try? context.delete(model: GroupBalanceModel.self)
         try? context.save()
-        UserDefaults.standard.removeObject(forKey: lastSyncKey)
+        for key in ["last_sync_at", "selectedCurrency", "defaultBudgetLimit", "userTimezone"] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
     
     func syncOnLaunch() async {

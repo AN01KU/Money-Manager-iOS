@@ -7,6 +7,7 @@ struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var email = ""
     @State private var password = ""
     @State private var showSignup = false
@@ -135,10 +136,11 @@ struct LoginView: View {
                 .dismissKeyboardOnScroll()
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showSignup, onDismiss: {
-                if authService.isAuthenticated { dismiss() }
-            }) {
+            .sheet(isPresented: $showSignup) {
                 SignupView()
+            }
+            .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated { dismiss() }
             }
             .alert("Login Error", isPresented: Binding(
                 get: { errorMessage != nil },
@@ -177,7 +179,8 @@ struct LoginView: View {
             do {
                 try await authService.login(email: email, password: password)
                 await syncService.fullSync()
-                dismiss()
+                hasCompletedOnboarding = true
+                if isDismissable { dismiss() }
             } catch {
                 errorMessage = error.localizedDescription
             }

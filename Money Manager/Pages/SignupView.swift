@@ -4,6 +4,7 @@ struct SignupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var email = ""
     @State private var username = ""
     @State private var password = ""
@@ -13,6 +14,7 @@ struct SignupView: View {
     @State private var inviteCode = ""
     @State private var showingInviteCodeAlert = false
     @State private var showingVerification = false
+    @State private var showDataWipeAlert = false
 
     var body: some View {
         NavigationStack {
@@ -108,7 +110,7 @@ struct SignupView: View {
                                 if inviteCode.isEmpty {
                                     showingInviteCodeAlert = true
                                 } else {
-                                    signup()
+                                    checkDataWipeThenSignup()
                                 }
                             } label: {
                                 Group {
@@ -153,9 +155,15 @@ struct SignupView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                 Button("Cancel", role: .cancel) {}
-                Button("Continue") { signup() }
+                Button("Continue") { checkDataWipeThenSignup() }
             } message: {
                 Text("This beta requires an invite code to sign up.")
+            }
+            .alert("Switch Account?", isPresented: $showDataWipeAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Continue", role: .destructive) { signup() }
+            } message: {
+                Text("You were previously signed in with a different account. All local data will be cleared before signing up.")
             }
         }
     }
@@ -168,6 +176,15 @@ struct SignupView: View {
         password == confirmPassword
     }
 
+    private func checkDataWipeThenSignup() {
+        let normalizedEmail = email.lowercased()
+        if let lastEmail = SessionStore.shared.getLastLoggedInEmail(), lastEmail != normalizedEmail {
+            showDataWipeAlert = true
+            return
+        }
+        signup()
+    }
+
     private func signup() {
         isLoading = true
         errorMessage = nil
@@ -175,6 +192,7 @@ struct SignupView: View {
             do {
                 try await authService.signup(email: email, username: username, password: password, inviteCode: inviteCode)
                 await syncService.bootstrapAfterSignup()
+                hasCompletedOnboarding = true
                 if authService.currentUser?.emailVerified == false {
                     showingVerification = true
                 } else {
