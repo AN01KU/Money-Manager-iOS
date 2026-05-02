@@ -10,6 +10,7 @@ struct RecurringTransactionsView: View {
     @State private var rowTapped = 0
     @State private var addTriggered = 0
     @State private var itemToDelete: RecurringTransaction?
+    @State private var swipedItemID: UUID?
 
     var body: some View {
         Group {
@@ -102,22 +103,22 @@ struct RecurringTransactionsView: View {
 
             VStack(spacing: 0) {
                 ForEach(items) { item in
-                    RecurringTransactionRow(
-                        recurring: item,
-                        onTap: {
-                            rowTapped += 1
-                            viewModel.editingRecurring = item
-                        },
-                        onToggle: { viewModel.toggle(item) }
-                    )
-                    .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            itemToDelete = item
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                        .tint(AppColors.expense)
+                    SwipeToDeleteRow(
+                        isRevealed: Binding(
+                            get: { swipedItemID == item.id },
+                            set: { revealed in swipedItemID = revealed ? item.id : nil }
+                        ),
+                        onDelete: { itemToDelete = item }
+                    ) {
+                        RecurringTransactionRow(
+                            recurring: item,
+                            onTap: {
+                                rowTapped += 1
+                                viewModel.editingRecurring = item
+                            },
+                            onToggle: { viewModel.toggle(item) }
+                        )
+                        .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
                     }
 
                     if item.id != items.last?.id {
@@ -130,6 +131,7 @@ struct RecurringTransactionsView: View {
         }
     }
 }
+
 
 #Preview {
     NavigationStack {

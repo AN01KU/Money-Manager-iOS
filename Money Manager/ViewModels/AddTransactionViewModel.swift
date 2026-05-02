@@ -330,6 +330,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
 
         if case .personal(let existing) = mode, let existingExpense = existing {
             existingExpense.amount = amountValue
+            existingExpense.type = transactionType.kind
             existingExpense.category = selectedCategory
             existingExpense.categoryId = resolvedCategoryId
             existingExpense.date = expenseDate
