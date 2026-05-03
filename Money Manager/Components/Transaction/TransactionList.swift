@@ -14,7 +14,7 @@ private let sectionDateFormatter: DateFormatter = {
 
 struct TransactionList: View {
     let transactions: [Transaction]
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
     @State private var selectedTransaction: Transaction?
     @State private var editingTransaction: Transaction?
     @State private var swipedTransactionID: PersistentIdentifier?
@@ -23,7 +23,7 @@ struct TransactionList: View {
     var onDelete: ((Transaction) -> Void)?
     var onGroupTapped: ((UUID) -> Void)?
 
-    private var categoryLookup: [String: CustomCategory] {
+    private var categoryLookup: [String: Category] {
         CategoryResolver.makeLookup(from: customCategories)
     }
 

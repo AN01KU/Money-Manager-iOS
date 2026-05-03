@@ -117,7 +117,7 @@ struct PersistenceServiceTests {
         let context = try makeContext()
         let svc = makeService(context: context)
 
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#FF0000")
         context.insert(cat)
 
         #expect(throws: Never.self) { try svc.saveCategory(cat, action: "create") }
@@ -127,7 +127,7 @@ struct PersistenceServiceTests {
         let context = try makeContext()
         let svc = makeService(context: context)
 
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#FF0000")
         context.insert(cat)
 
         #expect(throws: Never.self) { try svc.saveCategory(cat, action: "update") }
@@ -137,7 +137,7 @@ struct PersistenceServiceTests {
         let context = try makeContext()
         let svc = makeService(context: context)
 
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000")
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#FF0000")
         context.insert(cat)
 
         #expect(throws: Never.self) { try svc.saveCategory(cat, action: "delete") }

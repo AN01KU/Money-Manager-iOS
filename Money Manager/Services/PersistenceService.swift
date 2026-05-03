@@ -107,7 +107,7 @@ final class PersistenceService {
         )
     }
 
-    func saveCategory(_ category: CustomCategory, action: String) throws {
+    func saveCategory(_ category: Category, action: String) throws {
         let httpMethod: String
         let payload: Data?
 

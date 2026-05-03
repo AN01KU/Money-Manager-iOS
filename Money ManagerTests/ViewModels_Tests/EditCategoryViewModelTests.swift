@@ -12,11 +12,11 @@ struct EditCategoryViewModelRenameTests {
         ModelContext(try makeTestContainer())
     }
 
-    private func makeCustomCategory(name: String, icon: String = "star", color: String = "#FF0000") -> CustomCategory {
-        CustomCategory(name: name, icon: icon, color: color)
+    private func makeCategory(name: String, icon: String = "star", color: String = "#FF0000") -> Money_Manager.Category {
+        Category(name: name, icon: icon, color: color)
     }
 
-    private func makeTransactionCategory(row: CustomCategory) -> TransactionCategory {
+    private func makeTransactionCategory(row: Money_Manager.Category) -> TransactionCategory {
         TransactionCategory(
             id: "custom:\(row.id.uuidString)",
             key: row.key.isEmpty ? "local:\(row.id.uuidString)" : row.key,
@@ -28,9 +28,9 @@ struct EditCategoryViewModelRenameTests {
 
     // MARK: - save: update existing custom row
 
-    @Test func testSaveUpdatesCustomCategoryRow() throws {
+    @Test func testSaveUpdatesCategoryRow() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         context.insert(row)
         let category = makeTransactionCategory(row: row)
         let persistence = PersistenceService()
@@ -47,7 +47,7 @@ struct EditCategoryViewModelRenameTests {
 
     @Test func testSaveReturnsFalseForEmptyName() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         context.insert(row)
         let category = makeTransactionCategory(row: row)
         let persistence = PersistenceService()
@@ -63,7 +63,7 @@ struct EditCategoryViewModelRenameTests {
     }
 
     @Test func testSaveReturnsFalseWithNoModelContext() throws {
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         let category = makeTransactionCategory(row: row)
         let persistence = PersistenceService()
         // modelContext is nil
@@ -79,7 +79,7 @@ struct EditCategoryViewModelRenameTests {
         // Transactions store the stable server key, so renaming a category's display name
         // does not cascade to transactions.
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         row.key = "coffee-custom"
         context.insert(row)
 
@@ -103,7 +103,7 @@ struct EditCategoryViewModelRenameTests {
 
     @Test func testSaveDoesNotUpdateRecurringTransactionCategoryOnRename() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         row.key = "coffee-custom"
         context.insert(row)
 
@@ -132,7 +132,7 @@ struct EditCategoryViewModelRenameTests {
 
     @Test func testSaveDoesNotRenameTransactionsWithDifferentCategoryId() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         context.insert(row)
 
         let tx = Transaction(amount: 10, category: "Food", date: Date())
@@ -157,10 +157,10 @@ struct EditCategoryViewModelRenameTests {
 
     @Test func testSaveReturnsFalseOnColorConflict() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee", color: "#FF0000")
+        let row = makeCategory(name: "Coffee", color: "#FF0000")
         context.insert(row)
 
-        let conflicting = CustomCategory(name: "Tea", icon: "leaf", color: "#FF0000")
+        let conflicting = Category(name: "Tea", icon: "leaf", color: "#FF0000")
         context.insert(conflicting)
 
         let category = makeTransactionCategory(row: row)

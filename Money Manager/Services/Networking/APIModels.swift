@@ -107,7 +107,7 @@ struct APIMonthlyBudget: Codable {
     }
 }
 
-struct APICustomCategory: Codable {
+struct APICategory: Codable {
     let id: UUID
     let userId: UUID
     let key: String

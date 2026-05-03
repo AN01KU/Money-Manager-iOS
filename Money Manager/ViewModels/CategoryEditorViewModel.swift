@@ -8,7 +8,7 @@ import SwiftData
     var showColorWarning = false
     var colorWarningMessage = ""
     
-    var allCategories: [CustomCategory] = []
+    var allCategories: [Category] = []
     private var pendingSaveAfterWarning = false
     
     static let iconOptions: [String] = PredefinedCategory.allCases.map(\.icon)

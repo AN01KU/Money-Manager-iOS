@@ -5,7 +5,7 @@ struct AddCategorySheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    let allCategories: [CustomCategory]
+    let allCategories: [Category]
     @State private var viewModel = AddCategoryViewModel()
     @State private var iconTapped = 0
     @State private var colorTapped = 0

@@ -90,7 +90,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
         get { persistence.modelContext }
         set { persistence.modelContext = newValue }
     }
-    var customCategories: [CustomCategory] = []
+    var customCategories: [Category] = []
     private let groupService: GroupServiceProtocol
 
     // MARK: - Computed

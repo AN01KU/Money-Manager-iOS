@@ -24,7 +24,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(category: TransactionCategory, allCategories: [CustomCategory] = [], persistence: PersistenceService = PersistenceService()) {
+    init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService = PersistenceService()) {
         self.category = category
         self.name = category.name
         self.persistence = persistence
@@ -42,6 +42,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     func save() -> Bool {
         let (trimmedName, validationError) = validateName(name, excludingId: category.overrideRow?.id)
         if let validationError {
+            print("SSSSSS1")
             errorMessage = validationError
             showError = true
             return false
@@ -52,7 +53,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
 
         isSaving = true
         resetColorWarning()
-
+        print("SSSSSS2")
         if let row = category.overrideRow {
             // Update existing override row — transactions are keyed by server key, not name,
             // so renaming the display name requires no cascade update.
@@ -62,8 +63,10 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             row.updatedAt = Date()
 
             do {
+                print("SSSSSS3")
                 try persistence.saveCategory(row, action: "update")
             } catch {
+                print("SSSSSS4")
                 errorMessage = "Failed to save changes"
                 showError = true
                 isSaving = false
@@ -72,7 +75,8 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         } else if category.isPredefined,
                   let predefined = predefinedCase(for: category) {
             // No override row yet — create one to record the user's changes
-            let row = CustomCategory(
+            print("SSSSSS5")
+            let row = Category(
                 key: predefined.serverKey,
                 name: trimmedName,
                 icon: selectedIcon,
@@ -83,8 +87,10 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             context.insert(row)
 
             do {
+                print("SSSSSS6")
                 try persistence.saveCategory(row, action: "create")
             } catch {
+                print("SSSSSS7")
                 errorMessage = "Failed to save changes"
                 showError = true
                 isSaving = false

@@ -7,7 +7,7 @@ struct ExportDataView: View {
     @Query private var transactions: [Transaction]
     @Query(filter: #Predicate<RecurringTransaction> { !$0.isSoftDeleted }) private var recurringTransactions: [RecurringTransaction]
     @Query private var budgets: [MonthlyBudget]
-    @Query private var categories: [CustomCategory]
+    @Query private var categories: [Category]
     @Query private var groups: [SplitGroupModel]
     
     @State private var viewModel = BackupViewModel()
@@ -280,5 +280,5 @@ struct ShareSheet: UIViewControllerRepresentable {
     NavigationStack {
         ExportDataView()
     }
-    .modelContainer(for: [Transaction.self, MonthlyBudget.self, CustomCategory.self], inMemory: true)
+    .modelContainer(for: [Transaction.self, MonthlyBudget.self, Category.self], inMemory: true)
 }

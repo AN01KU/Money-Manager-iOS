@@ -4,11 +4,11 @@ import SwiftData
 struct CategoryPickerView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var selectedCategory: String
-    @Query private var overrides: [CustomCategory]
+    @Query private var allCategories: [Category]
     @State private var selectionToggled = 0
 
     private var categories: [TransactionCategory] {
-        TransactionCategory.merge(overrides: overrides)
+        TransactionCategory.merge(overrides: allCategories)
     }
 
     private var visibleCustom: [TransactionCategory] {

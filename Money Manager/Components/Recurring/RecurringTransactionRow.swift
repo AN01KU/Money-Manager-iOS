@@ -3,7 +3,7 @@ import SwiftData
 
 struct RecurringTransactionRow: View {
     let recurring: RecurringTransaction
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
     let onTap: () -> Void
     let onToggle: () -> Void
 

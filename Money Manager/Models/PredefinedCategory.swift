@@ -163,7 +163,7 @@ enum PredefinedCategory: String, CaseIterable, Identifiable {
 
     /// The kebab-case server key (e.g. "food-dining"). Used everywhere as the
     /// stable identifier for a predefined category — in API payloads, in
-    /// `CustomCategory.predefinedKey`, and in `TransactionCategory.id`.
+    /// `Category.predefinedKey`, and in `TransactionCategory.id`.
     nonisolated var serverKey: String {
         switch self {
         case .foodDining:      return "food-dining"

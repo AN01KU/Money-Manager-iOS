@@ -490,10 +490,10 @@ struct OverviewViewModelTests {
     // MARK: - Resolve Category Tests
     
     @Test
-    func testResolveCategoryReturnsCustomCategoryIconAndColor() {
+    func testResolveCategoryReturnsCategoryIconAndColor() {
         let viewModel = OverviewViewModel()
 
-        let customCategory = CustomCategory(
+        let customCategory = Category(
             key: "my-groceries",
             name: "My Groceries",
             icon: "cart.fill",
@@ -536,7 +536,7 @@ struct OverviewViewModelTests {
     func testResolveCategoryIgnoresHiddenCustomCategories() {
         let viewModel = OverviewViewModel()
 
-        let hiddenCategory = CustomCategory(
+        let hiddenCategory = Category(
             key: "hidden-cat",
             name: "Hidden Cat",
             icon: "star.fill",

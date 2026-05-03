@@ -83,14 +83,14 @@ struct ExportServiceTests {
     // MARK: CSV export — categories
 
     @Test func exportCategoriesCSV_producesCorrectHeaders() throws {
-        let cat = CustomCategory(name: "Travel", icon: "airplane", color: "#FF0000")
+        let cat = Category(name: "Travel", icon: "airplane", color: "#FF0000")
         let url = try service.exportCategories(format: .csv, categories: [cat])
         let content = try String(contentsOf: url, encoding: .utf8)
         #expect(content.hasPrefix("ID,Name,Icon,Color,Is Hidden,Is Predefined,Predefined Key"))
     }
 
     @Test func exportCategoriesCSV_oneRow_correctValues() throws {
-        let cat = CustomCategory(name: "Health", icon: "heart.fill", color: "#00FF00")
+        let cat = Category(name: "Health", icon: "heart.fill", color: "#00FF00")
         let url = try service.exportCategories(format: .csv, categories: [cat])
         let content = try String(contentsOf: url, encoding: .utf8)
         #expect(content.contains("Health"))
@@ -134,7 +134,7 @@ struct ExportServiceTests {
     @Test func exportAllJSON_containsAllSections() throws {
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         let budget = MonthlyBudget(year: 2026, month: 1, limit: 3000)
-        let cat = CustomCategory(name: "Fun", icon: "star.fill", color: "#AAAAAA")
+        let cat = Category(name: "Fun", icon: "star.fill", color: "#AAAAAA")
         let url = try service.exportAll(format: .json, transactions: [tx], recurringTransactions: [], budgets: [budget], categories: [cat])
 
         let data = try Data(contentsOf: url)
@@ -269,14 +269,14 @@ struct ImportServiceTests {
         let container = try makeTestContainer()
         let context = ModelContext(container)
 
-        let cat = CustomCategory(name: "Health", icon: "heart.fill", color: "#FF0000")
+        let cat = Category(name: "Health", icon: "heart.fill", color: "#FF0000")
         let exportService = ExportService()
         let url = try exportService.exportCategories(format: .json, categories: [cat])
 
         let result = try service.importJSON(from: url, context: context)
         #expect(result.message.contains("1 categories"))
 
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported[0].name == "Health")
@@ -289,7 +289,7 @@ struct ImportServiceTests {
 
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         let budget = MonthlyBudget(year: 2026, month: 1, limit: 5000)
-        let cat = CustomCategory(name: "Fun", icon: "star.fill", color: "#AAAAAA")
+        let cat = Category(name: "Fun", icon: "star.fill", color: "#AAAAAA")
 
         let exportService = ExportService()
         let url = try exportService.exportAll(format: .json, transactions: [tx], recurringTransactions: [], budgets: [budget], categories: [cat])
@@ -338,7 +338,7 @@ struct ImportServiceTests {
 
         let tx = Transaction(amount: 200, category: "Transport", date: Date())
         let budget = MonthlyBudget(year: 2026, month: 2, limit: 6000)
-        let cat = CustomCategory(name: "Work", icon: "briefcase.fill", color: "#0000FF")
+        let cat = Category(name: "Work", icon: "briefcase.fill", color: "#0000FF")
 
         let exportService = ExportService()
         let url = try exportService.exportAll(format: .csv, transactions: [tx], recurringTransactions: [], budgets: [budget], categories: [cat])

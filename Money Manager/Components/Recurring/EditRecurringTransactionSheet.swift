@@ -6,7 +6,7 @@ struct EditRecurringTransactionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.authService) private var authService
     @Environment(\.changeQueueManager) private var changeQueueManager
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     @Bindable var recurring: RecurringTransaction
 

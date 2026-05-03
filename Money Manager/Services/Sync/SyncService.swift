@@ -86,7 +86,7 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: Transaction.self)
         try? context.delete(model: RecurringTransaction.self)
         try? context.delete(model: MonthlyBudget.self)
-        try? context.delete(model: CustomCategory.self)
+        try? context.delete(model: Category.self)
         try? context.delete(model: PendingChange.self)
         try? context.delete(model: OrphanedChange.self)
         try? context.delete(model: SplitGroupModel.self)
@@ -230,9 +230,9 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        let categories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
+        let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
         let customOnly = categories.filter { !$0.isPredefined }
-        AppLogger.sync.debug("[EnqueueLocalData] total CustomCategory rows=\(categories.count) uploading custom-only=\(customOnly.count)")
+        AppLogger.sync.debug("[EnqueueLocalData] total Category rows=\(categories.count) uploading custom-only=\(customOnly.count)")
         for category in customOnly {
             do {
                 let payload = try AppAPIClient.apiEncoder.encode(category.toCreateRequest())
@@ -291,6 +291,7 @@ final class SyncService: SyncServiceProtocol {
         isSyncing = true
         defer { isSyncing = false }
 
+        await pullPredefinedCategories(context: context)
         await pullCategories(context: context)
         await pullBudgets(context: context)
         await pullRecurring(context: context)
@@ -298,10 +299,19 @@ final class SyncService: SyncServiceProtocol {
 
         updateLastSyncTime()
     }
+
+    private func pullPredefinedCategories(context: ModelContext) async {
+        do {
+            let response: APIListResponse<APIPredefinedCategory> = try await apiClient.get(.predefinedCategories)
+            upsertPredefinedCategories(response.data, context: context)
+        } catch {
+            AppLogger.sync.error("Failed to pull predefined categories: \(error)")
+        }
+    }
     
     private func pullCategories(context: ModelContext) async {
         do {
-            let response: APIListResponse<APICustomCategory> = try await apiClient.get(.syncCategories)
+            let response: APIListResponse<APICategory> = try await apiClient.get(.syncCategories)
             upsertCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull categories: \(error)")
@@ -322,28 +332,51 @@ final class SyncService: SyncServiceProtocol {
     }
 
     private func upsertPredefinedCategories(_ categories: [APIPredefinedCategory], context: ModelContext) {
-        // Predefined categories are owned by the server and backed by the PredefinedCategory
-        // enum as an offline fallback. We never insert them into SwiftData.
-        // The only thing to do here is update any existing local override rows whose
-        // server-side defaults changed (e.g. the backend renamed a predefined category).
-        let localCategories = (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? []
-        let localOverridesByKey = Dictionary(
-            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, CustomCategory)? in
-                guard cat.isPredefined, !cat.key.isEmpty else { return nil }
+        let localCategories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
+        let localServerPredefinedByKey = Dictionary(
+            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, Category)? in
+                guard cat.isServerPredefined, !cat.key.isEmpty else { return nil }
                 return (cat.key, cat)
             }
         )
 
+        let serverKeys = Set(categories.map { $0.key })
+
         for remote in categories {
-            guard let local = localOverridesByKey[remote.key] else { continue }
-            if let remoteUpdatedAt = remote.updatedAt, remoteUpdatedAt > local.updatedAt {
-                local.name = remote.name
-                local.icon = remote.icon
-                local.color = remote.color
-                local.isHidden = remote.isHidden ?? false
-                local.updatedAt = remoteUpdatedAt
+            if let local = localServerPredefinedByKey[remote.key] {
+                // Update if server has a newer version
+                let remoteUpdatedAt = remote.updatedAt ?? local.updatedAt
+                if remoteUpdatedAt > local.updatedAt {
+                    local.name = remote.name
+                    local.icon = remote.icon
+                    local.color = remote.color
+                    local.isHidden = remote.isHidden ?? false
+                    local.updatedAt = remoteUpdatedAt
+                }
+            } else {
+                // Insert new server-predefined row
+                let category = Category(
+                    id: remote.id,
+                    key: remote.key,
+                    name: remote.name,
+                    icon: remote.icon,
+                    color: remote.color,
+                    isPredefined: true,
+                    isServerPredefined: true
+                )
+                category.isHidden = remote.isHidden ?? false
+                category.updatedAt = remote.updatedAt ?? Date()
+                context.insert(category)
             }
         }
+
+        // Remove server-predefined rows the admin has permanently deleted
+        for local in localCategories where local.isServerPredefined {
+            if !serverKeys.contains(local.key) {
+                context.delete(local)
+            }
+        }
+
         try? context.save()
     }
 
@@ -595,7 +628,7 @@ final class SyncService: SyncServiceProtocol {
         syncCheckpoint(entityType: "budget", serverCount: apiBudgets.count, localCount: localBudgets.count)
     }
 
-    private func upsertCategories(_ apiCategories: [APICustomCategory], context: ModelContext) {
+    private func upsertCategories(_ apiCategories: [APICategory], context: ModelContext) {
         let pendingDescriptor = FetchDescriptor<PendingChange>(
             predicate: #Predicate { $0.entityType == "category" }
         )
@@ -603,13 +636,13 @@ final class SyncService: SyncServiceProtocol {
         let pendingIDs = Set(pendingChanges.map { $0.entityID })
         let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
 
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Category>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
         // Predefined rows always store the canonical serverKey in `key`, so we can
         // dedupe by it without consulting the legacy camelCase `predefinedKey` field.
         let localByPredServerKey = Dictionary(
-            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, CustomCategory)? in
+            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, Category)? in
                 guard cat.isPredefined, !cat.key.isEmpty else { return nil }
                 return (cat.key, cat)
             }
@@ -664,7 +697,7 @@ final class SyncService: SyncServiceProtocol {
                 local.updatedAt = remote.updatedAt
             } else {
                 AppLogger.sync.debug("[UpsertCategories] inserting new row: \(remote.name) isPredefined=\(remoteIsPredefined) predefinedKey=\(normalizedPredefinedKey ?? "nil") isHidden=\(remoteIsHidden)")
-                let category = CustomCategory(
+                let category = Category(
                     id: remote.id,
                     key: remote.key,
                     name: remote.name,
@@ -680,9 +713,10 @@ final class SyncService: SyncServiceProtocol {
         }
 
         // Purge local custom categories the server no longer returns and have no pending upload.
+        // Never touch server-predefined rows — those are managed by upsertPredefinedCategories.
         let serverCategoryIDs = Set(apiCategories.map { $0.id })
         for local in localCategories {
-            guard !local.isPredefined else { continue }
+            guard !local.isPredefined, !local.isServerPredefined else { continue }
             guard !serverCategoryIDs.contains(local.id) else { continue }
             guard !pendingIDs.contains(local.id) else { continue }
             AppLogger.sync.debug("Purging custom category not on server: \(local.id) name=\(local.name)")
@@ -834,7 +868,7 @@ final class SyncService: SyncServiceProtocol {
         return true
     }
 
-    private func isValid(_ api: APICustomCategory) -> Bool {
+    private func isValid(_ api: APICategory) -> Bool {
         guard !api.name.trimmingCharacters(in: .whitespaces).isEmpty else {
             AppLogger.sync.error("Validation failed: category \(api.id) has empty name")
             return false

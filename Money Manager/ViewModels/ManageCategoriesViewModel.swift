@@ -27,7 +27,7 @@ import SwiftData
         } else if category.isPredefined,
                   let predefined = predefinedCase(for: category),
                   let context = modelContext {
-            let row = CustomCategory(
+            let row = Category(
                 key: predefined.serverKey,
                 name: predefined.rawValue,
                 icon: predefined.icon,
@@ -106,7 +106,7 @@ import SwiftData
     func restoreDefaults(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
         persistence.modelContext = context
-        let descriptor = FetchDescriptor<CustomCategory>(predicate: #Predicate { $0.isPredefined == true })
+        let descriptor = FetchDescriptor<Category>(predicate: #Predicate { $0.isPredefined == true })
         deleteAndSync(rows: (try? context.fetch(descriptor)) ?? [], context: context)
         AppLogger.data.info("Default categories restored")
         resetTrigger += 1
@@ -114,16 +114,16 @@ import SwiftData
 
     var resetTrigger: Int = 0
 
-    /// Deletes all CustomCategory rows — custom categories and predefined overrides.
+    /// Deletes all Category rows — custom categories and predefined overrides.
     /// After this, the PredefinedCategory enum is the sole source of truth.
     func resetAll(modelContext: ModelContext?) {
         guard let context = modelContext else { return }
         persistence.modelContext = context
-        deleteAndSync(rows: (try? context.fetch(FetchDescriptor<CustomCategory>())) ?? [], context: context)
+        deleteAndSync(rows: (try? context.fetch(FetchDescriptor<Category>())) ?? [], context: context)
         resetTrigger += 1
     }
 
-    private func deleteAndSync(rows: [CustomCategory], context: ModelContext) {
+    private func deleteAndSync(rows: [Category], context: ModelContext) {
         for row in rows {
             let rowID = row.id
             context.delete(row)

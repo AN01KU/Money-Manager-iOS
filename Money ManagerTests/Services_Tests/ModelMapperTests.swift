@@ -212,11 +212,11 @@ struct ModelMapperTests {
         #expect(budget.limit == 9000)
     }
 
-    // MARK: - CustomCategory mappers
+    // MARK: - Category mappers
 
     @Test
-    func testCustomCategoryToCreateRequestIncludesFields() {
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000", isPredefined: false)
+    func testCategoryToCreateRequestIncludesFields() {
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#FF0000", isPredefined: false)
         let req = cat.toCreateRequest()
         #expect(req.name == "Fitness")
         #expect(req.icon == "🏋️")
@@ -225,8 +225,8 @@ struct ModelMapperTests {
     }
 
     @Test
-    func testCustomCategoryToUpdateRequestIncludesFields() {
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#00FF00", isPredefined: false)
+    func testCategoryToUpdateRequestIncludesFields() {
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#00FF00", isPredefined: false)
         cat.isHidden = true
         let req = cat.toUpdateRequest()
         #expect(req.name == "Fitness")
@@ -235,8 +235,8 @@ struct ModelMapperTests {
     }
 
     @Test
-    func testCustomCategoryApplyRemoteUpdatesFields() throws {
-        let cat = CustomCategory(name: "Old", icon: "⬛️", color: "#000000", isPredefined: false)
+    func testCategoryApplyRemoteUpdatesFields() throws {
+        let cat = Category(name: "Old", icon: "⬛️", color: "#000000", isPredefined: false)
         let json = """
         {
             "id": "\(UUID().uuidString)",
@@ -251,7 +251,7 @@ struct ModelMapperTests {
             "updated_at": "2024-06-01T00:00:00Z"
         }
         """.data(using: .utf8)!
-        let api = try Self.decoder.decode(APICustomCategory.self, from: json)
+        let api = try Self.decoder.decode(APICategory.self, from: json)
         cat.applyRemote(api)
         #expect(cat.name == "Fitness")
         #expect(cat.icon == "🏋️")

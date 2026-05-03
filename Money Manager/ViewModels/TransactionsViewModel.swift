@@ -27,13 +27,13 @@ import SwiftData
     let persistence: PersistenceService
 
     private var allTransactions: [Transaction] = []
-    private var customCategories: [CustomCategory] = []
+    private var customCategories: [Category] = []
 
     init(persistence: PersistenceService = PersistenceService()) {
         self.persistence = persistence
     }
 
-    func update(allTransactions: [Transaction], customCategories: [CustomCategory]) {
+    func update(allTransactions: [Transaction], customCategories: [Category]) {
         self.allTransactions = allTransactions
         self.customCategories = customCategories
         recalculate()

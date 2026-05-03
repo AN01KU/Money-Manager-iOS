@@ -5,7 +5,7 @@ struct Overview: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [MonthlyBudget]
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
 
@@ -377,9 +377,9 @@ private struct BudgetInlineRow: View {
 private struct OverviewRecentTransactions: View {
     let transactions: [Transaction]
     let onGroupTapped: ((UUID) -> Void)?
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
-    private var categoryLookup: [String: CustomCategory] {
+    private var categoryLookup: [String: Category] {
         CategoryResolver.makeLookup(from: customCategories)
     }
 
@@ -433,7 +433,7 @@ private struct FilterModeChip: View {
 private struct QuerySnapshot: Equatable {
     let transactions: [Transaction]
     let budgets: [MonthlyBudget]
-    let categories: [CustomCategory]
+    let categories: [Category]
 }
 
 // MARK: - Preview Helpers
@@ -445,7 +445,7 @@ private func previewContainer(
 ) -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
+        for: Transaction.self, MonthlyBudget.self, Category.self,
         configurations: config
     )
     let context = container.mainContext

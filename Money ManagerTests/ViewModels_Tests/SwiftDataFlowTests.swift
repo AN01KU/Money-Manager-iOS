@@ -10,7 +10,7 @@ struct AddRecurringTransactionSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Transaction.self, MonthlyBudget.self, CustomCategory.self, RecurringTransaction.self,
+            for: Transaction.self, MonthlyBudget.self, Category.self, RecurringTransaction.self,
             configurations: config
         )
     }
@@ -103,7 +103,7 @@ struct AddCategorySwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
+            for: Transaction.self, MonthlyBudget.self, Category.self,
             configurations: config
         )
     }
@@ -124,7 +124,7 @@ struct AddCategorySwiftDataTests {
         #expect(result == true)
         #expect(viewModel.isSaving == false)
         
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let saved = try context.fetch(descriptor)
         
         #expect(saved.count == 1)
@@ -149,7 +149,7 @@ struct AddCategorySwiftDataTests {
 
         #expect(result == true)
 
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let saved = try context.fetch(descriptor)
 
         #expect(saved.first?.name == "My Hobby")
@@ -178,7 +178,7 @@ struct AddCategorySwiftDataTests {
         #expect(result1 == true)
         #expect(result2 == true)
         
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let saved = try context.fetch(descriptor)
         
         #expect(saved.count == 2)
@@ -192,7 +192,7 @@ struct ManageCategoriesSwiftDataTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Transaction.self, MonthlyBudget.self, CustomCategory.self,
+            for: Transaction.self, MonthlyBudget.self, Category.self,
             configurations: config
         )
     }
@@ -202,7 +202,7 @@ struct ManageCategoriesSwiftDataTests {
         let container = try makeContainer()
         let context = container.mainContext
 
-        let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
+        let row = Category(name: "Coffee", icon: "star", color: "#FF0000")
         context.insert(row)
         try context.save()
 
@@ -223,7 +223,7 @@ struct ManageCategoriesSwiftDataTests {
 
         viewModel.hideCategory(category)
 
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let fetched = try context.fetch(descriptor)
         #expect(fetched.first?.isHidden == true)
     }
@@ -233,7 +233,7 @@ struct ManageCategoriesSwiftDataTests {
         let container = try makeContainer()
         let context = container.mainContext
 
-        let row = CustomCategory(name: "Coffee", icon: "star", color: "#FF0000")
+        let row = Category(name: "Coffee", icon: "star", color: "#FF0000")
         row.isHidden = true
         context.insert(row)
         try context.save()
@@ -255,7 +255,7 @@ struct ManageCategoriesSwiftDataTests {
 
         viewModel.restoreCategory(category)
 
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let fetched = try context.fetch(descriptor)
         #expect(fetched.first?.isHidden == false)
     }
@@ -265,7 +265,7 @@ struct ManageCategoriesSwiftDataTests {
         let container = try makeContainer()
         let context = container.mainContext
 
-        let row = CustomCategory(name: "Travel", icon: "star", color: "#00FF00")
+        let row = Category(name: "Travel", icon: "star", color: "#00FF00")
         context.insert(row)
         try context.save()
 
@@ -290,7 +290,7 @@ struct ManageCategoriesSwiftDataTests {
         viewModel.restoreCategory(category)
         #expect(row.isHidden == false)
 
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let fetched = try context.fetch(descriptor)
         #expect(fetched.first?.isHidden == false)
     }

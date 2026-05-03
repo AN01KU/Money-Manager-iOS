@@ -49,7 +49,7 @@ struct ImportService {
 
         var transactions: [ExportData.TransactionData] = []
         var budgets: [ExportData.MonthlyBudgetData] = []
-        var categories: [ExportData.CustomCategoryData] = []
+        var categories: [ExportData.CategoryData] = []
 
         let lowercaseHeaders = headers.map { $0.lowercased() }
         let firstHeader = lowercaseHeaders.first ?? ""
@@ -93,7 +93,7 @@ struct ImportService {
     private func importSectionBasedCSV(content: String, context: ModelContext) throws -> ImportResult {
         var transactions: [ExportData.TransactionData] = []
         var budgets: [ExportData.MonthlyBudgetData] = []
-        var categories: [ExportData.CustomCategoryData] = []
+        var categories: [ExportData.CategoryData] = []
 
         let sections = content.components(separatedBy: "\n# ")
 
@@ -219,7 +219,7 @@ struct ImportService {
 
                 if isPredefined, let key = predefinedKey {
                     let keyToFind = key
-                    let descriptor = FetchDescriptor<CustomCategory>(
+                    let descriptor = FetchDescriptor<Category>(
                         predicate: #Predicate { $0.predefinedKey == keyToFind }
                     )
                     if let existing = try? context.fetch(descriptor).first {
@@ -233,7 +233,7 @@ struct ImportService {
                     }
                 }
 
-                let category = CustomCategory(
+                let category = Category(
                     id: UUID(uuidString: categoryData.id) ?? UUID(),
                     name: categoryData.name,
                     icon: categoryData.icon,
@@ -325,12 +325,12 @@ struct ImportService {
         )
     }
 
-    func parseCategoryCSVRow(_ values: [String], headers: [String]) -> ExportData.CustomCategoryData? {
+    func parseCategoryCSVRow(_ values: [String], headers: [String]) -> ExportData.CategoryData? {
         guard values.count == headers.count else { return nil }
 
         let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
 
-        return ExportData.CustomCategoryData(
+        return ExportData.CategoryData(
             id: dict["id"] ?? UUID().uuidString,
             name: dict["name"] ?? "Custom",
             icon: dict["icon"] ?? "folder.fill",

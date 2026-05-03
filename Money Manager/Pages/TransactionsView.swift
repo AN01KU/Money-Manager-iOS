@@ -4,7 +4,7 @@ import SwiftData
 struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     @State private var viewModel = TransactionsViewModel()
     var categoryFilter: Binding<String?>?
@@ -213,5 +213,5 @@ private struct TransactionsFilterBar: View {
 
 private struct TransactionsQuerySnapshot: Equatable {
     let transactions: [Transaction]
-    let categories: [CustomCategory]
+    let categories: [Category]
 }

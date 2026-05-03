@@ -3,7 +3,7 @@ import SwiftData
 
 struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var overrides: [CustomCategory]
+    @Query private var overrides: [Category]
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }) private var allTransactions: [Transaction]
 
     @State private var viewModel = ManageCategoriesViewModel()
@@ -237,5 +237,5 @@ struct HiddenCategoryRow: View {
     NavigationStack {
         ManageCategoriesView()
     }
-    .modelContainer(for: [CustomCategory.self])
+    .modelContainer(for: [Category.self])
 }

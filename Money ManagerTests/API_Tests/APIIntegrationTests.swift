@@ -171,7 +171,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         for category in response.data {
             #expect(!category.key.isEmpty, "category \(category.name) has empty key")
@@ -183,7 +183,7 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         let predefinedRows = response.data.filter { $0.isPredefined == true }
         for row in predefinedRows {
@@ -206,7 +206,7 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(!response.key.isEmpty)
     }
@@ -225,12 +225,12 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
         #expect(!created.key.isEmpty)
 
         await delay(200)
 
-        let list: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let list: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         let found = list.data.first { $0.id == created.id }
         #expect(found != nil)
         #expect(found?.key == created.key)
@@ -250,7 +250,7 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == request.name)
         #expect(response.icon == request.icon)
@@ -282,7 +282,7 @@ struct APIIntegrationTests {
             color: "#FF6B6B",
             predefined_key: "food-dining"
         )
-        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == "Eating Out")
         #expect(response.icon == "food-dining")
@@ -295,11 +295,11 @@ struct APIIntegrationTests {
 
         let name = "ListTest \(UUID().uuidString.prefix(8))"
         let request = APICreateCategoryRequest(id: nil, name: name, icon: "travel", color: "#4ECDC4", isHidden: nil, isPredefined: nil, predefinedKey: nil)
-        let _: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let _: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         #expect(response.data.contains(where: { $0.name == name }))
     }
@@ -318,11 +318,11 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         let found = response.data.first(where: { $0.id == created.id })
 
         #expect(found != nil)
@@ -345,13 +345,13 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         let updateName = "Updated \(UUID().uuidString.prefix(4))"
         let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "gaming", color: nil, isHidden: nil)
-        let updated: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: updateRequest)
+        let updated: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: updateRequest)
 
         #expect(updated.name == updateName)
         #expect(updated.icon == "gaming")
@@ -371,20 +371,20 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         // Hide it
         let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: true)
-        let hidden: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: hideRequest)
+        let hidden: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: hideRequest)
         #expect(hidden.isHidden == true)
 
         await delay(200)
 
         // Unhide it
         let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: false)
-        let restored: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: unhideRequest)
+        let restored: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: unhideRequest)
         #expect(restored.isHidden == false)
     }
 
@@ -402,7 +402,7 @@ struct APIIntegrationTests {
             isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
@@ -410,7 +410,7 @@ struct APIIntegrationTests {
 
         await delay(200)
 
-        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let categories: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
@@ -435,7 +435,7 @@ struct APIIntegrationTests {
             color: "#4ECDC4",
             predefined_key: "transport"
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
@@ -445,7 +445,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         // Override row should be gone
-        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let categories: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 

@@ -50,7 +50,7 @@ struct ExportData: Codable {
     var transactions: [TransactionData]?
     var recurringTransactions: [RecurringTransactionData]?
     var budgets: [MonthlyBudgetData]?
-    var categories: [CustomCategoryData]?
+    var categories: [CategoryData]?
     
     struct TransactionData: Codable {
         let id: String
@@ -111,7 +111,7 @@ struct ExportData: Codable {
         let limit: Double
     }
     
-    struct CustomCategoryData: Codable {
+    struct CategoryData: Codable {
         let id: String
         let name: String
         let icon: String
@@ -167,7 +167,7 @@ struct ExportData: Codable {
         transactions: [Transaction],
         recurringTransactions: [RecurringTransaction],
         budgets: [MonthlyBudget],
-        categories: [CustomCategory],
+        categories: [Category],
         groups: [SplitGroupModel] = []
     ) async {
         isExporting = true

@@ -85,22 +85,22 @@ struct TransactionDetailViewModelTests {
     }
 
     @Test
-    func testCategoryIconPrefersCustomCategory() {
+    func testCategoryIconPrefersCategory() {
         let transaction = Transaction(amount: 100, category: "pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = Category(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         viewModel.customCategories = [custom]
 
         #expect(viewModel.categoryIcon == "pawprint.fill")
     }
 
     @Test
-    func testCategoryIconIgnoresHiddenCustomCategory() {
+    func testCategoryIconIgnoresHiddenCategory() {
         let transaction = Transaction(amount: 100, category: "my-custom-pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(key: "my-custom-pets", name: "My Custom Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = Category(key: "my-custom-pets", name: "My Custom Pets", icon: "pawprint.fill", color: "#FF0000")
         custom.isHidden = true
         viewModel.customCategories = [custom]
 
@@ -126,22 +126,22 @@ struct TransactionDetailViewModelTests {
     }
 
     @Test
-    func testCategoryColorPrefersCustomCategory() {
+    func testCategoryColorPrefersCategory() {
         let transaction = Transaction(amount: 100, category: "pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = Category(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF0000")
         viewModel.customCategories = [custom]
 
         #expect(viewModel.categoryColor == Color(hex: "#FF0000"))
     }
 
     @Test
-    func testCategoryColorIgnoresHiddenCustomCategory() {
+    func testCategoryColorIgnoresHiddenCategory() {
         let transaction = Transaction(amount: 100, category: "my-custom-pets", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        let custom = CustomCategory(key: "my-custom-pets", name: "My Custom Pets", icon: "pawprint.fill", color: "#FF0000")
+        let custom = Category(key: "my-custom-pets", name: "My Custom Pets", icon: "pawprint.fill", color: "#FF0000")
         custom.isHidden = true
         viewModel.customCategories = [custom]
 

@@ -91,8 +91,8 @@ struct SyncServiceUpsertTests {
         predefinedKey: String? = nil,
         isHidden: Bool = false,
         updatedAt: Date = Date()
-    ) -> APICustomCategory {
-        APICustomCategory(
+    ) -> APICategory {
+        APICategory(
             id: id, userId: UUID(),
             key: key,
             name: name, icon: icon, color: color,
@@ -108,7 +108,7 @@ struct SyncServiceUpsertTests {
         transactions: [APITransaction] = [],
         recurring: [APIRecurringTransaction] = [],
         budgets: [APIMonthlyBudget] = [],
-        categories: [APICustomCategory] = []
+        categories: [APICategory] = []
     ) -> MockAPIClient {
         let mock = MockAPIClient()
         mock.getHandler = { endpoint in
@@ -347,7 +347,7 @@ struct SyncServiceUpsertTests {
 
     // MARK: - upsertCategories: inserts new custom category from server
 
-    @Test func testFullSyncInsertsNewCustomCategoryFromServer() async throws {
+    @Test func testFullSyncInsertsNewCategoryFromServer() async throws {
         let container = try makeContainer()
         let cat = apiCategory(name: "Travel", icon: "airplane", color: "#00FF00")
         let mock = mockReturningSync(categories: [cat])
@@ -356,7 +356,7 @@ struct SyncServiceUpsertTests {
         await svc.fullSync()
 
         let context = ModelContext(container)
-        let local = try context.fetch(FetchDescriptor<CustomCategory>())
+        let local = try context.fetch(FetchDescriptor<Money_Manager.Category>())
         #expect(local.count == 1)
         #expect(local.first?.name == "Travel")
     }
@@ -372,20 +372,20 @@ struct SyncServiceUpsertTests {
         await svc.fullSync()
 
         let context = ModelContext(container)
-        let local = try context.fetch(FetchDescriptor<CustomCategory>())
+        let local = try context.fetch(FetchDescriptor<Money_Manager.Category>())
         #expect(local.isEmpty)
     }
 
     // MARK: - upsertCategories: updates existing custom category when server is newer
 
-    @Test func testFullSyncUpdatesCustomCategoryWhenServerIsNewer() async throws {
+    @Test func testFullSyncUpdatesCategoryWhenServerIsNewer() async throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let catId = UUID()
         let old = Date(timeIntervalSinceNow: -3600)
         let newer = Date(timeIntervalSinceNow: -10)
 
-        let localCat = CustomCategory(id: catId, name: "OldName", icon: "star", color: "#FF0000")
+        let localCat = Category(id: catId, name: "OldName", icon: "star", color: "#FF0000")
         localCat.updatedAt = old
         context.insert(localCat)
         try context.save()
@@ -396,18 +396,18 @@ struct SyncServiceUpsertTests {
 
         await svc.fullSync()
 
-        let all = try context.fetch(FetchDescriptor<CustomCategory>())
+        let all = try context.fetch(FetchDescriptor<Money_Manager.Category>())
         #expect(all.count == 1)
         #expect(all.first?.name == "NewName")
     }
 
     // MARK: - upsertCategories: purges custom category not returned by server
 
-    @Test func testFullSyncPurgesCustomCategoryNotOnServer() async throws {
+    @Test func testFullSyncPurgesCategoryNotOnServer() async throws {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        let stale = CustomCategory(name: "Stale", icon: "trash", color: "#888888")
+        let stale = Category(name: "Stale", icon: "trash", color: "#888888")
         stale.isPredefined = false
         context.insert(stale)
         try context.save()
@@ -418,7 +418,7 @@ struct SyncServiceUpsertTests {
 
         await svc.fullSync()
 
-        let local = try context.fetch(FetchDescriptor<CustomCategory>())
+        let local = try context.fetch(FetchDescriptor<Money_Manager.Category>())
         #expect(local.isEmpty)
     }
 
@@ -431,7 +431,7 @@ struct SyncServiceUpsertTests {
         context.insert(Transaction(amount: 5, category: "Food", date: Date()))
         context.insert(RecurringTransaction(name: "Sub", amount: 10, category: "Bills", frequency: .monthly, startDate: Date()))
         context.insert(MonthlyBudget(year: 2025, month: 1, limit: 500))
-        context.insert(CustomCategory(name: "Travel", icon: "star", color: "#000"))
+        context.insert(Category(name: "Travel", icon: "star", color: "#000"))
         try context.save()
 
         let svc = makeSyncService(container: container, mock: MockAPIClient())
@@ -440,6 +440,6 @@ struct SyncServiceUpsertTests {
         #expect(try context.fetch(FetchDescriptor<Transaction>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<RecurringTransaction>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<MonthlyBudget>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<CustomCategory>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<Money_Manager.Category>()).isEmpty)
     }
 }

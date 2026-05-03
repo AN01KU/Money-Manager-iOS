@@ -1,5 +1,5 @@
 //
-//  CustomCategory.swift
+//  Category.swift
 //  Money Manager
 //
 //  Created by Ankush Ganesh on 13/01/26.
@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class CustomCategory {
+final class Category {
     @Attribute(.unique) var id: UUID
 
     /// The stable server key used in API payloads (e.g. "food-dining" or "Ankush-cc-<uuid>").
@@ -25,11 +25,14 @@ final class CustomCategory {
     /// Legacy rows may contain the camelCase form (e.g. "foodDining"); use
     /// `PredefinedCategory.normalizeKey(_:)` when reading.
     var predefinedKey: String?
+    /// True for rows seeded from GET /predefined-categories (global, not user-owned).
+    /// False for user override rows and fully custom categories.
+    var isServerPredefined: Bool
 
     var createdAt: Date
     var updatedAt: Date
 
-    init(id: UUID = UUID(), key: String = "", name: String, icon: String, color: String, isPredefined: Bool = false, predefinedKey: String? = nil) {
+    init(id: UUID = UUID(), key: String = "", name: String, icon: String, color: String, isPredefined: Bool = false, predefinedKey: String? = nil, isServerPredefined: Bool = false) {
         self.id = id
         self.key = key
         self.name = name
@@ -38,6 +41,7 @@ final class CustomCategory {
         self.isHidden = false
         self.isPredefined = isPredefined
         self.predefinedKey = predefinedKey
+        self.isServerPredefined = isServerPredefined
         self.createdAt = Date()
         self.updatedAt = Date()
     }

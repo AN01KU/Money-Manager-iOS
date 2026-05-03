@@ -34,7 +34,7 @@ final class Transaction {
     var groupName: String?
     var settlementId: UUID?
     
-    /// UUID of the linked CustomCategory.
+    /// UUID of the linked Category.
     var categoryId: UUID?
 
     init(

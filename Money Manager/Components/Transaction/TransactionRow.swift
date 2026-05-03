@@ -9,7 +9,7 @@ private let timeFormatter: DateFormatter = {
 
 struct TransactionRow: View {
     let transaction: Transaction
-    let categoryLookup: [String: CustomCategory]
+    let categoryLookup: [String: Category]
     var onGroupTapped: ((UUID) -> Void)?
 
     private var resolved: (name: String, icon: String, color: Color) {

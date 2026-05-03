@@ -11,10 +11,10 @@ import SwiftData
         get { persistence.modelContext }
         set { persistence.modelContext = newValue }
     }
-    var customCategories: [CustomCategory] = [] {
+    var customCategories: [Category] = [] {
         didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
     }
-    private var categoryLookup: [String: CustomCategory] = [:]
+    private var categoryLookup: [String: Category] = [:]
 
     var categoryName: String { resolvedCategory.name }
     var categoryIcon: String { resolvedCategory.icon }

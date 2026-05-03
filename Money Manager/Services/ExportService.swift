@@ -33,14 +33,14 @@ struct ExportService {
         }
     }
 
-    func exportCategories(format: ExportFormat, categories: [CustomCategory]) throws -> URL {
+    func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL {
         switch format {
         case .csv: return try exportCategoriesToCSV(categories: categories)
         case .json: return try exportCategoriesToJSON(categories: categories)
         }
     }
 
-    func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL {
         let activeTransactions = transactions.filter { !$0.isSoftDeleted }
         switch format {
         case .csv: return try exportAllToCSV(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
@@ -207,7 +207,7 @@ struct ExportService {
 
     // MARK: - Categories
 
-    private func exportCategoriesToCSV(categories: [CustomCategory]) throws -> URL {
+    private func exportCategoriesToCSV(categories: [Category]) throws -> URL {
         var csv = "ID,Name,Icon,Color,Is Hidden,Is Predefined,Predefined Key\n"
 
         for category in categories {
@@ -227,9 +227,9 @@ struct ExportService {
         return try saveToTempFile(csv, fileName: fileName)
     }
 
-    private func exportCategoriesToJSON(categories: [CustomCategory]) throws -> URL {
+    private func exportCategoriesToJSON(categories: [Category]) throws -> URL {
         let categoryData = categories.map { category in
-            ExportData.CustomCategoryData(
+            ExportData.CategoryData(
                 id: category.id.uuidString,
                 name: category.name,
                 icon: category.icon,
@@ -254,7 +254,7 @@ struct ExportService {
 
     // MARK: - Export All
 
-    private func exportAllToCSV(transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToCSV(transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL {
         var csv = ""
 
         csv += "# TRANSACTIONS\n"
@@ -329,7 +329,7 @@ struct ExportService {
         return try saveToTempFile(csv, fileName: fileName)
     }
 
-    private func exportAllToJSON(transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [CustomCategory]) throws -> URL {
+    private func exportAllToJSON(transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL {
         let transactionsData = transactions.map { transaction in
             ExportData.TransactionData(
                 id: transaction.id.uuidString,
@@ -375,7 +375,7 @@ struct ExportService {
         }
 
         let categoryData = categories.map { category in
-            ExportData.CustomCategoryData(
+            ExportData.CategoryData(
                 id: category.id.uuidString,
                 name: category.name,
                 icon: category.icon,

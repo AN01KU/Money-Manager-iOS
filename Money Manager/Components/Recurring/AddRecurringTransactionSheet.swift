@@ -4,7 +4,7 @@ import SwiftData
 struct AddRecurringTransactionSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     private let prefillAmount: String
     private let prefillCategory: String

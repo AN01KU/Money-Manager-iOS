@@ -31,8 +31,8 @@ enum TransactionTypeFilter: String, CaseIterable {
 
     private var allTransactions: [Transaction] = []
     private var budgets: [MonthlyBudget] = []
-    private var customCategories: [CustomCategory] = []
-    private var categoryLookup: [String: CustomCategory] = [:]
+    private var customCategories: [Category] = []
+    private var categoryLookup: [String: Category] = [:]
     var modelContext: ModelContext? {
         get { persistence.modelContext }
         set { persistence.modelContext = newValue }
@@ -43,7 +43,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         self.persistence = persistence
     }
 
-    func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
+    func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [Category]) {
         self.allTransactions = allTransactions
         self.budgets = budgets
         self.customCategories = customCategories

@@ -4,7 +4,7 @@ import SwiftData
 struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     @State private var viewModel: AddTransactionViewModel
 
@@ -449,7 +449,7 @@ private struct TxnPickerRow<Picker: View>: View {
 
 private struct AddTransactionAmountSection: View {
     @Bindable var viewModel: AddTransactionViewModel
-    let customCategories: [CustomCategory]
+    let customCategories: [Category]
     @State private var categoryTapped = 0
 
     private var categoryByKey: [String: TransactionCategory] {
@@ -624,13 +624,13 @@ private struct AddTransactionSplitSummarySection: View {
 
 #Preview("New Transaction") {
     AddTransactionView()
-        .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
+        .modelContainer(for: [Transaction.self, Category.self], inMemory: true)
 }
 
 #Preview("Edit Transaction") {
     let transaction = Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch at cafe", notes: "With colleagues")
     AddTransactionView(transactionToEdit: transaction)
-        .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
+        .modelContainer(for: [Transaction.self, Category.self], inMemory: true)
 }
 
 #Preview("Group Transaction") {
@@ -639,5 +639,5 @@ private struct AddTransactionSplitSummarySection: View {
     let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joinedAt: Date())
     let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", createdBy: alice.id, createdAt: Date(), members: [alice, bob], balances: [])
     AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }), groupService: GroupService.shared)
-        .modelContainer(for: [Transaction.self, CustomCategory.self], inMemory: true)
+        .modelContainer(for: [Transaction.self, Category.self], inMemory: true)
 }

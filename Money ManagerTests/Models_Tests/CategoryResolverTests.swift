@@ -43,16 +43,16 @@ struct CategoryResolverTests {
     // MARK: - Custom category preference
 
     @Test
-    func testResolvePrefersVisibleCustomCategoryOverPredefined() {
-        let custom = CustomCategory(key: "food-dining", name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
+    func testResolvePrefersVisibleCategoryOverPredefined() {
+        let custom = Category(key: "food-dining", name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
         let result = CategoryResolver.resolve("food-dining", customCategories: [custom])
         #expect(result.icon == "custom.icon")
         #expect(result.color == Color(hex: "#FF0000"))
     }
 
     @Test
-    func testResolveIgnoresHiddenCustomCategoryFallsBackToPredefined() {
-        let hidden = CustomCategory(key: "food-dining", name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
+    func testResolveIgnoresHiddenCategoryFallsBackToPredefined() {
+        let hidden = Category(key: "food-dining", name: "Food & Dining", icon: "custom.icon", color: "#FF0000")
         hidden.isHidden = true
         let result = CategoryResolver.resolve("food-dining", customCategories: [hidden])
         #expect(result.icon == PredefinedCategory.foodDining.icon)
@@ -60,8 +60,8 @@ struct CategoryResolverTests {
     }
 
     @Test
-    func testResolveIgnoresHiddenCustomCategoryFallsBackToGrayWhenNoPredefined() {
-        let hidden = CustomCategory(key: "my-custom", name: "My Custom", icon: "custom.icon", color: "#FF0000")
+    func testResolveIgnoresHiddenCategoryFallsBackToGrayWhenNoPredefined() {
+        let hidden = Category(key: "my-custom", name: "My Custom", icon: "custom.icon", color: "#FF0000")
         hidden.isHidden = true
         let result = CategoryResolver.resolve("my-custom", customCategories: [hidden])
         #expect(result.icon == AppIcons.Category.other)
@@ -70,8 +70,8 @@ struct CategoryResolverTests {
 
     @Test
     func testResolveWithMultipleCustomCategoriesPicksMatchingOne() {
-        let wrong = CustomCategory(key: "transport", name: "Transport", icon: "wrong.icon", color: "#000000")
-        let correct = CustomCategory(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF00FF")
+        let wrong = Category(key: "transport", name: "Transport", icon: "wrong.icon", color: "#000000")
+        let correct = Category(key: "pets", name: "Pets", icon: "pawprint.fill", color: "#FF00FF")
         let result = CategoryResolver.resolve("pets", customCategories: [wrong, correct])
         #expect(result.icon == "pawprint.fill")
         #expect(result.color == Color(hex: "#FF00FF"))
@@ -81,7 +81,7 @@ struct CategoryResolverTests {
 
     @Test
     func testResolveLookupMatchesConvenienceOverload() {
-        let custom = CustomCategory(key: "food-dining", name: "Food & Dining", icon: "fork.knife", color: "#AABBCC")
+        let custom = Category(key: "food-dining", name: "Food & Dining", icon: "fork.knife", color: "#AABBCC")
         let lookup = CategoryResolver.makeLookup(from: [custom])
         let fast = CategoryResolver.resolve("food-dining", lookup: lookup)
         let slow = CategoryResolver.resolve("food-dining", customCategories: [custom])
@@ -91,9 +91,9 @@ struct CategoryResolverTests {
 
     @Test
     func testMakeLookupExcludesHiddenCategories() {
-        let hidden = CustomCategory(key: "hidden-key", name: "Hidden", icon: "eye.slash", color: "#000000")
+        let hidden = Category(key: "hidden-key", name: "Hidden", icon: "eye.slash", color: "#000000")
         hidden.isHidden = true
-        let visible = CustomCategory(key: "visible-key", name: "Visible", icon: "eye", color: "#FFFFFF")
+        let visible = Category(key: "visible-key", name: "Visible", icon: "eye", color: "#FFFFFF")
         let lookup = CategoryResolver.makeLookup(from: [hidden, visible])
         #expect(lookup["hidden-key"] == nil)
         #expect(lookup["visible-key"] != nil)

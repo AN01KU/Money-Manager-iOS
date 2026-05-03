@@ -122,7 +122,7 @@ import SwiftData
 
     let frequencies = RecurringFrequency.allCases
 
-    var customCategories: [CustomCategory] = []
+    var customCategories: [Category] = []
     let persistence: PersistenceService
 
     init(persistence: PersistenceService = PersistenceService()) {

@@ -41,7 +41,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         isSaving = true
         resetColorWarning()
         
-        let category = CustomCategory(
+        let category = Category(
             name: trimmedName,
             icon: selectedIcon,
             color: selectedColor

@@ -131,7 +131,7 @@ extension MonthlyBudget {
     }
 }
 
-extension CustomCategory {
+extension Category {
     func toCreateRequest() -> APICreateCategoryRequest {
         APICreateCategoryRequest(
             id: id,
@@ -153,7 +153,7 @@ extension CustomCategory {
         )
     }
     
-    func applyRemote(_ api: APICustomCategory) {
+    func applyRemote(_ api: APICategory) {
         self.key = api.key
         self.name = api.name
         self.icon = api.icon

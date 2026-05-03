@@ -39,7 +39,7 @@ struct Money_ManagerApp: App {
         let schema = Schema([
             Transaction.self,
             RecurringTransaction.self,
-            CustomCategory.self,
+            Category.self,
             MonthlyBudget.self,
             PendingChange.self,
             FailedChange.self,

@@ -34,7 +34,7 @@ final class RecurringTransaction {
 
     var notes: String?
 
-    /// UUID of the linked CustomCategory.
+    /// UUID of the linked Category.
     var categoryId: UUID?
 
     var type: TransactionKind

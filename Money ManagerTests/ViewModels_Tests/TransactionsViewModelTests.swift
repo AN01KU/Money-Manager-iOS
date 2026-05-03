@@ -10,7 +10,7 @@ struct TransactionsViewModelTests {
         ModelContext(try makeTestContainer())
     }
 
-    private func makeVM(transactions: [Transaction] = [], categories: [CustomCategory] = []) -> TransactionsViewModel {
+    private func makeVM(transactions: [Transaction] = [], categories: [Money_Manager.Category] = []) -> TransactionsViewModel {
         let vm = TransactionsViewModel()
         vm.update(allTransactions: transactions, customCategories: categories)
         return vm

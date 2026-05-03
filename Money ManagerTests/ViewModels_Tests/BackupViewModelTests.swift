@@ -123,8 +123,8 @@ struct ExportDataStructTests {
     }
     
     @Test
-    func testCustomCategoryDataInitialization() {
-        let categoryData = ExportData.CustomCategoryData(
+    func testCategoryDataInitialization() {
+        let categoryData = ExportData.CategoryData(
             id: "cat-1",
             name: "Groceries",
             icon: "cart.fill",
@@ -754,7 +754,7 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .categories
         
-        let category = CustomCategory(
+        let category = Category(
             name: "Groceries",
             icon: "cart.fill",
             color: "#FF0000"
@@ -782,7 +782,7 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .categories
         
-        let category = CustomCategory(
+        let category = Category(
             name: "Groceries",
             icon: "cart.fill",
             color: "#FF0000"
@@ -877,7 +877,7 @@ struct BackupViewModelExportTests {
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
-        let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
+        let category = Category(name: "Custom", icon: "star.fill", color: "#0000FF")
         
         await viewModel.exportData(
             transactions: [expense],
@@ -905,7 +905,7 @@ struct BackupViewModelExportTests {
         let expense = Transaction(amount: 100, category: "Food", date: Date())
         let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
         let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
-        let category = CustomCategory(name: "Custom", icon: "star.fill", color: "#0000FF")
+        let category = Category(name: "Custom", icon: "star.fill", color: "#0000FF")
         
         await viewModel.exportData(
             transactions: [expense],
@@ -1111,7 +1111,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: nil,
             budgets: nil,
             categories: [
-                ExportData.CustomCategoryData(
+                ExportData.CategoryData(
                     id: UUID().uuidString,
                     name: "Groceries",
                     icon: "cart.fill",
@@ -1137,7 +1137,7 @@ struct BackupViewModelImportTests {
         #expect(viewModel.showSuccess == true)
         #expect(viewModel.successMessage?.contains("1 categories") == true)
         
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported.first?.name == "Groceries")
@@ -1222,7 +1222,7 @@ struct BackupViewModelImportTests {
                 ExportData.MonthlyBudgetData(id: UUID().uuidString, year: 2026, month: 3, limit: 5000)
             ],
             categories: [
-                ExportData.CustomCategoryData(
+                ExportData.CategoryData(
                     id: UUID().uuidString, name: "Custom", icon: "star", color: "#000",
                     isHidden: false, isPredefined: false, predefinedKey: nil
                 )
@@ -1365,7 +1365,7 @@ struct BackupViewModelImportTests {
         
         #expect(viewModel.showSuccess == true)
         
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported.first?.name == "Groceries")
@@ -1401,7 +1401,7 @@ struct BackupViewModelImportTests {
         
         let expDescriptor = FetchDescriptor<Transaction>()
         let budDescriptor = FetchDescriptor<MonthlyBudget>()
-        let catDescriptor = FetchDescriptor<CustomCategory>()
+        let catDescriptor = FetchDescriptor<Money_Manager.Category>()
         
         #expect(try context.fetch(expDescriptor).count == 1)
         #expect(try context.fetch(budDescriptor).count == 1)
@@ -1444,7 +1444,7 @@ struct BackupViewModelImportTests {
         let context = try createTestContext()
         
         // Insert existing predefined category
-        let existing = CustomCategory(
+        let existing = Category(
             name: "Food & Dining",
             icon: "fork.knife",
             color: "#FF6B6B",
@@ -1461,7 +1461,7 @@ struct BackupViewModelImportTests {
             recurringTransactions: nil,
             budgets: nil,
             categories: [
-                ExportData.CustomCategoryData(
+                ExportData.CategoryData(
                     id: UUID().uuidString,
                     name: "Food Updated",
                     icon: "fork.knife.circle",
@@ -1486,7 +1486,7 @@ struct BackupViewModelImportTests {
         
         #expect(viewModel.showSuccess == true)
         
-        let descriptor = FetchDescriptor<CustomCategory>()
+        let descriptor = FetchDescriptor<Money_Manager.Category>()
         let categories = try context.fetch(descriptor)
         // Should update existing, not create new
         #expect(categories.count == 1)

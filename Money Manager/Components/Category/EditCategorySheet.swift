@@ -10,7 +10,7 @@ struct EditCategorySheet: View {
     @State private var colorTapped = 0
     @State private var saveSuccess = 0
 
-    init(category: TransactionCategory, allCategories: [CustomCategory]) {
+    init(category: TransactionCategory, allCategories: [Category]) {
         _viewModel = State(wrappedValue: EditCategoryViewModel(
             category: category,
             allCategories: allCategories

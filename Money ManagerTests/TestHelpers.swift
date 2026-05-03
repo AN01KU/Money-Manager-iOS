@@ -7,7 +7,7 @@ import SwiftData
 /// registered together or the container will fail to load.
 func makeTestContainer() throws -> ModelContainer {
     let schema = Schema([
-        Transaction.self, RecurringTransaction.self, MonthlyBudget.self, CustomCategory.self,
+        Transaction.self, RecurringTransaction.self, MonthlyBudget.self, Category.self,
         PendingChange.self, FailedChange.self, OrphanedChange.self,
         SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
     ])

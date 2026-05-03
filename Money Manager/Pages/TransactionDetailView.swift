@@ -4,7 +4,7 @@ import SwiftData
 struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
     @Query private var allRecurring: [RecurringTransaction]
 
     let transaction: Transaction
