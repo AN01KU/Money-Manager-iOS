@@ -44,8 +44,9 @@ import SwiftData
             return (trimmed, "Category name cannot be empty")
         }
 
-        // Check against all stored categories (custom + predefined overrides)
+        // Check against user-owned rows only (overrides + custom) — never server-predefined rows.
         let isDuplicate = allCategories.contains {
+            !$0.isServerPredefined &&
             (excludingId == nil || $0.id != excludingId) &&
             $0.name.lowercased() == trimmed.lowercased() &&
             !$0.isHidden

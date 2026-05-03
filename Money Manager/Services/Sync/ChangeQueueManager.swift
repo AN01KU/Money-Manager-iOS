@@ -169,6 +169,33 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     continue
                 }
 
+                // 409 OVERRIDE_ALREADY_EXISTS — server already has an override for this predefined.
+                // Discard the stale local row we created and the pending change.
+                // The next pullCategories will bring down the server's override with the correct virtual UUID.
+                if case APIError.overrideAlreadyExists = error, change.action == "create", change.entityType == "category" {
+                    AppLogger.sync.warning("[ReplayDebug] OVERRIDE_ALREADY_EXISTS for category=\(change.entityID) — deleting stale local row; pullCategories will sync the server override")
+                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
+                // 404 PREDEFINED_NOT_FOUND — the predefined category no longer exists on the server.
+                if case APIError.predefinedNotFound = error, change.action == "create", change.entityType == "category" {
+                    AppLogger.sync.warning("[ReplayDebug] PREDEFINED_NOT_FOUND for category=\(change.entityID) — predefined removed by admin, discarding local override")
+                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
+                    context.delete(change)
+                    try? context.save()
+                    continue
+                }
+
+                // 400 INVALID_ICON / INVALID_COLOR — permanent client error, no retry.
+                if case APIError.invalidField(let field) = error {
+                    AppLogger.sync.error("[ReplayDebug] invalid \(field) for \(change.entityType)=\(change.entityID) — dead-lettering immediately")
+                    moveToDeadLetter(change, lastError: "Invalid \(field)", context: context)
+                    continue
+                }
+
                 // A 409 on a create means the entity already exists on the server — treat as success
                 if case APIError.conflict = error, change.action == "create" {
                     AppLogger.sync.warning("[ReplayDebug] 409 on create for \(change.entityType)=\(change.entityID) — entity already on server, discarding pending change")
@@ -252,7 +279,14 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
-            let _: EmptyResponse = try await apiClient.post(.raw(endpoint), rawBody: payload)
+            if change.entityType == "category" {
+                // Decode the response so we can fix up the local row's ID when the
+                // server assigns a deterministic virtual UUID (predefined override).
+                let created: APICategory = try await apiClient.post(.raw(endpoint), rawBody: payload)
+                applyCreatedCategory(created, localID: change.entityID, context: context)
+            } else {
+                let _: EmptyResponse = try await apiClient.post(.raw(endpoint), rawBody: payload)
+            }
         case "PUT":
             guard let payload = change.payload else { return }
             let _: EmptyResponse = try await apiClient.put(.raw(endpoint), rawBody: payload)
@@ -275,7 +309,27 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         try? context.save()
     }
 
-    /// Hard-deletes the local SwiftData record after a successful backend DELETE.
+    /// Updates the local Category row to match what the server actually stored.
+    /// Critical for predefined overrides where the server assigns a deterministic
+    /// virtual UUID that differs from the local UUID we created optimistically.
+    private func applyCreatedCategory(_ api: APICategory, localID: UUID, context: ModelContext) {
+        let descriptor = FetchDescriptor<Category>(
+            predicate: #Predicate { $0.id == localID }
+        )
+        guard let rows = try? context.fetch(descriptor), let local = rows.first else {
+            AppLogger.sync.warning("[applyCreatedCategory] local Category row \(localID) not found — skipping ID fix-up")
+            return
+        }
+        if local.id != api.id {
+            AppLogger.sync.debug("[applyCreatedCategory] fixing local id \(local.id) → server id \(api.id) for key=\(api.key)")
+            local.id = api.id
+        }
+        local.applyRemote(api)
+        try? context.save()
+    }
+
+    /// Hard-deletes the local SwiftData record after a successful backend DELETE,
+    /// or when a stale local row needs to be removed (e.g. OVERRIDE_ALREADY_EXISTS).
     private func hardDeleteEntity(entityType: String, entityID: UUID, context: ModelContext) {
         switch entityType {
         case "recurring":
@@ -287,6 +341,13 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             }
         case "transaction":
             let descriptor = FetchDescriptor<Transaction>(
+                predicate: #Predicate { $0.id == entityID }
+            )
+            if let record = try? context.fetch(descriptor), let item = record.first {
+                context.delete(item)
+            }
+        case "category":
+            let descriptor = FetchDescriptor<Category>(
                 predicate: #Predicate { $0.id == entityID }
             )
             if let record = try? context.fetch(descriptor), let item = record.first {

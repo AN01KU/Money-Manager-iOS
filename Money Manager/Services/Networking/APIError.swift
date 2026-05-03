@@ -16,6 +16,9 @@ enum APIError: Error, LocalizedError, Equatable {
     case notFound
     case conflict
     case staleWrite          // 409 with code "STALE_WRITE" — server has a newer version
+    case overrideAlreadyExists  // 409 OVERRIDE_ALREADY_EXISTS
+    case predefinedNotFound  // 404 PREDEFINED_NOT_FOUND
+    case invalidField(String)  // 400 INVALID_ICON / INVALID_COLOR
     case syncSessionInvalid(reason: String)
     case serverError
     case transientError      // 502 — server-side blip; client should back off and retry
@@ -44,6 +47,12 @@ enum APIError: Error, LocalizedError, Equatable {
             return "Conflict detected. Data will be synced."
         case .staleWrite:
             return "A newer version of this item exists on the server."
+        case .overrideAlreadyExists:
+            return "An override for this category already exists."
+        case .predefinedNotFound:
+            return "This predefined category is no longer available."
+        case .invalidField(let field):
+            return "Invalid \(field). Please choose a different one."
         case .syncSessionInvalid(let reason):
             return "Sync session rejected: \(reason)"
         case .serverError:
@@ -65,10 +74,15 @@ enum APIError: Error, LocalizedError, Equatable {
              (.notFound, .notFound),
              (.conflict, .conflict),
              (.staleWrite, .staleWrite),
+             (.predefinedNotFound, .predefinedNotFound),
              (.serverError, .serverError),
              (.transientError, .transientError),
              (.unknown, .unknown):
             return true
+        case (.overrideAlreadyExists, .overrideAlreadyExists):
+            return true
+        case let (.invalidField(lF), .invalidField(rF)):
+            return lF == rF
         case let (.httpError(lCode, lMsg), .httpError(rCode, rMsg)):
             return lCode == rCode && lMsg == rMsg
         case (.decodingError, .decodingError),
@@ -96,13 +110,28 @@ extension APIError {
             } else {
                 self = .unauthorized
             }
+        case 400:
+            let code = Self.parseErrorCode(from: data)
+            if code == "INVALID_ICON" {
+                self = .invalidField("icon")
+            } else if code == "INVALID_COLOR" {
+                self = .invalidField("color")
+            } else {
+                self = .httpError(statusCode: 400, message: message)
+            }
         case 404:
-            self = .notFound
+            if Self.parseErrorCode(from: data) == "PREDEFINED_NOT_FOUND" {
+                self = .predefinedNotFound
+            } else {
+                self = .notFound
+            }
         case 409:
             if let reason = Self.parseSyncSessionReason(from: data) {
                 self = .syncSessionInvalid(reason: reason)
             } else if Self.parseErrorCode(from: data) == "STALE_WRITE" {
                 self = .staleWrite
+            } else if Self.parseErrorCode(from: data) == "OVERRIDE_ALREADY_EXISTS" {
+                self = .overrideAlreadyExists
             } else {
                 self = .conflict
             }
@@ -145,4 +174,5 @@ extension APIError {
         else { return nil }
         return json["code"] as? String
     }
+
 }

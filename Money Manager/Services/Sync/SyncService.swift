@@ -303,15 +303,17 @@ final class SyncService: SyncServiceProtocol {
     private func pullPredefinedCategories(context: ModelContext) async {
         do {
             let response: APIListResponse<APIPredefinedCategory> = try await apiClient.get(.predefinedCategories)
+            AppLogger.sync.debug("[pullPredefined] received \(response.data.count) rows: \(response.data.map { "\($0.key)" }.joined(separator: ", "))")
             upsertPredefinedCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull predefined categories: \(error)")
         }
     }
-    
+
     private func pullCategories(context: ModelContext) async {
         do {
             let response: APIListResponse<APICategory> = try await apiClient.get(.syncCategories)
+            AppLogger.sync.debug("[pullCategories] received \(response.data.count) rows: \(response.data.map { "\($0.key) isPredefined=\($0.isPredefined ?? false)" }.joined(separator: ", "))")
             upsertCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull categories: \(error)")
@@ -333,12 +335,18 @@ final class SyncService: SyncServiceProtocol {
 
     private func upsertPredefinedCategories(_ categories: [APIPredefinedCategory], context: ModelContext) {
         let localCategories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
-        let localServerPredefinedByKey = Dictionary(
-            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, Category)? in
-                guard cat.isServerPredefined, !cat.key.isEmpty else { return nil }
-                return (cat.key, cat)
+        // Use keepingCurrent to safely handle any duplicate keys in local store.
+        var localServerPredefinedByKey = [String: Category]()
+        for cat in localCategories where cat.isServerPredefined && !cat.key.isEmpty {
+            if let existing = localServerPredefinedByKey[cat.key] {
+                // Duplicate — purge the older one
+                AppLogger.sync.warning("[upsertPredefined] duplicate isServerPredefined row for key=\(cat.key), purging older")
+                context.delete(existing.updatedAt < cat.updatedAt ? existing : cat)
+                localServerPredefinedByKey[cat.key] = existing.updatedAt >= cat.updatedAt ? existing : cat
+            } else {
+                localServerPredefinedByKey[cat.key] = cat
             }
-        )
+        }
 
         let serverKeys = Set(categories.map { $0.key })
 
@@ -641,12 +649,10 @@ final class SyncService: SyncServiceProtocol {
         let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
         // Predefined rows always store the canonical serverKey in `key`, so we can
         // dedupe by it without consulting the legacy camelCase `predefinedKey` field.
-        let localByPredServerKey = Dictionary(
-            uniqueKeysWithValues: localCategories.compactMap { cat -> (String, Category)? in
-                guard cat.isPredefined, !cat.key.isEmpty else { return nil }
-                return (cat.key, cat)
-            }
-        )
+        var localByPredServerKey = [String: Category]()
+        for cat in localCategories where cat.isPredefined && !cat.key.isEmpty {
+            localByPredServerKey[cat.key] = cat
+        }
 
         AppLogger.sync.debug("[UpsertCategories] server returned \(apiCategories.count) categories")
         for remote in apiCategories {

@@ -73,15 +73,7 @@ struct CategoryEditorView: View {
     private var colorCard: some View {
         EditorSection(header: "COLOR") {
             VStack(spacing: AppConstants.UI.spacing12) {
-                if let conflict = colorConflictCategory {
-                    HStack(spacing: 6) {
-                        AppIcon(name: AppIcons.UI.warningIcon, size: 14, color: AppColors.warning)
-                        Text("Also used by \"\(conflict)\"")
-                            .font(AppTypography.caption1)
-                            .foregroundStyle(AppColors.warning)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+
 
                 let palette = AppIcons.CategoryColor.palette
                 let columns = Array(repeating: GridItem(.flexible(), spacing: AppConstants.UI.spacing12), count: 8)

@@ -18,6 +18,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
+            !$0.isServerPredefined &&
             $0.id != category.overrideRow?.id &&
             $0.color.lowercased() == selectedColor.lowercased() &&
             !$0.isHidden
@@ -40,62 +41,84 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     }
 
     func save() -> Bool {
+        let logName = name
+        let logIcon = selectedIcon
+        let logColor = selectedColor
+        let logCategoryId = category.id
+        let logIsPredefined = category.isPredefined
+        let logOverrideId = category.overrideRow?.id.uuidString ?? "nil"
+        let logAllCount = allCategories.count
+        let logPredKey = editingPredefinedKey ?? "nil"
+        AppLogger.data.debug("[EditCategory] save() called — name=\(logName) icon=\(logIcon) color=\(logColor)")
+        AppLogger.data.debug("[EditCategory] category.id=\(logCategoryId) isPredefined=\(logIsPredefined) overrideRow=\(logOverrideId)")
+        AppLogger.data.debug("[EditCategory] allCategories.count=\(logAllCount) editingPredefinedKey=\(logPredKey)")
+
         let (trimmedName, validationError) = validateName(name, excludingId: category.overrideRow?.id)
+        AppLogger.data.debug("[EditCategory] validateName -> trimmed=\(trimmedName) error=\(validationError ?? "none")")
         if let validationError {
-            print("SSSSSS1")
             errorMessage = validationError
             showError = true
             return false
         }
 
-        guard checkColorConflict() else { return false }
-        guard let context = modelContext else { return false }
+        guard checkColorConflict() else {
+            AppLogger.data.debug("[EditCategory] blocked by color conflict")
+            return false
+        }
+        guard let context = modelContext else {
+            AppLogger.data.error("[EditCategory] no modelContext — aborting")
+            return false
+        }
 
         isSaving = true
         resetColorWarning()
-        print("SSSSSS2")
         if let row = category.overrideRow {
-            // Update existing override row — transactions are keyed by server key, not name,
-            // so renaming the display name requires no cascade update.
+            AppLogger.data.debug("[EditCategory] updating existing override row id=\(row.id)")
             row.name = trimmedName
             row.icon = selectedIcon
             row.color = selectedColor
             row.updatedAt = Date()
 
             do {
-                print("SSSSSS3")
                 try persistence.saveCategory(row, action: "update")
+                AppLogger.data.debug("[EditCategory] update saved ok")
             } catch {
-                print("SSSSSS4")
+                AppLogger.data.error("[EditCategory] update failed: \(error)")
                 errorMessage = "Failed to save changes"
                 showError = true
                 isSaving = false
                 return false
             }
-        } else if category.isPredefined,
-                  let predefined = predefinedCase(for: category) {
-            // No override row yet — create one to record the user's changes
-            print("SSSSSS5")
+        } else if category.isPredefined {
+            let predefined = predefinedCase(for: category)
+            let serverKey = category.key
+            AppLogger.data.debug("[EditCategory] no override row — predefinedCase=\(predefined?.serverKey ?? "nil") category.key=\(serverKey)")
+
+            // No override row yet — create one. Use category.key directly since
+            // server-predefined rows may not be in the PredefinedCategory enum.
             let row = Category(
-                key: predefined.serverKey,
+                key: serverKey,
                 name: trimmedName,
                 icon: selectedIcon,
                 color: selectedColor,
                 isPredefined: true,
-                predefinedKey: predefined.serverKey
+                predefinedKey: serverKey
             )
             context.insert(row)
+            AppLogger.data.debug("[EditCategory] inserted new override row id=\(row.id) key=\(serverKey)")
 
             do {
-                print("SSSSSS6")
                 try persistence.saveCategory(row, action: "create")
+                AppLogger.data.debug("[EditCategory] create saved ok")
             } catch {
-                print("SSSSSS7")
+                AppLogger.data.error("[EditCategory] create failed: \(error)")
                 errorMessage = "Failed to save changes"
                 showError = true
                 isSaving = false
                 return false
             }
+        } else {
+            AppLogger.data.error("[EditCategory] save() fell through — no branch matched")
         }
 
         isSaving = false
