@@ -110,8 +110,10 @@ final class SyncService: SyncServiceProtocol {
 
         let preflight = await runPreflight()
         switch preflight {
-        case .valid, .skipped:
+        case .valid:
             await changeQueueManager.replayAll(context: context, isAuthenticated: true)
+        case .skipped:
+            AppLogger.sync.info("Preflight skipped (no sync session) — not replaying queue")
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on launch: \(reason) — orphaning queue")
             changeQueueManager.orphanAll(context: context)
@@ -135,8 +137,10 @@ final class SyncService: SyncServiceProtocol {
 
         let preflight = await runPreflight()
         switch preflight {
-        case .valid, .skipped:
+        case .valid:
             await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+        case .skipped:
+            AppLogger.sync.info("Preflight skipped (no sync session) — not replaying queue")
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — orphaning queue")
             changeQueueManager.orphanAll(context: context)
