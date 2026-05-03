@@ -101,6 +101,11 @@ struct TransactionCategory: Identifiable {
             )
         }
 
-        return predefinedSource + customSource
+        let all = predefinedSource + customSource
+        return all.sorted {
+            if $0.key == "other" { return false }
+            if $1.key == "other" { return true }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
 }
