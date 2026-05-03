@@ -730,7 +730,8 @@ final class SyncService: SyncServiceProtocol {
         }
 
         try? context.save()
-        syncCheckpoint(entityType: "category", serverCount: apiCategories.count, localCount: localCategories.count)
+        let userOwnedLocalCount = localCategories.filter { !$0.isServerPredefined }.count
+        syncCheckpoint(entityType: "category", serverCount: apiCategories.count, localCount: userOwnedLocalCount)
     }
     
     private func pullGroups(context: ModelContext) async {
