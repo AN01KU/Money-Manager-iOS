@@ -532,7 +532,7 @@ struct EditCategoryViewModelTests {
         let predefined = PredefinedCategory.foodDining
         let category = TransactionCategory(
             id: "predefined:\(predefined.serverKey)",
-            key: "test-key",
+            key: predefined.serverKey,
             name: predefined.rawValue,
             icon: predefined.icon,
             colorHex: predefined.defaultColorHex,
