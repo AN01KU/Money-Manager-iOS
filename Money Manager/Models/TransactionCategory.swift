@@ -62,7 +62,7 @@ struct TransactionCategory: Identifiable {
                     name: ov?.name ?? base.name,
                     icon: ov?.icon ?? base.icon,
                     colorHex: ov?.color ?? base.color,
-                    isHidden: base.isHidden,
+                    isHidden: ov?.isHidden ?? base.isHidden,
                     isPredefined: true,
                     isDeletable: base.key != "other",
                     overrideRow: ov

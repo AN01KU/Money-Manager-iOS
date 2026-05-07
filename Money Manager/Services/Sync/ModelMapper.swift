@@ -133,14 +133,21 @@ extension MonthlyBudget {
 
 extension Category {
     func toCreateRequest() -> APICreateCategoryRequest {
-        APICreateCategoryRequest(
-            id: id,
+        if isPredefined, let key = predefinedKey {
+            return APICreateCategoryRequest(
+                name: isHidden ? nil : name,
+                icon: isHidden ? nil : icon,
+                color: isHidden ? nil : color,
+                isHidden: isHidden ? true : nil,
+                predefinedKey: key
+            )
+        }
+        return APICreateCategoryRequest(
             name: name,
             icon: icon,
             color: color,
             isHidden: isHidden ? true : nil,
-            isPredefined: isPredefined ? true : nil,
-            predefinedKey: predefinedKey
+            predefinedKey: nil
         )
     }
     

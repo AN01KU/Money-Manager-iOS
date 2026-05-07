@@ -398,21 +398,17 @@ struct APIUpdateBudgetRequest: Codable {
 }
 
 struct APICreateCategoryRequest: Codable {
-    let id: UUID?
-    let name: String
-    let icon: String
-    let color: String
+    let name: String?
+    let icon: String?
+    let color: String?
     let isHidden: Bool?
-    let isPredefined: Bool?
     let predefinedKey: String?
 
     enum CodingKeys: String, CodingKey {
-        case id
         case name
         case icon
         case color
         case isHidden = "is_hidden"
-        case isPredefined = "is_predefined"
         case predefinedKey = "predefined_key"
     }
 }

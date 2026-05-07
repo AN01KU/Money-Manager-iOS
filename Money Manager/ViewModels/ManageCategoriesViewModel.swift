@@ -24,16 +24,15 @@ import SwiftData
             row.isHidden = true
             row.updatedAt = Date()
             try? persistence.saveCategory(row, action: "update")
-        } else if category.isPredefined,
-                  let predefined = predefinedCase(for: category),
-                  let context = modelContext {
+        } else if category.isPredefined, let context = modelContext {
+            let serverKey = category.key
             let row = Category(
-                key: predefined.serverKey,
-                name: predefined.rawValue,
-                icon: predefined.icon,
-                color: predefined.defaultColorHex,
+                key: serverKey,
+                name: category.name,
+                icon: serverKey,
+                color: category.colorHex,
                 isPredefined: true,
-                predefinedKey: predefined.serverKey
+                predefinedKey: serverKey
             )
             row.isHidden = true
             context.insert(row)

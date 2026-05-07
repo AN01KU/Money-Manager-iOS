@@ -275,7 +275,7 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         }
 
         AppLogger.sync.debug("[ReplayDebug] replayChange: entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) method=\(change.httpMethod) endpoint=\(endpoint)")
-
+        if let p = change.payload, let s = String(data: p, encoding: .utf8) { AppLogger.sync.debug("[ReplayDebug] payload: \(s)") }
         switch change.httpMethod {
         case "POST":
             guard let payload = change.payload else { return }
