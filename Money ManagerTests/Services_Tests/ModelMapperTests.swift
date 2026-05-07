@@ -221,7 +221,6 @@ struct ModelMapperTests {
         #expect(req.name == "Fitness")
         #expect(req.icon == "🏋️")
         #expect(req.color == "#FF0000")
-        #expect(req.id == cat.id)
     }
 
     @Test

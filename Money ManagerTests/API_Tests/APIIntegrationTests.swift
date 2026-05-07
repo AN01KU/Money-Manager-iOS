@@ -198,12 +198,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateCategoryRequest(
-            id: nil,
             name: "KeyTest \(UUID().uuidString.prefix(8))",
             icon: "shopping",
             color: "#1ABC9C",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
@@ -217,12 +215,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateCategoryRequest(
-            id: nil,
             name: "KeyPersist \(UUID().uuidString.prefix(8))",
             icon: "gifts",
             color: "#8E44AD",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
@@ -242,12 +238,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateCategoryRequest(
-            id: nil,
             name: "Test Cat \(UUID().uuidString.prefix(8))",
             icon: "pets",
             color: "#FF5733",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
@@ -294,7 +288,7 @@ struct APIIntegrationTests {
         await delay(200)
 
         let name = "ListTest \(UUID().uuidString.prefix(8))"
-        let request = APICreateCategoryRequest(id: nil, name: name, icon: "travel", color: "#4ECDC4", isHidden: nil, isPredefined: nil, predefinedKey: nil)
+        let request = APICreateCategoryRequest(name: name, icon: "travel", color: "#4ECDC4", isHidden: nil, predefinedKey: nil)
         let _: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
@@ -310,12 +304,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateCategoryRequest(
-            id: nil,
             name: "Shape Test \(UUID().uuidString.prefix(8))",
             icon: "education",
             color: "#8E44AD",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
@@ -337,12 +329,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateCategoryRequest(
-            id: nil,
             name: "Update Test \(UUID().uuidString.prefix(8))",
             icon: "music",
             color: "#FF5733",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
@@ -363,12 +353,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateCategoryRequest(
-            id: nil,
             name: "Hide Test \(UUID().uuidString.prefix(8))",
             icon: "savings",
             color: "#45B7D1",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
@@ -394,12 +382,10 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateCategoryRequest(
-            id: nil,
             name: "Delete Me \(UUID().uuidString.prefix(8))",
             icon: "taxes",
             color: "#FF5733",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
         let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)

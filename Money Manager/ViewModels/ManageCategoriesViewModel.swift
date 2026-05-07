@@ -25,12 +25,27 @@ import SwiftData
             row.updatedAt = Date()
             try? persistence.saveCategory(row, action: "update")
         } else if category.isPredefined, let context = modelContext {
-            let serverKey = category.key
+            let serverKey: String
+            let name: String
+            let icon: String
+            let color: String
+            if let predefined = predefinedCase(for: category) {
+                serverKey = predefined.serverKey
+                name = predefined.rawValue
+                icon = predefined.icon
+                color = predefined.defaultColorHex
+            } else {
+                // Server-predefined category not in the local enum — use id to extract key.
+                serverKey = String(category.id.dropFirst("predefined:".count))
+                name = category.name
+                icon = category.icon
+                color = category.colorHex
+            }
             let row = Category(
                 key: serverKey,
-                name: category.name,
-                icon: serverKey,
-                color: category.colorHex,
+                name: name,
+                icon: icon,
+                color: color,
                 isPredefined: true,
                 predefinedKey: serverKey
             )
