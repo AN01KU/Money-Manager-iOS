@@ -13,11 +13,10 @@ struct ActivityRow: View {
         switch item {
         case .transaction(let tx, let groupName):
             TransactionActivityRow(transaction: tx, groupName: groupName)
-        case .settlement(let settlement, let groupName, let memberMap):
+        case .settlement(let settlement, let groupName):
             SettlementActivityRow(
                 settlement: settlement,
                 groupName: groupName,
-                memberMap: memberMap,
                 currentUserId: currentUserId
             )
         }
@@ -27,10 +26,8 @@ struct ActivityRow: View {
 // MARK: - Transaction row
 
 private struct TransactionActivityRow: View {
-    let transaction: APIGroupTransaction
+    let transaction: ActivityTransaction
     let groupName: String
-
-    private var amount: Double { transaction.totalAmount }
 
     private var resolved: (icon: String, color: Color) {
         CategoryResolver.resolve(transaction.category, customCategories: [])
@@ -65,7 +62,7 @@ private struct TransactionActivityRow: View {
 
             Spacer()
 
-            Text(CurrencyFormatter.format(amount, showDecimals: true))
+            Text(CurrencyFormatter.format(transaction.totalAmount, showDecimals: true))
                 .font(AppTypography.amount)
                 .foregroundStyle(.primary)
         }
@@ -77,22 +74,18 @@ private struct TransactionActivityRow: View {
 // MARK: - Settlement row
 
 private struct SettlementActivityRow: View {
-    let settlement: APISettlement
+    let settlement: ActivitySettlement
     let groupName: String
-    let memberMap: [UUID: String]
     let currentUserId: UUID?
 
-    private var isCurrentUserPayer: Bool { settlement.fromUser == currentUserId }
-    private var amount: Double { settlement.amount }
+    private var isCurrentUserPayer: Bool { settlement.fromUserId == currentUserId }
 
     private var fromName: String {
-        if settlement.fromUser == currentUserId { return "You" }
-        return memberMap[settlement.fromUser] ?? "Unknown"
+        settlement.fromUserId == currentUserId ? "You" : settlement.fromName
     }
 
     private var toName: String {
-        if settlement.toUser == currentUserId { return "you" }
-        return memberMap[settlement.toUser] ?? "Unknown"
+        settlement.toUserId == currentUserId ? "you" : settlement.toName
     }
 
     private var accentColor: Color {
@@ -120,7 +113,7 @@ private struct SettlementActivityRow: View {
                     Text("·")
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
-                    Text(settlement.createdAt, style: .date)
+                    Text(settlement.date, style: .date)
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
                 }
@@ -129,7 +122,7 @@ private struct SettlementActivityRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(CurrencyFormatter.format(amount, showDecimals: true))
+                Text(CurrencyFormatter.format(settlement.amount, showDecimals: true))
                     .font(AppTypography.amount)
                     .foregroundStyle(accentColor)
                 Text(isCurrentUserPayer ? "paid" : "received")

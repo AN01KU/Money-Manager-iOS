@@ -27,6 +27,7 @@ final class SyncService: SyncServiceProtocol {
     private let networkMonitor = NetworkMonitor.shared
     private var authService: AuthServiceProtocol?
     private var modelContainer: ModelContainer?
+    private let persistence = PersistenceService(changeQueue: changeQueueManager)
 
     private let lastSyncKey = "last_sync_at"
     nonisolated(unsafe) private var networkObserver: Any?
@@ -218,76 +219,24 @@ final class SyncService: SyncServiceProtocol {
     private func enqueueLocalData(context: ModelContext) {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for transaction in transactions where !transaction.isSoftDeleted {
-            do {
-                let payload = try AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
-                changeQueueManager.enqueue(
-                    entityType: "transaction",
-                    entityID: transaction.id,
-                    action: "create",
-                    endpoint: "/transactions",
-                    httpMethod: "POST",
-                    payload: payload,
-                    context: context
-                )
-            } catch {
-                AppLogger.sync.error("[EnqueueLocalData] failed to encode transaction \(transaction.id): \(error) — skipping")
-            }
+            persistence.enqueueCreate(transaction, context: context)
         }
 
         let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
         let customOnly = categories.filter { !$0.isPredefined }
         AppLogger.sync.debug("[EnqueueLocalData] total Category rows=\(categories.count) uploading custom-only=\(customOnly.count)")
         for category in customOnly {
-            do {
-                let payload = try AppAPIClient.apiEncoder.encode(category.toCreateRequest())
-                changeQueueManager.enqueue(
-                    entityType: "category",
-                    entityID: category.id,
-                    action: "create",
-                    endpoint: "/categories",
-                    httpMethod: "POST",
-                    payload: payload,
-                    context: context
-                )
-            } catch {
-                AppLogger.sync.error("[EnqueueLocalData] failed to encode category \(category.id): \(error) — skipping")
-            }
+            persistence.enqueueCreate(category, context: context)
         }
 
         let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
         for budget in budgets {
-            do {
-                let payload = try AppAPIClient.apiEncoder.encode(budget.toCreateRequest())
-                changeQueueManager.enqueue(
-                    entityType: "budget",
-                    entityID: budget.id,
-                    action: "create",
-                    endpoint: "/budgets",
-                    httpMethod: "POST",
-                    payload: payload,
-                    context: context
-                )
-            } catch {
-                AppLogger.sync.error("[EnqueueLocalData] failed to encode budget \(budget.id): \(error) — skipping")
-            }
+            persistence.enqueueCreate(budget, context: context)
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
-            do {
-                let payload = try AppAPIClient.apiEncoder.encode(item.toCreateRequest())
-                changeQueueManager.enqueue(
-                    entityType: "recurring",
-                    entityID: item.id,
-                    action: "create",
-                    endpoint: "/recurring-transactions",
-                    httpMethod: "POST",
-                    payload: payload,
-                    context: context
-                )
-            } catch {
-                AppLogger.sync.error("[EnqueueLocalData] failed to encode recurring \(item.id): \(error) — skipping")
-            }
+            persistence.enqueueCreate(item, context: context)
         }
     }
     
@@ -438,21 +387,21 @@ final class SyncService: SyncServiceProtocol {
     }
     
     private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
-        let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "transaction" }
-        )
-        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
-        let pendingIDs = Set(pendingChanges.map { $0.entityID })
-        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
-
         let failedDescriptor = FetchDescriptor<FailedChange>(
             predicate: #Predicate { $0.entityType == "transaction" }
         )
         let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
+        let pendingDescriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == "transaction" }
+        )
+        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
+
         let descriptor = FetchDescriptor<Transaction>()
         let localTransactions = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localTransactions.map { ($0.id, $0) })
+
+        var serverWonIDs = Set<UUID>()
 
         for remote in apiTransactions {
             guard isValid(remote) else { continue }
@@ -464,10 +413,7 @@ final class SyncService: SyncServiceProtocol {
                     local.groupId = id
                 }
                 if remote.updatedAt > local.updatedAt {
-                    if let stale = pendingByID[remote.id] {
-                        AppLogger.sync.warning("Conflict: server wins for transaction \(remote.id) — deleting stale pending change")
-                        context.delete(stale)
-                    }
+                    serverWonIDs.insert(remote.id)
                     local.applyRemote(remote)
                 }
             } else {
@@ -489,6 +435,8 @@ final class SyncService: SyncServiceProtocol {
                 context.insert(tx)
             }
         }
+
+        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "transaction", context: context)
 
         // Remove local transactions that the server no longer returns and have no pending upload.
         // The server responds with is_deleted=false only, so anything missing from that set is
@@ -515,31 +463,28 @@ final class SyncService: SyncServiceProtocol {
     }
 
     private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
-        let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "recurring" }
-        )
-        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
-        let pendingIDs = Set(pendingChanges.map { $0.entityID })
-        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
-
         let failedDescriptor = FetchDescriptor<FailedChange>(
             predicate: #Predicate { $0.entityType == "recurring" }
         )
         let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
+        let pendingDescriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == "recurring" }
+        )
+        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
+
         let descriptor = FetchDescriptor<RecurringTransaction>()
         let localRecurring = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localRecurring.map { ($0.id, $0) })
+
+        var serverWonIDs = Set<UUID>()
 
         for remote in apiExpenses {
             guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if local.isSoftDeleted { continue }
                 if remote.updatedAt > local.updatedAt {
-                    if let stale = pendingByID[remote.id] {
-                        AppLogger.sync.warning("Conflict: server wins for recurring \(remote.id) — deleting stale pending change")
-                        context.delete(stale)
-                    }
+                    serverWonIDs.insert(remote.id)
                     local.name = remote.name
                     local.amount = remote.amount
                     local.category = remote.category
@@ -576,6 +521,8 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
+        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "recurring", context: context)
+
         // Purge local recurring transactions the server no longer returns and have no pending upload.
         // Also protect entities stuck in the dead-letter queue — their create may have failed transiently.
         let serverRecurringIDs = Set(apiExpenses.map { $0.id })
@@ -595,22 +542,19 @@ final class SyncService: SyncServiceProtocol {
         let pendingDescriptor = FetchDescriptor<PendingChange>(
             predicate: #Predicate { $0.entityType == "budget" }
         )
-        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
-        let pendingIDs = Set(pendingChanges.map { $0.entityID })
-        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
+        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
         let descriptor = FetchDescriptor<MonthlyBudget>()
         let localBudgets = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localBudgets.map { ($0.id, $0) })
 
+        var serverWonIDs = Set<UUID>()
+
         for remote in apiBudgets {
             guard isValid(remote) else { continue }
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
-                    if let stale = pendingByID[remote.id] {
-                        AppLogger.sync.warning("Conflict: server wins for budget \(remote.id) — deleting stale pending change")
-                        context.delete(stale)
-                    }
+                    serverWonIDs.insert(remote.id)
                     local.year = remote.year
                     local.month = remote.month
                     local.limit = remote.limit
@@ -626,6 +570,8 @@ final class SyncService: SyncServiceProtocol {
                 context.insert(budget)
             }
         }
+
+        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "budget", context: context)
 
         // Purge local budgets the server no longer returns and have no pending upload.
         let serverBudgetIDs = Set(apiBudgets.map { $0.id })
@@ -644,13 +590,13 @@ final class SyncService: SyncServiceProtocol {
         let pendingDescriptor = FetchDescriptor<PendingChange>(
             predicate: #Predicate { $0.entityType == "category" }
         )
-        let pendingChanges = (try? context.fetch(pendingDescriptor)) ?? []
-        let pendingIDs = Set(pendingChanges.map { $0.entityID })
-        let pendingByID = Dictionary(uniqueKeysWithValues: pendingChanges.map { ($0.entityID, $0) })
+        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
         let descriptor = FetchDescriptor<Category>()
         let localCategories = (try? context.fetch(descriptor)) ?? []
         let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
+
+        var serverWonIDs = Set<UUID>()
         // Predefined rows always store the canonical serverKey in `key`, so we can
         // dedupe by it without consulting the legacy camelCase `predefinedKey` field.
         var localByPredServerKey = [String: Category]()
@@ -675,10 +621,7 @@ final class SyncService: SyncServiceProtocol {
 
             if let local = localByID[remote.id] {
                 if remote.updatedAt > local.updatedAt {
-                    if let stale = pendingByID[remote.id] {
-                        AppLogger.sync.warning("Conflict: server wins for category \(remote.id) — deleting stale pending change")
-                        context.delete(stale)
-                    }
+                    serverWonIDs.insert(remote.id)
                     AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remoteIsHidden) predefinedKey=\(normalizedPredefinedKey ?? "nil")")
                     local.key = remote.key
                     local.name = remote.name
@@ -692,10 +635,7 @@ final class SyncService: SyncServiceProtocol {
             } else if remoteIsPredefined,
                       let local = localByPredServerKey[remote.key] {
                 AppLogger.sync.debug("[UpsertCategories] updating by serverKey=\(remote.key): \(remote.name) isHidden=\(remoteIsHidden)")
-                if let stale = pendingByID[local.id] {
-                    AppLogger.sync.warning("Conflict: server wins for category (serverKey=\(remote.key)) — deleting stale pending change")
-                    context.delete(stale)
-                }
+                serverWonIDs.insert(local.id)
                 local.id = remote.id
                 local.key = remote.key
                 local.name = remote.name
@@ -721,6 +661,8 @@ final class SyncService: SyncServiceProtocol {
                 context.insert(category)
             }
         }
+
+        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "category", context: context)
 
         // Purge local custom categories the server no longer returns and have no pending upload.
         // Never touch server-predefined rows — those are managed by upsertPredefinedCategories.

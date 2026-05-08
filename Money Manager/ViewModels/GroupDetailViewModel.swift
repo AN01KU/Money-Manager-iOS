@@ -233,11 +233,12 @@ final class GroupDetailViewModel {
         }
     }
 
-    // MARK: - After transaction added / edited
+    // MARK: - After transaction added / edited / deleted
 
     func transactionAdded(_ transaction: APIGroupTransaction) {
         transactions.insert(transaction, at: 0)
-        recalculateBalances()
+        // Reload so balances reflect server-authoritative split amounts.
+        Task { await loadData() }
     }
 
     func transactionEdited(replacing old: APIGroupTransaction, with updated: APIGroupTransaction) {
@@ -246,35 +247,31 @@ final class GroupDetailViewModel {
         } else {
             transactions.insert(updated, at: 0)
         }
-        recalculateBalances()
 
         Task {
             do {
                 try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: old.id)
+                await loadData()
             } catch {
                 // Restore old on failure
                 if let idx = transactions.firstIndex(where: { $0.id == updated.id }) {
                     transactions[idx] = old
                 }
-                recalculateBalances()
                 errorMessage = errorDescription(error)
             }
         }
     }
 
-    // MARK: - Delete transaction
-
     func deleteTransaction(_ transaction: APIGroupTransaction) {
         transactions.removeAll { $0.id == transaction.id }
-        recalculateBalances()
 
         Task {
             do {
                 try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: transaction.id)
+                await loadData()
             } catch {
                 // Restore on failure
                 transactions.insert(transaction, at: 0)
-                recalculateBalances()
                 errorMessage = errorDescription(error)
             }
         }
@@ -294,7 +291,6 @@ final class GroupDetailViewModel {
         Task {
             do {
                 try await groupService.deleteSettlement(settlementId: settlement.id)
-                // Reload to get authoritative balances from server
                 await loadData()
             } catch {
                 settlements = original
@@ -323,23 +319,4 @@ final class GroupDetailViewModel {
         (error as? APIError)?.errorDescription ?? error.localizedDescription
     }
 
-    private func recalculateBalances() {
-        var map: [UUID: Double] = [:]
-        for m in members { map[m.id] = 0 }
-
-        for tx in transactions {
-            map[tx.paidByUserId, default: 0] += tx.totalAmount
-        }
-
-        // Split equally among all members for now (server is authoritative for custom splits)
-        let memberCount = members.isEmpty ? 1 : members.count
-        for tx in transactions {
-            let share = tx.totalAmount / Double(memberCount)
-            for m in members {
-                map[m.id, default: 0] -= share
-            }
-        }
-
-        balances = map.map { APIGroupBalance(userId: $0.key, amount: $0.value) }
-    }
 }

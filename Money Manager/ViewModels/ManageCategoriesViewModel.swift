@@ -25,30 +25,7 @@ import SwiftData
             row.updatedAt = Date()
             try? persistence.saveCategory(row, action: "update")
         } else if category.isPredefined, let context = modelContext {
-            let serverKey: String
-            let name: String
-            let icon: String
-            let color: String
-            if let predefined = predefinedCase(for: category) {
-                serverKey = predefined.serverKey
-                name = predefined.rawValue
-                icon = predefined.icon
-                color = predefined.defaultColorHex
-            } else {
-                // Server-predefined category not in the local enum — use id to extract key.
-                serverKey = String(category.id.dropFirst("predefined:".count))
-                name = category.name
-                icon = category.icon
-                color = category.colorHex
-            }
-            let row = Category(
-                key: serverKey,
-                name: name,
-                icon: icon,
-                color: color,
-                isPredefined: true,
-                predefinedKey: serverKey
-            )
+            let row = Category.makeOverride(for: category)
             row.isHidden = true
             context.insert(row)
             try? persistence.saveCategory(row, action: "create")
@@ -97,14 +74,7 @@ import SwiftData
             }
 
             context.delete(row)
-            try? persistence.saveAndSync(
-                entityType: "category",
-                entityID: categoryId,
-                action: "delete",
-                endpoint: "/categories",
-                httpMethod: "DELETE",
-                payload: nil
-            )
+            try? persistence.deleteCategory(id: categoryId)
             AppLogger.data.info("Category deleted: \(categoryName)")
         }
         // A predefined with no override row has nothing to delete locally
@@ -141,24 +111,8 @@ import SwiftData
         for row in rows {
             let rowID = row.id
             context.delete(row)
-            try? persistence.saveAndSync(
-                entityType: "category",
-                entityID: rowID,
-                action: "delete",
-                endpoint: "/categories",
-                httpMethod: "DELETE",
-                payload: nil
-            )
+            try? persistence.deleteCategory(id: rowID)
         }
     }
 
-    // MARK: - Helpers
-
-    private func predefinedCase(for category: TransactionCategory) -> PredefinedCategory? {
-        // id format: "predefined:<serverKey>"
-        let prefix = "predefined:"
-        guard category.id.hasPrefix(prefix) else { return nil }
-        let key = String(category.id.dropFirst(prefix.count))
-        return PredefinedCategory.allCases.first { $0.serverKey == key }
-    }
 }

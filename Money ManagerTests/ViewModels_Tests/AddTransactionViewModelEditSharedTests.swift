@@ -94,7 +94,7 @@ struct AddTransactionViewModelEditSharedTests {
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(completed == false)
-        #expect(vm.showError == true)
+        #expect(vm.errorMessage != nil)
         #expect(vm.isSaving == false)
     }
 

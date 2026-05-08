@@ -34,26 +34,27 @@ struct AddTransactionView: View {
                 personalScrollView
             }
         }
-        .alert(item: $viewModel.activeAlert) { alert in
-            switch alert {
-            case .recurringAmount:
-                return Alert(
-                    title: Text("Update Recurring Transaction?"),
-                    message: Text("You've changed fields that are part of the recurring schedule. Update the template too?"),
-                    primaryButton: .default(Text("Update Recurring Too")) {
-                        viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() }
-                    },
-                    secondaryButton: .cancel(Text("Just This Transaction")) {
-                        viewModel.saveThisTransactionOnly(); saveSuccess = true; dismiss()
-                    }
-                )
-            case .error(let msg):
-                return Alert(title: Text("Error"), message: Text(msg), dismissButton: .cancel(Text("OK")))
+        .alert("Update Recurring Transaction?", isPresented: $viewModel.showRecurringAmountAlert) {
+            Button("Update Recurring Too") {
+                viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() }
             }
+            Button("Just This Transaction", role: .cancel) {
+                viewModel.saveThisTransactionOnly { saveSuccess = true; dismiss() }
+            }
+        } message: {
+            Text("You've changed fields that are part of the recurring schedule. Update the template too?")
+        }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
         .sensoryFeedback(.error, trigger: errorTriggered)
-        .onChange(of: viewModel.activeAlert) { _, newVal in
-            if case .error = newVal { errorTriggered += 1 }
+        .onChange(of: viewModel.errorMessage) { _, newVal in
+            if newVal != nil { errorTriggered += 1 }
         }
     }
 

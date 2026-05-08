@@ -253,7 +253,8 @@ struct OverviewViewModelTests {
         
         #expect(viewModel.filteredTransactions.count == 1)
         #expect(viewModel.filteredTransactions.first?.category == "Transport")
-        #expect(viewModel.totalSpent == 200)
+        // totalSpent reflects the full month scope, not the search-narrowed result
+        #expect(viewModel.totalSpent == 300)
     }
     
     @Test

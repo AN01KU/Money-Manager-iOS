@@ -131,95 +131,66 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             do {
                 try await replayChange(change, context: context)
             } catch {
-                if case APIError.unauthorized = error {
-                    NotificationCenter.default.post(name: .authSessionExpired, object: nil)
-                    return
+                guard let apiError = error as? APIError else {
+                    retryOrDeadLetter(change, error: error.localizedDescription, context: context)
+                    continue
                 }
 
-                if case APIError.syncSessionInvalid = error {
+                switch apiError {
+                case .unauthorized:
+                    NotificationCenter.default.post(name: .authSessionExpired, object: nil)
+                    return
+
+                case .syncSessionInvalid:
+                    // Entire session is invalid — orphan the queue and stop.
                     orphanAll(context: context)
                     NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
                     return
-                }
 
-                // 502 = transient DB blip on the server. Stop this replay batch entirely;
-                // the change stays queued and will be retried on the next sync trigger.
-                // Do NOT orphan the queue — the server never processed the write.
-                if case APIError.transientError = error {
+                case .transientError:
+                    // 502 server blip — leave the change queued, retry on next sync trigger.
                     AppLogger.sync.warning("[ReplayDebug] 502 transient error for \(change.entityType)=\(change.entityID) — backing off, will retry")
                     return
-                }
 
-                // 409 STALE_WRITE = server already has a newer version of this entity.
-                // Discard the pending change so the stale local write is not retried;
-                // the next full sync will pull down the authoritative server version.
-                if case APIError.staleWrite = error {
+                case .staleWrite:
+                    // Server has a newer version — discard our pending write; next pull wins.
                     AppLogger.sync.warning("[ReplayDebug] STALE_WRITE for \(change.entityType)=\(change.entityID) — discarding stale pending change, server version wins")
-                    context.delete(change)
-                    try? context.save()
-                    continue
-                }
+                    discardChange(change, context: context)
 
-                // A 404 on a delete means the entity never reached the server — treat as success
-                if case APIError.notFound = error, change.action == "delete" {
+                case .notFound where change.action == "delete":
+                    // 404 on a delete — entity never reached the server, clean up locally.
                     AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
-                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
-                    context.delete(change)
-                    try? context.save()
-                    continue
-                }
+                    discardChangeAndEntity(change, context: context)
 
-                // 409 OVERRIDE_ALREADY_EXISTS — server already has an override for this predefined.
-                // Discard the stale local row we created and the pending change.
-                // The next pullCategories will bring down the server's override with the correct virtual UUID.
-                if case APIError.overrideAlreadyExists = error, change.action == "create", change.entityType == "category" {
+                case .overrideAlreadyExists where change.action == "create" && change.entityType == "category":
+                    // Server already has this predefined override — drop stale local row;
+                    // next pullCategories will bring down the canonical server version.
                     AppLogger.sync.warning("[ReplayDebug] OVERRIDE_ALREADY_EXISTS for category=\(change.entityID) — deleting stale local row; pullCategories will sync the server override")
-                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
-                    context.delete(change)
-                    try? context.save()
-                    continue
-                }
+                    discardChangeAndEntity(change, context: context)
 
-                // 404 PREDEFINED_NOT_FOUND — the predefined category no longer exists on the server.
-                if case APIError.predefinedNotFound = error, change.action == "create", change.entityType == "category" {
+                case .predefinedNotFound where change.action == "create" && change.entityType == "category":
+                    // Predefined category removed by admin — discard local override entirely.
                     AppLogger.sync.warning("[ReplayDebug] PREDEFINED_NOT_FOUND for category=\(change.entityID) — predefined removed by admin, discarding local override")
-                    hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
-                    context.delete(change)
-                    try? context.save()
-                    continue
-                }
+                    discardChangeAndEntity(change, context: context)
 
-                // 400 INVALID_ICON / INVALID_COLOR — permanent client error, no retry.
-                if case APIError.invalidField(let field) = error {
+                case .invalidField(let field):
+                    // Permanent client-side validation error — dead-letter immediately, no retry.
                     AppLogger.sync.error("[ReplayDebug] invalid \(field) for \(change.entityType)=\(change.entityID) — dead-lettering immediately")
                     moveToDeadLetter(change, lastError: "Invalid \(field)", context: context)
-                    continue
-                }
 
-                // A 409 on a create means the entity already exists on the server — treat as success
-                if case APIError.conflict = error, change.action == "create" {
+                case .conflict where change.action == "create":
+                    // 409 on a create — entity already exists on server, treat as success.
                     AppLogger.sync.warning("[ReplayDebug] 409 on create for \(change.entityType)=\(change.entityID) — entity already on server, discarding pending change")
-                    context.delete(change)
-                    try? context.save()
-                    continue
-                }
+                    discardChange(change, context: context)
 
-                let errorDetail: String
-                if let apiError = error as? APIError, case .httpError(let code, let msg) = apiError {
-                    errorDetail = "HTTP \(code): \(msg ?? "(no body)")"
-                } else {
-                    errorDetail = error.localizedDescription
-                }
-
-                change.retryCount += 1
-                AppLogger.sync.warning("replayAll: retry \(change.retryCount)/\(ChangeQueueManager.maxRetryCount) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) error=\(errorDetail)")
-
-                if change.retryCount >= ChangeQueueManager.maxRetryCount {
-                    AppLogger.sync.error("replayAll: dead-lettering entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) after \(change.retryCount) retries — final error: \(errorDetail)")
-                    moveToDeadLetter(change, lastError: errorDetail, context: context)
-                } else {
-                    change.nextRetryAt = Self.backoffDate(forRetry: change.retryCount)
-                    try? context.save()
+                default:
+                    let detail: String
+                    if case .httpError(let code, let msg) = apiError {
+                        detail = "HTTP \(code): \(msg ?? "(no body)")"
+                    } else {
+                        detail = apiError.localizedDescription
+                    }
+                    retryOrDeadLetter(change, error: detail, context: context)
                 }
             }
         }
@@ -232,6 +203,35 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         let base = baseRetryDelay * pow(2.0, Double(exponent))
         let jitter = Double.random(in: 0..<base * 0.2)
         return Date(timeIntervalSinceNow: base + jitter)
+    }
+
+    /// Removes the pending change and saves. Use when the server conflict is resolved
+    /// without touching the local entity (e.g. STALE_WRITE, duplicate create).
+    private func discardChange(_ change: PendingChange, context: ModelContext) {
+        context.delete(change)
+        try? context.save()
+    }
+
+    /// Removes both the local entity and the pending change. Use when the local row
+    /// is stale or invalid and should be replaced by the next server pull
+    /// (e.g. OVERRIDE_ALREADY_EXISTS, PREDEFINED_NOT_FOUND, 404 on delete).
+    private func discardChangeAndEntity(_ change: PendingChange, context: ModelContext) {
+        hardDeleteEntity(entityType: change.entityType, entityID: change.entityID, context: context)
+        context.delete(change)
+        try? context.save()
+    }
+
+    /// Increments retry count and schedules backoff, or dead-letters if the limit is reached.
+    private func retryOrDeadLetter(_ change: PendingChange, error: String, context: ModelContext) {
+        change.retryCount += 1
+        AppLogger.sync.warning("replayAll: retry \(change.retryCount)/\(ChangeQueueManager.maxRetryCount) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) error=\(error)")
+        if change.retryCount >= ChangeQueueManager.maxRetryCount {
+            AppLogger.sync.error("replayAll: dead-lettering entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) after \(change.retryCount) retries — final error: \(error)")
+            moveToDeadLetter(change, lastError: error, context: context)
+        } else {
+            change.nextRetryAt = Self.backoffDate(forRetry: change.retryCount)
+            try? context.save()
+        }
     }
 
     private func purgeExpiredFailedChanges(context: ModelContext) {
@@ -386,6 +386,21 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             context.delete(change)
         }
         try? context.save()
+    }
+
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext) {
+        guard !entityIDs.isEmpty else { return }
+        let descriptor = FetchDescriptor<PendingChange>(
+            predicate: #Predicate { $0.entityType == entityType }
+        )
+        guard let changes = try? context.fetch(descriptor) else { return }
+        var removed = 0
+        for change in changes where entityIDs.contains(change.entityID) {
+            AppLogger.sync.warning("Conflict: server wins for \(entityType)=\(change.entityID) — removing stale pending change")
+            context.delete(change)
+            removed += 1
+        }
+        if removed > 0 { try? context.save() }
     }
 
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {

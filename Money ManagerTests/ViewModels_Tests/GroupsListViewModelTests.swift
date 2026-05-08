@@ -37,6 +37,10 @@ struct GroupsListViewModelTests {
         )
     }
 
+    private func makeActivityTransaction(description: String = "Test", totalAmount: Double = 10.0, createdAt: Date = Date()) -> ActivityTransaction {
+        ActivityTransaction(id: UUID(), date: createdAt, description: description, category: "Food", totalAmount: totalAmount, paidByUserId: UUID())
+    }
+
     private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
         let body = APIGroupDetailsBody(
             id: groupId, name: groupName, createdBy: UUID(), createdAt: Date(),
@@ -150,8 +154,8 @@ struct GroupsListViewModelTests {
     func testFilteredActivityWithEmptySearchReturnsAll() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            .transaction(makeTransaction(description: "Dinner"), groupName: "Trip"),
-            .transaction(makeTransaction(description: "Taxi"),   groupName: "Work")
+            .transaction(makeActivityTransaction(description: "Dinner"), groupName: "Trip"),
+            .transaction(makeActivityTransaction(description: "Taxi"),   groupName: "Work")
         ]
         vm.searchText = ""
         #expect(vm.filteredActivity.count == 2)
@@ -161,8 +165,8 @@ struct GroupsListViewModelTests {
     func testFilteredActivityMatchesTransactionDescription() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            .transaction(makeTransaction(description: "Dinner"), groupName: "Trip"),
-            .transaction(makeTransaction(description: "Hotel"),  groupName: "Trip")
+            .transaction(makeActivityTransaction(description: "Dinner"), groupName: "Trip"),
+            .transaction(makeActivityTransaction(description: "Hotel"),  groupName: "Trip")
         ]
         vm.searchText = "dinner"
         #expect(vm.filteredActivity.count == 1)
@@ -177,8 +181,8 @@ struct GroupsListViewModelTests {
     func testFilteredActivityMatchesGroupName() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
         vm.recentActivity = [
-            .transaction(makeTransaction(description: "Dinner"), groupName: "Weekend Trip"),
-            .transaction(makeTransaction(description: "Lunch"),  groupName: "Office")
+            .transaction(makeActivityTransaction(description: "Dinner"), groupName: "Weekend Trip"),
+            .transaction(makeActivityTransaction(description: "Lunch"),  groupName: "Office")
         ]
         vm.searchText = "weekend"
         #expect(vm.filteredActivity.count == 1)

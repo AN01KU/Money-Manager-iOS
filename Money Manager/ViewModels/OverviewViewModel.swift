@@ -83,7 +83,23 @@ enum TransactionTypeFilter: String, CaseIterable {
             }
         }
 
-        var result = dateFiltered
+        // Apply category filter. Totals and recent list are computed at this scope —
+        // after category drill-down but before search/type filters, which are transient UI state.
+        let categoryFiltered: [Transaction]
+        if let categoryFilter = selectedCategoryFilter {
+            categoryFiltered = dateFiltered.filter { $0.category == categoryFilter }
+        } else {
+            categoryFiltered = dateFiltered
+        }
+
+        // Totals reflect the month + category scope, not the search term.
+        totalSpent  = categoryFiltered.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
+        totalIncome = categoryFiltered.filter { $0.type == .income  }.reduce(0) { $0 + $1.amount }
+
+        // Recent list follows the category drill-down but ignores search and type filter.
+        recentTransactions = Array(categoryFiltered.prefix(8))
+
+        var result = categoryFiltered
 
         if !searchText.isEmpty {
             result = result.filter { transaction in
@@ -92,14 +108,6 @@ enum TransactionTypeFilter: String, CaseIterable {
                 (transaction.notes?.localizedStandardContains(searchText) ?? false)
             }
         }
-
-        if let categoryFilter = selectedCategoryFilter {
-            result = result.filter { $0.category == categoryFilter }
-        }
-
-        // Compute totals before applying type filter (so budget card is always accurate)
-        totalSpent = result.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
-        totalIncome = result.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
 
         switch transactionTypeFilter {
         case .all:      break
@@ -120,14 +128,15 @@ enum TransactionTypeFilter: String, CaseIterable {
             dailyBudgetLimit = 0
         }
 
-        // For the category chart: use income when that filter is active, otherwise expenses
+        // Category chart: derive from categoryFiltered (before type/search filters) so the
+        // chart base is always the full month/category scope, not a search-narrowed subset.
         let categoryBase: [Transaction]
         let categoryTotal: Double
         if transactionTypeFilter == .income {
-            categoryBase = result  // already income-only at this point
+            categoryBase = categoryFiltered.filter { $0.type == .income }
             categoryTotal = totalIncome
         } else {
-            categoryBase = result.filter { $0.type == .expense }
+            categoryBase = categoryFiltered.filter { $0.type == .expense }
             categoryTotal = totalSpent
         }
 
@@ -150,9 +159,6 @@ enum TransactionTypeFilter: String, CaseIterable {
         } else {
             categorySpending = []
         }
-
-        // Recent transactions: up to 8 from the filtered period, unaffected by type/search filters
-        recentTransactions = Array(dateFiltered.prefix(8))
     }
 
     func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {

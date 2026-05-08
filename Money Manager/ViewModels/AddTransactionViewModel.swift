@@ -30,12 +30,41 @@ enum SplitType: String, CaseIterable {
     case custom = "Custom"
 }
 
-enum AddTransactionAlert: Identifiable, Equatable {
-    case recurringAmount
-    case error(String)
-    var id: Int { switch self { case .recurringAmount: 0; case .error: 1 } }
-}
+struct SplitCalculator {
+    let totalAmount: Double
+    let selectedMembers: Set<UUID>
+    let customAmounts: [UUID: String]
+    let splitType: SplitType
 
+    var equalShareText: String {
+        guard totalAmount > 0, !selectedMembers.isEmpty else {
+            return "\(CurrencyFormatter.currentSymbol)0"
+        }
+        return CurrencyFormatter.format(totalAmount / Double(selectedMembers.count), showDecimals: true)
+    }
+
+    var customSplitTotal: Double {
+        selectedMembers.compactMap { Double(customAmounts[$0] ?? "") }.reduce(0, +)
+    }
+
+    /// `false` when `totalAmount` is zero but custom amounts are also zero — only valid when the
+    /// original amount string was a parseable number (callers must check that separately).
+    var splitMatchesTotal: Bool {
+        totalAmount > 0 && abs(customSplitTotal - totalAmount) < 0.01
+    }
+
+    func buildSplits() -> [APIGroupTransactionSplitInput] {
+        if splitType == .equal {
+            let share = totalAmount / Double(max(selectedMembers.count, 1))
+            return selectedMembers.map { APIGroupTransactionSplitInput(userId: $0, amount: share) }
+        } else {
+            return selectedMembers.compactMap { id in
+                guard let raw = customAmounts[id], let value = Double(raw) else { return nil }
+                return APIGroupTransactionSplitInput(userId: id, amount: value)
+            }
+        }
+    }
+}
 
 @MainActor
 @Observable class AddTransactionViewModel {
@@ -45,20 +74,8 @@ enum AddTransactionAlert: Identifiable, Equatable {
     var notes = ""
     var transactionType: TransactionType = .expense
     var showCategoryPicker = false
-    var activeAlert: AddTransactionAlert?
-
-    var showError: Bool {
-        get { if case .error = activeAlert { return true }; return false }
-        set { if !newValue, case .error = activeAlert { activeAlert = nil } }
-    }
-    var errorMessage: String {
-        get { if case .error(let msg) = activeAlert { return msg }; return "" }
-        set { activeAlert = .error(newValue) }
-    }
-    var showRecurringAmountAlert: Bool {
-        get { activeAlert == .recurringAmount }
-        set { activeAlert = newValue ? .recurringAmount : nil }
-    }
+    var errorMessage: String?
+    var showRecurringAmountAlert = false
 
     // Inline recurring fields
     var isRecurring = false
@@ -81,7 +98,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
     private var originalAmount: Double?
     private var originalCategory: String?
     private var originalType: TransactionType?
-    private var pendingSaveCompletion: (() -> Void)?
+    private var pendingAmountValue: Double?
     private(set) var editingRecurringExpenseId: UUID?
 
     let mode: AddTransactionMode
@@ -150,21 +167,18 @@ enum AddTransactionAlert: Identifiable, Equatable {
         return true
     }
 
-    var equalShareText: String {
-        guard let total = Double(amount), total > 0, !selectedMembers.isEmpty else {
-            return "\(CurrencyFormatter.currentSymbol)0"
-        }
-        return CurrencyFormatter.format(total / Double(selectedMembers.count), showDecimals: true)
+    private var splitCalculator: SplitCalculator {
+        SplitCalculator(
+            totalAmount: Double(amount) ?? 0,
+            selectedMembers: selectedMembers,
+            customAmounts: customAmounts,
+            splitType: splitType
+        )
     }
 
-    var customSplitTotal: Double {
-        selectedMembers.compactMap { Double(customAmounts[$0] ?? "") }.reduce(0, +)
-    }
-
-    var splitMatchesTotal: Bool {
-        guard let total = Double(amount) else { return false }
-        return abs(customSplitTotal - total) < 0.01
-    }
+    var equalShareText: String { splitCalculator.equalShareText }
+    var customSplitTotal: Double { splitCalculator.customSplitTotal }
+    var splitMatchesTotal: Bool { splitCalculator.splitMatchesTotal }
 
     // MARK: - Init
 
@@ -181,34 +195,39 @@ enum AddTransactionAlert: Identifiable, Equatable {
 
     func setup() {
         switch mode {
-        case .personal(let editing):
-            guard let expense = editing else { return }
-            originalAmount = expense.amount
-            originalCategory = expense.category
-            originalType = TransactionType(kind: expense.type)
-            editingRecurringExpenseId = expense.recurringExpenseId
-            isRecurring = expense.recurringExpenseId != nil
-            amount = expense.amount.editableString
-            selectedCategory = expense.category
-            selectedDate = expense.date
-            selectedTime = expense.time ?? Date()
-            hasTime = expense.time != nil
-            description = expense.transactionDescription ?? ""
-            notes = expense.notes ?? ""
-            transactionType = TransactionType(kind: expense.type)
+        case .personal(let editing): setupPersonal(editing: editing)
+        case .shared(_, let members, let currentUserId, let editing, _): setupShared(members: members, currentUserId: currentUserId, editing: editing)
+        }
+    }
 
-        case .shared(_, let members, let currentUserId, let editing, _):
-            if let tx = editing {
-                let txAmount = Double(tx.totalAmount) ?? 0
-                amount = txAmount.editableString
-                selectedCategory = tx.category
-                description = tx.description ?? ""
-                paidByUserId = tx.paidByUserId
-                selectedMembers = Set(tx.splits.map(\.userId))
-            } else {
-                paidByUserId = currentUserId
-                selectedMembers = Set(members.map(\.id))
-            }
+    private func setupPersonal(editing: Transaction?) {
+        guard let expense = editing else { return }
+        originalAmount = expense.amount
+        originalCategory = expense.category
+        originalType = TransactionType(kind: expense.type)
+        editingRecurringExpenseId = expense.recurringExpenseId
+        isRecurring = expense.recurringExpenseId != nil
+        amount = expense.amount.editableString
+        selectedCategory = expense.category
+        selectedDate = expense.date
+        selectedTime = expense.time ?? Date()
+        hasTime = expense.time != nil
+        description = expense.transactionDescription ?? ""
+        notes = expense.notes ?? ""
+        transactionType = TransactionType(kind: expense.type)
+    }
+
+    private func setupShared(members: [APIGroupMember], currentUserId: UUID?, editing: APIGroupTransaction?) {
+        if let tx = editing {
+            let txAmount = Double(tx.totalAmount) ?? 0
+            amount = txAmount.editableString
+            selectedCategory = tx.category
+            description = tx.description ?? ""
+            paidByUserId = tx.paidByUserId
+            selectedMembers = Set(tx.splits.map(\.userId))
+        } else {
+            paidByUserId = currentUserId
+            selectedMembers = Set(members.map(\.id))
         }
     }
 
@@ -247,7 +266,6 @@ enum AddTransactionAlert: Identifiable, Equatable {
     func save(completion: @escaping () -> Void) {
         guard let amountValue = Double(amount), amountValue > 0 else {
             errorMessage = "Please enter a valid amount"
-            showError = true
             return
         }
 
@@ -257,7 +275,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
             let categoryChanged = originalCategory.map { selectedCategory != $0 } ?? false
             let typeChanged = originalType.map { transactionType != $0 } ?? false
             if amountChanged || categoryChanged || typeChanged {
-                pendingSaveCompletion = completion
+                pendingAmountValue = amountValue
                 showRecurringAmountAlert = true
                 return
             }
@@ -322,7 +340,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
             } catch {
                 AppLogger.data.error("Failed to save recurring: \(error)")
                 errorMessage = "Failed to save recurring template"
-                showError = true
+
                 isSaving = false
                 return
             }
@@ -372,7 +390,6 @@ enum AddTransactionAlert: Identifiable, Equatable {
         } catch {
             AppLogger.data.error("Failed to save expense: \(error)")
             errorMessage = "Failed to save expense"
-            showError = true
             isSaving = false
             return
         }
@@ -383,21 +400,22 @@ enum AddTransactionAlert: Identifiable, Equatable {
 
     // MARK: - Recurring amount alert responses
 
-    func saveThisTransactionOnly() {
-        guard let completion = pendingSaveCompletion else { return }
-        pendingSaveCompletion = nil
+    func saveThisTransactionOnly(completion: @escaping () -> Void) {
+        let amountValue = pendingAmountValue ?? 0
+        pendingAmountValue = nil
         isSaving = true
-        savePersonal(amountValue: Double(amount) ?? 0, completion: completion)
+        savePersonal(amountValue: amountValue, completion: completion)
     }
 
     func saveAlsoUpdatingRecurring(completion: @escaping () -> Void) {
-        pendingSaveCompletion = nil
+        let amountValue = pendingAmountValue ?? 0
+        pendingAmountValue = nil
         if let recurringId = editingRecurringExpenseId, let ctx = persistence.modelContext {
             let descriptor = FetchDescriptor<RecurringTransaction>(
                 predicate: #Predicate { $0.id == recurringId && !$0.isSoftDeleted }
             )
             if let recurring = try? ctx.fetch(descriptor).first {
-                if let newAmount = Double(amount) { recurring.amount = newAmount }
+                recurring.amount = amountValue
                 recurring.category = selectedCategory
                 recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
@@ -405,7 +423,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
             }
         }
         isSaving = true
-        savePersonal(amountValue: Double(amount) ?? 0, completion: completion)
+        savePersonal(amountValue: amountValue, completion: completion)
     }
 
     // MARK: - Private: shared save
@@ -431,23 +449,11 @@ enum AddTransactionAlert: Identifiable, Equatable {
     ) {
         guard let paidBy = paidByUserId else {
             errorMessage = "Please select who paid"
-            showError = true
             isSaving = false
             return
         }
 
-        let splits: [APIGroupTransactionSplitInput]
-        if splitType == .equal {
-            let share = amountValue / Double(max(selectedMembers.count, 1))
-            splits = selectedMembers.map {
-                APIGroupTransactionSplitInput(userId: $0, amount: share)
-            }
-        } else {
-            splits = selectedMembers.compactMap { id in
-                guard let raw = customAmounts[id], let value = Double(raw) else { return nil }
-                return APIGroupTransactionSplitInput(userId: id, amount: value)
-            }
-        }
+        let splits = splitCalculator.buildSplits()
 
         let request = APICreateGroupTransactionRequest(
             paidByUserId: paidBy,
@@ -468,7 +474,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
                 completion()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
-                showError = true
+
                 isSaving = false
             }
         }
@@ -498,7 +504,7 @@ enum AddTransactionAlert: Identifiable, Equatable {
                 completion()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
-                showError = true
+
                 isSaving = false
             }
         }

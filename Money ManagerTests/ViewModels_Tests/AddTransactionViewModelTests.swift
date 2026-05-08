@@ -147,7 +147,7 @@ struct AddTransactionViewModelTests {
 
         #expect(completed == true)
         #expect(vm.isSaving == false)
-        #expect(vm.showError == false)
+        #expect(vm.errorMessage == nil)
 
         let expenses = try context.fetch(FetchDescriptor<Transaction>())
         #expect(expenses.count == 1)
@@ -258,9 +258,7 @@ struct AddTransactionViewModelTests {
         vm.save { completed = true }
 
         #expect(completed == false)
-        #expect(vm.showError == true)
-        print(vm.errorMessage)
-        #expect(vm.errorMessage.contains("amount"))
+        #expect(vm.errorMessage?.contains("amount") == true)
     }
 
     @Test
@@ -275,7 +273,7 @@ struct AddTransactionViewModelTests {
         vm.save { completed = true }
 
         #expect(completed == false)
-        #expect(vm.showError == true)
+        #expect(vm.errorMessage != nil)
     }
 
     @Test
@@ -586,11 +584,12 @@ struct AddTransactionViewModelTests {
         vm.amount = "1500"
         vm.selectedCategory = "Housing"
 
+        var completed = false
         vm.save { }
         #expect(vm.showRecurringAmountAlert == true)
 
         // User chooses to update only this transaction
-        vm.saveThisTransactionOnly()
+        vm.saveThisTransactionOnly { completed = true }
 
         // Recurring amount stays unchanged
         let fetchedRecurring = try context.fetch(FetchDescriptor<RecurringTransaction>())

@@ -26,6 +26,14 @@ struct TransactionCategory: Identifiable {
 
     var color: Color { Color(hex: colorHex) }
 
+    /// The `PredefinedCategory` case backing this category, if any.
+    /// Derived from the `"predefined:<serverKey>"` id format owned by this type.
+    var predefinedCase: PredefinedCategory? {
+        guard id.hasPrefix("predefined:") else { return nil }
+        let key = String(id.dropFirst("predefined:".count))
+        return PredefinedCategory.allCases.first { $0.serverKey == key }
+    }
+
     // MARK: - Factory
 
     /// Builds the full list the UI needs: predefined defaults (possibly

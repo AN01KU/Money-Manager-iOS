@@ -50,4 +50,36 @@ final class Category {
     var isDeletable: Bool {
         key != "other"
     }
+
+    /// Builds a user-override row for a predefined `TransactionCategory`.
+    /// Use this whenever you need to persist a change to a predefined category
+    /// (hide, edit name/icon/color) and no override row exists yet.
+    @MainActor static func makeOverride(for category: TransactionCategory) -> Category {
+        let serverKey: String
+        let name: String
+        let icon: String
+        let color: String
+
+        if let predefined = category.predefinedCase {
+            serverKey = predefined.serverKey
+            name = predefined.rawValue
+            icon = predefined.icon
+            color = predefined.defaultColorHex
+        } else {
+            // Server-predefined row not in the local enum — extract key from id.
+            serverKey = String(category.id.dropFirst("predefined:".count))
+            name = category.name
+            icon = category.icon
+            color = category.colorHex
+        }
+
+        return Category(
+            key: serverKey,
+            name: name,
+            icon: icon,
+            color: color,
+            isPredefined: true,
+            predefinedKey: serverKey
+        )
+    }
 }

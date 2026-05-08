@@ -32,10 +32,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         super.init(icon: category.icon, color: category.colorHex)
         self.allCategories = allCategories
         if category.isPredefined {
-            let prefix = "predefined:"
-            self.editingPredefinedKey = category.id.hasPrefix(prefix)
-                ? String(category.id.dropFirst(prefix.count))
-                : nil
+            self.editingPredefinedKey = category.predefinedCase?.serverKey
         }
     }
 
@@ -67,15 +64,10 @@ class EditCategoryViewModel: CategoryEditorViewModel {
                 return false
             }
         } else if category.isPredefined {
-            let serverKey = category.key
-            let row = Category(
-                key: serverKey,
-                name: trimmedName,
-                icon: selectedIcon,
-                color: selectedColor,
-                isPredefined: true,
-                predefinedKey: serverKey
-            )
+            let row = Category.makeOverride(for: category)
+            row.name = trimmedName
+            row.icon = selectedIcon
+            row.color = selectedColor
             context.insert(row)
 
             do {
@@ -92,12 +84,4 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         return true
     }
 
-    // MARK: - Private
-
-    private func predefinedCase(for category: TransactionCategory) -> PredefinedCategory? {
-        let prefix = "predefined:"
-        guard category.id.hasPrefix(prefix) else { return nil }
-        let key = String(category.id.dropFirst(prefix.count))
-        return PredefinedCategory.allCases.first { $0.serverKey == key }
-    }
 }

@@ -334,7 +334,7 @@ struct AddTransactionViewModelSharedTests {
         vm.save { completed = true }
 
         #expect(completed == false)
-        #expect(vm.showError == true)
+        #expect(vm.errorMessage != nil)
     }
 
     @Test func testSaveSharedWithCustomSplitBuildsCorrectRequest() async {

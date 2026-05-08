@@ -26,4 +26,7 @@ protocol ChangeQueueManagerProtocol: AnyObject {
     func orphanAll(context: ModelContext)
     /// Deletes orphaned records older than the given number of days.
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext)
+    /// Removes pending changes for entities where the server version won the conflict.
+    /// Called by SyncService after applying a remote update so the queue stays clean.
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext)
 }

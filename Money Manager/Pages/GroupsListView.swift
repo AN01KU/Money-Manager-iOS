@@ -9,7 +9,7 @@ struct GroupsListView: View {
     @Environment(\.authService) private var authService
     @State private var viewModel = GroupsListViewModel()
     @State private var showCreateGroup = false
-    @State private var navigationPath: [APIGroupWithDetails] = []
+    @State private var navigationPath: [UUID] = []
     var pendingRoute: Binding<AppRoute?>?
 
     var body: some View {
@@ -29,9 +29,11 @@ struct GroupsListView: View {
                 text: $viewModel.searchText,
                 prompt: viewModel.selectedTab == .groups ? "Search groups" : "Search activity"
             )
-            .navigationDestination(for: APIGroupWithDetails.self) { group in
-                GroupDetailView(group: group, currentUserId: authService.currentUser?.id) { deletedId in
-                    viewModel.groups.removeAll { $0.id == deletedId }
+            .navigationDestination(for: UUID.self) { groupId in
+                if let group = viewModel.groups.first(where: { $0.id == groupId }) {
+                    GroupDetailView(group: group, currentUserId: authService.currentUser?.id) { deletedId in
+                        viewModel.groups.removeAll { $0.id == deletedId }
+                    }
                 }
             }
             .sheet(isPresented: $showCreateGroup) {
@@ -58,7 +60,7 @@ struct GroupsListView: View {
         guard let route = pendingRoute?.wrappedValue,
               case .group(let id) = route,
               let group = viewModel.groups.first(where: { $0.id == id }) else { return }
-        navigationPath = [group]
+        navigationPath = [group.id]
         pendingRoute?.wrappedValue = nil
     }
 }
@@ -141,7 +143,7 @@ private struct GroupsGroupsContent: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(viewModel.filteredGroups) { group in
-                        NavigationLink(value: group) {
+                        NavigationLink(value: group.id) {
                             GroupRow(
                                 group: group,
                                 memberCount: group.members.count,

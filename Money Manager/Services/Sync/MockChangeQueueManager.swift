@@ -34,5 +34,7 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     func orphanAll(context: ModelContext) {}
 
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {}
+
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext) {}
 }
 #endif
