@@ -27,13 +27,20 @@ final class SyncService: SyncServiceProtocol {
     private let networkMonitor = NetworkMonitor.shared
     private var authService: AuthServiceProtocol?
     private var modelContainer: ModelContainer?
-    private let persistence = PersistenceService(changeQueue: changeQueueManager)
+    private let changeQueue: any ChangeQueueManagerProtocol
+    private let persistence: PersistenceService
 
     private let lastSyncKey = "last_sync_at"
     nonisolated(unsafe) private var networkObserver: Any?
     nonisolated(unsafe) private var logoutObserver: Any?
 
-    private init() {
+    private convenience init() {
+        self.init(changeQueue: ChangeQueueManager.shared)
+    }
+
+    init(changeQueue: any ChangeQueueManagerProtocol) {
+        self.changeQueue = changeQueue
+        self.persistence = PersistenceService(changeQueue: changeQueue)
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date
 
         networkObserver = NotificationCenter.default.addObserver(
@@ -68,7 +75,7 @@ final class SyncService: SyncServiceProtocol {
     func configure(container: ModelContainer, authService: AuthServiceProtocol) {
         self.modelContainer = container
         self.authService = authService
-        changeQueueManager.configure(container: container)
+        changeQueue.configure(container: container)
     }
 
     func clearGroupData() {
@@ -107,17 +114,17 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.info("Sync on launch started")
         let context = ModelContext(container)
 
-        changeQueueManager.purgeExpiredOrphans(olderThan: 7, context: context)
+        changeQueue.purgeExpiredOrphans(olderThan: 7, context: context)
 
         let preflight = await runPreflight()
         switch preflight {
         case .valid:
-            await changeQueueManager.replayAll(context: context, isAuthenticated: true)
+            await changeQueue.replayAll(context: context, isAuthenticated: true)
         case .skipped:
             AppLogger.sync.info("Preflight skipped (no sync session) — not replaying queue")
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on launch: \(reason) — orphaning queue")
-            changeQueueManager.orphanAll(context: context)
+            changeQueue.orphanAll(context: context)
             SessionStore.shared.clearSyncSessionID()
             NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
@@ -139,12 +146,12 @@ final class SyncService: SyncServiceProtocol {
         let preflight = await runPreflight()
         switch preflight {
         case .valid:
-            await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+            await changeQueue.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
         case .skipped:
             AppLogger.sync.info("Preflight skipped (no sync session) — not replaying queue")
         case .invalid(let reason):
             AppLogger.sync.warning("Preflight failed on reconnect: \(reason) — orphaning queue")
-            changeQueueManager.orphanAll(context: context)
+            changeQueue.orphanAll(context: context)
             SessionStore.shared.clearSyncSessionID()
             NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
         }
@@ -208,7 +215,7 @@ final class SyncService: SyncServiceProtocol {
         enqueueLocalData(context: context)
 
         // 3. Push everything to server
-        await changeQueueManager.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+        await changeQueue.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
 
         // 4. Pull canonical state
         await pullFromServer(context: context)
@@ -436,7 +443,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "transaction", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "transaction", context: context)
 
         // Remove local transactions that the server no longer returns and have no pending upload.
         // The server responds with is_deleted=false only, so anything missing from that set is
@@ -521,7 +528,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "recurring", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "recurring", context: context)
 
         // Purge local recurring transactions the server no longer returns and have no pending upload.
         // Also protect entities stuck in the dead-letter queue — their create may have failed transiently.
@@ -571,7 +578,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "budget", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "budget", context: context)
 
         // Purge local budgets the server no longer returns and have no pending upload.
         let serverBudgetIDs = Set(apiBudgets.map { $0.id })
@@ -662,7 +669,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueueManager.removeStaleChanges(for: serverWonIDs, entityType: "category", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "category", context: context)
 
         // Purge local custom categories the server no longer returns and have no pending upload.
         // Never touch server-predefined rows — those are managed by upsertPredefinedCategories.
