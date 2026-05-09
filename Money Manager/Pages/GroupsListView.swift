@@ -45,6 +45,13 @@ struct GroupsListView: View {
                 viewModel.setCurrentUser(authService.currentUser?.id)
                 await viewModel.load()
                 handlePendingRoute()
+                #if DEBUG
+                if ProcessInfo.processInfo.isScreenshotMode,
+                   ProcessInfo.processInfo.environment["GROUP_ROUTE"] == "first",
+                   let firstId = viewModel.groups.first?.id {
+                    navigationPath = [firstId]
+                }
+                #endif
             }
             .refreshable {
                 await viewModel.load()

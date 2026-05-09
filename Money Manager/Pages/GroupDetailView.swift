@@ -29,6 +29,7 @@ struct GroupDetailView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("group-detail.section-picker")
             .padding(.horizontal)
             .padding(.bottom, 8)
 

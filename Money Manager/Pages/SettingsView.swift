@@ -18,6 +18,8 @@ struct SettingsView: View {
     @Environment(\.changeQueueManager) private var changeQueueManager
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var authVersion = 0
+    @State private var lastKnownAuthState: Bool? = nil
+    @State private var navigationPath: [SettingsRoute] = []
     @State private var showLoginSheet = false
     @State private var showSignupSheet = false
     @State private var showLogoutConfirmation = false
@@ -28,7 +30,7 @@ struct SettingsView: View {
     #endif
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(spacing: AppConstants.UI.spacing20) {
                     // Profile / login card
@@ -55,63 +57,47 @@ struct SettingsView: View {
                             icon: AppIcons.UI.budget,
                             iconBg: AppColors.primary,
                             label: "Budgets",
-                            route: SettingsRoute.budgets
+                            accessibilityID: "settings.budgets-row",
+                            onTap: { navigationPath.append(.budgets) }
                         )
-                        .accessibilityIdentifier("settings.budgets-row")
                         Divider().padding(.leading, 56)
                         SettingsNavRow(
                             icon: AppIcons.UI.recurring,
                             iconBg: AppColors.primary,
                             label: "Recurring",
-                            route: SettingsRoute.recurring
+                            accessibilityID: "settings.recurring-row",
+                            onTap: { navigationPath.append(.recurring) }
                         )
-                        .accessibilityIdentifier("settings.recurring-row")
                         Divider().padding(.leading, 56)
                         SettingsNavRow(
                             icon: AppIcons.UI.categories,
                             iconBg: Color("CatIndigo", bundle: .main),
                             label: "Categories",
-                            route: SettingsRoute.categories
+                            accessibilityID: "settings.categories-row",
+                            onTap: { navigationPath.append(.categories) }
                         )
-                        .accessibilityIdentifier("settings.categories-row")
                     }
 
                     // Preferences section
                     SettingsSection(header: "PREFERENCES") {
-                        NavigationLink(value: SettingsRoute.currency) {
-                            HStack(spacing: AppConstants.UI.spacing12) {
-                                IconBadge(name: AppIcons.UI.currency, bg: AppColors.income)
-                                Text("Currency")
-                                    .font(AppTypography.body)
-                                    .foregroundStyle(AppColors.label)
-                                Spacer()
-                                Text("\(selectedCurrency) (\(CurrencyFormatter.currentSymbol))")
-                                    .font(AppTypography.subhead)
-                                    .foregroundStyle(AppColors.label2)
-                                AppIcon(name: AppIcons.UI.chevron, size: 16, color: AppColors.label3)
-                            }
-                            .padding(.horizontal, AppConstants.UI.padding)
-                            .padding(.vertical, AppConstants.UI.spacing14)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("settings.currency-row")
+                        SettingsNavRow(
+                            icon: AppIcons.UI.currency,
+                            iconBg: AppColors.income,
+                            label: "Currency",
+                            trailingText: "\(selectedCurrency) (\(CurrencyFormatter.currentSymbol))",
+                            accessibilityID: "settings.currency-row",
+                            onTap: { navigationPath.append(.currency) }
+                        )
 
                         Divider().padding(.leading, 56)
 
-                        NavigationLink(value: SettingsRoute.backup) {
-                            HStack(spacing: AppConstants.UI.spacing12) {
-                                IconBadge(name: AppIcons.UI.export, bg: Color("CatBlue", bundle: .main))
-                                Text("Backup")
-                                    .font(AppTypography.body)
-                                    .foregroundStyle(AppColors.label)
-                                Spacer()
-                                AppIcon(name: AppIcons.UI.chevron, size: 16, color: AppColors.label3)
-                            }
-                            .padding(.horizontal, AppConstants.UI.padding)
-                            .padding(.vertical, AppConstants.UI.spacing14)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("settings.backup-row")
+                        SettingsNavRow(
+                            icon: AppIcons.UI.export,
+                            iconBg: Color("CatBlue", bundle: .main),
+                            label: "Backup",
+                            accessibilityID: "settings.backup-row",
+                            onTap: { navigationPath.append(.backup) }
+                        )
                     }
 
                     // Sync section (authenticated only)
@@ -133,19 +119,12 @@ struct SettingsView: View {
 
                     #if DEBUG
                     SettingsSection(header: "DEBUG") {
-                        NavigationLink(value: SettingsRoute.syncDebug) {
-                            HStack(spacing: AppConstants.UI.spacing12) {
-                                IconBadge(name: AppIcons.UI.sync, bg: AppColors.warning)
-                                Text("Sync Debug")
-                                    .font(AppTypography.body)
-                                    .foregroundStyle(AppColors.label)
-                                Spacer()
-                                AppIcon(name: AppIcons.UI.chevron, size: 16, color: AppColors.label3)
-                            }
-                            .padding(.horizontal, AppConstants.UI.padding)
-                            .padding(.vertical, AppConstants.UI.spacing14)
-                        }
-                        .buttonStyle(.plain)
+                        SettingsNavRow(
+                            icon: AppIcons.UI.sync,
+                            iconBg: AppColors.warning,
+                            label: "Sync Debug",
+                            onTap: { navigationPath.append(.syncDebug) }
+                        )
                     }
                     #endif
 
@@ -163,6 +142,22 @@ struct SettingsView: View {
             .background(AppColors.background)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                #if DEBUG
+                if ProcessInfo.processInfo.isScreenshotMode,
+                   let routeName = ProcessInfo.processInfo.environment["SETTINGS_ROUTE"] {
+                    let route: SettingsRoute? = switch routeName {
+                    case "budgets":    .budgets
+                    case "recurring":  .recurring
+                    case "categories": .categories
+                    case "currency":   .currency
+                    case "backup":     .backup
+                    default:           nil
+                    }
+                    if let route { navigationPath = [route] }
+                }
+                #endif
+            }
             .navigationDestination(for: SettingsRoute.self) { route in
                 switch route {
                 case .budgets:    BudgetsView()
@@ -189,7 +184,17 @@ struct SettingsView: View {
                 Text("Are you sure you want to log out?")
             }
             .onReceive(NotificationCenter.default.publisher(for: .authStateDidChange)) { _ in
-                authVersion += 1
+                let isNowAuthenticated = authService.isAuthenticated
+                if lastKnownAuthState != isNowAuthenticated {
+                    lastKnownAuthState = isNowAuthenticated
+                    #if DEBUG
+                    // During screenshot runs the auth state is pre-established; don't
+                    // blow away the NavigationStack on every background sync notification.
+                    if ProcessInfo.processInfo.isScreenshotMode { return }
+                    #endif
+                    navigationPath = []
+                    authVersion += 1
+                }
             }
         }
         .id(authVersion)
@@ -248,22 +253,30 @@ private struct SettingsNavRow: View {
     let icon: String
     let iconBg: Color
     let label: String
-    let route: SettingsRoute
+    var trailingText: String? = nil
+    var accessibilityID: String? = nil
+    let onTap: () -> Void
 
     var body: some View {
-        NavigationLink(value: route) {
+        Button(action: onTap) {
             HStack(spacing: AppConstants.UI.spacing12) {
                 IconBadge(name: icon, bg: iconBg)
                 Text(label)
                     .font(AppTypography.body)
                     .foregroundStyle(AppColors.label)
                 Spacer()
+                if let trailingText {
+                    Text(trailingText)
+                        .font(AppTypography.subhead)
+                        .foregroundStyle(AppColors.label2)
+                }
                 AppIcon(name: AppIcons.UI.chevron, size: 16, color: AppColors.label3)
             }
             .padding(.horizontal, AppConstants.UI.padding)
             .padding(.vertical, AppConstants.UI.spacing14)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityID ?? "")
     }
 }
 
