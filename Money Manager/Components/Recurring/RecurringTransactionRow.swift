@@ -78,6 +78,7 @@ struct RecurringTransactionRow: View {
             .contentShape(Rectangle())
             .onTapGesture { onTap() }
             .accessibilityLabel("\(recurring.name), \(CurrencyFormatter.format(recurring.amount)), \(recurring.isActive ? "Active" : "Paused")")
+            .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("recurring.row")
         }
     }

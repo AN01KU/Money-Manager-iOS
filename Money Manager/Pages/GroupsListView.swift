@@ -46,7 +46,7 @@ struct GroupsListView: View {
                 await viewModel.load()
                 handlePendingRoute()
                 #if DEBUG
-                if ProcessInfo.processInfo.isScreenshotMode,
+                if ProcessInfo.processInfo.isUITesting,
                    ProcessInfo.processInfo.environment["GROUP_ROUTE"] == "first",
                    let firstId = viewModel.groups.first?.id {
                     navigationPath = [firstId]

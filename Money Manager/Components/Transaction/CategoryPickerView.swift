@@ -42,6 +42,7 @@ struct CategoryPickerView: View {
                         dismiss()
                     }
                     .sensoryFeedback(.selection, trigger: selectionToggled)
+                    .accessibilityIdentifier("category-picker.\(category.key)")
                 }
             }
         }

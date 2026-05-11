@@ -144,7 +144,7 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 #if DEBUG
-                if ProcessInfo.processInfo.isScreenshotMode,
+                if ProcessInfo.processInfo.isUITesting,
                    let routeName = ProcessInfo.processInfo.environment["SETTINGS_ROUTE"] {
                     let route: SettingsRoute? = switch routeName {
                     case "budgets":    .budgets

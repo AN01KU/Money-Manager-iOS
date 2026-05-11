@@ -113,6 +113,7 @@ struct Money_ManagerApp: App {
         try? context.delete(model: Transaction.self)
         try? context.delete(model: MonthlyBudget.self)
         try? context.delete(model: RecurringTransaction.self)
+        try? context.delete(model: Category.self)
 
         for transaction in TestData.generatePersonalTransactions() {
             context.insert(transaction)
