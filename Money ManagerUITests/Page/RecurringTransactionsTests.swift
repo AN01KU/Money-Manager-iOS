@@ -173,21 +173,13 @@ final class RecurringTransactionsTests: XCTestCase {
         XCTAssertTrue(toggle.waitForExistence(timeout: 3), "Toggle switch should exist on recurring row")
         toggle.tap()
 
-        // Give the UI a moment to update
-        _ = firstRow.waitForExistence(timeout: 2)
-
-        let labelAfter = firstRow.label
-        if wasActive {
-            XCTAssertTrue(
-                labelAfter.contains("Paused"),
-                "Row should show Paused after toggling an active recurring item; got: \(labelAfter)"
-            )
-        } else {
-            XCTAssertTrue(
-                labelAfter.contains("Active"),
-                "Row should show Active after toggling a paused recurring item; got: \(labelAfter)"
-            )
-        }
+        let expectedLabel = wasActive ? "Paused" : "Active"
+        let predicate = NSPredicate(format: "label CONTAINS %@", expectedLabel)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: firstRow)
+        let result = XCTWaiter().wait(for: [expectation], timeout: 5)
+        XCTAssertEqual(result, .completed,
+            "Row should show \(expectedLabel) after toggle; got: \(firstRow.label)"
+        )
     }
 
     // MARK: - Edit Recurring Expense
