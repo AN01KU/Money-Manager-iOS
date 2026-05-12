@@ -16,8 +16,8 @@ final class AuthService: AuthServiceProtocol {
     var isLoading: Bool = false
     var errorMessage: String?
 
-    private let session = SessionStore.shared
-    private let apiClient = AppAPIClient.shared
+    var session: SessionStore = SessionStore.shared
+    var apiClient: any APIClientProtocol = AppAPIClient.shared
 
     nonisolated(unsafe) private var sessionExpiredObserver: Any?
 

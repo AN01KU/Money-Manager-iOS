@@ -43,6 +43,8 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     var rawPostHandler: ((MoneyManagerEndpoint, Data) throws -> Any)?
     /// Called by `put<T>`.
     var rawPutHandler: ((MoneyManagerEndpoint, Data) throws -> Any)?
+    /// Called by typed-body `patch<Req,Res>`.
+    var patchHandler: ((MoneyManagerEndpoint, Data?) throws -> Any)?
     /// Called by `patch<T>`.
     var rawPatchHandler: ((MoneyManagerEndpoint, Data) throws -> Any)?
     /// Called by `delete`.
@@ -92,6 +94,17 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
         guard let handler = rawPutHandler else { throw MockError.notConfigured }
         let raw = try handler(endpoint, rawBody)
         guard let value = raw as? T else { throw MockError.notConfigured }
+        return value
+    }
+
+    func patch<Req: Encodable, Res: Decodable>(
+        _ endpoint: MoneyManagerEndpoint, body: sending Req
+    ) async throws -> Res {
+        let data = try? JSONEncoder().encode(body)
+        patchCalls.append((endpoint: endpoint, body: data))
+        guard let handler = patchHandler else { throw MockError.notConfigured }
+        let raw = try handler(endpoint, data)
+        guard let value = raw as? Res else { throw MockError.notConfigured }
         return value
     }
 
