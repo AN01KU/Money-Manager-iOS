@@ -25,9 +25,13 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     var failedCount: Int { 0 }
 
     private(set) var enqueueCallLog: [EnqueueCall] = []
+    private(set) var replayAllCallCount: Int = 0
+    private(set) var orphanAllCallCount: Int = 0
 
     func reset() {
         enqueueCallLog = []
+        replayAllCallCount = 0
+        orphanAllCallCount = 0
     }
 
     func configure(container: ModelContainer) {}
@@ -51,11 +55,15 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
         ))
     }
 
-    func replayAll(context: ModelContext, isAuthenticated: Bool) async {}
+    func replayAll(context: ModelContext, isAuthenticated: Bool) async {
+        replayAllCallCount += 1
+    }
 
     func clearAll(context: ModelContext) {}
 
-    func orphanAll(context: ModelContext) {}
+    func orphanAll(context: ModelContext) {
+        orphanAllCallCount += 1
+    }
 
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {}
 
