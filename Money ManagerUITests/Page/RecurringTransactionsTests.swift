@@ -154,6 +154,42 @@ final class RecurringTransactionsTests: XCTestCase {
         XCTAssertTrue(hasPicker, "Frequency picker should exist")
     }
 
+    // MARK: - Toggle Interaction
+
+    func testRecurringToggleChangesActiveState() throws {
+        navigateToRecurring()
+
+        let firstRow = app.buttons.matching(identifier: "recurring.row").firstMatch
+        guard firstRow.waitForExistence(timeout: 5) else {
+            throw XCTSkip("No recurring transactions present to toggle")
+        }
+
+        // Capture state before toggle using the accessibility label
+        let labelBefore = firstRow.label
+        let wasActive = labelBefore.contains("Active")
+
+        // Tap the toggle switch (first Switch in the row)
+        let toggle = app.switches.firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3), "Toggle switch should exist on recurring row")
+        toggle.tap()
+
+        // Give the UI a moment to update
+        _ = firstRow.waitForExistence(timeout: 2)
+
+        let labelAfter = firstRow.label
+        if wasActive {
+            XCTAssertTrue(
+                labelAfter.contains("Paused"),
+                "Row should show Paused after toggling an active recurring item; got: \(labelAfter)"
+            )
+        } else {
+            XCTAssertTrue(
+                labelAfter.contains("Active"),
+                "Row should show Active after toggling a paused recurring item; got: \(labelAfter)"
+            )
+        }
+    }
+
     // MARK: - Edit Recurring Expense
 
     func testTapTransactionOpensEditSheet() throws {

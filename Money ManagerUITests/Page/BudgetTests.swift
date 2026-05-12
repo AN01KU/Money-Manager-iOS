@@ -115,6 +115,46 @@ final class BudgetTests: XCTestCase {
         }
     }
 
+    // MARK: - Set Budget Interaction
+
+    func testSetBudgetLimitDisplaysOnCard() throws {
+        navigateToBudgets()
+
+        // Open the budget sheet via the edit button or the no-budget card
+        let editButton = app.buttons.matching(identifier: "budget.edit-button").firstMatch
+        let noBudgetCard = app.otherElements.matching(identifier: "budget.no-budget-card").firstMatch
+
+        if editButton.waitForExistence(timeout: 3) {
+            editButton.tap()
+        } else {
+            XCTAssertTrue(noBudgetCard.waitForExistence(timeout: 3), "Either edit button or no-budget card must exist")
+            noBudgetCard.tap()
+        }
+
+        let amountField = app.textFields.matching(identifier: "budget.amount-field").firstMatch
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5), "Budget amount field should appear")
+
+        amountField.tap()
+        // Clear existing value then type the test limit
+        amountField.press(forDuration: 1.0)
+        if app.menuItems["Select All"].waitForExistence(timeout: 1) {
+            app.menuItems["Select All"].tap()
+        }
+        amountField.typeText("12345")
+
+        let saveButton = app.buttons.matching(identifier: "budget.save-button").firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 3), "Save button should exist")
+        saveButton.tap()
+
+        // After dismiss, the card should display the saved limit
+        let budgetCard = app.otherElements.matching(identifier: "budget.card").firstMatch
+        XCTAssertTrue(budgetCard.waitForExistence(timeout: 5), "Budget card should appear after saving")
+        XCTAssertTrue(
+            budgetCard.label.contains("12,345") || budgetCard.label.contains("12345"),
+            "Budget card should display the saved limit; got: \(budgetCard.label)"
+        )
+    }
+
     // MARK: - Helpers
 
     /// Taps the Settings tab; SETTINGS_ROUTE=budgets causes the app to auto-push to Budgets on appear.

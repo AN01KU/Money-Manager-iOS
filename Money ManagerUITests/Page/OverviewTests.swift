@@ -36,9 +36,7 @@ final class OverviewTests: XCTestCase {
         app.tabBars.buttons["Overview"].tap()
 
         let emptyState = app.otherElements["overview.empty-state"]
-        if emptyState.waitForExistence(timeout: 2) {
-            XCTAssertTrue(emptyState.exists)
-        }
+        XCTAssertTrue(emptyState.waitForExistence(timeout: 3), "Empty state should appear when there are no transactions")
     }
 
     // MARK: - Budget Card Tests
@@ -47,18 +45,14 @@ final class OverviewTests: XCTestCase {
         app.tabBars.buttons["Overview"].tap()
 
         let budgetCard = app.buttons["overview.budget-card"]
-        if budgetCard.waitForExistence(timeout: 3) {
-            XCTAssertTrue(budgetCard.exists)
-        }
+        XCTAssertTrue(budgetCard.waitForExistence(timeout: 3), "Budget card should appear when a budget exists")
     }
 
     func testNoBudgetCardDisplaysWhenNoBudget() throws {
         app.tabBars.buttons["Overview"].tap()
 
         let noBudgetCard = app.buttons["overview.no-budget-card"]
-        if noBudgetCard.waitForExistence(timeout: 3) {
-            XCTAssertTrue(noBudgetCard.exists)
-        }
+        XCTAssertTrue(noBudgetCard.waitForExistence(timeout: 3), "No-budget card should appear when no budget is set")
     }
 
     // MARK: - Date Filter Tests
