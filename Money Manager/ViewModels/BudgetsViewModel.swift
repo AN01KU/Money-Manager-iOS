@@ -5,6 +5,7 @@ import SwiftData
 @Observable class BudgetsViewModel {
     var selectedMonth: Date = Date()
     var showBudgetSheet = false
+    var referenceDate: Date = Date()
 
     var allTransactions: [Transaction] = []
     var budgets: [MonthlyBudget] = []
@@ -48,7 +49,7 @@ import SwiftData
 
     var daysRemaining: Int {
         let calendar = Calendar.current
-        let today = Date()
+        let today = referenceDate
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
             let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
@@ -71,7 +72,7 @@ import SwiftData
     /// Days elapsed so far in the selected month (1-based, capped to today if current month).
     private var daysElapsed: Int {
         let calendar = Calendar.current
-        let today = Date()
+        let today = referenceDate
         guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)) else { return 1 }
         if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
             return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
@@ -107,7 +108,7 @@ import SwiftData
     var spendingInsight: String? {
         guard let budget = currentBudget, budget.limit > 0 else { return nil }
         // Only show for current month
-        guard Calendar.current.isDate(Date(), equalTo: selectedMonth, toGranularity: .month) else { return nil }
+        guard Calendar.current.isDate(referenceDate, equalTo: selectedMonth, toGranularity: .month) else { return nil }
         guard daysElapsed > 1 else { return nil }
 
         let projected = projectedMonthEnd

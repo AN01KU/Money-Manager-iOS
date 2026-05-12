@@ -8,36 +8,41 @@ import Testing
 @MainActor
 struct BudgetsViewModelInsightTests {
 
-    private func currentYearMonth() -> (year: Int, month: Int) {
-        let calendar = Calendar.current
-        let now = Date()
-        return (calendar.component(.year, from: now), calendar.component(.month, from: now))
+    // Fixed mid-month reference: January 15, 2026
+    private static let calendar = Calendar.current
+    private static let fixedRef = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+    private static let fixedYear = 2026
+    private static let fixedMonth = 1
+
+    private func makeVM() -> BudgetsViewModel {
+        let vm = BudgetsViewModel()
+        vm.referenceDate = Self.fixedRef
+        vm.selectedMonth = Self.fixedRef
+        return vm
     }
 
     private func makeBudget(limit: Double) -> MonthlyBudget {
-        let (year, month) = currentYearMonth()
-        return MonthlyBudget(year: year, month: month, limit: limit)
+        MonthlyBudget(year: Self.fixedYear, month: Self.fixedMonth, limit: limit)
     }
 
     // MARK: - insightIcon
 
     @Test func testInsightIconIsCheckmarkWhenNoBudgetSet() {
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         vm.configure(allTransactions: [], budgets: [], modelContext: nil)
         #expect(vm.insightIcon == "checkmark.circle.fill")
     }
 
     @Test func testInsightIconIsExclamationWhenOverBudget() {
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         let budget = makeBudget(limit: 500)
-        let tx = Transaction(amount: 600, category: "Food", date: Date())
+        let tx = Transaction(amount: 600, category: "Food", date: Self.fixedRef)
         vm.configure(allTransactions: [tx], budgets: [budget], modelContext: nil)
         #expect(vm.insightIcon == "exclamationmark.triangle.fill")
     }
 
     @Test func testInsightIconIsCheckmarkWhenOnTrack() {
-        // No transactions — projected spend is 0, well under any limit
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         let budget = makeBudget(limit: 5000)
         vm.configure(allTransactions: [], budgets: [budget], modelContext: nil)
         #expect(vm.insightIcon == "checkmark.circle.fill")
@@ -46,21 +51,21 @@ struct BudgetsViewModelInsightTests {
     // MARK: - insightColor
 
     @Test func testInsightColorIsPositiveWhenNoBudgetSet() {
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         vm.configure(allTransactions: [], budgets: [], modelContext: nil)
         #expect(vm.insightColor == AppColors.positive)
     }
 
     @Test func testInsightColorIsExpenseWhenOverBudget() {
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         let budget = makeBudget(limit: 200)
-        let tx = Transaction(amount: 300, category: "Food", date: Date())
+        let tx = Transaction(amount: 300, category: "Food", date: Self.fixedRef)
         vm.configure(allTransactions: [tx], budgets: [budget], modelContext: nil)
         #expect(vm.insightColor == AppColors.expense)
     }
 
     @Test func testInsightColorIsPositiveWhenOnTrack() {
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         let budget = makeBudget(limit: 10000)
         vm.configure(allTransactions: [], budgets: [budget], modelContext: nil)
         #expect(vm.insightColor == AppColors.positive)
@@ -69,28 +74,25 @@ struct BudgetsViewModelInsightTests {
     // MARK: - daysRemaining
 
     @Test func testDaysRemainingIsPositiveInCurrentMonth() {
-        let vm = BudgetsViewModel()
+        // Fixed reference: Jan 15. Jan has 31 days → 17 days remain (Jan 15 to Feb 1).
+        let vm = makeVM()
         vm.configure(allTransactions: [], budgets: [], modelContext: nil)
-        // daysRemaining should be non-negative
-        #expect(vm.daysRemaining >= 0)
+        #expect(vm.daysRemaining == 17)
     }
 
     // MARK: - dailyAverage
 
     @Test func testDailyAverageIsZeroWhenNoBudget() {
-        let vm = BudgetsViewModel()
+        let vm = makeVM()
         vm.configure(allTransactions: [], budgets: [], modelContext: nil)
-        // No budget → remainingBudget is 0 → daysRemaining irrelevant
         #expect(vm.dailyAverage == 0)
     }
 
     @Test func testDailyAverageIsPositiveWhenBudgetRemainsAndDaysLeft() {
-        let vm = BudgetsViewModel()
+        // Fixed mid-month reference guarantees daysRemaining > 0
+        let vm = makeVM()
         let budget = makeBudget(limit: 3000)
         vm.configure(allTransactions: [], budgets: [budget], modelContext: nil)
-        // If we're not at month end, daysRemaining > 0 and dailyAverage > 0
-        if vm.daysRemaining > 0 {
-            #expect(vm.dailyAverage > 0)
-        }
+        #expect(vm.dailyAverage > 0)
     }
 }
