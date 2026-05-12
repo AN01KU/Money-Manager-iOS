@@ -127,4 +127,96 @@ import SwiftData
         self.budgets = budgets
         self.modelContext = modelContext
     }
+
+    // MARK: - Mutations
+
+    enum BudgetValidationError: Error, LocalizedError {
+        case zeroLimit
+
+        var errorDescription: String? {
+            switch self {
+            case .zeroLimit: return "Budget limit must be greater than zero"
+            }
+        }
+    }
+
+    /// Creates or updates the budget for `selectedMonth`. Enqueues the sync change via `changeQueue`.
+    func saveBudget(
+        limit: Double,
+        context: ModelContext,
+        changeQueue: ChangeQueueManagerProtocol = changeQueueManager
+    ) throws {
+        guard limit > 0 else { throw BudgetValidationError.zeroLimit }
+
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: selectedMonth)
+        let month = calendar.component(.month, from: selectedMonth)
+
+        let budgetID: UUID
+        let action: String
+        let httpMethod: String
+        let payload: Data?
+
+        let existing = try context.fetch(FetchDescriptor<MonthlyBudget>(
+            predicate: #Predicate<MonthlyBudget> { b in b.year == year && b.month == month }
+        )).first
+
+        if let existing {
+            existing.limit = limit
+            existing.updatedAt = Date()
+            budgetID = existing.id
+            action = "update"
+            httpMethod = "PATCH"
+            payload = try? AppAPIClient.apiEncoder.encode(existing.toUpdateRequest())
+        } else {
+            let budget = MonthlyBudget(year: year, month: month, limit: limit)
+            context.insert(budget)
+            budgetID = budget.id
+            action = "create"
+            httpMethod = "POST"
+            payload = try? AppAPIClient.apiEncoder.encode(budget.toCreateRequest())
+        }
+
+        try context.save()
+
+        changeQueue.enqueue(
+            entityType: "budget",
+            entityID: budgetID,
+            action: action,
+            endpoint: "/budgets",
+            httpMethod: httpMethod,
+            payload: payload,
+            context: context
+        )
+    }
+
+    /// Removes the budget for `selectedMonth` from SwiftData and enqueues a delete sync change.
+    func deleteBudget(
+        context: ModelContext,
+        changeQueue: ChangeQueueManagerProtocol = changeQueueManager
+    ) throws {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: selectedMonth)
+        let month = calendar.component(.month, from: selectedMonth)
+
+        let existing = try context.fetch(FetchDescriptor<MonthlyBudget>(
+            predicate: #Predicate<MonthlyBudget> { b in b.year == year && b.month == month }
+        )).first
+
+        guard let budget = existing else { return }
+
+        let budgetID = budget.id
+        context.delete(budget)
+        try context.save()
+
+        changeQueue.enqueue(
+            entityType: "budget",
+            entityID: budgetID,
+            action: "delete",
+            endpoint: "/budgets",
+            httpMethod: "DELETE",
+            payload: nil,
+            context: context
+        )
+    }
 }
