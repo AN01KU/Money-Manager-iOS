@@ -8,10 +8,10 @@ import Foundation
 struct ServiceFactory {
     private let useMocks: Bool
     private let isRunningTests: Bool
-    
-    init(_ useMocks: Bool = false) {
+
+    init(_ useMocks: Bool = false, overrideIsRunningTests: Bool? = nil) {
         self.useMocks = useMocks
-        self.isRunningTests = ProcessInfo.processInfo.isRunningTests
+        self.isRunningTests = overrideIsRunningTests ?? ProcessInfo.processInfo.isRunningTests
     }
     
     private(set) lazy var authService: AuthServiceProtocol = {

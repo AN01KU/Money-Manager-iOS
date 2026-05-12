@@ -51,12 +51,10 @@ struct AddTransactionViewModelEditSharedTests {
         vm.selectedCategory = "Transport"
         vm.description = "Uber"
 
-        var completed = false
-        vm.save { completed = true }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
 
-        try? await Task.sleep(nanoseconds: 100_000_000)
-
-        #expect(completed == true)
         #expect(addedTx != nil)
     }
 
@@ -70,8 +68,9 @@ struct AddTransactionViewModelEditSharedTests {
         vm.selectedCategory = "Transport"
         vm.description = "Uber"
 
-        vm.save { }
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
         #expect(vm.isSaving == false)
     }
 
@@ -89,11 +88,10 @@ struct AddTransactionViewModelEditSharedTests {
         vm.selectedCategory = "Transport"
         vm.description = "Uber"
 
-        var completed = false
-        vm.save { completed = true }
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        vm.save { Issue.record("completion must not be called on error path") }
+        // Yield to let the spawned Task run to completion on @MainActor.
+        for _ in 0..<10 { await Task.yield() }
 
-        #expect(completed == false)
         #expect(vm.errorMessage != nil)
         #expect(vm.isSaving == false)
     }
@@ -109,8 +107,9 @@ struct AddTransactionViewModelEditSharedTests {
         vm.selectedCategory = "Food"     // unchanged
         vm.description = "New Description" // changed
 
-        vm.save { }
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
 
         #expect(mock.lastUpdateRequest?.category == nil) // unchanged category not sent
         #expect(mock.lastUpdateRequest?.description == "New Description")

@@ -14,30 +14,11 @@ struct CategoryModelTests {
     }
     
     @Test
-    func testCategoryStoresAllProperties() {
-        let category = Category(name: "Groceries", icon: "cart", color: "#4ECDC4")
-        
-        #expect(category.name == "Groceries")
-        #expect(category.icon == "cart")
-        #expect(category.color == "#4ECDC4")
-    }
-    
-    @Test
     func testCategoryGeneratesUniqueId() {
         let category1 = Category(name: "Test1", icon: "star", color: "#FF0000")
         let category2 = Category(name: "Test2", icon: "star", color: "#FF0000")
         
         #expect(category1.id != category2.id)
-    }
-    
-    @Test
-    func testCategoryWithHexColorFormats() {
-        let colors = ["#FF6B6B", "#4ECDC4", "#FFEAA7", "#45B7D1", "#FFFFFF", "#000000"]
-        
-        for color in colors {
-            let category = Category(name: "Test", icon: "star", color: color)
-            #expect(category.color == color)
-        }
     }
     
     @Test

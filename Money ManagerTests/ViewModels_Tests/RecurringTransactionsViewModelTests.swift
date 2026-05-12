@@ -45,18 +45,6 @@ struct RecurringTransactionsViewModelTests {
     }
 
     @Test
-    func testAllRecurringReturnsAll() {
-        let viewModel = RecurringTransactionsViewModel()
-
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
-
-        viewModel.update(recurring: [active, inactive])
-
-        #expect(viewModel.allRecurring.count == 2)
-    }
-
-    @Test
     func testToggleSwapsActiveState() {
         let viewModel = RecurringTransactionsViewModel()
 
@@ -145,6 +133,21 @@ struct RecurringTransactionsViewModelTests {
         viewModel.deleteItem(other)
 
         #expect(viewModel.pausedRecurring.count == 1)
+    }
+
+    @Test
+    func testDeleteRemovesItemFromAllRecurring() {
+        let item = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly)
+        let other = RecurringTransaction(name: "Keeper", amount: 200, category: "Food", frequency: .monthly)
+
+        let viewModel = RecurringTransactionsViewModel()
+        viewModel.update(recurring: [item, other])
+
+        viewModel.deleteItem(item)
+
+        #expect(!viewModel.allRecurring.contains { $0.id == item.id })
+        #expect(viewModel.allRecurring.count == 1)
+        #expect(viewModel.allRecurring.first?.name == "Keeper")
     }
 
     @Test

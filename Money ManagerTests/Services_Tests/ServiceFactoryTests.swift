@@ -55,4 +55,30 @@ struct ServiceFactoryTests {
         let gs = factory.groupService
         #expect(gs is MockGroupService)
     }
+
+    // MARK: - Production mode (useMocks: false, isRunningTests forced false)
+
+    @Test func testFactoryProductionModeReturnsRealAuthService() {
+        var factory = ServiceFactory(false, overrideIsRunningTests: false)
+        let auth = factory.authService
+        #expect(auth is AuthService)
+    }
+
+    @Test func testFactoryProductionModeReturnsRealSyncService() {
+        var factory = ServiceFactory(false, overrideIsRunningTests: false)
+        let sync = factory.syncService
+        #expect(sync is SyncService)
+    }
+
+    @Test func testFactoryProductionModeReturnsRealChangeQueueManager() {
+        var factory = ServiceFactory(false, overrideIsRunningTests: false)
+        let cqm = factory.changeQueueManager
+        #expect(cqm is ChangeQueueManager)
+    }
+
+    @Test func testFactoryProductionModeReturnsRealGroupService() {
+        var factory = ServiceFactory(false, overrideIsRunningTests: false)
+        let gs = factory.groupService
+        #expect(gs is GroupService)
+    }
 }

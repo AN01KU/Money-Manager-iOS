@@ -308,12 +308,10 @@ struct AddTransactionViewModelSharedTests {
         vm.selectedMembers = [alice.id, bob.id]
         vm.splitType = .equal
 
-        var completed = false
-        vm.save { completed = true }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
 
-        try? await Task.sleep(nanoseconds: 100_000_000)
-
-        #expect(completed == true)
         #expect(addedTransaction != nil)
         #expect(addedTransaction?.totalAmount == 100)
     }
@@ -352,10 +350,8 @@ struct AddTransactionViewModelSharedTests {
         vm.splitType = .custom
         vm.customAmounts = [alice.id: "70", bob.id: "30"]
 
-        var completed = false
-        vm.save { completed = true }
-
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        #expect(completed == true)
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
     }
 }
