@@ -1,0 +1,176 @@
+import Foundation
+import SwiftData
+import Testing
+@testable import Money_Manager
+
+@MainActor
+struct ChangeQueueManagerOrphanTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        try makeTestContainer()
+    }
+
+    private func makeManager(container: ModelContainer) -> ChangeQueueManager {
+        let mgr = ChangeQueueManager()
+        mgr.configure(container: container)
+        return mgr
+    }
+
+    private func insertPending(
+        in context: ModelContext,
+        entityType: String = "transaction"
+    ) {
+        let change = PendingChange(
+            entityType: entityType, entityID: UUID(),
+            action: "create", endpoint: "/\(entityType)s",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try? context.save()
+    }
+
+    // MARK: - orphanAll
+
+    @Test func testOrphanAllMovesPendingToOrphaned() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager(container: container)
+
+        insertPending(in: context)
+        insertPending(in: context)
+
+        manager.orphanAll(context: context)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(pending.isEmpty)
+        #expect(orphaned.count == 2)
+    }
+
+    @Test func testOrphanAllClearsPendingQueue() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager(container: container)
+
+        insertPending(in: context)
+        insertPending(in: context)
+        insertPending(in: context)
+
+        manager.orphanAll(context: context)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        #expect(pending.isEmpty)
+    }
+
+    @Test func testOrphanAllOnEmptyQueueDoesNothing() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager(container: container)
+
+        manager.orphanAll(context: context)
+
+        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(orphaned.isEmpty)
+    }
+
+    @Test func testOrphanAllPreservesEntityMetadata() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager(container: container)
+
+        let id = UUID()
+        manager.enqueue(
+            entityType: "budget", entityID: id,
+            action: "update", endpoint: "/budgets",
+            httpMethod: "PUT", payload: "{}".data(using: .utf8),
+            context: context
+        )
+
+        manager.orphanAll(context: context)
+
+        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(orphaned.count == 1)
+        #expect(orphaned.first?.entityType == "budget")
+        #expect(orphaned.first?.entityID == id)
+        #expect(orphaned.first?.action == "update")
+        #expect(orphaned.first?.httpMethod == "PUT")
+    }
+
+    // MARK: - purgeExpiredOrphans
+
+    @Test func testPurgeExpiredOrphansRemovesOldEntries() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager(container: container)
+
+        let oldOrphan = OrphanedChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "create", endpoint: "/transactions",
+            httpMethod: "POST", payload: nil,
+            createdAt: Date(timeIntervalSinceNow: -30 * 86400)
+        )
+        oldOrphan.orphanedAt = Date(timeIntervalSinceNow: -8 * 86400)
+        context.insert(oldOrphan)
+        try context.save()
+
+        manager.purgeExpiredOrphans(olderThan: 7, context: context)
+
+        let remaining = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(remaining.isEmpty)
+    }
+
+    @Test func testPurgeExpiredOrphansKeepsRecentEntries() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = makeManager(container: container)
+
+        let recentOrphan = OrphanedChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "create", endpoint: "/transactions",
+            httpMethod: "POST", payload: nil,
+            createdAt: Date()
+        )
+        context.insert(recentOrphan)
+        try context.save()
+
+        manager.purgeExpiredOrphans(olderThan: 7, context: context)
+
+        let remaining = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(remaining.count == 1)
+    }
+
+    // MARK: - Notification
+
+    @Test func testSyncSessionInvalidOrphansQueueAndPostsNotification() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.syncSessionInvalid(reason: "EXPIRED") }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        for _ in 0..<2 {
+            let change = PendingChange(
+                entityType: "transaction", entityID: UUID(),
+                action: "create", endpoint: "/transactions",
+                httpMethod: "POST", payload: "{}".data(using: .utf8)
+            )
+            context.insert(change)
+        }
+        try context.save()
+
+        var notificationFired = false
+        let observer = NotificationCenter.default.addObserver(
+            forName: .syncSessionOrphaned, object: nil, queue: nil
+        ) { _ in notificationFired = true }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let orphans = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(pending.isEmpty)
+        #expect(orphans.count == 2)
+        #expect(notificationFired)
+    }
+}

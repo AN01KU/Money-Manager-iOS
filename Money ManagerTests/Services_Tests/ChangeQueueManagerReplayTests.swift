@@ -286,11 +286,57 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: false)
 
-        // Nothing sent
         #expect(mock.postCalls.isEmpty)
-        // Change still in queue
         let remaining = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(remaining.count == 1)
+    }
+
+    // MARK: - Backoff window skips items not yet due
+
+    @Test func testReplayAllSkipsItemsInBackoffWindow() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = ChangeQueueManager()
+        manager.configure(container: container)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "create", endpoint: "/transactions",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        change.nextRetryAt = Date(timeIntervalSinceNow: 3600)
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        #expect(pending.count == 1)
+    }
+
+    // MARK: - Max retry limit → dead letter
+
+    @Test func testReplayAllMovesExhaustedChangeToDeadLetter() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let manager = ChangeQueueManager()
+        manager.configure(container: container)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "create", endpoint: "/transactions",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        change.retryCount = ChangeQueueManager.maxRetryCount
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty)
+        #expect(failed.count == 1)
     }
 
     // MARK: - SyncSession invalid → orphans queue and posts notification
