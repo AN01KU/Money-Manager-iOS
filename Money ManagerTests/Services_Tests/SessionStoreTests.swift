@@ -25,6 +25,14 @@ struct SessionStoreTests {
     @Test
     func testGetSyncSessionIDReturnsNilWhenNotSet() {
         let store = makeStore()
+        let original = UserDefaults.standard.string(forKey: "sync_session_id")
+        defer {
+            if let original {
+                UserDefaults.standard.set(original, forKey: "sync_session_id")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "sync_session_id")
+            }
+        }
         UserDefaults.standard.removeObject(forKey: "sync_session_id")
 
         #expect(store.getSyncSessionID() == nil)
@@ -147,6 +155,14 @@ struct SessionStoreTests {
     @Test
     func testGetLastLoggedInEmailReturnsNilWhenNotSet() {
         let store = makeStore()
+        let original = UserDefaults.standard.string(forKey: "last_logged_in_email")
+        defer {
+            if let original {
+                UserDefaults.standard.set(original, forKey: "last_logged_in_email")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+            }
+        }
         UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
 
         #expect(store.getLastLoggedInEmail() == nil)
@@ -197,6 +213,14 @@ struct SessionStoreTests {
     @Test
     func testMissingEmailAllowsSilentAccountSwitch() {
         let store = makeStore()
+        let original = UserDefaults.standard.string(forKey: "last_logged_in_email")
+        defer {
+            if let original {
+                UserDefaults.standard.set(original, forKey: "last_logged_in_email")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+            }
+        }
         UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
 
         // No email saved — this is the pre-fix state after reinstall + Keychain token present

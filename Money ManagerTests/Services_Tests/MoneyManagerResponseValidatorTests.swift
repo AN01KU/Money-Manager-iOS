@@ -42,9 +42,16 @@ struct MoneyManagerResponseValidatorTests {
 
     @Test func testValidatorThrowsFor401() throws {
         let response = makeResponse(statusCode: 401)
-        #expect(throws: (any Error).self) {
+        var threwError = false
+        do {
             try validator.validate(response, data: Data(), for: URLRequest(url: URL(string: "https://api.example.com")!))
+        } catch let error as APIError {
+            threwError = true
+            if case .unauthorized = error {} else {
+                Issue.record("Expected .unauthorized, got \(error)")
+            }
         }
+        #expect(threwError)
     }
 
     @Test func testValidatorThrowsFor404() throws {

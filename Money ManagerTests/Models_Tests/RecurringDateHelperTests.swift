@@ -38,7 +38,9 @@ struct RecurringDateHelperTests {
     
     @Test
     func testNextOccurrenceForWeeklyFrequency() {
-        let pastDate = Calendar.current.date(byAdding: .weekOfYear, value: -2, to: Date())!
+        let calendar = Calendar.current
+        // Start exactly 2 weeks ago (no daysOfWeek → pure weekly interval)
+        let pastDate = calendar.date(byAdding: .weekOfYear, value: -2, to: Date())!
 
         let expense = RecurringTransaction(
             name: "Weekly Gym",
@@ -50,30 +52,47 @@ struct RecurringDateHelperTests {
 
         let next = expense.nextOccurrence
         #expect(next != nil)
+        // Must be strictly in the future
         #expect(next! > Date())
+        // Must be within 7 days of today (weekly cadence means next occurrence is < 1 week away)
+        let oneWeekAhead = calendar.date(byAdding: .weekOfYear, value: 1, to: Date())!
+        #expect(next! <= oneWeekAhead)
     }
     
     @Test
     func testNextOccurrenceForMonthlyFrequency() {
-        let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
-        
+        let calendar = Calendar.current
+        // Start exactly one month ago with dayOfMonth = 15
+        var components = calendar.dateComponents([.year, .month], from: Date())
+        components.day = 15
+        components.hour = 0
+        components.minute = 0
+        components.second = 0
+        let startDate = calendar.date(byAdding: .month, value: -1, to: calendar.date(from: components)!)!
+
         let expense = RecurringTransaction(
             name: "Rent",
             amount: 15000,
             category: "Housing",
             frequency: .monthly,
-            dayOfMonth: 1,
-            startDate: lastMonth
+            dayOfMonth: 15,
+            startDate: startDate
         )
-        
+
         let next = expense.nextOccurrence
         #expect(next != nil)
+        // Must be strictly in the future
+        #expect(next! > Date())
+        // Must fall on day 15 (or day 28 if the month is short — matches the clamping logic)
+        let dayOfMonth = calendar.component(.day, from: next!)
+        #expect(dayOfMonth == 15 || dayOfMonth == 28)
     }
-    
+
     @Test
     func testNextOccurrenceForMonthlyWithoutDayOfMonth() {
-        let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
-        
+        let calendar = Calendar.current
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: Date())!
+
         let expense = RecurringTransaction(
             name: "Subscription",
             amount: 100,
@@ -81,9 +100,11 @@ struct RecurringDateHelperTests {
             frequency: .monthly,
             startDate: lastMonth
         )
-        
+
         let next = expense.nextOccurrence
         #expect(next != nil)
+        // Must be strictly in the future
+        #expect(next! > Date())
     }
     
     @Test
@@ -182,14 +203,20 @@ struct DateExtensionTests {
     
     @Test
     func testRelativeStringContainsExpectedUnits() {
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-        
-        let yesterdayString = yesterday.relativeString
-        let tomorrowString = tomorrow.relativeString
-        
-        #expect(yesterdayString.contains("day") || yesterdayString.contains("ago"))
-        #expect(tomorrowString.contains("day") || tomorrowString.contains("in"))
+        // Use a fixed 7-day offset so the result is always a "week" unit, not locale-dependent words.
+        // RelativeDateTimeFormatter is locale-aware but we assert non-emptiness and that
+        // the past/future direction differs — both of which are locale-independent.
+        let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
+        let sevenDaysAhead = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
+
+        let pastString = sevenDaysAgo.relativeString
+        let futureString = sevenDaysAhead.relativeString
+
+        #expect(!pastString.isEmpty)
+        #expect(!futureString.isEmpty)
+        // The two strings must differ — past and future produce distinct formatted output
+        // regardless of locale.
+        #expect(pastString != futureString)
     }
     
     @Test
