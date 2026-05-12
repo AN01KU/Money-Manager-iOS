@@ -185,6 +185,90 @@ struct AddCategorySwiftDataTests {
     }
 }
 
+// MARK: - AddRecurringTransactionViewModel validation
+
+@MainActor
+struct AddRecurringTransactionValidationTests {
+
+    private func makeVM(name: String = "Netflix", amount: String = "649", category: String = "Entertainment") -> AddRecurringTransactionViewModel {
+        let vm = AddRecurringTransactionViewModel()
+        vm.name = name
+        vm.amount = amount
+        vm.selectedCategory = category
+        return vm
+    }
+
+    @Test func testSaveWithEmptyNameReturnsFalseAndSetsError() {
+        let vm = makeVM(name: "")
+        let result = vm.save()
+        #expect(result == false)
+        #expect(vm.showError == true)
+        #expect(!vm.errorMessage.isEmpty)
+    }
+
+    @Test func testSaveWithWhitespaceOnlyNameReturnsFalseAndSetsError() {
+        let vm = makeVM(name: "   ")
+        let result = vm.save()
+        #expect(result == false)
+        #expect(vm.showError == true)
+    }
+
+    @Test func testSaveWithZeroAmountReturnsFalseAndSetsError() {
+        let vm = makeVM(amount: "0")
+        let result = vm.save()
+        #expect(result == false)
+        #expect(vm.showError == true)
+        #expect(!vm.errorMessage.isEmpty)
+    }
+
+    @Test func testSaveWithNegativeAmountReturnsFalseAndSetsError() {
+        let vm = makeVM(amount: "-100")
+        let result = vm.save()
+        #expect(result == false)
+        #expect(vm.showError == true)
+    }
+
+    @Test func testSaveWithNonNumericAmountReturnsFalseAndSetsError() {
+        let vm = makeVM(amount: "abc")
+        let result = vm.save()
+        #expect(result == false)
+        #expect(vm.showError == true)
+        #expect(!vm.errorMessage.isEmpty)
+    }
+
+    @Test func testSaveWithEmptyAmountReturnsFalseAndSetsError() {
+        let vm = makeVM(amount: "")
+        let result = vm.save()
+        #expect(result == false)
+        #expect(vm.showError == true)
+    }
+
+    @Test func testIsValidFalseWhenNameEmpty() {
+        let vm = makeVM(name: "")
+        #expect(vm.isValid == false)
+    }
+
+    @Test func testIsValidFalseWhenAmountIsZero() {
+        let vm = makeVM(amount: "0")
+        #expect(vm.isValid == false)
+    }
+
+    @Test func testIsValidFalseWhenAmountIsNonNumeric() {
+        let vm = makeVM(amount: "xyz")
+        #expect(vm.isValid == false)
+    }
+
+    @Test func testIsValidFalseWhenCategoryEmpty() {
+        let vm = makeVM(category: "")
+        #expect(vm.isValid == false)
+    }
+
+    @Test func testIsValidTrueWithValidInputs() {
+        let vm = makeVM()
+        #expect(vm.isValid == true)
+    }
+}
+
 @Suite(.serialized)
 @MainActor
 struct ManageCategoriesSwiftDataTests {
