@@ -1,7 +1,15 @@
 import Foundation
 import SwiftData
 
-struct ExportService {
+protocol ExportServiceProtocol {
+    func exportTransactions(format: ExportFormat, transactions: [Transaction], groups: [SplitGroupModel]) throws -> URL
+    func exportRecurringTransactions(format: ExportFormat, recurringTransactions: [RecurringTransaction]) throws -> URL
+    func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL
+    func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL
+    func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL
+}
+
+struct ExportService: ExportServiceProtocol {
 
     private let iso8601Formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()

@@ -4,6 +4,173 @@ import Testing
 import UniformTypeIdentifiers
 @testable import Money_Manager
 
+// MARK: - Mock Services
+
+@MainActor
+final class MockExportService: ExportServiceProtocol {
+    struct CallRecord {
+        let format: ExportFormat
+        let dataType: ExportDataType
+    }
+
+    var callLog: [CallRecord] = []
+    var shouldThrow = false
+    private let stubbedURL = FileManager.default.temporaryDirectory.appendingPathComponent("mock_export_result")
+
+    func exportTransactions(format: ExportFormat, transactions: [Transaction], groups: [SplitGroupModel]) throws -> URL {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(format: format, dataType: .transactions))
+        return stubbedURL
+    }
+
+    func exportRecurringTransactions(format: ExportFormat, recurringTransactions: [RecurringTransaction]) throws -> URL {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(format: format, dataType: .recurring))
+        return stubbedURL
+    }
+
+    func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(format: format, dataType: .budgets))
+        return stubbedURL
+    }
+
+    func exportCategories(format: ExportFormat, categories: [Money_Manager.Category]) throws -> URL {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(format: format, dataType: .categories))
+        return stubbedURL
+    }
+
+    func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Money_Manager.Category]) throws -> URL {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(format: format, dataType: .all))
+        return stubbedURL
+    }
+}
+
+@MainActor
+final class MockImportService: ImportServiceProtocol {
+    struct CallRecord {
+        let url: URL
+        let format: ExportFormat
+    }
+
+    var callLog: [CallRecord] = []
+    var shouldThrow = false
+    var stubbedResult = ImportResult(message: "Imported successfully")
+
+    func importJSON(from url: URL, context: ModelContext) throws -> ImportResult {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(url: url, format: .json))
+        return stubbedResult
+    }
+
+    func importCSV(from url: URL, context: ModelContext) throws -> ImportResult {
+        if shouldThrow { throw NSError(domain: "mock", code: 1) }
+        callLog.append(CallRecord(url: url, format: .csv))
+        return stubbedResult
+    }
+}
+
+// MARK: - BackupViewModel Behavior Tests
+
+@MainActor
+struct BackupViewModelBehaviorTests {
+
+    private func makeTestContext() throws -> ModelContext {
+        ModelContext(try makeTestContainer())
+    }
+
+    @Test
+    func testExport_callsExportServiceWithCorrectFormatAndDataType() async {
+        let mockExport = MockExportService()
+        let viewModel = BackupViewModel()
+        viewModel.selectedExportFormat = .json
+        viewModel.selectedDataType = .transactions
+        viewModel.exportService = mockExport
+
+        await viewModel.exportData(transactions: [], recurringTransactions: [], budgets: [], categories: [])
+
+        #expect(mockExport.callLog.count == 1)
+        #expect(mockExport.callLog.first?.format == .json)
+        #expect(mockExport.callLog.first?.dataType == .transactions)
+    }
+
+    @Test
+    func testExport_setsIsExportingFalseAfterCompletion() async {
+        let mockExport = MockExportService()
+        let viewModel = BackupViewModel()
+        viewModel.exportService = mockExport
+
+        await viewModel.exportData(transactions: [], recurringTransactions: [], budgets: [], categories: [])
+
+        #expect(viewModel.isExporting == false)
+    }
+
+    @Test
+    func testExport_whenServiceThrows_setsErrorMessage() async {
+        let mockExport = MockExportService()
+        mockExport.shouldThrow = true
+        let viewModel = BackupViewModel()
+        viewModel.selectedExportFormat = .csv
+        viewModel.selectedDataType = .transactions
+        viewModel.exportService = mockExport
+
+        await viewModel.exportData(transactions: [], recurringTransactions: [], budgets: [], categories: [])
+
+        #expect(viewModel.showError == true)
+        #expect(viewModel.errorMessage?.hasPrefix("Export failed:") == true)
+        #expect(viewModel.exportedFileURL == nil)
+    }
+
+    @Test
+    func testImport_callsImportServiceWithProvidedURL() async throws {
+        let mockImport = MockImportService()
+        let context = try makeTestContext()
+        let testURL = URL(fileURLWithPath: "/tmp/import_test.json")
+        let viewModel = BackupViewModel()
+        viewModel.selectedImportFormat = .json
+        viewModel.importService = mockImport
+
+        await viewModel.importData(from: testURL, context: context)
+
+        #expect(mockImport.callLog.count == 1)
+        #expect(mockImport.callLog.first?.url == testURL)
+        #expect(mockImport.callLog.first?.format == .json)
+    }
+
+    @Test
+    func testImport_whenServiceThrows_setsErrorMessage() async throws {
+        let mockImport = MockImportService()
+        mockImport.shouldThrow = true
+        let context = try makeTestContext()
+        let testURL = URL(fileURLWithPath: "/tmp/import_fail.json")
+        let viewModel = BackupViewModel()
+        viewModel.selectedImportFormat = .json
+        viewModel.importService = mockImport
+
+        await viewModel.importData(from: testURL, context: context)
+
+        #expect(viewModel.showError == true)
+        #expect(viewModel.errorMessage?.hasPrefix("Import failed:") == true)
+        #expect(viewModel.isImporting == false)
+    }
+
+    @Test
+    func testImport_setsIsImportingFalseAfterCompletion() async throws {
+        let mockImport = MockImportService()
+        let context = try makeTestContext()
+        let testURL = URL(fileURLWithPath: "/tmp/nonexistent_import.json")
+        let viewModel = BackupViewModel()
+        viewModel.selectedImportFormat = .json
+        viewModel.importService = mockImport
+
+        await viewModel.importData(from: testURL, context: context)
+
+        #expect(viewModel.isImporting == false)
+    }
+}
+
 @MainActor
 struct ExportFormatTests {
     
@@ -62,84 +229,7 @@ struct ExportDataTypeTests {
 
 @MainActor
 struct ExportDataStructTests {
-    
-    @Test
-    func testTransactionDataInitialization() {
-        let expenseData = ExportData.TransactionData(
-            id: "test-id",
-            amount: 100.50,
-            category: "Food",
-            date: Date(),
-            time: nil,
-            transactionDescription: "Lunch",
-            notes: nil,
-            recurringExpenseId: nil,
-            groupTransactionId: nil
-        )
-        
-        #expect(expenseData.id == "test-id")
-        #expect(expenseData.amount == 100.50)
-        #expect(expenseData.category == "Food")
-        #expect(expenseData.transactionDescription == "Lunch")
-    }
-    
-    @Test
-    func testRecurringTransactionDataInitialization() {
-        let recurringData = ExportData.RecurringTransactionData(
-            id: "rec-1",
-            name: "Netflix",
-            amount: 649,
-            category: "Entertainment",
-            frequency: RecurringFrequency.monthly.rawValue,
-            dayOfMonth: 1,
-            daysOfWeek: nil,
-            startDate: Date(),
-            endDate: nil,
-            isActive: true,
-            lastAddedDate: nil,
-            notes: nil,
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        
-        #expect(recurringData.id == "rec-1")
-        #expect(recurringData.name == "Netflix")
-        #expect(recurringData.frequency == "monthly")
-        #expect(recurringData.isActive == true)
-    }
-    
-    @Test
-    func testMonthlyBudgetDataInitialization() {
-        let budgetData = ExportData.MonthlyBudgetData(
-            id: "budget-1",
-            year: 2026,
-            month: 3,
-            limit: 5000
-        )
-        
-        #expect(budgetData.year == 2026)
-        #expect(budgetData.month == 3)
-        #expect(budgetData.limit == 5000)
-    }
-    
-    @Test
-    func testCategoryDataInitialization() {
-        let categoryData = ExportData.CategoryData(
-            id: "cat-1",
-            name: "Groceries",
-            icon: "cart.fill",
-            color: "#FF0000",
-            isHidden: false,
-            isPredefined: nil,
-            predefinedKey: nil
-        )
-        
-        #expect(categoryData.name == "Groceries")
-        #expect(categoryData.icon == "cart.fill")
-        #expect(categoryData.color == "#FF0000")
-        #expect(categoryData.isHidden == false)
-    }
-    
+
     @Test
     func testExportDataWithAllFields() {
         let expenseData = ExportData.TransactionData(

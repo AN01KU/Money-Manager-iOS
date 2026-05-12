@@ -137,8 +137,8 @@ struct ExportData: Codable {
     var selectedDataType: ExportDataType = .all
     var selectedImportFormat: ExportFormat = .json
     
-    private let exportService = ExportService()
-    private let importService = ImportService()
+    var exportService: any ExportServiceProtocol = ExportService()
+    var importService: any ImportServiceProtocol = ImportService()
     
     var exportDescription: String {
         switch selectedExportFormat {

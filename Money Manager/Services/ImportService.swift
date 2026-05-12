@@ -6,7 +6,13 @@ struct ImportResult {
 }
 
 @MainActor
-struct ImportService {
+protocol ImportServiceProtocol {
+    func importJSON(from url: URL, context: ModelContext) throws -> ImportResult
+    func importCSV(from url: URL, context: ModelContext) throws -> ImportResult
+}
+
+@MainActor
+struct ImportService: ImportServiceProtocol {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
