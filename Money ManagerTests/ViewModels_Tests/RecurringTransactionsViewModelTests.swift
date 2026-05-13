@@ -674,3 +674,192 @@ struct AddRecurringTransactionViewModelTests {
         #expect(items.first?.type == .expense)
     }
 }
+
+@MainActor
+struct EditRecurringTransactionViewModelTests {
+
+    private func makeMonthly() -> RecurringTransaction {
+        RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly, dayOfMonth: 5)
+    }
+
+    private func makeWeekly() -> RecurringTransaction {
+        RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .weekly, daysOfWeek: [1, 3])
+    }
+
+    // MARK: - load
+
+    @Test
+    func testLoadPopulatesFields() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+
+        #expect(vm.name == "Rent")
+        #expect(Double(vm.amount) == 1000)
+        #expect(vm.selectedCategory == "Housing")
+        #expect(vm.frequency == .monthly)
+        #expect(vm.dayOfMonth == 5)
+        #expect(vm.frequencyError == nil)
+    }
+
+    @Test
+    func testLoadResetsFrequencyError() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.frequencyError = "stale error"
+        vm.load(from: recurring)
+
+        #expect(vm.frequencyError == nil)
+    }
+
+    // MARK: - isValid
+
+    @Test
+    func testIsValidTrueWhenNoFrequencyChange() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+
+        #expect(vm.isValid == true)
+    }
+
+    @Test
+    func testIsValidFalseWhenChangingToWeeklyWithNoDaysSelected() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .weekly
+        vm.daysOfWeek = []
+
+        #expect(vm.isValid == false)
+    }
+
+    @Test
+    func testIsValidTrueWhenChangingToWeeklyWithDaysSelected() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .weekly
+        vm.daysOfWeek = [1, 3]
+
+        #expect(vm.isValid == true)
+    }
+
+    @Test
+    func testIsValidFalseWithEmptyName() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.name = ""
+
+        #expect(vm.isValid == false)
+    }
+
+    @Test
+    func testIsValidFalseWithZeroAmount() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.amount = "0"
+
+        #expect(vm.isValid == false)
+    }
+
+    // MARK: - validateFrequency
+
+    @Test
+    func testValidateFrequencySetsErrorWhenChangingToWeeklyWithNoDays() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .weekly
+        vm.daysOfWeek = []
+        vm.validateFrequency()
+
+        #expect(vm.frequencyError != nil)
+        #expect(vm.frequencyError?.contains("day of the week") == true)
+    }
+
+    @Test
+    func testValidateFrequencyClearsErrorWhenDaysSelected() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .weekly
+        vm.daysOfWeek = []
+        vm.validateFrequency()
+        vm.daysOfWeek = [2]
+        vm.validateFrequency()
+
+        #expect(vm.frequencyError == nil)
+    }
+
+    @Test
+    func testValidateFrequencyNoErrorWhenFrequencyUnchanged() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.validateFrequency()
+
+        #expect(vm.frequencyError == nil)
+    }
+
+    // MARK: - apply
+
+    @Test
+    func testApplyReturnsFalseWhenWeeklyWithNoDays() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .weekly
+        vm.daysOfWeek = []
+
+        let result = vm.apply(to: recurring)
+
+        #expect(result == false)
+        #expect(vm.showError == true)
+        #expect(vm.errorMessage.contains("day of the week"))
+    }
+
+    @Test
+    func testApplySetsDaysOfWeekWhenWeekly() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .weekly
+        vm.daysOfWeek = [1, 4]
+
+        let result = vm.apply(to: recurring)
+
+        #expect(result == true)
+        #expect(recurring.daysOfWeek == [1, 4])
+        #expect(recurring.dayOfMonth == nil)
+    }
+
+    @Test
+    func testApplyClearsDaysOfWeekWhenMonthly() {
+        let recurring = makeWeekly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+        vm.frequency = .monthly
+        vm.dayOfMonth = 10
+
+        let result = vm.apply(to: recurring)
+
+        #expect(result == true)
+        #expect(recurring.dayOfMonth == 10)
+        #expect(recurring.daysOfWeek == nil)
+    }
+
+    @Test
+    func testApplyReturnsTrueWhenValidMonthly() {
+        let recurring = makeMonthly()
+        let vm = EditRecurringTransactionViewModel()
+        vm.load(from: recurring)
+
+        let result = vm.apply(to: recurring)
+
+        #expect(result == true)
+        #expect(recurring.name == "Rent")
+    }
+}

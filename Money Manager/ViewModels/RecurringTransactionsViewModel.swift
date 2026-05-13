@@ -101,6 +101,113 @@ import SwiftData
 }
 
 @MainActor
+@Observable class EditRecurringTransactionViewModel {
+    var name: String = ""
+    var amount: String = ""
+    var selectedCategory: String = ""
+    var selectedCategoryName: String {
+        let lookup = CategoryResolver.makeLookup(from: customCategories)
+        return CategoryResolver.resolveAll(selectedCategory, lookup: lookup).name
+    }
+    var transactionType: TransactionKind = .expense
+    var frequency: RecurringFrequency = .monthly
+    var startDate: Date = Date()
+    var hasEndDate: Bool = false
+    var endDate: Date = Date()
+    var dayOfMonth: Int = 1
+    var daysOfWeek: [Int] = []
+    var notes: String = ""
+    var showCategoryPicker = false
+    var showError = false
+    var errorMessage = ""
+    var frequencyError: String? = nil
+
+    var customCategories: [Category] = []
+
+    private var originalFrequency: RecurringFrequency = .monthly
+
+    let frequencies = RecurringFrequency.allCases
+
+    var isValid: Bool {
+        guard let amountValue = Double(amount), amountValue > 0 else { return false }
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        guard !selectedCategory.isEmpty else { return false }
+        return frequencyValidationError == nil
+    }
+
+    var frequencyValidationError: String? {
+        guard frequency != originalFrequency else { return nil }
+        switch frequency {
+        case .weekly where daysOfWeek.isEmpty:
+            return "Please select at least one day of the week."
+        case .monthly where dayOfMonth < 1:
+            return "Please select a day of the month."
+        default:
+            return nil
+        }
+    }
+
+    func load(from recurring: RecurringTransaction, categories: [Category] = []) {
+        name = recurring.name
+        amount = recurring.amount.editableString
+        selectedCategory = recurring.category
+        transactionType = recurring.type
+        frequency = recurring.frequency
+        originalFrequency = recurring.frequency
+        startDate = recurring.startDate
+        hasEndDate = recurring.endDate != nil
+        endDate = recurring.endDate ?? Date()
+        dayOfMonth = recurring.dayOfMonth ?? 1
+        daysOfWeek = recurring.daysOfWeek ?? []
+        notes = recurring.notes ?? ""
+        customCategories = categories
+        frequencyError = nil
+    }
+
+    func validateFrequency() {
+        frequencyError = frequencyValidationError
+    }
+
+    func apply(to recurring: RecurringTransaction, categories: [Category] = []) -> Bool {
+        guard let amountValue = Double(amount), amountValue > 0 else {
+            errorMessage = "Amount must be greater than 0"
+            showError = true
+            return false
+        }
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Please enter a name"
+            showError = true
+            return false
+        }
+        guard !selectedCategory.isEmpty else {
+            errorMessage = "Please select a category"
+            showError = true
+            return false
+        }
+        if let freqErr = frequencyValidationError {
+            errorMessage = freqErr
+            showError = true
+            return false
+        }
+
+        recurring.name = trimmed
+        recurring.amount = amountValue
+        recurring.category = selectedCategory
+        recurring.categoryId = categories.first(where: { $0.key == selectedCategory })?.id
+        recurring.type = transactionType
+        recurring.frequency = frequency
+        recurring.startDate = startDate
+        recurring.dayOfMonth = frequency == .monthly ? dayOfMonth : nil
+        recurring.daysOfWeek = frequency == .weekly ? (daysOfWeek.isEmpty ? nil : daysOfWeek) : nil
+        recurring.endDate = hasEndDate ? endDate : nil
+        recurring.notes = notes.isEmpty ? nil : notes
+        recurring.updatedAt = Date()
+        return true
+    }
+}
+
+@MainActor
 @Observable class AddRecurringTransactionViewModel {
     var name: String = ""
     var amount: String = ""

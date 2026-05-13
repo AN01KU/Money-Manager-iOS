@@ -28,6 +28,7 @@ enum APIError: Error, LocalizedError, Equatable {
     case mixedCurrencySettlement // 400 MIXED_CURRENCY_SETTLEMENT
     case mixedCurrencyGroupTx   // 400 MIXED_CURRENCY_GROUP_TX
     case addMemberFailed        // 400 add_member_failed
+    case recurringFrequencyFieldMissing(String) // 400 — required field for new frequency absent; string is the frequency name
     case missingTestData(String)
     
     var errorDescription: String? {
@@ -76,6 +77,14 @@ enum APIError: Error, LocalizedError, Equatable {
             return "All members in a group transaction must use the same currency."
         case .addMemberFailed:
             return "Failed to add member to the group. Please try again."
+        case .recurringFrequencyFieldMissing(let freq):
+            if freq == "weekly" {
+                return "Please select at least one day of the week."
+            } else if freq == "monthly" {
+                return "Please select a day of the month."
+            } else {
+                return "Please fill in the required field for the selected frequency."
+            }
         case .missingTestData(let context):
             return "Missing test data: \(context)"
         }
@@ -101,6 +110,8 @@ enum APIError: Error, LocalizedError, Equatable {
              (.mixedCurrencyGroupTx, .mixedCurrencyGroupTx),
              (.addMemberFailed, .addMemberFailed):
             return true
+        case let (.recurringFrequencyFieldMissing(lF), .recurringFrequencyFieldMissing(rF)):
+            return lF == rF
         case let (.invalidField(lF), .invalidField(rF)):
             return lF == rF
         case let (.httpError(lCode, lMsg), .httpError(rCode, rMsg)):
