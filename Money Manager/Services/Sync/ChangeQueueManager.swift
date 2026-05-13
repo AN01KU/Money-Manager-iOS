@@ -183,6 +183,13 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     AppLogger.sync.error("[ReplayDebug] invalid \(field) for \(change.entityType)=\(change.entityID) — dead-lettering immediately")
                     moveToDeadLetter(change, lastError: "Invalid \(field)", context: context)
 
+                case .idOwnedByAnotherUser, .idOwnedByAnotherGroup:
+                    // UUID collision — this entity belongs to another user/group and is
+                    // unrecoverable from the client's perspective. Purge the local row
+                    // and drop the pending change regardless of action.
+                    AppLogger.sync.error("[ReplayDebug] \(apiError) for \(change.entityType)=\(change.entityID) action=\(change.action) — purging local entity and discarding change")
+                    discardChangeAndEntity(change, context: context)
+
                 case .conflict where change.action == "create":
                     // 409 on a create — entity already exists on server, treat as success.
                     AppLogger.sync.warning("[ReplayDebug] 409 on create for \(change.entityType)=\(change.entityID) — entity already on server, discarding pending change")

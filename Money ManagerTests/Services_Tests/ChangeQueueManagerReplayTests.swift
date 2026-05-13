@@ -460,6 +460,134 @@ struct ChangeQueueManagerReplayTests {
         #expect(failed.count == 1, "404 on create should dead-letter, not purge entity")
     }
 
+    // MARK: - ID_OWNED_BY_ANOTHER_USER / GROUP → purge entity + discard (issue #39)
+
+    @Test func testReplayAllIdOwnedByAnotherUserOnCreatePurgesEntityAndDiscardsChange() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.idOwnedByAnotherUser }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let txId = UUID()
+        let tx = Transaction(id: txId, amount: 50, category: "Food", date: Date())
+        context.insert(tx)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: txId,
+            action: "create", endpoint: "/transactions",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let txns = try context.fetch(FetchDescriptor<Transaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty, "pending change should be discarded")
+        #expect(txns.isEmpty, "local entity should be purged")
+        #expect(failed.isEmpty, "should NOT dead-letter — purge and discard immediately")
+    }
+
+    @Test func testReplayAllIdOwnedByAnotherUserOnUpdatePurgesEntityAndDiscardsChange() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.idOwnedByAnotherUser }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let txId = UUID()
+        let tx = Transaction(id: txId, amount: 50, category: "Food", date: Date())
+        context.insert(tx)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: txId,
+            action: "update", endpoint: "/transactions",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let txns = try context.fetch(FetchDescriptor<Transaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty)
+        #expect(txns.isEmpty)
+        #expect(failed.isEmpty)
+    }
+
+    @Test func testReplayAllIdOwnedByAnotherGroupOnCreatePurgesEntityAndDiscardsChange() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.idOwnedByAnotherGroup }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let recId = UUID()
+        let rec = RecurringTransaction(
+            id: recId, name: "Sub", amount: 9, category: "Bills",
+            frequency: .monthly, startDate: Date()
+        )
+        context.insert(rec)
+
+        let change = PendingChange(
+            entityType: "recurring", entityID: recId,
+            action: "create", endpoint: "/recurring-transactions",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty)
+        #expect(recurring.isEmpty)
+        #expect(failed.isEmpty)
+    }
+
+    @Test func testReplayAllIdOwnedByAnotherGroupOnUpdatePurgesEntityAndDiscardsChange() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.idOwnedByAnotherGroup }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let recId = UUID()
+        let rec = RecurringTransaction(
+            id: recId, name: "Sub", amount: 9, category: "Bills",
+            frequency: .monthly, startDate: Date()
+        )
+        context.insert(rec)
+
+        let change = PendingChange(
+            entityType: "recurring", entityID: recId,
+            action: "update", endpoint: "/recurring-transactions",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty)
+        #expect(recurring.isEmpty)
+        #expect(failed.isEmpty)
+    }
+
     // MARK: - SyncSession invalid → orphans queue and posts notification
 
     @Test func testReplayAllSyncSessionInvalidOrphansQueue() async throws {
