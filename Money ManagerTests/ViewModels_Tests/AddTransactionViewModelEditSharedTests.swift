@@ -24,13 +24,14 @@ struct AddTransactionViewModelEditSharedTests {
         amount: Double = 100,
         category: String = "Food",
         description: String? = "Dinner",
-        notes: String? = nil
+        notes: String? = nil,
+        updatedAt: Date = Date()
     ) -> APIGroupTransaction {
         APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: paidBy,
             totalAmount: amount, category: category, date: Date(),
             description: description, notes: notes, isDeleted: false,
-            createdAt: Date(), updatedAt: Date(), splits: []
+            createdAt: Date(), updatedAt: updatedAt, splits: []
         )
     }
 
@@ -113,6 +114,24 @@ struct AddTransactionViewModelEditSharedTests {
 
         #expect(mock.lastUpdateRequest?.category == nil) // unchanged category not sent
         #expect(mock.lastUpdateRequest?.description == "New Description")
+    }
+
+    @Test func testSaveSharedEditIncludesUpdatedAtInPayload() async {
+        let alice = makeMember()
+        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let knownDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let existingTx = makeGroupTransaction(paidBy: alice.id, updatedAt: knownDate)
+        let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
+        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        vm.selectedCategory = "Transport"
+        vm.description = "Taxi"
+
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
+
+        #expect(mock.lastUpdateRequest?.updatedAt == knownDate)
     }
 
     // MARK: - isValid edge cases

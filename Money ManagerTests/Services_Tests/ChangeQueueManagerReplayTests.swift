@@ -588,6 +588,38 @@ struct ChangeQueueManagerReplayTests {
         #expect(failed.isEmpty)
     }
 
+    // MARK: - STALE_WRITE → discard pending change, keep local entity
+
+    @Test func testReplayAllStaleWriteDiscardsPendingChangeAndKeepsLocalEntity() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.staleWrite }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let txId = UUID()
+        let tx = Transaction(id: txId, amount: 50, category: "Food", date: Date())
+        context.insert(tx)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: txId,
+            action: "update", endpoint: "/transactions",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let txns = try context.fetch(FetchDescriptor<Transaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty, "stale pending change should be discarded")
+        #expect(txns.count == 1, "local entity should NOT be purged — server pull will overwrite it")
+        #expect(failed.isEmpty, "staleWrite should not dead-letter")
+    }
+
     // MARK: - SyncSession invalid → orphans queue and posts notification
 
     @Test func testReplayAllSyncSessionInvalidOrphansQueue() async throws {

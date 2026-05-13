@@ -618,6 +618,12 @@ struct APIUpdateGroupTransactionRequest: Codable, Sendable {
     let date: Date?
     let description: String?
     let notes: String?
+    let updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case category, date, description, notes
+        case updatedAt = "updated_at"
+    }
 }
 
 struct APIGroupMembersResponse: Codable, Sendable {
