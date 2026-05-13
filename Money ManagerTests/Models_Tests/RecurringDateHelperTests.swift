@@ -236,6 +236,43 @@ struct DateExtensionTests {
         #expect(!formatted.contains(":"))
     }
 
+    // MARK: - formattedNextOccurrence: respects passed time zone (no UTC-as-local drift)
+
+    @Test
+    func testFormattedNextOccurrenceRespectsTimeZone() {
+        // Same UTC instant rendered in different time zones must produce
+        // different local dates — proving the formatter honours `timeZone`
+        // and does not silently use UTC.
+        // 2026-05-13T20:00:00Z → May 14 in Asia/Kolkata (+05:30),
+        //                         May 13 in UTC.
+        let formatter = ISO8601DateFormatter()
+        let instant = formatter.date(from: "2026-05-13T20:00:00Z")!
+        let enUS = Locale(identifier: "en_US")
+
+        let kolkata = instant.formattedNextOccurrence(
+            timeZone: TimeZone(identifier: "Asia/Kolkata")!,
+            locale: enUS
+        )
+        let utc = instant.formattedNextOccurrence(
+            timeZone: TimeZone(identifier: "UTC")!,
+            locale: enUS
+        )
+
+        #expect(kolkata == "May 14, 2026")
+        #expect(utc == "May 13, 2026")
+    }
+
+    @Test
+    func testFormattedNextOccurrenceDefaultsToCurrentTimeZone() {
+        // Default arguments must match an explicit `.current` invocation —
+        // i.e. the helper defers to the device's calendar/timezone for the UI.
+        let now = Date()
+        #expect(
+            now.formattedNextOccurrence()
+                == now.formattedNextOccurrence(timeZone: .current, locale: .current)
+        )
+    }
+
     // MARK: - nextOccurrence: past endDate returns nil
 
     @Test

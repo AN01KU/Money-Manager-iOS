@@ -125,7 +125,7 @@ struct TransactionDetailView: View {
                         .foregroundStyle(AppColors.primary)
 
                     if let next = recurring.nextOccurrence {
-                        Text("Next: \(next.formatted(date: .abbreviated, time: .omitted))")
+                        Text("Next: \(next.formattedNextOccurrence())")
                             .font(AppTypography.caption1)
                             .foregroundStyle(AppColors.label2)
                     }
