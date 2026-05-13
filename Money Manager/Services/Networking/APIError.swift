@@ -23,6 +23,11 @@ enum APIError: Error, LocalizedError, Equatable {
     case serverError
     case transientError      // 502 — server-side blip; client should back off and retry
     case unknown
+    case idOwnedByAnotherUser   // 409 ID_OWNED_BY_ANOTHER_USER
+    case idOwnedByAnotherGroup  // 409 ID_OWNED_BY_ANOTHER_GROUP
+    case mixedCurrencySettlement // 400 MIXED_CURRENCY_SETTLEMENT
+    case mixedCurrencyGroupTx   // 400 MIXED_CURRENCY_GROUP_TX
+    case addMemberFailed        // 400 add_member_failed
     case missingTestData(String)
     
     var errorDescription: String? {
@@ -61,6 +66,16 @@ enum APIError: Error, LocalizedError, Equatable {
             return "Server temporarily unavailable. Will retry shortly."
         case .unknown:
             return "An unknown error occurred"
+        case .idOwnedByAnotherUser:
+            return "This item belongs to another user and cannot be modified."
+        case .idOwnedByAnotherGroup:
+            return "This item belongs to another group and cannot be modified."
+        case .mixedCurrencySettlement:
+            return "Settlements must be between members using the same currency."
+        case .mixedCurrencyGroupTx:
+            return "All members in a group transaction must use the same currency."
+        case .addMemberFailed:
+            return "Failed to add member to the group. Please try again."
         case .missingTestData(let context):
             return "Missing test data: \(context)"
         }
@@ -79,7 +94,12 @@ enum APIError: Error, LocalizedError, Equatable {
              (.transientError, .transientError),
              (.unknown, .unknown):
             return true
-        case (.overrideAlreadyExists, .overrideAlreadyExists):
+        case (.overrideAlreadyExists, .overrideAlreadyExists),
+             (.idOwnedByAnotherUser, .idOwnedByAnotherUser),
+             (.idOwnedByAnotherGroup, .idOwnedByAnotherGroup),
+             (.mixedCurrencySettlement, .mixedCurrencySettlement),
+             (.mixedCurrencyGroupTx, .mixedCurrencyGroupTx),
+             (.addMemberFailed, .addMemberFailed):
             return true
         case let (.invalidField(lF), .invalidField(rF)):
             return lF == rF
@@ -116,6 +136,12 @@ extension APIError {
                 self = .invalidField("icon")
             } else if code == "INVALID_COLOR" {
                 self = .invalidField("color")
+            } else if code == "MIXED_CURRENCY_SETTLEMENT" {
+                self = .mixedCurrencySettlement
+            } else if code == "MIXED_CURRENCY_GROUP_TX" {
+                self = .mixedCurrencyGroupTx
+            } else if code == "add_member_failed" {
+                self = .addMemberFailed
             } else {
                 self = .httpError(statusCode: 400, message: message)
             }
@@ -132,6 +158,10 @@ extension APIError {
                 self = .staleWrite
             } else if Self.parseErrorCode(from: data) == "OVERRIDE_ALREADY_EXISTS" {
                 self = .overrideAlreadyExists
+            } else if Self.parseErrorCode(from: data) == "ID_OWNED_BY_ANOTHER_USER" {
+                self = .idOwnedByAnotherUser
+            } else if Self.parseErrorCode(from: data) == "ID_OWNED_BY_ANOTHER_GROUP" {
+                self = .idOwnedByAnotherGroup
             } else {
                 self = .conflict
             }

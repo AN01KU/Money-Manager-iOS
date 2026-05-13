@@ -144,4 +144,83 @@ struct APIErrorDescriptionTests {
         let error = APIError(from: response(status: 429), data: data)
         #expect(error == .httpError(statusCode: 429, message: "rate limited"))
     }
+
+    // MARK: - New typed error code mappings (Issue #31)
+
+    @Test func test409IdOwnedByAnotherUser() {
+        let data = body(["code": "ID_OWNED_BY_ANOTHER_USER"])
+        let error = APIError(from: response(status: 409), data: data)
+        #expect(error == .idOwnedByAnotherUser)
+    }
+
+    @Test func test409IdOwnedByAnotherGroup() {
+        let data = body(["code": "ID_OWNED_BY_ANOTHER_GROUP"])
+        let error = APIError(from: response(status: 409), data: data)
+        #expect(error == .idOwnedByAnotherGroup)
+    }
+
+    @Test func test400MixedCurrencySettlement() {
+        let data = body(["code": "MIXED_CURRENCY_SETTLEMENT"])
+        let error = APIError(from: response(status: 400), data: data)
+        #expect(error == .mixedCurrencySettlement)
+    }
+
+    @Test func test400MixedCurrencyGroupTx() {
+        let data = body(["code": "MIXED_CURRENCY_GROUP_TX"])
+        let error = APIError(from: response(status: 400), data: data)
+        #expect(error == .mixedCurrencyGroupTx)
+    }
+
+    @Test func test400AddMemberFailed() {
+        let data = body(["code": "add_member_failed"])
+        let error = APIError(from: response(status: 400), data: data)
+        #expect(error == .addMemberFailed)
+    }
+
+    @Test func testIdOwnedByAnotherUserDescription() {
+        #expect(APIError.idOwnedByAnotherUser.errorDescription != nil)
+        #expect(APIError.idOwnedByAnotherUser.errorDescription?.isEmpty == false)
+    }
+
+    @Test func testIdOwnedByAnotherGroupDescription() {
+        #expect(APIError.idOwnedByAnotherGroup.errorDescription != nil)
+        #expect(APIError.idOwnedByAnotherGroup.errorDescription?.isEmpty == false)
+    }
+
+    @Test func testMixedCurrencySettlementDescription() {
+        #expect(APIError.mixedCurrencySettlement.errorDescription != nil)
+        #expect(APIError.mixedCurrencySettlement.errorDescription?.isEmpty == false)
+    }
+
+    @Test func testMixedCurrencyGroupTxDescription() {
+        #expect(APIError.mixedCurrencyGroupTx.errorDescription != nil)
+        #expect(APIError.mixedCurrencyGroupTx.errorDescription?.isEmpty == false)
+    }
+
+    @Test func testAddMemberFailedDescription() {
+        #expect(APIError.addMemberFailed.errorDescription != nil)
+        #expect(APIError.addMemberFailed.errorDescription?.isEmpty == false)
+    }
+
+    @Test func testIdOwnedByAnotherUserEquatable() {
+        #expect(APIError.idOwnedByAnotherUser == .idOwnedByAnotherUser)
+        #expect(APIError.idOwnedByAnotherUser != .idOwnedByAnotherGroup)
+    }
+
+    @Test func testIdOwnedByAnotherGroupEquatable() {
+        #expect(APIError.idOwnedByAnotherGroup == .idOwnedByAnotherGroup)
+    }
+
+    @Test func testMixedCurrencySettlementEquatable() {
+        #expect(APIError.mixedCurrencySettlement == .mixedCurrencySettlement)
+        #expect(APIError.mixedCurrencySettlement != .mixedCurrencyGroupTx)
+    }
+
+    @Test func testMixedCurrencyGroupTxEquatable() {
+        #expect(APIError.mixedCurrencyGroupTx == .mixedCurrencyGroupTx)
+    }
+
+    @Test func testAddMemberFailedEquatable() {
+        #expect(APIError.addMemberFailed == .addMemberFailed)
+    }
 }
