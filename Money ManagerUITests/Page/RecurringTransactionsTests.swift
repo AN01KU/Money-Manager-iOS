@@ -159,26 +159,29 @@ final class RecurringTransactionsTests: XCTestCase {
     func testRecurringToggleChangesActiveState() throws {
         navigateToRecurring()
 
-        let firstRow = app.buttons.matching(identifier: "recurring.row").firstMatch
-        guard firstRow.waitForExistence(timeout: 5) else {
+        let firstToggle = app.switches.matching(identifier: "recurring.toggle").firstMatch
+        guard firstToggle.waitForExistence(timeout: 5) else {
             throw XCTSkip("No recurring transactions present to toggle")
         }
 
-        // Capture state before toggle using the accessibility label
-        let labelBefore = firstRow.label
+        // Find the row that contains this toggle by matching it via position
+        let allRows = app.buttons.matching(identifier: "recurring.row")
+        guard allRows.count > 0 else {
+            throw XCTSkip("No recurring rows found")
+        }
+        let targetRow = allRows.firstMatch
+        let labelBefore = targetRow.label
         let wasActive = labelBefore.contains("Active")
+        let itemName = labelBefore.components(separatedBy: ", ").first ?? ""
 
-        // Tap the toggle switch (first Switch in the row)
-        let toggle = app.switches.firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: 3), "Toggle switch should exist on recurring row")
-        toggle.tap()
+        firstToggle.tap()
 
         let expectedLabel = wasActive ? "Paused" : "Active"
-        let predicate = NSPredicate(format: "label CONTAINS %@", expectedLabel)
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: firstRow)
-        let result = XCTWaiter().wait(for: [expectation], timeout: 5)
-        XCTAssertEqual(result, .completed,
-            "Row should show \(expectedLabel) after toggle; got: \(firstRow.label)"
+        // Re-query the specific row by name to avoid index shifting after section changes
+        let updatedRowPredicate = NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", itemName, expectedLabel)
+        let updatedRow = app.buttons.matching(updatedRowPredicate).firstMatch
+        XCTAssertTrue(updatedRow.waitForExistence(timeout: 5),
+            "Row for '\(itemName)' should show '\(expectedLabel)' after toggle; before: \(labelBefore)"
         )
     }
 
