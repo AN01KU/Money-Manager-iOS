@@ -162,6 +162,11 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
                     discardChangeAndEntity(change, context: context)
 
+                case .notFound where change.action == "update":
+                    // 404 on an update — entity was deleted on another device; purge local row.
+                    AppLogger.sync.warning("[ReplayDebug] 404 on update for \(change.entityType)=\(change.entityID) — entity gone from server, purging local row")
+                    discardChangeAndEntity(change, context: context)
+
                 case .overrideAlreadyExists where change.action == "create" && change.entityType == "category":
                     // Server already has this predefined override — drop stale local row;
                     // next pullCategories will bring down the canonical server version.

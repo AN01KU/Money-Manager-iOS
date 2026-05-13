@@ -339,6 +339,127 @@ struct ChangeQueueManagerReplayTests {
         #expect(failed.count == 1)
     }
 
+    // MARK: - 404 on UPDATE → purge local entity + remove pending (issue #32)
+
+    @Test func testReplayAll404OnUpdateTransactionPurgesLocalEntityAndRemovesPending() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.notFound }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let txId = UUID()
+        let tx = Transaction(id: txId, amount: 20, category: "Food", date: Date())
+        context.insert(tx)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: txId,
+            action: "update", endpoint: "/transactions",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let txns = try context.fetch(FetchDescriptor<Transaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty, "pending change should be removed")
+        #expect(txns.isEmpty, "local transaction should be purged")
+        #expect(failed.isEmpty, "should NOT dead-letter a 404 on update")
+    }
+
+    @Test func testReplayAll404OnUpdateRecurringPurgesLocalEntityAndRemovesPending() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.notFound }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let recId = UUID()
+        let rec = RecurringTransaction(
+            id: recId, name: "Netflix", amount: 15, category: "Entertainment",
+            frequency: .monthly, startDate: Date()
+        )
+        context.insert(rec)
+
+        let change = PendingChange(
+            entityType: "recurring", entityID: recId,
+            action: "update", endpoint: "/recurring-transactions",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty)
+        #expect(recurring.isEmpty)
+        #expect(failed.isEmpty)
+    }
+
+    @Test func testReplayAll404OnUpdateCategoryPurgesLocalEntityAndRemovesPending() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.notFound }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let catId = UUID()
+        let cat = Money_Manager.Category(id: catId, name: "Travel", icon: "airplane", color: "#FF0000")
+        context.insert(cat)
+
+        let change = PendingChange(
+            entityType: "category", entityID: catId,
+            action: "update", endpoint: "/categories",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let categories = try context.fetch(FetchDescriptor<Money_Manager.Category>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty)
+        #expect(categories.isEmpty)
+        #expect(failed.isEmpty)
+    }
+
+    @Test func testReplayAll404OnCreateStillDeadLetters() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.notFound }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "create", endpoint: "/transactions",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        change.retryCount = ChangeQueueManager.maxRetryCount - 1
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        // After one more failure (hitting max), moves to dead-letter — NOT purged
+        #expect(pending.isEmpty)
+        #expect(failed.count == 1, "404 on create should dead-letter, not purge entity")
+    }
+
     // MARK: - SyncSession invalid → orphans queue and posts notification
 
     @Test func testReplayAllSyncSessionInvalidOrphansQueue() async throws {
