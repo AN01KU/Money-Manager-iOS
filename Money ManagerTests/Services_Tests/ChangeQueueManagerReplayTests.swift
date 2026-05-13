@@ -620,6 +620,86 @@ struct ChangeQueueManagerReplayTests {
         #expect(failed.isEmpty, "staleWrite should not dead-letter")
     }
 
+    // MARK: - Permanent 400 codes → dead-letter immediately, no retry (issue #40)
+
+    @Test func testReplayAllMixedCurrencySettlementDeadLettersImmediately() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.mixedCurrencySettlement }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "create", endpoint: "/groups/1/settlements",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        change.retryCount = 0
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty, "pending change should be removed immediately")
+        #expect(failed.count == 1, "should dead-letter on first failure")
+        #expect(failed.first?.retryCount == 0, "retry count should not be incremented")
+    }
+
+    @Test func testReplayAllMixedCurrencyGroupTxDeadLettersImmediately() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPatchHandler = { _, _ in throw APIError.mixedCurrencyGroupTx }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let change = PendingChange(
+            entityType: "transaction", entityID: UUID(),
+            action: "update", endpoint: "/groups/1/transactions",
+            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+        )
+        change.retryCount = 0
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty, "pending change should be removed immediately")
+        #expect(failed.count == 1, "should dead-letter on first failure")
+        #expect(failed.first?.retryCount == 0, "retry count should not be incremented")
+    }
+
+    @Test func testReplayAllAddMemberFailedDeadLettersImmediately() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.addMemberFailed }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        let change = PendingChange(
+            entityType: "group", entityID: UUID(),
+            action: "create", endpoint: "/groups/1/members",
+            httpMethod: "POST", payload: "{}".data(using: .utf8)
+        )
+        change.retryCount = 0
+        context.insert(change)
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        #expect(pending.isEmpty, "pending change should be removed immediately")
+        #expect(failed.count == 1, "should dead-letter on first failure")
+        #expect(failed.first?.retryCount == 0, "retry count should not be incremented")
+    }
+
     // MARK: - SyncSession invalid → orphans queue and posts notification
 
     @Test func testReplayAllSyncSessionInvalidOrphansQueue() async throws {

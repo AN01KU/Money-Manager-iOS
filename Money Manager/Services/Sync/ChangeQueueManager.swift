@@ -183,6 +183,12 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     AppLogger.sync.error("[ReplayDebug] invalid \(field) for \(change.entityType)=\(change.entityID) — dead-lettering immediately")
                     moveToDeadLetter(change, lastError: "Invalid \(field)", context: context)
 
+                case .mixedCurrencySettlement, .mixedCurrencyGroupTx, .addMemberFailed:
+                    // Permanent client-side validation failure — retrying cannot help.
+                    // Dead-letter immediately without incrementing retry count.
+                    AppLogger.sync.error("[ReplayDebug] \(apiError) for \(change.entityType)=\(change.entityID) action=\(change.action) — permanent 400, dead-lettering immediately")
+                    moveToDeadLetter(change, lastError: apiError.errorDescription ?? "Permanent 400", context: context)
+
                 case .idOwnedByAnotherUser, .idOwnedByAnotherGroup:
                     // UUID collision — this entity belongs to another user/group and is
                     // unrecoverable from the client's perspective. Purge the local row
