@@ -375,6 +375,7 @@ struct AddTransactionView: View {
             AddTransactionAmountSection(viewModel: viewModel, customCategories: customCategories)
 
             if viewModel.isEditingShared {
+                AddTransactionPaidBySection(viewModel: viewModel)
                 Section {
                     Label("Amount and split cannot be changed after creation.", systemImage: "lock.fill")
                         .font(.subheadline)

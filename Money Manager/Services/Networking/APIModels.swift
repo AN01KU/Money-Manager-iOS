@@ -629,10 +629,12 @@ struct APIUpdateGroupTransactionRequest: Codable, Sendable {
     let description: String?
     let notes: String?
     let updatedAt: Date?
+    let paidByUserId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case category, date, description, notes
         case updatedAt = "updated_at"
+        case paidByUserId = "paid_by_user_id"
     }
 }
 

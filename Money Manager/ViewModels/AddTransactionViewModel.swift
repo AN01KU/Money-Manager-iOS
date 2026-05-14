@@ -494,7 +494,8 @@ struct SplitCalculator {
             date: selectedDate != existing.date ? selectedDate : nil,
             description: trimmedDescription != (existing.description ?? "") ? trimmedDescription : nil,
             notes: trimmedNotes.isEmpty ? nil : (trimmedNotes != (existing.notes ?? "") ? trimmedNotes : nil),
-            updatedAt: existing.updatedAt
+            updatedAt: existing.updatedAt,
+            paidByUserId: paidByUserId != existing.paidByUserId ? paidByUserId : nil
         )
 
         Task {

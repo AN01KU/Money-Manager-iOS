@@ -134,6 +134,43 @@ struct AddTransactionViewModelEditSharedTests {
         #expect(mock.lastUpdateRequest?.updatedAt == knownDate)
     }
 
+    @Test func testSaveSharedEditIncludesPaidByUserIdWhenChanged() async {
+        let alice = makeMember(username: "alice")
+        let bob = makeMember(username: "bob")
+        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice, bob])
+        let existingTx = makeGroupTransaction(paidBy: alice.id)
+        let mode = AddTransactionMode.shared(group: group, members: [alice, bob], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
+        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        vm.selectedCategory = "Food"
+        vm.description = "Dinner"
+        vm.paidByUserId = bob.id   // changed from alice → bob
+
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
+
+        #expect(mock.lastUpdateRequest?.paidByUserId == bob.id)
+    }
+
+    @Test func testSaveSharedEditOmitsPaidByUserIdWhenUnchanged() async {
+        let alice = makeMember(username: "alice")
+        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let existingTx = makeGroupTransaction(paidBy: alice.id)
+        let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
+        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        vm.selectedCategory = "Food"
+        vm.description = "Dinner"
+        // paidByUserId remains alice.id (unchanged)
+
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
+
+        #expect(mock.lastUpdateRequest?.paidByUserId == nil)
+    }
+
     // MARK: - isValid edge cases
 
     @Test func testIsValidFalseForRecurringWithBlankDescription() {
