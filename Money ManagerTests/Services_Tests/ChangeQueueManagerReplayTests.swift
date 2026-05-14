@@ -734,4 +734,65 @@ struct ChangeQueueManagerReplayTests {
         #expect(orphans.count == 2)
         #expect(notificationFired)
     }
+
+    @Test func testReplayAllSyncSessionInvalidStopsAfterFirstChange() async throws {
+        // replayAll must return immediately after orphaning — it should not
+        // continue processing remaining pending changes (only one API call).
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.syncSessionInvalid(reason: "MISMATCH") }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        for _ in 0..<3 {
+            let change = PendingChange(
+                entityType: "transaction", entityID: UUID(),
+                action: "create", endpoint: "/transactions",
+                httpMethod: "POST", payload: "{}".data(using: .utf8)
+            )
+            context.insert(change)
+        }
+        try context.save()
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        // Only one attempt should have been made; the loop must not continue.
+        #expect(mock.postCalls.count == 1, "replayAll should stop after the first syncSessionInvalid")
+    }
+
+    @Test func testReplayAllSyncSessionInvalidOrphansAllAndPostsNotification() async throws {
+        // Regression: orphanAll must move ALL pending changes (not just the
+        // first one) and the notification must fire exactly once.
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockAPIClient()
+        mock.rawPostHandler = { _, _ in throw APIError.syncSessionInvalid(reason: "EXPIRED") }
+        let manager = ChangeQueueManager(apiClient: mock)
+        manager.configure(container: container)
+
+        for _ in 0..<4 {
+            let change = PendingChange(
+                entityType: "transaction", entityID: UUID(),
+                action: "create", endpoint: "/transactions",
+                httpMethod: "POST", payload: "{}".data(using: .utf8)
+            )
+            context.insert(change)
+        }
+        try context.save()
+
+        var notificationCount = 0
+        let observer = NotificationCenter.default.addObserver(
+            forName: .syncSessionOrphaned, object: nil, queue: nil
+        ) { _ in notificationCount += 1 }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        await manager.replayAll(context: context, isAuthenticated: true)
+
+        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let orphans = try context.fetch(FetchDescriptor<OrphanedChange>())
+        #expect(pending.isEmpty, "all pending changes must be orphaned")
+        #expect(orphans.count == 4, "all 4 changes must appear in orphaned table")
+        #expect(notificationCount == 1, "notification must fire exactly once")
+    }
 }
