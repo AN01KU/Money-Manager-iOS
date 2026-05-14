@@ -359,8 +359,7 @@ struct GroupDetailView: View {
                                 balance: viewModel.balances.first(where: { $0.userId == member.id })?.amount
                             )
                             .swipeActions(edge: .trailing) {
-                                if viewModel.currentUserId == viewModel.group.createdBy
-                                    && member.id != viewModel.group.createdBy {
+                                if viewModel.canRemoveMember(member) {
                                     Button(role: .destructive) {
                                         viewModel.removeMember(member)
                                     } label: {

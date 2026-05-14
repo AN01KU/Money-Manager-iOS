@@ -180,6 +180,11 @@ final class GroupDetailViewModel {
 
     // MARK: - Remove Member
 
+    func canRemoveMember(_ member: APIGroupMember) -> Bool {
+        guard let currentUserId else { return false }
+        return member.id != currentUserId
+    }
+
     func removeMember(_ member: APIGroupMember) {
         let original = members
         members.removeAll { $0.id == member.id }

@@ -153,6 +153,40 @@ struct GroupDetailViewModelMutationTests {
         #expect(vm.didDeleteOrLeave == false)
     }
 
+    // MARK: - canRemoveMember
+
+    @Test func testCanRemoveMember_anyMemberCanRemoveOtherMember() {
+        let creatorId = UUID()
+        let alice = makeMember()
+        let bob = makeMember()
+        let vm = GroupDetailViewModel(group: makeGroup(createdBy: creatorId), currentUserId: alice.id)
+        vm.members = [alice, bob]
+        #expect(vm.canRemoveMember(bob) == true)
+    }
+
+    @Test func testCanRemoveMember_memberCannotRemoveSelf() {
+        let alice = makeMember()
+        let vm = GroupDetailViewModel(group: makeGroup(), currentUserId: alice.id)
+        vm.members = [alice]
+        #expect(vm.canRemoveMember(alice) == false)
+    }
+
+    @Test func testCanRemoveMember_unauthenticatedCannotRemove() {
+        let alice = makeMember()
+        let vm = GroupDetailViewModel(group: makeGroup(), currentUserId: nil)
+        vm.members = [alice]
+        #expect(vm.canRemoveMember(alice) == false)
+    }
+
+    @Test func testCanRemoveMember_nonCreatorCanRemoveCreator() {
+        let creatorId = UUID()
+        let creator = makeMember(id: creatorId)
+        let alice = makeMember()
+        let vm = GroupDetailViewModel(group: makeGroup(createdBy: creatorId), currentUserId: alice.id)
+        vm.members = [creator, alice]
+        #expect(vm.canRemoveMember(creator) == true)
+    }
+
     // MARK: - removeMember
 
     @Test func testRemoveMemberOptimisticallyRemovesMemberFromList() {
