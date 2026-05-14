@@ -405,13 +405,19 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        // First create a predefined override
         struct APIPredefinedOverrideRequest: Codable {
             let id: UUID?
             let name: String
             let icon: String
             let color: String
             let predefined_key: String
+        }
+
+        // Clean up any stale override from a previous run before creating a fresh one.
+        let existing: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        if let stale = existing.data.first(where: { $0.predefinedKey == "transport" }) {
+            let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(stale.id)"))
+            await delay(200)
         }
 
         let request = APIPredefinedOverrideRequest(
