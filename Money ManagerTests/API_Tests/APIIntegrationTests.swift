@@ -28,6 +28,22 @@ struct APIIntegrationTests {
         abs(a - b) < 0.001
     }
 
+    /// Returns a predefined category key that is visible (not hidden) on the server
+    /// and not already overridden by the current user, so override tests start clean.
+    private func pickAvailablePredefinedKey() async throws -> APIPredefinedCategory {
+        let predefined: APIListResponse<APIPredefinedCategory> = try await AppAPIClient.shared.get(.raw("/predefined-categories"))
+        let userCategories: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let overriddenKeys = Set(userCategories.data.compactMap(\.predefinedKey))
+
+        guard let candidate = predefined.data.first(where: {
+            $0.isHidden != true && !overriddenKeys.contains($0.key)
+        }) else {
+            Issue.record("No available predefined category to use for override test")
+            throw CancellationError()
+        }
+        return candidate
+    }
+
     /// Generates a unique, lowercase test email. Always use this instead of inline UUID strings
     /// so email case is consistent with what the backend stores after normalization.
     private func makeTestEmail() -> String {
@@ -259,8 +275,8 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        // Simulate the client sending a predefined override (e.g. user renamed Food & Dining)
-        // Backend should store this as an override row with isPredefined=true
+        let predefined = try await pickAvailablePredefinedKey()
+
         struct APIPredefinedOverrideRequest: Codable {
             let id: UUID?
             let name: String
@@ -269,17 +285,20 @@ struct APIIntegrationTests {
             let predefined_key: String
         }
 
+        let overrideName = "Override \(predefined.name)"
         let request = APIPredefinedOverrideRequest(
             id: nil,
-            name: "Eating Out",
-            icon: "food-dining",
-            color: "#FF6B6B",
-            predefined_key: "food-dining"
+            name: overrideName,
+            icon: predefined.icon,
+            color: predefined.color,
+            predefined_key: predefined.key
         )
         let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
-        #expect(response.name == "Eating Out")
-        #expect(response.icon == "food-dining")
+        #expect(response.name == overrideName)
+        #expect(response.predefinedKey == predefined.key)
+        // Clean up so subsequent tests see a fresh state
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(response.id)"))
     }
 
 @Test("List categories returns created custom categories")
@@ -405,6 +424,8 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
+        let predefined = try await pickAvailablePredefinedKey()
+
         struct APIPredefinedOverrideRequest: Codable {
             let id: UUID?
             let name: String
@@ -413,19 +434,12 @@ struct APIIntegrationTests {
             let predefined_key: String
         }
 
-        // Clean up any stale override from a previous run before creating a fresh one.
-        let existing: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
-        if let stale = existing.data.first(where: { $0.predefinedKey == "transport" }) {
-            let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(stale.id)"))
-            await delay(200)
-        }
-
         let request = APIPredefinedOverrideRequest(
             id: nil,
-            name: "Custom Transport Name",
-            icon: "transport",
-            color: "#4ECDC4",
-            predefined_key: "transport"
+            name: "Override \(predefined.name)",
+            icon: predefined.icon,
+            color: predefined.color,
+            predefined_key: predefined.key
         )
         let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
