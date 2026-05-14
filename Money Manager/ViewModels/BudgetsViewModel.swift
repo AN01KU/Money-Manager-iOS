@@ -8,7 +8,8 @@ import SwiftData
     var referenceDate: Date = Date()
 
     var allTransactions: [Transaction] = []
-    var budgets: [MonthlyBudget] = []
+    /// The single per-user budget row fetched from SwiftData.
+    var userBudget: UserBudget?
     var modelContext: ModelContext?
 
     var currentMonthTransactions: [Transaction] {
@@ -26,25 +27,20 @@ import SwiftData
         }
     }
 
-    var currentBudget: MonthlyBudget? {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-        return budgets.first { $0.year == year && $0.month == month }
-    }
+    var budgetLimit: Double? { userBudget?.limit }
 
     var totalSpent: Double {
         currentMonthTransactions.reduce(0) { $0 + $1.amount }
     }
 
     var remainingBudget: Double {
-        guard let budget = currentBudget else { return 0 }
-        return max(0, budget.limit - totalSpent)
+        guard let limit = budgetLimit else { return 0 }
+        return max(0, limit - totalSpent)
     }
 
     var budgetPercentage: Int {
-        guard let budget = currentBudget, budget.limit > 0 else { return 0 }
-        return Int((totalSpent / budget.limit) * 100.0)
+        guard let limit = budgetLimit, limit > 0 else { return 0 }
+        return Int((totalSpent / limit) * 100.0)
     }
 
     var daysRemaining: Int {
@@ -57,7 +53,6 @@ import SwiftData
 
         if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
             let startOfToday = calendar.startOfDay(for: today)
-            // Distance from start of today to start of next month gives full remaining days
             let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: firstDayNextMonth).day ?? 0
             return max(0, daysLeft)
         }
@@ -69,7 +64,6 @@ import SwiftData
         return remainingBudget / Double(daysRemaining + 1)
     }
 
-    /// Days elapsed so far in the selected month (1-based, capped to today if current month).
     private var daysElapsed: Int {
         let calendar = Calendar.current
         let today = referenceDate
@@ -77,12 +71,10 @@ import SwiftData
         if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
             return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
         }
-        // Past month — use full month length
         let range = calendar.range(of: .day, in: .month, for: selectedMonth)
         return range?.count ?? 30
     }
 
-    /// Projected total spend at end of month based on current daily rate.
     var projectedMonthEnd: Double {
         let daysInMonth = Calendar.current.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
         let dailyRate = totalSpent / Double(daysElapsed)
@@ -91,41 +83,39 @@ import SwiftData
     }
 
     var insightIcon: String {
-        guard let budget = currentBudget, budget.limit > 0 else { return "checkmark.circle.fill" }
-        if totalSpent >= budget.limit { return "exclamationmark.triangle.fill" }
-        if projectedMonthEnd > budget.limit { return "arrow.up.circle.fill" }
+        guard let limit = budgetLimit, limit > 0 else { return "checkmark.circle.fill" }
+        if totalSpent >= limit { return "exclamationmark.triangle.fill" }
+        if projectedMonthEnd > limit { return "arrow.up.circle.fill" }
         return "checkmark.circle.fill"
     }
 
     var insightColor: Color {
-        guard let budget = currentBudget, budget.limit > 0 else { return AppColors.positive }
-        if totalSpent >= budget.limit { return AppColors.expense }
-        if projectedMonthEnd > budget.limit { return AppColors.budgetCaution }
+        guard let limit = budgetLimit, limit > 0 else { return AppColors.positive }
+        if totalSpent >= limit { return AppColors.expense }
+        if projectedMonthEnd > limit { return AppColors.budgetCaution }
         return AppColors.positive
     }
 
-    /// Human-readable spending insight for the current budget period.
     var spendingInsight: String? {
-        guard let budget = currentBudget, budget.limit > 0 else { return nil }
-        // Only show for current month
+        guard let limit = budgetLimit, limit > 0 else { return nil }
         guard Calendar.current.isDate(referenceDate, equalTo: selectedMonth, toGranularity: .month) else { return nil }
         guard daysElapsed > 1 else { return nil }
 
         let projected = projectedMonthEnd
-        let overspend = projected - budget.limit
+        let overspend = projected - limit
 
-        if totalSpent >= budget.limit {
+        if totalSpent >= limit {
             return "You've exceeded your budget"
         } else if overspend > 0 {
             return "At this rate you'll overspend by \(CurrencyFormatter.format(overspend))"
         } else {
-            return "On track — projected \(CurrencyFormatter.format(projected)) of \(CurrencyFormatter.format(budget.limit))"
+            return "On track — projected \(CurrencyFormatter.format(projected)) of \(CurrencyFormatter.format(limit))"
         }
     }
 
-    func configure(allTransactions: [Transaction], budgets: [MonthlyBudget], modelContext: ModelContext?) {
+    func configure(allTransactions: [Transaction], userBudget: UserBudget?, modelContext: ModelContext?) {
         self.allTransactions = allTransactions
-        self.budgets = budgets
+        self.userBudget = userBudget
         self.modelContext = modelContext
     }
 
@@ -141,7 +131,7 @@ import SwiftData
         }
     }
 
-    /// Creates or updates the budget for `selectedMonth`. Enqueues the sync change via `changeQueue`.
+    /// Sets the per-user budget to `limit`. Enqueues a PUT /me/budget sync change.
     func saveBudget(
         limit: Double,
         context: ModelContext,
@@ -149,74 +139,53 @@ import SwiftData
     ) throws {
         guard limit > 0 else { throw BudgetValidationError.zeroLimit }
 
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-
-        let budgetID: UUID
-        let action: String
-        let httpMethod: String
-        let payload: Data?
-
-        let existing = try context.fetch(FetchDescriptor<MonthlyBudget>(
-            predicate: #Predicate<MonthlyBudget> { b in b.year == year && b.month == month }
-        )).first
-
+        let budget: UserBudget
+        let existing = try context.fetch(FetchDescriptor<UserBudget>()).first
         if let existing {
             existing.limit = limit
             existing.updatedAt = Date()
-            budgetID = existing.id
-            action = "update"
-            httpMethod = "PATCH"
-            payload = try? AppAPIClient.apiEncoder.encode(existing.toUpdateRequest())
+            budget = existing
         } else {
-            let budget = MonthlyBudget(year: year, month: month, limit: limit)
-            context.insert(budget)
-            budgetID = budget.id
-            action = "create"
-            httpMethod = "POST"
-            payload = try? AppAPIClient.apiEncoder.encode(budget.toCreateRequest())
+            let newBudget = UserBudget(limit: limit)
+            context.insert(newBudget)
+            budget = newBudget
         }
-
         try context.save()
 
+        let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: limit))
         changeQueue.enqueue(
             entityType: "budget",
-            entityID: budgetID,
-            action: action,
-            endpoint: "/budgets",
-            httpMethod: httpMethod,
+            entityID: budget.id,
+            action: "create",   // "create" so replayChange uses endpoint as-is (no entityID suffix)
+            endpoint: "/me/budget",
+            httpMethod: "PUT",
             payload: payload,
             context: context
         )
     }
 
-    /// Removes the budget for `selectedMonth` from SwiftData and enqueues a delete sync change.
-    func deleteBudget(
+    /// Clears the per-user budget by sending {\"limit\": null} to PUT /me/budget.
+    func clearBudget(
         context: ModelContext,
         changeQueue: ChangeQueueManagerProtocol = changeQueueManager
     ) throws {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-
-        let existing = try context.fetch(FetchDescriptor<MonthlyBudget>(
-            predicate: #Predicate<MonthlyBudget> { b in b.year == year && b.month == month }
-        )).first
-
-        guard let budget = existing else { return }
-
-        let budgetID = budget.id
-        context.delete(budget)
+        let existing = try context.fetch(FetchDescriptor<UserBudget>()).first
+        if let existing {
+            existing.limit = nil
+            existing.updatedAt = Date()
+        } else {
+            context.insert(UserBudget(limit: nil))
+        }
         try context.save()
 
+        let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: nil))
         changeQueue.enqueue(
             entityType: "budget",
-            entityID: budgetID,
-            action: "delete",
-            endpoint: "/budgets",
-            httpMethod: "DELETE",
-            payload: nil,
+            entityID: UserBudget.sentinelID,
+            action: "create",
+            endpoint: "/me/budget",
+            httpMethod: "PUT",
+            payload: payload,
             context: context
         )
     }

@@ -41,6 +41,7 @@ struct Money_ManagerApp: App {
             RecurringTransaction.self,
             Category.self,
             MonthlyBudget.self,
+            UserBudget.self,
             PendingChange.self,
             FailedChange.self,
             OrphanedChange.self,
@@ -62,6 +63,7 @@ struct Money_ManagerApp: App {
         }
         container = resolvedContainer
 
+        Self.migrateMonthlyBudgetToScalar(context: resolvedContainer.mainContext)
         SessionStore.shared.configure(container: container)
 
         // Only generate recurring transactions locally when not logged in.
@@ -79,6 +81,26 @@ struct Money_ManagerApp: App {
         NetworkMonitor.shared.startMonitoring()
 
         syncService.configure(container: container, authService: authService)
+    }
+
+    /// One-shot migration: carry the most-recent MonthlyBudget.limit into UserBudget, then purge all old rows.
+    private static func migrateMonthlyBudgetToScalar(context: ModelContext) {
+        let migrationKey = "budgetMigratedToScalar"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+        defer { UserDefaults.standard.set(true, forKey: migrationKey) }
+
+        let oldBudgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>(
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        ))) ?? []
+
+        if let mostRecent = oldBudgets.first {
+            AppLogger.sync.info("budget migration: carrying limit=\(mostRecent.limit) from \(mostRecent.year)-\(mostRecent.month)")
+            let scalar = UserBudget(limit: mostRecent.limit)
+            context.insert(scalar)
+        }
+
+        for old in oldBudgets { context.delete(old) }
+        try? context.save()
     }
 
     /// Attempts to create the ModelContainer, recovering by deleting the on-disk store on failure.

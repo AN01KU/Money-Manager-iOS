@@ -11,7 +11,7 @@ import SwiftData
 struct BudgetSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
-    
+
     let selectedMonth: Date
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
@@ -21,7 +21,7 @@ struct BudgetSheet: View {
     @State private var errorTriggered = 0
     @State private var successTriggered = 0
     @FocusState private var isAmountFocused: Bool
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -40,9 +40,9 @@ struct BudgetSheet: View {
                 } header: {
                     Text("Monthly Budget Amount")
                 } footer: {
-                    Text("Set your monthly spending limit for \(selectedMonth.formatted(.dateTime.month(.wide).year()))")
+                    Text("Set your spending limit. Applies across all months.")
                 }
-                
+
                 if let amount = Double(budgetAmount), amount > 0 {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
@@ -98,75 +98,43 @@ struct BudgetSheet: View {
             }
         }
     }
-    
+
     private func loadExistingBudget() {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-        
-        if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
-            predicate: #Predicate<MonthlyBudget> { budget in
-                budget.year == year && budget.month == month
-            }
-        )).first {
-            budgetAmount = existing.limit.formatted(.number.precision(.fractionLength(0)))
+        if let existing = (try? modelContext.fetch(FetchDescriptor<UserBudget>()))?.first,
+           let limit = existing.limit {
+            budgetAmount = limit.formatted(.number.precision(.fractionLength(0)))
         } else if defaultBudgetLimit > 0 {
             budgetAmount = defaultBudgetLimit.formatted(.number.precision(.fractionLength(0)))
         }
     }
-    
+
     private func saveBudget() {
         guard let amount = Double(budgetAmount), amount > 0 else { return }
-        
+
         isSaving = true
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-        
-        let budgetID: UUID
-        let action: String
-        let httpMethod: String
-        
-        if let existing = try? modelContext.fetch(FetchDescriptor<MonthlyBudget>(
-            predicate: #Predicate<MonthlyBudget> { budget in
-                budget.year == year && budget.month == month
-            }
-        )).first {
+        defaultBudgetLimit = amount
+
+        let existing = (try? modelContext.fetch(FetchDescriptor<UserBudget>()))?.first
+        if let existing {
             existing.limit = amount
             existing.updatedAt = Date()
-            budgetID = existing.id
-            action = "update"
-            httpMethod = "PATCH"
         } else {
-            let budget = MonthlyBudget(
-                year: year,
-                month: month,
-                limit: amount
-            )
-            modelContext.insert(budget)
-            budgetID = budget.id
-            action = "create"
-            httpMethod = "POST"
+            modelContext.insert(UserBudget(limit: amount))
         }
-        
-        defaultBudgetLimit = amount
-        
+
         do {
             try modelContext.save()
-            
-            let payload: Data? = action == "create"
-                ? try? AppAPIClient.apiEncoder.encode(APICreateBudgetRequest(id: budgetID, year: year, month: month, limit: amount))
-                : try? AppAPIClient.apiEncoder.encode(APIUpdateBudgetRequest(year: year, month: month, limit: amount))
+            let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: amount))
             changeQueueManager.enqueue(
                 entityType: "budget",
-                entityID: budgetID,
-                action: action,
-                endpoint: "/budgets",
-                httpMethod: httpMethod,
+                entityID: UserBudget.sentinelID,
+                action: "create",
+                endpoint: "/me/budget",
+                httpMethod: "PUT",
                 payload: payload,
                 context: modelContext
             )
-            
+
             if NetworkMonitor.shared.isConnected {
                 Task {
                     await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
@@ -178,15 +146,14 @@ struct BudgetSheet: View {
             isSaving = false
             return
         }
-        
+
         isSaving = false
         successTriggered += 1
         dismiss()
     }
-    
 }
 
 #Preview {
     BudgetSheet(selectedMonth: Date())
-        .modelContainer(for: [MonthlyBudget.self])
+        .modelContainer(for: [MonthlyBudget.self, UserBudget.self])
 }

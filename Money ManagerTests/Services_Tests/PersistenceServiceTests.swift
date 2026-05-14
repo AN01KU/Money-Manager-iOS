@@ -226,18 +226,18 @@ struct PersistenceServiceTests {
         #expect(log[0].httpMethod == "POST")
     }
 
-    @Test func testEnqueueCreate_budget_enqueuesWithCorrectContract() throws {
+    @Test func testEnqueueUserBudget_enqueuesPutWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let budget = MonthlyBudget(year: 2026, month: 1, limit: 5000)
+        let budget = UserBudget(limit: 5000)
         context.insert(budget)
-        svc.enqueueCreate(budget, context: context)
+        svc.enqueueUserBudget(budget, context: context)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == "budget")
         #expect(log[0].action == "create")
-        #expect(log[0].endpoint == "/budgets")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].endpoint == "/me/budget")
+        #expect(log[0].httpMethod == "PUT")
     }
 
     @Test func testEnqueueCreate_category_enqueuesWithCorrectContract() throws {

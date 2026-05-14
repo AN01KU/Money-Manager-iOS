@@ -159,11 +159,11 @@ final class PersistenceService {
         )
     }
 
-    func enqueueCreate(_ budget: MonthlyBudget, context: ModelContext) {
-        guard let payload = try? AppAPIClient.apiEncoder.encode(budget.toCreateRequest()) else { return }
+    func enqueueUserBudget(_ budget: UserBudget, context: ModelContext) {
+        guard let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) else { return }
         changeQueue.enqueue(
             entityType: "budget", entityID: budget.id, action: "create",
-            endpoint: "/budgets", httpMethod: "POST", payload: payload, context: context
+            endpoint: "/me/budget", httpMethod: "PUT", payload: payload, context: context
         )
     }
 

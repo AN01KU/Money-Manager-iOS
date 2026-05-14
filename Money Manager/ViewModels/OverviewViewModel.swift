@@ -20,7 +20,7 @@ enum TransactionTypeFilter: String, CaseIterable {
 
     var filteredTransactions: [Transaction] = []
     var recentTransactions: [Transaction] = []
-    var currentBudget: MonthlyBudget?
+    var currentBudget: UserBudget?
     var dailyBudgetLimit: Double = 0
     var totalSpent: Double = 0
     var totalIncome: Double = 0
@@ -30,7 +30,7 @@ enum TransactionTypeFilter: String, CaseIterable {
     var netBalance: Double { totalIncome - totalSpent }
 
     private var allTransactions: [Transaction] = []
-    private var budgets: [MonthlyBudget] = []
+    private var userBudget: UserBudget?
     private var customCategories: [Category] = []
     private var categoryLookup: [String: Category] = [:]
     var modelContext: ModelContext? {
@@ -43,9 +43,9 @@ enum TransactionTypeFilter: String, CaseIterable {
         self.persistence = persistence
     }
 
-    func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [Category]) {
+    func update(allTransactions: [Transaction], userBudget: UserBudget?, customCategories: [Category]) {
         self.allTransactions = allTransactions
-        self.budgets = budgets
+        self.userBudget = userBudget
         self.customCategories = customCategories
         self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
@@ -119,11 +119,11 @@ enum TransactionTypeFilter: String, CaseIterable {
 
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
-        currentBudget = budgets.first { $0.year == year && $0.month == month }
+        currentBudget = userBudget?.limit != nil ? userBudget : nil
 
-        if filterMode == .daily, let budget = currentBudget {
+        if filterMode == .daily, let budget = currentBudget, let limit = budget.limit {
             let daysInMonth = calendar.range(of: .day, in: .month, for: selectedDate)?.count ?? 30
-            dailyBudgetLimit = budget.limit / Double(daysInMonth)
+            dailyBudgetLimit = limit / Double(daysInMonth)
         } else {
             dailyBudgetLimit = 0
         }
@@ -163,11 +163,12 @@ enum TransactionTypeFilter: String, CaseIterable {
 
     func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {
         guard currentBudget == nil, defaultBudgetLimit > 0 else { return }
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        let budget = MonthlyBudget(year: year, month: month, limit: defaultBudgetLimit)
-        modelContext.insert(budget)
+        let existing = (try? modelContext.fetch(FetchDescriptor<UserBudget>()))?.first
+        if let existing {
+            existing.limit = defaultBudgetLimit
+        } else {
+            modelContext.insert(UserBudget(limit: defaultBudgetLimit))
+        }
         try? modelContext.save()
     }
 

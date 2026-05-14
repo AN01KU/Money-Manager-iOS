@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct BudgetCard: View {
-    let budget: MonthlyBudget
+    let budget: UserBudget
     let spent: Double
     let remaining: Double
     let percentage: Int
@@ -25,7 +25,7 @@ struct BudgetCard: View {
                     Text("Monthly Budget")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(CurrencyFormatter.format(budget.limit))
+                    Text(CurrencyFormatter.format(budget.limit ?? 0))
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(.primary)
                 }
@@ -112,7 +112,7 @@ struct BudgetCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Monthly budget \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used, \(CurrencyFormatter.format(remaining)) remaining")
+        .accessibilityLabel("Monthly budget \(CurrencyFormatter.format(budget.limit ?? 0)), \(percentage) percent used, \(CurrencyFormatter.format(remaining)) remaining")
         .accessibilityIdentifier("budget.card")
     }
 }
@@ -157,7 +157,7 @@ struct BudgetProgressBar: View {
 
 #Preview {
     BudgetCard(
-        budget: MonthlyBudget(year: 2025, month: 1, limit: 50000),
+        budget: UserBudget(limit: 50000),
         spent: 32450,
         remaining: 17550,
         percentage: 65,

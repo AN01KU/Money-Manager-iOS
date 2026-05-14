@@ -18,6 +18,8 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
     case predefinedCategories
     case syncCategories
     case syncBudgets
+    case getBudget
+    case setBudget
     case syncRecurring
     /// Paginated transaction fetch. `limit` and `offset` are passed as query parameters.
     case syncTransactions(limit: Int, offset: Int)
@@ -58,6 +60,8 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .predefinedCategories:         return "/predefined-categories"
         case .syncCategories:               return "/categories"
         case .syncBudgets:                  return "/budgets"
+        case .getBudget:                    return "/me/budget"
+        case .setBudget:                    return "/me/budget"
         case .syncRecurring:                return "/recurring-transactions"
         case .syncTransactions:             return "/transactions"
         case .groups:                       return "/groups"

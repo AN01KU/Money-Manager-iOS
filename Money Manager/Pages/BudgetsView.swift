@@ -4,7 +4,7 @@ import SwiftData
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
-    @Query private var budgets: [MonthlyBudget]
+    @Query private var userBudgets: [UserBudget]
 
     @State private var viewModel = BudgetsViewModel()
 
@@ -15,7 +15,7 @@ struct BudgetsView: View {
                     .padding(.horizontal)
                     .padding(.top)
 
-                if let budget = viewModel.currentBudget {
+                if let budget = viewModel.userBudget, budget.limit != nil {
                     BudgetCard(
                         budget: budget,
                         spent: viewModel.totalSpent,
@@ -29,12 +29,14 @@ struct BudgetsView: View {
                     )
                     .padding(.horizontal)
 
-                    BudgetStatusBanner(
-                        spent: viewModel.totalSpent,
-                        limit: budget.limit,
-                        percentage: viewModel.budgetPercentage
-                    )
-                    .padding(.horizontal)
+                    if let limit = budget.limit {
+                        BudgetStatusBanner(
+                            spent: viewModel.totalSpent,
+                            limit: limit,
+                            percentage: viewModel.budgetPercentage
+                        )
+                        .padding(.horizontal)
+                    }
 
                     if let insight = viewModel.spendingInsight {
                         HStack(spacing: 8) {
@@ -77,8 +79,8 @@ struct BudgetsView: View {
         .sheet(isPresented: $viewModel.showBudgetSheet) {
             BudgetSheet(selectedMonth: viewModel.selectedMonth)
         }
-        .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, budgets: budgets), initial: true) {
-            viewModel.configure(allTransactions: allTransactions, budgets: budgets, modelContext: modelContext)
+        .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, userBudget: userBudgets.first), initial: true) {
+            viewModel.configure(allTransactions: allTransactions, userBudget: userBudgets.first, modelContext: modelContext)
         }
     }
 }
@@ -87,10 +89,10 @@ struct BudgetsView: View {
 
 private struct BudgetsQuerySnapshot: Equatable {
     let transactions: [Transaction]
-    let budgets: [MonthlyBudget]
+    let userBudget: UserBudget?
 }
 
 #Preview {
     BudgetsView()
-        .modelContainer(for: [Transaction.self, MonthlyBudget.self])
+        .modelContainer(for: [Transaction.self, MonthlyBudget.self, UserBudget.self])
 }

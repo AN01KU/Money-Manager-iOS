@@ -94,6 +94,7 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: Transaction.self)
         try? context.delete(model: RecurringTransaction.self)
         try? context.delete(model: MonthlyBudget.self)
+        try? context.delete(model: UserBudget.self)
         try? context.delete(model: Category.self)
         try? context.delete(model: PendingChange.self)
         try? context.delete(model: OrphanedChange.self)
@@ -236,9 +237,8 @@ final class SyncService: SyncServiceProtocol {
             persistence.enqueueCreate(category, context: context)
         }
 
-        let budgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>())) ?? []
-        for budget in budgets {
-            persistence.enqueueCreate(budget, context: context)
+        if let budget = (try? context.fetch(FetchDescriptor<UserBudget>()))?.first, budget.limit != nil {
+            persistence.enqueueUserBudget(budget, context: context)
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
@@ -350,10 +350,10 @@ final class SyncService: SyncServiceProtocol {
 
     private func pullBudgets(context: ModelContext) async {
         do {
-            let response: APIListResponse<APIMonthlyBudget> = try await apiClient.get(.syncBudgets)
-            upsertBudgets(response.data, context: context)
+            let response: APIUserBudget = try await apiClient.get(.getBudget)
+            upsertUserBudget(response, context: context)
         } catch {
-            AppLogger.sync.error("Failed to pull budgets: \(error)")
+            AppLogger.sync.error("Failed to pull budget: \(error)")
             recordSyncError()
         }
     }
@@ -545,52 +545,27 @@ final class SyncService: SyncServiceProtocol {
         syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count)
     }
 
-    private func upsertBudgets(_ apiBudgets: [APIMonthlyBudget], context: ModelContext) {
-        let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "budget" }
-        )
-        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
+    private func upsertUserBudget(_ remote: APIUserBudget, context: ModelContext) {
+        let hasPending = (try? context.fetch(
+            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType == "budget" })
+        ))?.isEmpty == false
 
-        let descriptor = FetchDescriptor<MonthlyBudget>()
-        let localBudgets = (try? context.fetch(descriptor)) ?? []
-        let localByID = Dictionary(uniqueKeysWithValues: localBudgets.map { ($0.id, $0) })
-
-        var serverWonIDs = Set<UUID>()
-
-        for remote in apiBudgets {
-            guard isValid(remote) else { continue }
-            if let local = localByID[remote.id] {
-                if remote.updatedAt > local.updatedAt {
-                    serverWonIDs.insert(remote.id)
-                    local.year = remote.year
-                    local.month = remote.month
-                    local.limit = remote.limit
-                    local.updatedAt = remote.updatedAt
-                }
-            } else {
-                let budget = MonthlyBudget(
-                    id: remote.id,
-                    year: remote.year,
-                    month: remote.month,
-                    limit: remote.limit
-                )
-                context.insert(budget)
-            }
+        // Don't overwrite a queued local write with the (possibly stale) server value.
+        if hasPending {
+            AppLogger.sync.debug("[upsertUserBudget] pending budget change queued — skipping server overwrite")
+            return
         }
 
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "budget", context: context)
-
-        // Purge local budgets the server no longer returns and have no pending upload.
-        let serverBudgetIDs = Set(apiBudgets.map { $0.id })
-        for local in localBudgets {
-            guard !serverBudgetIDs.contains(local.id) else { continue }
-            guard !pendingIDs.contains(local.id) else { continue }
-            AppLogger.sync.debug("Purging budget not on server: \(local.id)")
-            context.delete(local)
+        let local = (try? context.fetch(FetchDescriptor<UserBudget>()))?.first
+        if let local {
+            local.limit = remote.limit
+        } else {
+            context.insert(UserBudget(limit: remote.limit))
         }
 
+        changeQueue.removeStaleChanges(for: [UserBudget.sentinelID], entityType: "budget", context: context)
         try? context.save()
-        syncCheckpoint(entityType: "budget", serverCount: apiBudgets.count, localCount: localBudgets.count)
+        AppLogger.sync.debug("[upsertUserBudget] limit=\(remote.limit.map { "\($0)" } ?? "nil")")
     }
 
     private func upsertCategories(_ apiCategories: [APICategory], context: ModelContext) {
@@ -811,18 +786,6 @@ final class SyncService: SyncServiceProtocol {
     private func isValid(_ api: APIRecurringTransaction) -> Bool {
         guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
             AppLogger.sync.error("Validation failed: recurring \(api.id) has empty category")
-            return false
-        }
-        return true
-    }
-
-    private func isValid(_ api: APIMonthlyBudget) -> Bool {
-        guard api.year >= 2000 && api.year <= 2100 else {
-            AppLogger.sync.error("Validation failed: budget \(api.id) has out-of-range year \(api.year)")
-            return false
-        }
-        guard api.month >= 1 && api.month <= 12 else {
-            AppLogger.sync.error("Validation failed: budget \(api.id) has out-of-range month \(api.month)")
             return false
         }
         return true

@@ -4,7 +4,7 @@ import SwiftData
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
-    @Query private var budgets: [MonthlyBudget]
+    @Query private var userBudgets: [UserBudget]
     @Query(sort: \Category.name) private var customCategories: [Category]
 
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
@@ -16,7 +16,7 @@ struct Overview: View {
     var onCategoryTapped: ((String) -> Void)?
 
     private var queryData: QuerySnapshot {
-        QuerySnapshot(transactions: allTransactions, budgets: budgets, categories: customCategories)
+        QuerySnapshot(transactions: allTransactions, userBudget: userBudgets.first, categories: customCategories)
     }
 
     var body: some View {
@@ -41,7 +41,7 @@ struct Overview: View {
         }
         .onChange(of: queryData, initial: true) {
             viewModel.modelContext = modelContext
-            viewModel.update(allTransactions: allTransactions, budgets: budgets, customCategories: customCategories)
+            viewModel.update(allTransactions: allTransactions, userBudget: userBudgets.first, customCategories: customCategories)
         }
     }
 }
@@ -132,8 +132,8 @@ private struct OverviewHeaderCard: View {
     @State private var navTapped = 0
 
     private var budgetPercentage: Int {
-        guard let budget = viewModel.currentBudget, budget.limit > 0 else { return 0 }
-        return min(100, Int((viewModel.totalSpent / budget.limit) * 100))
+        guard let budget = viewModel.currentBudget, let limit = budget.limit, limit > 0 else { return 0 }
+        return min(100, Int((viewModel.totalSpent / limit) * 100))
     }
 
     private var budgetColor: Color {
@@ -238,13 +238,13 @@ private struct OverviewHeaderCard: View {
             .padding(.vertical, 14)
 
             // Budget bar — only when a budget exists
-            if let budget = viewModel.currentBudget {
+            if let budget = viewModel.currentBudget, let limit = budget.limit {
                 Divider()
                     .padding(.horizontal, 16)
 
                 BudgetInlineRow(
                     spent: viewModel.totalSpent,
-                    limit: budget.limit,
+                    limit: limit,
                     percentage: budgetPercentage,
                     color: budgetColor,
                     onTap: { viewModel.showBudgetSheet = true }
@@ -432,7 +432,7 @@ private struct FilterModeChip: View {
 
 private struct QuerySnapshot: Equatable {
     let transactions: [Transaction]
-    let budgets: [MonthlyBudget]
+    let userBudget: UserBudget?
     let categories: [Category]
 }
 
@@ -441,16 +441,16 @@ private struct QuerySnapshot: Equatable {
 @MainActor
 private func previewContainer(
     transactions: [Transaction] = [],
-    budgets: [MonthlyBudget] = []
+    budgetLimit: Double? = nil
 ) -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Transaction.self, MonthlyBudget.self, Category.self,
+        for: Transaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
         configurations: config
     )
     let context = container.mainContext
     for transaction in transactions { context.insert(transaction) }
-    for budget in budgets { context.insert(budget) }
+    if let limit = budgetLimit { context.insert(UserBudget(limit: limit)) }
     try? context.save()
     return container
 }
@@ -458,8 +458,6 @@ private func previewContainer(
 #Preview("With Transactions & Budget") {
     let calendar = Calendar.current
     let today = Date()
-    let year = calendar.component(.year, from: today)
-    let month = calendar.component(.month, from: today)
 
     let transactions = [
         Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
@@ -470,10 +468,9 @@ private func previewContainer(
         Transaction(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, transactionDescription: "Phone bill"),
         Transaction(amount: 649, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, transactionDescription: "Netflix"),
     ]
-    let budget = MonthlyBudget(year: year, month: month, limit: 50000)
 
     Overview()
-        .modelContainer(previewContainer(transactions: transactions, budgets: [budget]))
+        .modelContainer(previewContainer(transactions: transactions, budgetLimit: 50000))
 }
 
 #Preview("Empty State") {
@@ -484,8 +481,6 @@ private func previewContainer(
 #Preview("Over Budget") {
     let calendar = Calendar.current
     let today = Date()
-    let year = calendar.component(.year, from: today)
-    let month = calendar.component(.month, from: today)
 
     let transactions = [
         Transaction(amount: 15000, category: "Travel", date: today, transactionDescription: "Flight tickets"),
@@ -493,10 +488,9 @@ private func previewContainer(
         Transaction(amount: 5000, category: "Food & Dining", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "Party dinner"),
         Transaction(amount: 3000, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, transactionDescription: "Concert tickets"),
     ]
-    let budget = MonthlyBudget(year: year, month: month, limit: 10000)
 
     Overview()
-        .modelContainer(previewContainer(transactions: transactions, budgets: [budget]))
+        .modelContainer(previewContainer(transactions: transactions, budgetLimit: 10000))
 }
 
 #Preview("No Budget Set") {

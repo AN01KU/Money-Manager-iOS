@@ -66,21 +66,6 @@ struct SyncServiceUpsertTests {
         )
     }
 
-    private func apiBudget(
-        id: UUID = UUID(),
-        year: Int = 2025,
-        month: Int = 4,
-        limit: Double = 1000,
-        updatedAt: Date = Date()
-    ) -> APIMonthlyBudget {
-        APIMonthlyBudget(
-            id: id, userId: UUID(),
-            year: year, month: month,
-            limit: limit,
-            createdAt: Date(), updatedAt: updatedAt
-        )
-    }
-
     private func apiCategory(
         id: UUID = UUID(),
         key: String = "custom-key",
@@ -107,7 +92,7 @@ struct SyncServiceUpsertTests {
     private func mockReturningSync(
         transactions: [APITransaction] = [],
         recurring: [APIRecurringTransaction] = [],
-        budgets: [APIMonthlyBudget] = [],
+        userBudget: APIUserBudget? = nil,
         categories: [APICategory] = []
     ) -> MockAPIClient {
         let mock = MockAPIClient()
@@ -115,8 +100,8 @@ struct SyncServiceUpsertTests {
             switch endpoint {
             case .syncCategories:
                 return APIListResponse(data: categories)
-            case .syncBudgets:
-                return APIListResponse(data: budgets)
+            case .getBudget:
+                return userBudget ?? APIUserBudget(limit: nil)
             case .syncRecurring:
                 return APIListResponse(data: recurring)
             case .syncTransactions:
@@ -273,76 +258,38 @@ struct SyncServiceUpsertTests {
         #expect(local.isEmpty)
     }
 
-    // MARK: - upsertBudgets: inserts new budget from server
+    // MARK: - upsertUserBudget: inserts scalar budget from server
 
     @Test func testFullSyncInsertsNewBudgetFromServer() async throws {
         let container = try makeContainer()
-        let budget = apiBudget(year: 2025, month: 3, limit: 500)
-        let mock = mockReturningSync(budgets: [budget])
+        let mock = mockReturningSync(userBudget: APIUserBudget(limit: 5000))
         let svc = makeSyncService(container: container, mock: mock)
 
         await svc.fullSync()
 
         let context = ModelContext(container)
-        let local = try context.fetch(FetchDescriptor<MonthlyBudget>())
+        let local = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(local.count == 1)
-        #expect(local.first?.limit == 500)
-        #expect(local.first?.month == 3)
+        #expect(local.first?.limit == 5000)
     }
 
-    // MARK: - upsertBudgets: updates existing budget when server is newer
+    // MARK: - upsertUserBudget: overwrites local scalar when server responds
 
     @Test func testFullSyncUpdatesBudgetWhenServerIsNewer() async throws {
         let container = try makeContainer()
         let context = ModelContext(container)
-        let budId = UUID()
-        let old = Date(timeIntervalSinceNow: -3600)
-        let newer = Date(timeIntervalSinceNow: -10)
 
-        let localBudget = MonthlyBudget(id: budId, year: 2025, month: 4, limit: 300)
-        localBudget.updatedAt = old
-        context.insert(localBudget)
+        context.insert(UserBudget(limit: 300))
         try context.save()
 
-        let serverBudget = apiBudget(id: budId, year: 2025, month: 4, limit: 800, updatedAt: newer)
-        let mock = mockReturningSync(budgets: [serverBudget])
+        let mock = mockReturningSync(userBudget: APIUserBudget(limit: 800))
         let svc = makeSyncService(container: container, mock: mock)
 
         await svc.fullSync()
 
-        let all = try context.fetch(FetchDescriptor<MonthlyBudget>())
+        let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
         #expect(all.first?.limit == 800)
-    }
-
-    // MARK: - upsertBudgets: rejects invalid year
-
-    @Test func testFullSyncSkipsBudgetWithOutOfRangeYear() async throws {
-        let container = try makeContainer()
-        let invalid = apiBudget(year: 1999, month: 1, limit: 100)
-        let mock = mockReturningSync(budgets: [invalid])
-        let svc = makeSyncService(container: container, mock: mock)
-
-        await svc.fullSync()
-
-        let context = ModelContext(container)
-        let local = try context.fetch(FetchDescriptor<MonthlyBudget>())
-        #expect(local.isEmpty)
-    }
-
-    // MARK: - upsertBudgets: rejects invalid month
-
-    @Test func testFullSyncSkipsBudgetWithInvalidMonth() async throws {
-        let container = try makeContainer()
-        let invalid = apiBudget(year: 2025, month: 13, limit: 100)
-        let mock = mockReturningSync(budgets: [invalid])
-        let svc = makeSyncService(container: container, mock: mock)
-
-        await svc.fullSync()
-
-        let context = ModelContext(container)
-        let local = try context.fetch(FetchDescriptor<MonthlyBudget>())
-        #expect(local.isEmpty)
     }
 
     // MARK: - upsertCategories: inserts new custom category from server
@@ -431,6 +378,7 @@ struct SyncServiceUpsertTests {
         context.insert(Transaction(amount: 5, category: "Food", date: Date()))
         context.insert(RecurringTransaction(name: "Sub", amount: 10, category: "Bills", frequency: .monthly, startDate: Date()))
         context.insert(MonthlyBudget(year: 2025, month: 1, limit: 500))
+        context.insert(UserBudget(limit: 5000))
         context.insert(Category(name: "Travel", icon: "star", color: "#000"))
         try context.save()
 
@@ -440,6 +388,7 @@ struct SyncServiceUpsertTests {
         #expect(try context.fetch(FetchDescriptor<Transaction>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<RecurringTransaction>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<MonthlyBudget>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<UserBudget>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<Money_Manager.Category>()).isEmpty)
     }
 }

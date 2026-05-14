@@ -10,46 +10,38 @@ struct BudgetsViewModelMutationTests {
         ModelContext(try makeTestContainer())
     }
 
-    private func makeViewModel(selectedMonth: Date = Date()) -> BudgetsViewModel {
-        let vm = BudgetsViewModel()
-        vm.selectedMonth = selectedMonth
-        return vm
-    }
-
-    private func fixedMonth() -> Date {
-        Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 15))!
+    private func makeViewModel() -> BudgetsViewModel {
+        BudgetsViewModel()
     }
 
     // MARK: - saveBudget: create
 
     @Test
-    func testSaveBudget_newLimit_createsBudgetInSwiftData() throws {
+    func testSaveBudget_newLimit_createsUserBudgetInSwiftData() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
 
         try vm.saveBudget(limit: 5000, context: context, changeQueue: MockChangeQueueManager.shared)
 
-        let all = try context.fetch(FetchDescriptor<MonthlyBudget>())
+        let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
         #expect(all.first?.limit == 5000)
-        #expect(all.first?.year == 2025)
-        #expect(all.first?.month == 6)
     }
 
     // MARK: - saveBudget: update (no duplicate)
 
     @Test
-    func testSaveBudget_existingMonth_updatesRecordWithoutDuplicate() throws {
+    func testSaveBudget_existingRow_updatesLimitWithoutDuplicate() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
 
-        let existing = MonthlyBudget(year: 2025, month: 6, limit: 3000)
+        let existing = UserBudget(limit: 3000)
         context.insert(existing)
         try context.save()
 
         try vm.saveBudget(limit: 4500, context: context, changeQueue: MockChangeQueueManager.shared)
 
-        let all = try context.fetch(FetchDescriptor<MonthlyBudget>())
+        let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
         #expect(all.first?.limit == 4500)
     }
@@ -59,22 +51,22 @@ struct BudgetsViewModelMutationTests {
     @Test
     func testSaveBudget_zeroLimit_throwsValidationError() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
 
         #expect(throws: BudgetsViewModel.BudgetValidationError.zeroLimit) {
             try vm.saveBudget(limit: 0, context: context, changeQueue: MockChangeQueueManager.shared)
         }
 
-        let all = try context.fetch(FetchDescriptor<MonthlyBudget>())
+        let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.isEmpty)
     }
 
     // MARK: - saveBudget: enqueues sync change
 
     @Test
-    func testSaveBudget_newBudget_enqueuesCreateWithCorrectContract() throws {
+    func testSaveBudget_enqueuesPutWithCorrectContract() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
         MockChangeQueueManager.shared.reset()
 
         try vm.saveBudget(limit: 2000, context: context, changeQueue: MockChangeQueueManager.shared)
@@ -82,17 +74,34 @@ struct BudgetsViewModelMutationTests {
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log.first?.entityType == "budget")
-        #expect(log.first?.action == "create")
-        #expect(log.first?.endpoint == "/budgets")
-        #expect(log.first?.httpMethod == "POST")
+        #expect(log.first?.endpoint == "/me/budget")
+        #expect(log.first?.httpMethod == "PUT")
     }
 
     @Test
-    func testSaveBudget_existingBudget_enqueuesUpdateWithCorrectContract() throws {
+    func testSaveBudget_payloadContainsLimit() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
+        MockChangeQueueManager.shared.reset()
 
-        let existing = MonthlyBudget(year: 2025, month: 6, limit: 1000)
+        try vm.saveBudget(limit: 3500, context: context, changeQueue: MockChangeQueueManager.shared)
+
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        if let payload = log.first?.payload,
+           let decoded = try? JSONDecoder().decode(APISetBudgetRequest.self, from: payload) {
+            #expect(decoded.limit == 3500)
+        } else {
+            Issue.record("Expected decodable APISetBudgetRequest payload")
+        }
+    }
+
+    @Test
+    func testSaveBudget_existingRow_stillEnqueuesPut() throws {
+        let context = try makeContext()
+        let vm = makeViewModel()
+
+        let existing = UserBudget(limit: 1000)
         context.insert(existing)
         try context.save()
 
@@ -101,57 +110,59 @@ struct BudgetsViewModelMutationTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log.first?.entityType == "budget")
-        #expect(log.first?.action == "update")
-        #expect(log.first?.httpMethod == "PATCH")
+        #expect(log.first?.httpMethod == "PUT")
+        #expect(log.first?.endpoint == "/me/budget")
     }
 
-    // MARK: - deleteBudget
+    // MARK: - clearBudget
 
     @Test
-    func testDeleteBudget_removesMonthlyBudgetFromSwiftData() throws {
+    func testClearBudget_setsLimitToNilInSwiftData() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
 
-        let budget = MonthlyBudget(year: 2025, month: 6, limit: 3000)
-        context.insert(budget)
+        let existing = UserBudget(limit: 3000)
+        context.insert(existing)
         try context.save()
 
-        try vm.deleteBudget(context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.clearBudget(context: context, changeQueue: MockChangeQueueManager.shared)
 
-        let all = try context.fetch(FetchDescriptor<MonthlyBudget>())
-        #expect(all.isEmpty)
+        let all = try context.fetch(FetchDescriptor<UserBudget>())
+        #expect(all.count == 1)
+        #expect(all.first?.limit == nil)
     }
 
     @Test
-    func testDeleteBudget_enqueuesDeleteWithCorrectContract() throws {
+    func testClearBudget_whenNoBudgetRow_createsClearedRow() throws {
         let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
+        let vm = makeViewModel()
 
-        let budget = MonthlyBudget(year: 2025, month: 6, limit: 3000)
-        context.insert(budget)
-        try context.save()
+        try vm.clearBudget(context: context, changeQueue: MockChangeQueueManager.shared)
 
+        let all = try context.fetch(FetchDescriptor<UserBudget>())
+        #expect(all.count == 1)
+        #expect(all.first?.limit == nil)
+    }
+
+    @Test
+    func testClearBudget_enqueuesPutWithNullLimit() throws {
+        let context = try makeContext()
+        let vm = makeViewModel()
         MockChangeQueueManager.shared.reset()
-        try vm.deleteBudget(context: context, changeQueue: MockChangeQueueManager.shared)
+
+        try vm.clearBudget(context: context, changeQueue: MockChangeQueueManager.shared)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log.first?.entityType == "budget")
-        #expect(log.first?.action == "delete")
-        #expect(log.first?.httpMethod == "DELETE")
-    }
+        #expect(log.first?.endpoint == "/me/budget")
+        #expect(log.first?.httpMethod == "PUT")
 
-    @Test
-    func testDeleteBudget_whenNoBudgetExists_doesNothing() throws {
-        let context = try makeContext()
-        let vm = makeViewModel(selectedMonth: fixedMonth())
-        MockChangeQueueManager.shared.reset()
-
-        // Should not throw and should not enqueue anything
-        try vm.deleteBudget(context: context, changeQueue: MockChangeQueueManager.shared)
-
-        let log = MockChangeQueueManager.shared.enqueueCallLog
-        #expect(log.isEmpty)
+        if let payload = log.first?.payload,
+           let decoded = try? JSONDecoder().decode(APISetBudgetRequest.self, from: payload) {
+            #expect(decoded.limit == nil)
+        } else {
+            Issue.record("Expected decodable APISetBudgetRequest payload with null limit")
+        }
     }
 }

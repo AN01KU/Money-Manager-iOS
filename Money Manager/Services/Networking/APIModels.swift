@@ -397,6 +397,16 @@ struct APIUpdateBudgetRequest: Codable {
     let limit: Double?
 }
 
+// MARK: - Per-user scalar budget (GET /me/budget, PUT /me/budget)
+
+struct APIUserBudget: Codable {
+    let limit: Double?
+}
+
+struct APISetBudgetRequest: Codable {
+    let limit: Double?
+}
+
 struct APICreateCategoryRequest: Codable {
     let name: String?
     let icon: String?
