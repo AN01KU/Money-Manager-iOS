@@ -12,7 +12,6 @@ struct BudgetSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    let selectedMonth: Date
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
     @State private var isSaving = false
@@ -154,6 +153,6 @@ struct BudgetSheet: View {
 }
 
 #Preview {
-    BudgetSheet(selectedMonth: Date())
+    BudgetSheet()
         .modelContainer(for: [MonthlyBudget.self, UserBudget.self])
 }

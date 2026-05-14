@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct NoBudgetCard: View {
-    let selectedMonth: Date
     let onSetBudget: () -> Void
     
     var body: some View {
@@ -30,5 +29,5 @@ struct NoBudgetCard: View {
 }
 
 #Preview {
-    NoBudgetCard(selectedMonth: Date(), onSetBudget: {})
+    NoBudgetCard(onSetBudget: {})
 }

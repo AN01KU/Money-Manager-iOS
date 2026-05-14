@@ -3,7 +3,6 @@ import SwiftData
 
 @MainActor
 @Observable class BudgetsViewModel {
-    var selectedMonth: Date = Date()
     var showBudgetSheet = false
     var referenceDate: Date = Date()
 
@@ -15,7 +14,7 @@ import SwiftData
     var currentMonthTransactions: [Transaction] {
         let calendar = Calendar.current
         guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)),
             let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
         else { return [] }
 
@@ -47,16 +46,13 @@ import SwiftData
         let calendar = Calendar.current
         let today = referenceDate
         guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)),
             let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
         else { return 0 }
 
-        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
-            let startOfToday = calendar.startOfDay(for: today)
-            let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: firstDayNextMonth).day ?? 0
-            return max(0, daysLeft)
-        }
-        return 0
+        let startOfToday = calendar.startOfDay(for: today)
+        let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: firstDayNextMonth).day ?? 0
+        return max(0, daysLeft)
     }
 
     var dailyAverage: Double {
@@ -67,16 +63,12 @@ import SwiftData
     private var daysElapsed: Int {
         let calendar = Calendar.current
         let today = referenceDate
-        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)) else { return 1 }
-        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
-            return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
-        }
-        let range = calendar.range(of: .day, in: .month, for: selectedMonth)
-        return range?.count ?? 30
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) else { return 1 }
+        return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
     }
 
     var projectedMonthEnd: Double {
-        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: referenceDate)?.count ?? 30
         let dailyRate = totalSpent / Double(daysElapsed)
         let daysLeft = daysInMonth - daysElapsed
         return totalSpent + (dailyRate * Double(daysLeft))
@@ -98,7 +90,6 @@ import SwiftData
 
     var spendingInsight: String? {
         guard let limit = budgetLimit, limit > 0 else { return nil }
-        guard Calendar.current.isDate(referenceDate, equalTo: selectedMonth, toGranularity: .month) else { return nil }
         guard daysElapsed > 1 else { return nil }
 
         let projected = projectedMonthEnd

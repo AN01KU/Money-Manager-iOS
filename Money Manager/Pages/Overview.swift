@@ -63,7 +63,7 @@ private struct OverviewBody: View {
         .navigationTitle("Overview")
         .toolbar { overviewToolbar }
         .sheet(isPresented: $viewModel.showBudgetSheet) {
-            BudgetSheet(selectedMonth: viewModel.selectedDate)
+            BudgetSheet()
         }
         .task(id: viewModel.selectedDate) {
             viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)

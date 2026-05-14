@@ -15,7 +15,6 @@ struct BudgetsViewModelInsightTests {
     private func makeVM() -> BudgetsViewModel {
         let vm = BudgetsViewModel()
         vm.referenceDate = Self.fixedRef
-        vm.selectedMonth = Self.fixedRef
         return vm
     }
 

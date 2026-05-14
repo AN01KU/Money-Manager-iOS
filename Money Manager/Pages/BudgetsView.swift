@@ -11,10 +11,6 @@ struct BudgetsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                MonthSelector(selectedMonth: $viewModel.selectedMonth)
-                    .padding(.horizontal)
-                    .padding(.top)
-
                 if let budget = viewModel.userBudget, budget.limit != nil {
                     BudgetCard(
                         budget: budget,
@@ -28,6 +24,7 @@ struct BudgetsView: View {
                         }
                     )
                     .padding(.horizontal)
+                    .padding(.top)
 
                     if let limit = budget.limit {
                         BudgetStatusBanner(
@@ -54,13 +51,11 @@ struct BudgetsView: View {
                     }
 
                 } else {
-                    NoBudgetCard(
-                        selectedMonth: viewModel.selectedMonth,
-                        onSetBudget: {
-                            viewModel.showBudgetSheet = true
-                        }
-                    )
+                    NoBudgetCard(onSetBudget: {
+                        viewModel.showBudgetSheet = true
+                    })
                     .padding(.horizontal)
+                    .padding(.top)
                 }
 
                 if !viewModel.currentMonthTransactions.isEmpty {
@@ -77,7 +72,7 @@ struct BudgetsView: View {
         .navigationTitle("Budgets")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $viewModel.showBudgetSheet) {
-            BudgetSheet(selectedMonth: viewModel.selectedMonth)
+            BudgetSheet()
         }
         .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, userBudget: userBudgets.first), initial: true) {
             viewModel.configure(allTransactions: allTransactions, userBudget: userBudgets.first, modelContext: modelContext)
