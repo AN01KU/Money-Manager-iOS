@@ -270,6 +270,139 @@ struct ManageCategoriesViewModelTests {
         viewModel.resetAll(modelContext: nil)
         #expect(viewModel.resetTrigger == 0)
     }
+
+    // MARK: - First-time hide: single POST with predefined_key + is_hidden
+
+    private func makeServiceWithSpy(context: ModelContext) -> PersistenceService {
+        MockChangeQueueManager.shared.reset()
+        let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
+        svc.modelContext = context
+        return svc
+    }
+
+    @Test
+    func testHidePredefinedFirstTime_enqueueSinglePostWithBothFields() throws {
+        let context = try makeContext()
+        let predefined = PredefinedCategory.foodDining
+        let category = TransactionCategory(
+            id: "predefined:\(predefined.serverKey)",
+            key: predefined.serverKey,
+            name: predefined.rawValue,
+            icon: predefined.icon,
+            colorHex: predefined.defaultColorHex,
+            isHidden: false,
+            isPredefined: true,
+            isDeletable: true,
+            overrideRow: nil
+        )
+
+        let svc = makeServiceWithSpy(context: context)
+        let viewModel = ManageCategoriesViewModel(persistence: svc)
+        viewModel.modelContext = context
+        viewModel.hideCategory(category)
+
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].action == "create")
+        #expect(log[0].httpMethod == "POST")
+
+        let decoder = JSONDecoder()
+        let req = try decoder.decode(APICreateCategoryRequest.self, from: log[0].payload!)
+        #expect(req.predefinedKey == predefined.serverKey)
+        #expect(req.isHidden == true)
+    }
+
+    @Test
+    func testHidePredefinedFirstTime_postPayloadOmitsNameIconColor() throws {
+        let context = try makeContext()
+        let predefined = PredefinedCategory.foodDining
+        let category = TransactionCategory(
+            id: "predefined:\(predefined.serverKey)",
+            key: predefined.serverKey,
+            name: predefined.rawValue,
+            icon: predefined.icon,
+            colorHex: predefined.defaultColorHex,
+            isHidden: false,
+            isPredefined: true,
+            isDeletable: true,
+            overrideRow: nil
+        )
+
+        let svc = makeServiceWithSpy(context: context)
+        let viewModel = ManageCategoriesViewModel(persistence: svc)
+        viewModel.modelContext = context
+        viewModel.hideCategory(category)
+
+        let decoder = JSONDecoder()
+        let req = try decoder.decode(APICreateCategoryRequest.self, from: MockChangeQueueManager.shared.enqueueCallLog[0].payload!)
+        #expect(req.name == nil)
+        #expect(req.icon == nil)
+        #expect(req.color == nil)
+    }
+
+    @Test
+    func testHideExistingOverrideRow_enqueuesSinglePatchNotPost() throws {
+        let context = try makeContext()
+        let row = Category(name: "Food & Dining", icon: "fork.knife", color: "#FF6B6B", isPredefined: true, predefinedKey: "food-dining")
+        row.isHidden = false
+        context.insert(row)
+
+        let category = TransactionCategory(
+            id: "predefined:food-dining",
+            key: "food-dining",
+            name: row.name,
+            icon: row.icon,
+            colorHex: row.color,
+            isHidden: false,
+            isPredefined: true,
+            isDeletable: true,
+            overrideRow: row
+        )
+
+        let svc = makeServiceWithSpy(context: context)
+        let viewModel = ManageCategoriesViewModel(persistence: svc)
+        viewModel.modelContext = context
+        viewModel.hideCategory(category)
+
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].action == "update")
+        #expect(log[0].httpMethod == "PATCH")
+    }
+
+    @Test
+    func testRestoreCategory_enqueueSinglePatchWithIsHiddenFalse() throws {
+        let context = try makeContext()
+        let row = Category(name: "Food & Dining", icon: "fork.knife", color: "#FF6B6B", isPredefined: true, predefinedKey: "food-dining")
+        row.isHidden = true
+        context.insert(row)
+
+        let category = TransactionCategory(
+            id: "predefined:food-dining",
+            key: "food-dining",
+            name: row.name,
+            icon: row.icon,
+            colorHex: row.color,
+            isHidden: true,
+            isPredefined: true,
+            isDeletable: true,
+            overrideRow: row
+        )
+
+        let svc = makeServiceWithSpy(context: context)
+        let viewModel = ManageCategoriesViewModel(persistence: svc)
+        viewModel.modelContext = context
+        viewModel.restoreCategory(category)
+
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].action == "update")
+        #expect(log[0].httpMethod == "PATCH")
+
+        let decoder = JSONDecoder()
+        let req = try decoder.decode(APIUpdateCategoryRequest.self, from: log[0].payload!)
+        #expect(req.isHidden == false)
+    }
 }
 
 // MARK: - AddCategoryViewModel Tests
