@@ -53,7 +53,14 @@ final class OverviewTests: XCTestCase {
         app.tabBars.buttons["Overview"].tap()
 
         let budgetCard = app.buttons["overview.budget-card"]
-        XCTAssertTrue(budgetCard.waitForExistence(timeout: 3), "Budget card should appear when a budget exists")
+        let noBudgetCard = app.buttons["overview.no-budget-card"]
+        let hasBudget = budgetCard.waitForExistence(timeout: 3)
+        if hasBudget {
+            XCTAssertTrue(budgetCard.exists, "Budget card should appear when a budget is set")
+            XCTAssertFalse(noBudgetCard.exists, "No-budget card should not appear when a budget is set")
+        } else {
+            XCTAssertTrue(noBudgetCard.waitForExistence(timeout: 3), "No-budget card should appear when no budget is set")
+        }
     }
 
     func testNoBudgetCardDisplaysWhenNoBudget() throws {

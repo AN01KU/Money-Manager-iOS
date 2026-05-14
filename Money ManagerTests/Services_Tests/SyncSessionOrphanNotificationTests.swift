@@ -33,8 +33,8 @@ struct SyncSessionOrphanNotificationTests {
                 return APIListResponse<APIPredefinedCategory>(data: [])
             case .syncCategories:
                 return APIListResponse<APICategory>(data: [])
-            case .syncBudgets:
-                return APIListResponse<APIMonthlyBudget>(data: [])
+            case .getBudget:
+                return APIUserBudget(limit: nil)
             case .syncRecurring:
                 return APIListResponse<APIRecurringTransaction>(data: [])
             case .syncTransactions:

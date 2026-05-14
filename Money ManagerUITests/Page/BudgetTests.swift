@@ -31,15 +31,6 @@ final class BudgetTests: XCTestCase {
         XCTAssertTrue(navBar.waitForExistence(timeout: 5), "Budgets screen should load")
     }
 
-    // MARK: - Month Selector
-
-    func testMonthSelectorExists() throws {
-        navigateToBudgets()
-
-        let monthSelector = app.buttons.matching(identifier: "budget.month-selector").firstMatch
-        XCTAssertTrue(monthSelector.waitForExistence(timeout: 5), "Month selector should exist")
-    }
-
     // MARK: - Budget Display
 
     func testBudgetCardOrNoBudgetCardExists() throws {
@@ -97,12 +88,12 @@ final class BudgetTests: XCTestCase {
         navigateToBudgets()
 
         let editButton = app.buttons.matching(identifier: "budget.edit-button").firstMatch
-        let noBudgetCard = app.otherElements.matching(identifier: "budget.no-budget-card").firstMatch
+        let setBudgetButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Set Budget'")).firstMatch
 
         if editButton.waitForExistence(timeout: 3) {
             editButton.tap()
-        } else if noBudgetCard.waitForExistence(timeout: 2) {
-            noBudgetCard.tap()
+        } else if setBudgetButton.waitForExistence(timeout: 2) {
+            setBudgetButton.tap()
         }
 
         let amountField = app.textFields.matching(identifier: "budget.amount-field").firstMatch
@@ -120,15 +111,15 @@ final class BudgetTests: XCTestCase {
     func testSetBudgetLimitDisplaysOnCard() throws {
         navigateToBudgets()
 
-        // Open the budget sheet via the edit button or the no-budget card
+        // Open the budget sheet via the edit button or the "Set Budget" button inside the no-budget card
         let editButton = app.buttons.matching(identifier: "budget.edit-button").firstMatch
-        let noBudgetCard = app.otherElements.matching(identifier: "budget.no-budget-card").firstMatch
+        let setBudgetButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Set Budget'")).firstMatch
 
         if editButton.waitForExistence(timeout: 3) {
             editButton.tap()
         } else {
-            XCTAssertTrue(noBudgetCard.waitForExistence(timeout: 3), "Either edit button or no-budget card must exist")
-            noBudgetCard.tap()
+            XCTAssertTrue(setBudgetButton.waitForExistence(timeout: 3), "Either edit button or Set Budget button must exist")
+            setBudgetButton.tap()
         }
 
         let amountField = app.textFields.matching(identifier: "budget.amount-field").firstMatch

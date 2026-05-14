@@ -437,54 +437,47 @@ struct APIIntegrationTests {
 
     // MARK: - Budget Tests
 
-    @Test("Create budget returns 200/201")
-    mutating func testBudgetCreate() async throws {
+    @Test("Set budget returns 200")
+    mutating func testBudgetSet() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
-        let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: 5000.00)
-        let response: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
+        let request = APISetBudgetRequest(limit: 8000.00)
+        let response: APIUserBudget = try await AppAPIClient.shared.put(.raw("/me/budget"), body: request)
 
-        #expect(compareAmount(response.limit, request.limit))
+        #expect(response.limit != nil)
+        if let limit = response.limit {
+            #expect(compareAmount(limit, 8000))
+        }
     }
 
-    @Test("List budgets returns data array")
-    mutating func testBudgetList() async throws {
+    @Test("Get budget returns current value")
+    mutating func testBudgetGet() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APIMonthlyBudget> = try await AppAPIClient.shared.get(.raw("/budgets"))
+        let response: APIUserBudget = try await AppAPIClient.shared.get(.raw("/me/budget"))
 
-        #expect(!response.data.isEmpty)
+        // Budget may or may not be set; just verify the response decodes correctly
+        _ = response
     }
 
-    @Test("Update budget modifies limit")
-    mutating func testBudgetUpdate() async throws {
+    @Test("Clear budget sets limit to null")
+    mutating func testBudgetClear() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
-        let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: 1000.00)
-        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: createRequest)
+        // First set a budget
+        let setRequest = APISetBudgetRequest(limit: 5000.00)
+        let _: APIUserBudget = try await AppAPIClient.shared.put(.raw("/me/budget"), body: setRequest)
 
         await delay(200)
 
-        let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: 1500.00)
-        let updated: APIMonthlyBudget = try await AppAPIClient.shared.patch(.raw("/budgets/\(created.id)"), body: updateRequest)
+        // Then clear it
+        let clearRequest = APISetBudgetRequest(limit: nil)
+        let cleared: APIUserBudget = try await AppAPIClient.shared.put(.raw("/me/budget"), body: clearRequest)
 
-        #expect(compareAmount(updated.limit, 1500))
-    }
-
-    @Test("Delete budget removes it")
-    mutating func testBudgetDelete() async throws {
-        try await ensureAuthenticated()
-        await delay(200)
-
-        let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: 999.00)
-        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
-
-        await delay(200)
-
-        try await AppAPIClient.shared.delete(.raw("/budgets/\(created.id)"))
+        #expect(cleared.limit == nil)
     }
 
     // MARK: - Recurring Transaction Tests

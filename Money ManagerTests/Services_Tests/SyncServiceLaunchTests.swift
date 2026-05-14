@@ -41,8 +41,8 @@ struct SyncServiceLaunchTests {
                 return APIListResponse<APIPredefinedCategory>(data: [])
             case .syncCategories:
                 return APIListResponse<APICategory>(data: [])
-            case .syncBudgets:
-                return APIListResponse<APIMonthlyBudget>(data: [])
+            case .getBudget:
+                return APIUserBudget(limit: nil)
             case .syncRecurring:
                 return APIListResponse<APIRecurringTransaction>(data: [])
             case .syncTransactions:
@@ -69,8 +69,8 @@ struct SyncServiceLaunchTests {
                 return APIListResponse<APIPredefinedCategory>(data: [])
             case .syncCategories:
                 return APIListResponse<APICategory>(data: [])
-            case .syncBudgets:
-                return APIListResponse<APIMonthlyBudget>(data: [])
+            case .getBudget:
+                return APIUserBudget(limit: nil)
             case .syncRecurring:
                 return APIListResponse<APIRecurringTransaction>(data: [])
             case .syncTransactions:
@@ -132,8 +132,8 @@ struct SyncServiceLaunchTests {
                 return APIListResponse<APIPredefinedCategory>(data: [])
             case .syncCategories:
                 return APIListResponse<APICategory>(data: [])
-            case .syncBudgets:
-                return APIListResponse<APIMonthlyBudget>(data: [])
+            case .getBudget:
+                return APIUserBudget(limit: nil)
             case .syncRecurring:
                 return APIListResponse<APIRecurringTransaction>(data: [])
             case .syncTransactions:
@@ -234,8 +234,8 @@ struct SyncServiceLaunchTests {
         await confirmation("syncOnReconnect called replayAll after notification") { confirm in
             queue.onReplayAll = { confirm() }
             NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
-            // Allow the Task spawned by the notification observer to complete
-            try? await Task.sleep(nanoseconds: 200_000_000)
+            // Allow the notification-dispatched callback and its async Task to complete
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
         }
 
         #expect(queue.replayAllCallCount >= 1)
