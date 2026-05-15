@@ -426,22 +426,12 @@ struct APIIntegrationTests {
 
         let predefined = try await pickAvailablePredefinedKey()
 
-        struct APIPredefinedOverrideRequest: Codable {
-            let id: UUID?
-            let name: String
-            let icon: String
-            let color: String
-            let predefined_key: String
-        }
-
-        let request = APIPredefinedOverrideRequest(
-            id: nil,
-            name: "Override \(predefined.name)",
-            icon: predefined.icon,
-            color: predefined.color,
-            predefined_key: predefined.key
-        )
-        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        // Use PATCH via the predefined category's id — this upserts the override row
+        // (and un-soft-deletes it if a stale row exists from a prior run), making the
+        // test resilient regardless of prior state.
+        let overrideName = "Override \(predefined.name)"
+        let upsertRequest = APIUpdateCategoryRequest(name: overrideName, icon: nil, color: nil, isHidden: nil)
+        let created: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(predefined.id)"), body: upsertRequest)
 
         await delay(200)
 
