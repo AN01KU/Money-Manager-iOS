@@ -231,11 +231,13 @@ struct SyncServiceLaunchTests {
             svc.networkMonitor.isConnected = false
         }
 
-        await confirmation("syncOnReconnect called replayAll after notification") { confirm in
-            queue.onReplayAll = { confirm() }
-            NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
-            // Allow the notification-dispatched callback and its async Task to complete
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+        queue.onReplayAll = { }
+        NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
+
+        // Poll until replayAll is called or 5s timeout — avoids flaky fixed sleeps.
+        let deadline = Date().addingTimeInterval(5)
+        while queue.replayAllCallCount == 0 && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
 
         #expect(queue.replayAllCallCount >= 1)
