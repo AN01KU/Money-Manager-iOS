@@ -74,17 +74,10 @@ final class KeychainTokenStorage: TokenStorage {
 final class SessionStore {
     static let shared = SessionStore()
 
-    private let service = "com.moneymanager.authtoken"
-    private let account = "jwt"
-
     /// Overridable token storage — defaults to Keychain, swappable in tests.
     var tokenStorage: TokenStorage = KeychainTokenStorage()
 
     init() {}
-
-    // MARK: - Configure (no-op; kept for call-site compatibility)
-
-    func configure(container: Any) {}
 
     // MARK: - Token
 

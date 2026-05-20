@@ -20,12 +20,7 @@ enum AppTypography {
     static let caption2   = Font.system(size: 11, weight: .regular)     // tracking: +0.2
 
     // MARK: - Tracking (kern) values from design spec
-    static let trackingLargeTitle: CGFloat = -0.5
-    static let trackingTitle1:     CGFloat = -0.5
-    static let trackingTitle2:     CGFloat = -0.3
-    static let trackingTitle3:     CGFloat = -0.2
-    static let trackingFootnote:   CGFloat =  0.1
-    static let trackingCaption2:   CGFloat =  0.2
+    static let trackingFootnote: CGFloat = 0.1
 
     // MARK: - Role aliases (map semantic use onto scale)
 
@@ -51,14 +46,9 @@ enum AppTypography {
     // Section headers
     static let sectionHeader = Font.system(size: 13, weight: .semibold)
 
-    // Hero / page title area
-    static let heroCategory  = subhead
-    static let heroDate      = subhead
-
     // Badges / chips
     static let chip          = subhead
     static let chipSelected  = Font.system(size: 15, weight: .semibold)
-    static let badgeIcon     = Font.system(size: 8, weight: .semibold)
 
     // Buttons
     static let button        = Font.system(size: 16, weight: .semibold)

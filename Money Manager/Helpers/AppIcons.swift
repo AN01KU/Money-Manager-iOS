@@ -102,12 +102,6 @@ enum AppIcons {
         static let dark   = Color("CatDark",   bundle: .main)
         static let gold   = Color("CatGold",   bundle: .main)
 
-        static let all: [Color] = [
-            teal, red, green, orange, purple, blue,
-            pink, indigo, sky, yellow, mint, coral,
-            brown, gray, dark, gold
-        ]
-
         /// Ordered palette for the category color picker.
         /// Each entry pairs the xcassets Color with its hex equivalent for storage.
         static let palette: [(color: Color, hex: String)] = [

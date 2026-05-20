@@ -28,6 +28,4 @@ enum AppLogger {
     /// CSV/JSON export, file operations
     static let export = Logger(subsystem: subsystem, category: "export")
 
-    /// API requests, responses, decoding failures
-    static let network = Logger(subsystem: subsystem, category: "network")
 }

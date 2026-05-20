@@ -64,7 +64,6 @@ struct Money_ManagerApp: App {
         container = resolvedContainer
 
         Self.migrateMonthlyBudgetToScalar(context: resolvedContainer.mainContext)
-        SessionStore.shared.configure(container: container)
 
         // Only generate recurring transactions locally when not logged in.
         // When authenticated, the backend generates them on GET /transactions.

@@ -125,10 +125,6 @@ struct TestData {
         return budgets
     }
 
-    static func getGroupExpensesForOverview() -> [Transaction] {
-        return []
-    }
-
     static func generateRecurringTransactions() -> [RecurringTransaction] {
         let calendar = Calendar.current
         let today = Date()

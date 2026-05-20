@@ -52,10 +52,6 @@ enum AppColors {
     static let accentLight         = primaryBg
     static let accentSubtle        = primaryBg
     static let positive            = income
-    static let info                = Color("CatBlue", bundle: .main)
     static let grayLight           = Color(white: 0.5, opacity: 0.10)
     static let graySubtle          = Color(white: 0.5, opacity: 0.12)
-    static let grayMedium          = Color(white: 0.5, opacity: 0.20)
-    static let backgroundPrimary   = Color.clear
-    static let backgroundSecondary = Color.primary.opacity(0.05)
 }
