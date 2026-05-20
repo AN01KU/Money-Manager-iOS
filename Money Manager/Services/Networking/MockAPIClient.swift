@@ -69,7 +69,7 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     func post<Req: Encodable, Res: Decodable>(
         _ endpoint: MoneyManagerEndpoint, body: sending Req
     ) async throws -> Res {
-        let data = try? JSONEncoder().encode(body)
+        let data = try? AppAPIClient.apiEncoder.encode(body)
         postCalls.append((endpoint: endpoint, body: data))
         guard let handler = postHandler else { throw MockError.notConfigured }
         let raw = try handler(endpoint, data)
@@ -100,7 +100,7 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     func patch<Req: Encodable, Res: Decodable>(
         _ endpoint: MoneyManagerEndpoint, body: sending Req
     ) async throws -> Res {
-        let data = try? JSONEncoder().encode(body)
+        let data = try? AppAPIClient.apiEncoder.encode(body)
         patchCalls.append((endpoint: endpoint, body: data))
         guard let handler = patchHandler else { throw MockError.notConfigured }
         let raw = try handler(endpoint, data)
