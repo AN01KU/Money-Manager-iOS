@@ -234,7 +234,6 @@ struct ImportService: ImportServiceProtocol {
                         existing.color = categoryData.color
                         existing.isHidden = categoryData.isHidden
                         existing.updatedAt = Date()
-                        categoriesImported += 1
                         continue
                     }
                 }

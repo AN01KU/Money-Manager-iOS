@@ -349,6 +349,94 @@ struct ImportServiceTests {
         #expect(result.message.contains("categories"))
     }
 
+    // MARK: Predefined category re-use counter
+
+    @Test func importJSON_predefinedCategoryAlreadyExists_doesNotIncrementCounter() throws {
+        let container = try makeTestContainer()
+        let context = ModelContext(container)
+
+        // Seed the context with an existing predefined-category row
+        let existing = Category(name: "Food & Dining", icon: "fork.knife", color: "#FF0000", isPredefined: true, predefinedKey: "food-dining")
+        context.insert(existing)
+        try context.save()
+
+        // Build export data containing the same predefined key
+        let exportData = ExportData(
+            exportDate: Date(),
+            appVersion: "1.0",
+            transactions: nil,
+            budgets: nil,
+            categories: [
+                ExportData.CategoryData(
+                    id: existing.id.uuidString,
+                    name: "Food & Dining",
+                    icon: "fork.knife",
+                    color: "#FF0000",
+                    isHidden: false,
+                    isPredefined: true,
+                    predefinedKey: "food-dining"
+                )
+            ]
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(exportData)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("predefined_reuse.json")
+        try data.write(to: url)
+
+        let result = try service.importJSON(from: url, context: context)
+        // Counter must not include re-used predefined rows
+        #expect(!result.message.contains("categories"), "Expected no categories in import message when re-using predefined rows, got: \(result.message)")
+    }
+
+    @Test func importJSON_mixedPredefinedAndCustom_counterReflectsOnlyNewInserts() throws {
+        let container = try makeTestContainer()
+        let context = ModelContext(container)
+
+        // Seed one predefined row
+        let existing = Category(name: "Transport", icon: "car.fill", color: "#0000FF", isPredefined: true, predefinedKey: "transport")
+        context.insert(existing)
+        try context.save()
+
+        let exportData = ExportData(
+            exportDate: Date(),
+            appVersion: "1.0",
+            transactions: nil,
+            budgets: nil,
+            categories: [
+                ExportData.CategoryData(
+                    id: existing.id.uuidString,
+                    name: "Transport",
+                    icon: "car.fill",
+                    color: "#0000FF",
+                    isHidden: false,
+                    isPredefined: true,
+                    predefinedKey: "transport"
+                ),
+                ExportData.CategoryData(
+                    id: UUID().uuidString,
+                    name: "Hobbies",
+                    icon: "paintbrush.fill",
+                    color: "#00FF00",
+                    isHidden: false,
+                    isPredefined: false,
+                    predefinedKey: nil
+                )
+            ]
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(exportData)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("mixed_categories.json")
+        try data.write(to: url)
+
+        let result = try service.importJSON(from: url, context: context)
+        // Only the new custom category counts
+        #expect(result.message.contains("1 categories"), "Expected '1 categories', got: \(result.message)")
+    }
+
     // MARK: Malformed input
 
     @Test func importCSV_emptyFile_returnsNoDataMessage() throws {
