@@ -521,7 +521,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
 
         let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
@@ -548,7 +548,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
 
         let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
@@ -586,7 +586,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
         let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
@@ -615,7 +615,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
         let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
@@ -625,7 +625,7 @@ struct APIIntegrationTests {
             name: nil, amount: 12.00, category: nil, frequency: nil,
             dayOfMonth: nil, daysOfWeek: nil, startDate: nil, endDate: nil,
             isActive: false, notes: nil,
-            type: "expense"
+            type: .expense
         )
         let updated: APIRecurringTransaction = try await AppAPIClient.shared.patch(.raw("/recurring-transactions/\(created.id)"), body: updateRequest)
 
@@ -651,7 +651,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
         let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
@@ -669,7 +669,7 @@ struct APIIntegrationTests {
 
         let request = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 25.50,
             category: "food-dining",
             date: Date(),
@@ -683,7 +683,7 @@ struct APIIntegrationTests {
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.category == request.category)
-        #expect(response.type == "expense")
+        #expect(response.type == .expense)
         #expect(response.groupTransactionId == nil)
     }
 
@@ -694,7 +694,7 @@ struct APIIntegrationTests {
 
         let request = APICreateTransactionRequest(
             id: nil,
-            type: "income",
+            type: .income,
             amount: 5000.00,
             category: "salary-income",
             date: Date(),
@@ -707,7 +707,7 @@ struct APIIntegrationTests {
         let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
-        #expect(response.type == "income")
+        #expect(response.type == .income)
     }
 
     @Test("Create transaction with notes and time")
@@ -717,7 +717,7 @@ struct APIIntegrationTests {
 
         let request = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 45.00,
             category: "shopping",
             date: Date(),
@@ -754,7 +754,7 @@ struct APIIntegrationTests {
             .queryParameters(["type": "expense"])
             .response()
 
-        #expect(response.data.allSatisfy { $0.type == "expense" })
+        #expect(response.data.allSatisfy { $0.type == .expense })
     }
 
     @Test("List transactions filtered by type=income")
@@ -767,7 +767,7 @@ struct APIIntegrationTests {
             .queryParameters(["type": "income"])
             .response()
 
-        #expect(response.data.allSatisfy { $0.type == "income" })
+        #expect(response.data.allSatisfy { $0.type == .income })
     }
 
     @Test("Get transaction by id")
@@ -777,7 +777,7 @@ struct APIIntegrationTests {
 
         let createRequest = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 100.00,
             category: "transport",
             date: Date(),
@@ -793,7 +793,7 @@ struct APIIntegrationTests {
         let response: APITransaction = try await AppAPIClient.shared.get(.raw("/transactions/\(created.id)"))
 
         #expect(response.id == created.id)
-        #expect(response.type == "expense")
+        #expect(response.type == .expense)
     }
 
     @Test("Update transaction modifies data")
@@ -803,7 +803,7 @@ struct APIIntegrationTests {
 
         let createRequest = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 50.00,
             category: "food-dining",
             date: Date(),
@@ -838,7 +838,7 @@ struct APIIntegrationTests {
 
         let createRequest = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 75.00,
             category: "shopping",
             date: Date(),

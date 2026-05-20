@@ -427,7 +427,7 @@ final class SyncService: SyncServiceProtocol {
             } else {
                 let tx = Transaction(
                     id: remote.id,
-                    type: TransactionKind(rawValue: remote.type) ?? .expense,
+                    type: remote.type,
                     amount: remote.amount,
                     category: remote.category,
                     date: remote.date,
@@ -504,9 +504,7 @@ final class SyncService: SyncServiceProtocol {
                     local.isActive = remote.isActive
                     local.lastAddedDate = remote.lastAddedDate
                     local.notes = remote.notes
-                    if let remoteType = remote.type, let kind = TransactionKind(rawValue: remoteType) {
-                        local.type = kind
-                    }
+                    if let kind = remote.type { local.type = kind }
                     local.updatedAt = remote.updatedAt
                 }
             } else {
@@ -523,7 +521,7 @@ final class SyncService: SyncServiceProtocol {
                     isActive: remote.isActive,
                     lastAddedDate: remote.lastAddedDate,
                     notes: remote.notes,
-                    type: TransactionKind(rawValue: remote.type ?? "expense") ?? .expense
+                    type: remote.type ?? .expense
                 )
                 context.insert(item)
             }

@@ -85,13 +85,11 @@ struct ModelMapperTests {
 
     @Test
     func testApplyRemoteFallsBackToExistingTypeOnUnknownRawValue() throws {
-        let transaction = Transaction(type: .income, amount: 100, category: "Food", date: Date())
-        let api = try makeAPITransaction(id: transaction.id, type: "unknown_type")
-
-        transaction.applyRemote(api)
-
-        // "unknown_type" has no matching TransactionKind case — should keep existing .income
-        #expect(transaction.type == .income)
+        // Unknown type strings now fail at JSON decode time (TransactionKind is Codable enum).
+        // Verify that makeAPITransaction throws when given an invalid type.
+        #expect(throws: (any Error).self) {
+            try makeAPITransaction(id: UUID(), type: "unknown_type")
+        }
     }
 
     // MARK: - RecurringTransaction.applyRemote
@@ -156,7 +154,7 @@ struct ModelMapperTests {
         #expect(req.amount == 250)
         #expect(req.category == "Transport")
         #expect(req.description == "Bus fare")
-        #expect(req.type == "expense")
+        #expect(req.type == .expense)
     }
 
     // MARK: - RecurringTransaction.toUpdateRequest

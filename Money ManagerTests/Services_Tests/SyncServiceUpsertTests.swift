@@ -37,7 +37,7 @@ struct SyncServiceUpsertTests {
         updatedAt: Date = Date()
     ) -> APITransaction {
         APITransaction(
-            id: id, userId: UUID(), type: "expense",
+            id: id, userId: UUID(), type: .expense,
             amount: amount, category: category,
             date: Date(), time: nil,
             description: nil, notes: nil,
@@ -62,7 +62,7 @@ struct SyncServiceUpsertTests {
             isActive: true, lastAddedDate: nil,
             nextOccurrence: nil, notes: nil,
             createdAt: Date(), updatedAt: updatedAt,
-            type: "expense"
+            type: .expense
         )
     }
 

@@ -22,7 +22,7 @@ struct APIRecurringTransaction: Codable, Sendable {
     let notes: String?
     let createdAt: Date
     let updatedAt: Date
-    let type: String?
+    let type: TransactionKind?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -57,7 +57,7 @@ struct APICreateRecurringTransactionRequest: Codable, Sendable {
     let endDate: Date?
     let isActive: Bool
     let notes: String?
-    let type: String
+    let type: TransactionKind
     var updatedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
@@ -88,7 +88,7 @@ struct APIUpdateRecurringTransactionRequest: Codable, Sendable {
     let endDate: Date?
     let isActive: Bool?
     let notes: String?
-    let type: String?
+    let type: TransactionKind?
 
     enum CodingKeys: String, CodingKey {
         case name

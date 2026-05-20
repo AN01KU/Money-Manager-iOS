@@ -9,7 +9,7 @@ extension Transaction {
     func toCreateRequest() -> APICreateTransactionRequest {
         APICreateTransactionRequest(
             id: id,
-            type: type.rawValue,
+            type: type,
             amount: amount,
             category: category,
             date: date,
@@ -23,7 +23,7 @@ extension Transaction {
 
     func toUpdateRequest() -> APIUpdateTransactionRequest {
         APIUpdateTransactionRequest(
-            type: type.rawValue,
+            type: type,
             amount: amount,
             category: category,
             date: date,
@@ -34,7 +34,7 @@ extension Transaction {
     }
 
     func applyRemote(_ api: APITransaction) {
-        self.type = TransactionKind(rawValue: api.type) ?? self.type
+        self.type = api.type
         self.amount = api.amount
         self.category = api.category
         self.date = api.date
@@ -65,7 +65,7 @@ extension RecurringTransaction {
             endDate: endDate,
             isActive: isActive,
             notes: notes,
-            type: type.rawValue,
+            type: type,
             updatedAt: updatedAt
         )
     }
@@ -82,7 +82,7 @@ extension RecurringTransaction {
             endDate: endDate,
             isActive: isActive,
             notes: notes,
-            type: type.rawValue
+            type: type
         )
     }
 
@@ -98,9 +98,7 @@ extension RecurringTransaction {
         self.isActive = api.isActive
         self.lastAddedDate = api.lastAddedDate
         self.notes = api.notes
-        if let apiType = api.type, let kind = TransactionKind(rawValue: apiType) {
-            self.type = kind
-        }
+        if let kind = api.type { self.type = kind }
         self.updatedAt = api.updatedAt
     }
 }

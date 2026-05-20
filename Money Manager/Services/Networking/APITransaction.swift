@@ -8,7 +8,7 @@ import Foundation
 struct APITransaction: Codable, Sendable {
     let id: UUID
     let userId: UUID
-    let type: String          // "expense" or "income"
+    let type: TransactionKind
     let amount: Double
     let category: String
     let date: Date
@@ -47,7 +47,7 @@ struct APITransaction: Codable, Sendable {
 
 struct APICreateTransactionRequest: Codable, Sendable {
     let id: UUID?
-    let type: String          // "expense" or "income"
+    let type: TransactionKind
     let amount: Double
     let category: String
     let date: Date
@@ -72,7 +72,7 @@ struct APICreateTransactionRequest: Codable, Sendable {
 }
 
 struct APIUpdateTransactionRequest: Codable, Sendable {
-    let type: String?
+    let type: TransactionKind?
     let amount: Double?
     let category: String?
     let date: Date?
