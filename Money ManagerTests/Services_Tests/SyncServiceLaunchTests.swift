@@ -17,15 +17,18 @@ struct SyncServiceLaunchTests {
 
     /// Builds a SyncService with an injected spy change queue, configured with an
     /// in-memory container + MockAuthService so tests don't hit network or Keychain.
+    @discardableResult
     private func makeSyncService(
         container: ModelContainer,
         changeQueue: SpySyncChangeQueue,
-        mock: MockAPIClient
+        mock: MockAPIClient,
+        networkMonitor: MockNetworkMonitor? = nil
     ) -> SyncService {
         let svc = SyncService(changeQueue: changeQueue)
         MockAuthService.shared.reset()
         svc.configure(container: container, authService: MockAuthService.shared)
         svc.apiClient = mock
+        if let networkMonitor { svc.networkMonitor = networkMonitor }
         return svc
     }
 
@@ -221,14 +224,13 @@ struct SyncServiceLaunchTests {
         let container = try makeContainer()
         let queue = SpySyncChangeQueue()
         let mock = mockWithValidPreflight()
-        let svc = makeSyncService(container: container, changeQueue: queue, mock: mock)
+        let networkMonitor = MockNetworkMonitor(isConnected: true)
+        let svc = makeSyncService(container: container, changeQueue: queue, mock: mock, networkMonitor: networkMonitor)
 
-        // Ensure network is marked as connected so syncOnReconnect proceeds
-        svc.networkMonitor.isConnected = true
         storeSyncSessionID()
         defer {
             clearSyncSessionID()
-            svc.networkMonitor.isConnected = false
+            networkMonitor.isConnected = false
         }
 
         queue.onReplayAll = { }

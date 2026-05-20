@@ -24,7 +24,7 @@ final class SyncService: SyncServiceProtocol {
 
     var apiClient: any APIClientProtocol = AppAPIClient.shared
     private let groupService = GroupService.shared
-    var networkMonitor: NetworkMonitor = NetworkMonitor.shared
+    var networkMonitor: any NetworkMonitorProtocol = NetworkMonitor.shared
     private var authService: AuthServiceProtocol?
     private var modelContainer: ModelContainer?
     private let changeQueue: any ChangeQueueManagerProtocol
