@@ -49,7 +49,7 @@ struct APIUpdateMeRequest: Codable, Sendable {
 
     init(username: String? = nil, email: String? = nil, password: String? = nil, currency: String? = nil) {
         self.username = username
-        self.email = email?.lowercased()
+        self.email = email?.normalizedEmail
         self.password = password
         self.currency = currency
     }
@@ -63,7 +63,7 @@ struct APISignupRequest: Codable, Sendable {
     let timezone: String
 
     init(email: String, username: String, password: String, inviteCode: String) {
-        self.email = email.lowercased()
+        self.email = email.normalizedEmail
         self.username = username
         self.password = password
         self.inviteCode = inviteCode
@@ -84,7 +84,7 @@ struct APILoginRequest: Codable, Sendable {
     let password: String
 
     init(email: String, password: String) {
-        self.email = email.lowercased()
+        self.email = email.normalizedEmail
         self.password = password
     }
 }

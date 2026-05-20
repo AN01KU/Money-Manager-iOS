@@ -8,4 +8,9 @@ extension String {
         let pattern = #"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"#
         return range(of: pattern, options: .regularExpression) != nil
     }
+
+    /// Lowercases and trims whitespace — the canonical form for email storage and comparison.
+    var normalizedEmail: String {
+        trimmingCharacters(in: .whitespaces).lowercased()
+    }
 }

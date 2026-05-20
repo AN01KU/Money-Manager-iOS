@@ -42,10 +42,10 @@ private final class SpyChangeQueueManager: ChangeQueueManagerProtocol {
     var configureCallCount = 0
 
     func configure(container: ModelContainer) { configureCallCount += 1 }
-    func enqueue(entityType: String, entityID: UUID, action: String, endpoint: String, httpMethod: String, payload: Data?, context: ModelContext) {}
+    func enqueue(entityType: EntityType, entityID: UUID, action: ChangeAction, endpoint: String, httpMethod: HTTPMethod, payload: Data?, context: ModelContext) {}
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {}
     func clearAll(context: ModelContext) {}
     func orphanAll(context: ModelContext) {}
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {}
-    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext) {}
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: EntityType, context: ModelContext) {}
 }

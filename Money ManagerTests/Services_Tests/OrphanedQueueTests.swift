@@ -22,13 +22,13 @@ struct OrphanedQueueTests {
         return ModelContext(container)
     }
 
-    private func insertPendingChange(in context: ModelContext, entityType: String = "transaction") -> PendingChange {
+    private func insertPendingChange(in context: ModelContext, entityType: EntityType = .transaction) -> PendingChange {
         let change = PendingChange(
             entityType: entityType,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/transactions",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: nil
         )
         context.insert(change)
@@ -38,11 +38,11 @@ struct OrphanedQueueTests {
 
     private func insertOrphanedChange(orphanedAt: Date, in context: ModelContext) {
         let orphan = OrphanedChange(
-            entityType: "transaction",
+            entityType: .transaction,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/transactions",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: nil,
             createdAt: Date()
         )
@@ -97,11 +97,11 @@ struct OrphanedQueueTests {
         let manager = ChangeQueueManager()
         let payload = "test-payload".data(using: .utf8)!
         let change = PendingChange(
-            entityType: "budget",
+            entityType: .budget,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/budgets",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: payload
         )
         context.insert(change)
@@ -111,9 +111,9 @@ struct OrphanedQueueTests {
 
         let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
         #expect(orphaned.count == 1)
-        #expect(orphaned.first?.entityType == "budget")
+        #expect(orphaned.first?.entityType == .budget)
         #expect(orphaned.first?.payload == payload)
-        #expect(orphaned.first?.httpMethod == "POST")
+        #expect(orphaned.first?.httpMethod == .post)
     }
 
     // MARK: - purgeExpiredOrphans

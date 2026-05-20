@@ -303,8 +303,8 @@ struct ManageCategoriesViewModelTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].action == "create")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].action == .create)
+        #expect(log[0].httpMethod == .post)
 
         let decoder = JSONDecoder()
         let req = try decoder.decode(APICreateCategoryRequest.self, from: log[0].payload!)
@@ -366,8 +366,8 @@ struct ManageCategoriesViewModelTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].action == "update")
-        #expect(log[0].httpMethod == "PATCH")
+        #expect(log[0].action == .update)
+        #expect(log[0].httpMethod == .patch)
     }
 
     @Test
@@ -396,8 +396,8 @@ struct ManageCategoriesViewModelTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].action == "update")
-        #expect(log[0].httpMethod == "PATCH")
+        #expect(log[0].action == .update)
+        #expect(log[0].httpMethod == .patch)
 
         let decoder = JSONDecoder()
         let req = try decoder.decode(APIUpdateCategoryRequest.self, from: log[0].payload!)

@@ -313,7 +313,7 @@ struct SplitCalculator {
         let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
 
         let transaction: Transaction
-        let action: String
+        let action: ChangeAction
 
         // If recurring is toggled on for a NEW transaction, create the template first so we can link it atomically.
         // Skip if editing an existing recurring-linked transaction — template was already updated in saveAlsoUpdatingRecurring.
@@ -334,7 +334,7 @@ struct SplitCalculator {
             )
             persistence.modelContext?.insert(recurring)
             do {
-                try persistence.saveRecurring(recurring, action: "create")
+                try persistence.saveRecurring(recurring, action: .create)
                 AppLogger.data.info("Recurring transaction saved: \(recurring.id)")
                 recurringExpenseId = recurring.id
             } catch {
@@ -362,7 +362,7 @@ struct SplitCalculator {
             existingExpense.notes = notes.isEmpty ? nil : notes
             existingExpense.updatedAt = Date()
             transaction = existingExpense
-            action = "update"
+            action = .update
         } else {
             let resolvedDescription = isRecurring
                 ? description.trimmingCharacters(in: .whitespaces)
@@ -381,12 +381,12 @@ struct SplitCalculator {
             )
             persistence.modelContext?.insert(expense)
             transaction = expense
-            action = "create"
+            action = .create
         }
 
         do {
             try persistence.saveTransaction(transaction, action: action)
-            AppLogger.data.info("Expense saved: \(transaction.id) action=\(action)")
+            AppLogger.data.info("Expense saved: \(transaction.id) action=\(action.rawValue)")
         } catch {
             AppLogger.data.error("Failed to save expense: \(error)")
             errorMessage = "Failed to save expense"
@@ -419,7 +419,7 @@ struct SplitCalculator {
                 recurring.category = selectedCategory
                 recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
-                try? persistence.saveRecurring(recurring, action: "update")
+                try? persistence.saveRecurring(recurring, action: .update)
             }
         }
         isSaving = true

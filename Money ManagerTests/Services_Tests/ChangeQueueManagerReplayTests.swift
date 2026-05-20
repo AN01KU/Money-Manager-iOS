@@ -32,9 +32,9 @@ struct ChangeQueueManagerReplayTests {
 
         let payload = "{}".data(using: .utf8)
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: payload
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: payload
         )
         context.insert(change)
         try context.save()
@@ -57,9 +57,9 @@ struct ChangeQueueManagerReplayTests {
 
         let payload = "{}".data(using: .utf8)
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "update", endpoint: "/transactions",
-            httpMethod: "PUT", payload: payload
+            entityType: .transaction, entityID: UUID(),
+            action: .update, endpoint: "/transactions",
+            httpMethod: .put, payload: payload
         )
         context.insert(change)
         try context.save()
@@ -82,9 +82,9 @@ struct ChangeQueueManagerReplayTests {
 
         let payload = "{}".data(using: .utf8)
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "update", endpoint: "/transactions",
-            httpMethod: "PATCH", payload: payload
+            entityType: .transaction, entityID: UUID(),
+            action: .update, endpoint: "/transactions",
+            httpMethod: .patch, payload: payload
         )
         context.insert(change)
         try context.save()
@@ -110,9 +110,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(tx)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: txId,
-            action: "delete", endpoint: "/transactions",
-            httpMethod: "DELETE", payload: nil
+            entityType: .transaction, entityID: txId,
+            action: .delete, endpoint: "/transactions",
+            httpMethod: .delete, payload: nil
         )
         context.insert(change)
         try context.save()
@@ -143,9 +143,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(rec)
 
         let change = PendingChange(
-            entityType: "recurring", entityID: recId,
-            action: "delete", endpoint: "/recurring-transactions",
-            httpMethod: "DELETE", payload: nil
+            entityType: .recurring, entityID: recId,
+            action: .delete, endpoint: "/recurring-transactions",
+            httpMethod: .delete, payload: nil
         )
         context.insert(change)
         try context.save()
@@ -169,9 +169,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         change.retryCount = 0
         context.insert(change)
@@ -199,9 +199,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(tx)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: txId,
-            action: "delete", endpoint: "/transactions",
-            httpMethod: "DELETE", payload: nil
+            entityType: .transaction, entityID: txId,
+            action: .delete, endpoint: "/transactions",
+            httpMethod: .delete, payload: nil
         )
         context.insert(change)
         try context.save()
@@ -225,9 +225,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -249,9 +249,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -277,9 +277,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -300,9 +300,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         change.nextRetryAt = Date(timeIntervalSinceNow: 3600)
         context.insert(change)
@@ -323,9 +323,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         change.retryCount = ChangeQueueManager.maxRetryCount
         context.insert(change)
@@ -354,9 +354,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(tx)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: txId,
-            action: "update", endpoint: "/transactions",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: txId,
+            action: .update, endpoint: "/transactions",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -387,9 +387,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(rec)
 
         let change = PendingChange(
-            entityType: "recurring", entityID: recId,
-            action: "update", endpoint: "/recurring-transactions",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .recurring, entityID: recId,
+            action: .update, endpoint: "/recurring-transactions",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -417,9 +417,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(cat)
 
         let change = PendingChange(
-            entityType: "category", entityID: catId,
-            action: "update", endpoint: "/categories",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .category, entityID: catId,
+            action: .update, endpoint: "/categories",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -443,9 +443,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         change.retryCount = ChangeQueueManager.maxRetryCount - 1
         context.insert(change)
@@ -475,9 +475,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(tx)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: txId,
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: txId,
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -505,9 +505,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(tx)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: txId,
-            action: "update", endpoint: "/transactions",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: txId,
+            action: .update, endpoint: "/transactions",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -538,9 +538,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(rec)
 
         let change = PendingChange(
-            entityType: "recurring", entityID: recId,
-            action: "create", endpoint: "/recurring-transactions",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .recurring, entityID: recId,
+            action: .create, endpoint: "/recurring-transactions",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -571,9 +571,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(rec)
 
         let change = PendingChange(
-            entityType: "recurring", entityID: recId,
-            action: "update", endpoint: "/recurring-transactions",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .recurring, entityID: recId,
+            action: .update, endpoint: "/recurring-transactions",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -603,9 +603,9 @@ struct ChangeQueueManagerReplayTests {
         context.insert(tx)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: txId,
-            action: "update", endpoint: "/transactions",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: txId,
+            action: .update, endpoint: "/transactions",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try context.save()
@@ -631,9 +631,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/groups/1/settlements",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/groups/1/settlements",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         change.retryCount = 0
         context.insert(change)
@@ -657,9 +657,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "update", endpoint: "/groups/1/transactions",
-            httpMethod: "PATCH", payload: "{}".data(using: .utf8)
+            entityType: .transaction, entityID: UUID(),
+            action: .update, endpoint: "/groups/1/transactions",
+            httpMethod: .patch, payload: "{}".data(using: .utf8)
         )
         change.retryCount = 0
         context.insert(change)
@@ -683,9 +683,9 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let change = PendingChange(
-            entityType: "group", entityID: UUID(),
-            action: "create", endpoint: "/groups/1/members",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            entityType: .group, entityID: UUID(),
+            action: .create, endpoint: "/groups/1/members",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         change.retryCount = 0
         context.insert(change)
@@ -712,9 +712,9 @@ struct ChangeQueueManagerReplayTests {
 
         for _ in 0..<2 {
             let change = PendingChange(
-                entityType: "transaction", entityID: UUID(),
-                action: "create", endpoint: "/transactions",
-                httpMethod: "POST", payload: "{}".data(using: .utf8)
+                entityType: .transaction, entityID: UUID(),
+                action: .create, endpoint: "/transactions",
+                httpMethod: .post, payload: "{}".data(using: .utf8)
             )
             context.insert(change)
         }
@@ -747,9 +747,9 @@ struct ChangeQueueManagerReplayTests {
 
         for _ in 0..<3 {
             let change = PendingChange(
-                entityType: "transaction", entityID: UUID(),
-                action: "create", endpoint: "/transactions",
-                httpMethod: "POST", payload: "{}".data(using: .utf8)
+                entityType: .transaction, entityID: UUID(),
+                action: .create, endpoint: "/transactions",
+                httpMethod: .post, payload: "{}".data(using: .utf8)
             )
             context.insert(change)
         }
@@ -773,9 +773,9 @@ struct ChangeQueueManagerReplayTests {
 
         for _ in 0..<4 {
             let change = PendingChange(
-                entityType: "transaction", entityID: UUID(),
-                action: "create", endpoint: "/transactions",
-                httpMethod: "POST", payload: "{}".data(using: .utf8)
+                entityType: .transaction, entityID: UUID(),
+                action: .create, endpoint: "/transactions",
+                httpMethod: .post, payload: "{}".data(using: .utf8)
             )
             context.insert(change)
         }

@@ -48,8 +48,9 @@ final class SyncService: SyncServiceProtocol {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self, self.authService?.isAuthenticated == true else { return }
-            Task {
+            guard let self else { return }
+            Task { @MainActor in
+                guard self.authService?.isAuthenticated == true else { return }
                 await self.syncOnReconnect()
             }
         }
@@ -59,7 +60,9 @@ final class SyncService: SyncServiceProtocol {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.clearGroupData()
+            Task { @MainActor in
+                self?.clearGroupData()
+            }
         }
     }
 
@@ -396,12 +399,12 @@ final class SyncService: SyncServiceProtocol {
     
     private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
         let failedDescriptor = FetchDescriptor<FailedChange>(
-            predicate: #Predicate { $0.entityType == "transaction" }
+            predicate: #Predicate { $0.entityType.rawValue == "transaction" }
         )
         let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "transaction" }
+            predicate: #Predicate { $0.entityType.rawValue == "transaction" }
         )
         let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
@@ -444,7 +447,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "transaction", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .transaction, context: context)
 
         // Remove local transactions that the server no longer returns and have no pending upload.
         // The server responds with is_deleted=false only, so anything missing from that set is
@@ -472,12 +475,12 @@ final class SyncService: SyncServiceProtocol {
 
     private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
         let failedDescriptor = FetchDescriptor<FailedChange>(
-            predicate: #Predicate { $0.entityType == "recurring" }
+            predicate: #Predicate { $0.entityType.rawValue == "recurring" }
         )
         let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "recurring" }
+            predicate: #Predicate { $0.entityType.rawValue == "recurring" }
         )
         let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
@@ -527,7 +530,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "recurring", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .recurring, context: context)
 
         // Purge local recurring transactions the server no longer returns and have no pending upload.
         // Also protect entities stuck in the dead-letter queue — their create may have failed transiently.
@@ -546,7 +549,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func upsertUserBudget(_ remote: APIUserBudget, context: ModelContext) {
         let hasPending = (try? context.fetch(
-            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType == "budget" })
+            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType.rawValue == "budget" })
         ))?.isEmpty == false
 
         // Don't overwrite a queued local write with the (possibly stale) server value.
@@ -562,14 +565,14 @@ final class SyncService: SyncServiceProtocol {
             context.insert(UserBudget(limit: remote.limit))
         }
 
-        changeQueue.removeStaleChanges(for: [UserBudget.sentinelID], entityType: "budget", context: context)
+        changeQueue.removeStaleChanges(for: [UserBudget.sentinelID], entityType: .budget, context: context)
         try? context.save()
         AppLogger.sync.debug("[upsertUserBudget] limit=\(remote.limit.map { "\($0)" } ?? "nil")")
     }
 
     private func upsertCategories(_ apiCategories: [APICategory], context: ModelContext) {
         let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "category" }
+            predicate: #Predicate { $0.entityType.rawValue == "category" }
         )
         let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
@@ -643,7 +646,7 @@ final class SyncService: SyncServiceProtocol {
             }
         }
 
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: "category", context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .category, context: context)
 
         // Purge local custom categories the server no longer returns and have no pending upload.
         // Never touch server-predefined rows — those are managed by upsertPredefinedCategories.

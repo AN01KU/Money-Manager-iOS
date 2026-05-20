@@ -73,9 +73,9 @@ struct BudgetsViewModelMutationTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log.first?.entityType == "budget")
+        #expect(log.first?.entityType == .budget)
         #expect(log.first?.endpoint == "/me/budget")
-        #expect(log.first?.httpMethod == "PUT")
+        #expect(log.first?.httpMethod == .put)
     }
 
     @Test
@@ -110,7 +110,7 @@ struct BudgetsViewModelMutationTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log.first?.httpMethod == "PUT")
+        #expect(log.first?.httpMethod == .put)
         #expect(log.first?.endpoint == "/me/budget")
     }
 
@@ -154,9 +154,9 @@ struct BudgetsViewModelMutationTests {
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log.first?.entityType == "budget")
+        #expect(log.first?.entityType == .budget)
         #expect(log.first?.endpoint == "/me/budget")
-        #expect(log.first?.httpMethod == "PUT")
+        #expect(log.first?.httpMethod == .put)
 
         if let payload = log.first?.payload,
            let decoded = try? JSONDecoder().decode(APISetBudgetRequest.self, from: payload) {

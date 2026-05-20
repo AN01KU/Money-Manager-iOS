@@ -163,7 +163,7 @@ struct APIAddMemberRequest: Codable, Sendable {
     let email: String
 
     init(email: String) {
-        self.email = email.lowercased()
+        self.email = email.normalizedEmail
     }
 }
 

@@ -18,12 +18,12 @@ struct ChangeQueueManagerOrphanTests {
 
     private func insertPending(
         in context: ModelContext,
-        entityType: String = "transaction"
+        entityType: EntityType = .transaction
     ) {
         let change = PendingChange(
             entityType: entityType, entityID: UUID(),
-            action: "create", endpoint: "/\(entityType)s",
-            httpMethod: "POST", payload: "{}".data(using: .utf8)
+            action: .create, endpoint: "/\(entityType.rawValue)s",
+            httpMethod: .post, payload: "{}".data(using: .utf8)
         )
         context.insert(change)
         try? context.save()
@@ -80,9 +80,9 @@ struct ChangeQueueManagerOrphanTests {
 
         let id = UUID()
         manager.enqueue(
-            entityType: "budget", entityID: id,
-            action: "update", endpoint: "/budgets",
-            httpMethod: "PUT", payload: "{}".data(using: .utf8),
+            entityType: .budget, entityID: id,
+            action: .update, endpoint: "/budgets",
+            httpMethod: .put, payload: "{}".data(using: .utf8),
             context: context
         )
 
@@ -90,10 +90,10 @@ struct ChangeQueueManagerOrphanTests {
 
         let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
         #expect(orphaned.count == 1)
-        #expect(orphaned.first?.entityType == "budget")
+        #expect(orphaned.first?.entityType == .budget)
         #expect(orphaned.first?.entityID == id)
-        #expect(orphaned.first?.action == "update")
-        #expect(orphaned.first?.httpMethod == "PUT")
+        #expect(orphaned.first?.action == .update)
+        #expect(orphaned.first?.httpMethod == .put)
     }
 
     // MARK: - purgeExpiredOrphans
@@ -104,9 +104,9 @@ struct ChangeQueueManagerOrphanTests {
         let manager = makeManager(container: container)
 
         let oldOrphan = OrphanedChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: nil,
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: nil,
             createdAt: Date(timeIntervalSinceNow: -30 * 86400)
         )
         oldOrphan.orphanedAt = Date(timeIntervalSinceNow: -8 * 86400)
@@ -125,9 +125,9 @@ struct ChangeQueueManagerOrphanTests {
         let manager = makeManager(container: container)
 
         let recentOrphan = OrphanedChange(
-            entityType: "transaction", entityID: UUID(),
-            action: "create", endpoint: "/transactions",
-            httpMethod: "POST", payload: nil,
+            entityType: .transaction, entityID: UUID(),
+            action: .create, endpoint: "/transactions",
+            httpMethod: .post, payload: nil,
             createdAt: Date()
         )
         context.insert(recentOrphan)
@@ -151,9 +151,9 @@ struct ChangeQueueManagerOrphanTests {
 
         for _ in 0..<2 {
             let change = PendingChange(
-                entityType: "transaction", entityID: UUID(),
-                action: "create", endpoint: "/transactions",
-                httpMethod: "POST", payload: "{}".data(using: .utf8)
+                entityType: .transaction, entityID: UUID(),
+                action: .create, endpoint: "/transactions",
+                httpMethod: .post, payload: "{}".data(using: .utf8)
             )
             context.insert(change)
         }

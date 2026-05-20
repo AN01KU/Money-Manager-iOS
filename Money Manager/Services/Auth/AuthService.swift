@@ -27,8 +27,9 @@ final class AuthService: AuthServiceProtocol {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self, self.isAuthenticated else { return }
+            guard let self else { return }
             Task { @MainActor in
+                guard self.isAuthenticated else { return }
                 self.authState = .expired
                 self.session.clearSession()
             }

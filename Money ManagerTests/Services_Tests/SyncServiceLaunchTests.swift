@@ -257,8 +257,8 @@ private final class SpySyncChangeQueue: ChangeQueueManagerProtocol {
     func configure(container: ModelContainer) {}
 
     func enqueue(
-        entityType: String, entityID: UUID, action: String,
-        endpoint: String, httpMethod: String, payload: Data?,
+        entityType: EntityType, entityID: UUID, action: ChangeAction,
+        endpoint: String, httpMethod: HTTPMethod, payload: Data?,
         context: ModelContext
     ) {}
 
@@ -275,5 +275,5 @@ private final class SpySyncChangeQueue: ChangeQueueManagerProtocol {
 
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {}
 
-    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext) {}
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: EntityType, context: ModelContext) {}
 }
