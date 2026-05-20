@@ -252,19 +252,8 @@ final class GroupDetailViewModel {
         } else {
             transactions.insert(updated, at: 0)
         }
-
-        Task {
-            do {
-                try await groupService.deleteGroupTransaction(groupId: group.id, transactionId: old.id)
-                await loadData()
-            } catch {
-                // Restore old on failure
-                if let idx = transactions.firstIndex(where: { $0.id == updated.id }) {
-                    transactions[idx] = old
-                }
-                errorMessage = errorDescription(error)
-            }
-        }
+        // The PATCH already succeeded before this callback fires; just refresh balances.
+        Task { await loadData() }
     }
 
     func deleteTransaction(_ transaction: APIGroupTransaction) {

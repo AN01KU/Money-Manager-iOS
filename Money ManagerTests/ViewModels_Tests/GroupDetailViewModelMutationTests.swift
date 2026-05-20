@@ -297,23 +297,48 @@ struct GroupDetailViewModelMutationTests {
         #expect(vm.settlements.isEmpty)
     }
 
-    // MARK: - transactionEdited failure path
+    // MARK: - transactionEdited
 
-    @Test func testTransactionEditedFailureRestoresOldAndSetsError() async {
+    @Test func testTransactionEditedOptimisticallyReplacesOld() async {
         let mock = MockGroupService.fresh()
-        struct EditError: Error, LocalizedError {
-            var errorDescription: String? { "edit failed" }
-        }
-        mock.deleteError = EditError()
+        mock.stubbedTransactions = []
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
         let txId = UUID()
         let old = makeTransaction(id: txId, totalAmount: 100)
-        let updated = makeTransaction(id: UUID(), totalAmount: 200)
+        let updated = makeTransaction(id: txId, totalAmount: 200)
+        vm.transactions = [old]
+        vm.transactionEdited(replacing: old, with: updated)
+        // Optimistic update is immediate
+        #expect(vm.transactions.contains(where: { $0.id == txId && $0.totalAmount == 200 }))
+    }
+
+    @Test func testTransactionEditedDoesNotCallDelete() async {
+        // Regression: transactionEdited must NOT call deleteGroupTransaction.
+        // The PATCH already ran in AddTransactionViewModel; calling DELETE here would destroy the transaction.
+        let mock = MockGroupService.fresh()
+        mock.stubbedTransactions = []
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let txId = UUID()
+        let old = makeTransaction(id: txId, totalAmount: 100)
+        let updated = makeTransaction(id: txId, totalAmount: 200)
         vm.transactions = [old]
         vm.transactionEdited(replacing: old, with: updated)
         try? await Task.sleep(nanoseconds: 100_000_000)
-        // After failure, old transaction should be restored
-        #expect(vm.transactions.contains(where: { $0.id == old.id }))
-        #expect(vm.errorMessage != nil)
+        #expect(mock.deleteCallCount == 0)
+    }
+
+    @Test func testTransactionEditedWithDifferentIdUpdatesCorrectSlot() async {
+        let mock = MockGroupService.fresh()
+        mock.stubbedTransactions = []
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let txId = UUID()
+        let other = makeTransaction(totalAmount: 50)
+        let old = makeTransaction(id: txId, totalAmount: 100)
+        let updated = makeTransaction(id: txId, totalAmount: 200)
+        vm.transactions = [old, other]
+        vm.transactionEdited(replacing: old, with: updated)
+        // The slot for old should now contain updated; other is untouched
+        #expect(vm.transactions.contains(where: { $0.id == txId && $0.totalAmount == 200 }))
+        #expect(vm.transactions.contains(where: { $0.id == other.id }))
     }
 }

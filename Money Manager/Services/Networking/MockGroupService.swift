@@ -82,6 +82,7 @@ final class MockGroupService: GroupServiceProtocol {
 
     var stubbedTransactions: [APIGroupTransaction] = []
     var deleteError: Error? = nil
+    var deleteCallCount = 0
     var updateGroupTransactionError: Error? = nil
     var lastUpdateRequest: APIUpdateGroupTransactionRequest? = nil
 
@@ -90,6 +91,7 @@ final class MockGroupService: GroupServiceProtocol {
     }
 
     func deleteGroupTransaction(groupId: UUID, transactionId: UUID) async throws {
+        deleteCallCount += 1
         if let error = deleteError { throw error }
     }
 
