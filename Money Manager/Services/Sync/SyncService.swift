@@ -267,6 +267,7 @@ final class SyncService: SyncServiceProtocol {
             upsertPredefinedCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull predefined categories: \(error)")
+            recordSyncError()
         }
     }
 
