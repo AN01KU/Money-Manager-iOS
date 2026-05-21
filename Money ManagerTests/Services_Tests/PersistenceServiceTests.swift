@@ -252,36 +252,7 @@ struct PersistenceServiceTests {
         #expect(log[0].entityID == id)
     }
 
-    // MARK: - enqueueCreate helpers (no modelContext.save)
-
-    @Test func testEnqueueCreate_transaction_enqueuesWithCorrectContract() throws {
-        let context = try makeContext()
-        let svc = makeService(context: context)
-        let tx = Transaction(amount: 250, category: "Travel", date: Date())
-        context.insert(tx)
-        svc.enqueueCreate(tx, context: context)
-        let log = MockChangeQueueManager.shared.enqueueCallLog
-        #expect(log.count == 1)
-        #expect(log[0].entityType == .transaction)
-        #expect(log[0].action == .create)
-        #expect(log[0].endpoint == "/transactions")
-        #expect(log[0].httpMethod == .post)
-        #expect(log[0].entityID == tx.id)
-    }
-
-    @Test func testEnqueueCreate_recurring_enqueuesWithCorrectContract() throws {
-        let context = try makeContext()
-        let svc = makeService(context: context)
-        let r = RecurringTransaction(name: "Spotify", amount: 199, category: "Music", frequency: .monthly)
-        context.insert(r)
-        svc.enqueueCreate(r, context: context)
-        let log = MockChangeQueueManager.shared.enqueueCallLog
-        #expect(log.count == 1)
-        #expect(log[0].entityType == .recurring)
-        #expect(log[0].action == .create)
-        #expect(log[0].endpoint == "/recurring-transactions")
-        #expect(log[0].httpMethod == .post)
-    }
+    // MARK: - enqueueUserBudget helper (no modelContext.save)
 
     @Test func testEnqueueUserBudget_enqueuesPutWithCorrectContract() throws {
         let context = try makeContext()
@@ -295,19 +266,5 @@ struct PersistenceServiceTests {
         #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/me/budget")
         #expect(log[0].httpMethod == .put)
-    }
-
-    @Test func testEnqueueCreate_category_enqueuesWithCorrectContract() throws {
-        let context = try makeContext()
-        let svc = makeService(context: context)
-        let cat = Category(name: "Health", icon: "heart", color: "#FF0000")
-        context.insert(cat)
-        svc.enqueueCreate(cat, context: context)
-        let log = MockChangeQueueManager.shared.enqueueCallLog
-        #expect(log.count == 1)
-        #expect(log[0].entityType == .category)
-        #expect(log[0].action == .create)
-        #expect(log[0].endpoint == "/categories")
-        #expect(log[0].httpMethod == .post)
     }
 }

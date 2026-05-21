@@ -91,37 +91,11 @@ final class PersistenceService {
 
     // MARK: - Enqueue-only helpers (no modelContext.save — caller already inserted the entity)
 
-    /// Encodes and enqueues a create change without triggering a replay.
-    /// Used by bootstrap to batch-enqueue all local data before a single replayAll.
-    func enqueueCreate(_ transaction: Transaction, context: ModelContext) {
-        guard let payload = try? AppAPIClient.apiEncoder.encode(transaction.toCreateRequest()) else { return }
-        changeQueue.enqueue(
-            entityType: .transaction, entityID: transaction.id, action: .create,
-            endpoint: "/transactions", httpMethod: .post, payload: payload, context: context
-        )
-    }
-
-    func enqueueCreate(_ recurring: RecurringTransaction, context: ModelContext) {
-        guard let payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest()) else { return }
-        changeQueue.enqueue(
-            entityType: .recurring, entityID: recurring.id, action: .create,
-            endpoint: "/recurring-transactions", httpMethod: .post, payload: payload, context: context
-        )
-    }
-
     func enqueueUserBudget(_ budget: UserBudget, context: ModelContext) {
         guard let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) else { return }
         changeQueue.enqueue(
             entityType: .budget, entityID: budget.id, action: .create,
             endpoint: "/me/budget", httpMethod: .put, payload: payload, context: context
-        )
-    }
-
-    func enqueueCreate(_ category: Category, context: ModelContext) {
-        guard let payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest()) else { return }
-        changeQueue.enqueue(
-            entityType: .category, entityID: category.id, action: .create,
-            endpoint: "/categories", httpMethod: .post, payload: payload, context: context
         )
     }
 
