@@ -37,9 +37,6 @@ import SwiftData
     }
 
     func deleteTransaction(completion: @escaping () -> Void) {
-        transaction.isSoftDeleted = true
-        transaction.updatedAt = Date()
-
         do {
             try persistence.save(transaction, action: .delete)
             AppLogger.data.info("Transaction deleted: \(self.transaction.id)")

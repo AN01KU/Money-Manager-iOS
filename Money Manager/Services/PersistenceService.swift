@@ -73,6 +73,10 @@ final class PersistenceService {
         case .delete:
             httpMethod = .delete
             payload = nil
+            if let softDeletable = entity as? any SoftDeletableEntity {
+                softDeletable.isSoftDeleted = true
+                softDeletable.updatedAt = Date()
+            }
         }
 
         try saveAndSync(

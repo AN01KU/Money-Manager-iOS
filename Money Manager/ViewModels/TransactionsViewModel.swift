@@ -80,8 +80,6 @@ import SwiftData
 
     func confirmDeleteTransaction() {
         guard let transaction = transactionToDelete else { return }
-        transaction.isSoftDeleted = true
-        transaction.updatedAt = Date()
         transactionToDelete = nil
         isConfirmingDelete = false
         do {

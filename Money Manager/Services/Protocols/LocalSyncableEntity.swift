@@ -25,3 +25,12 @@ protocol LocalSyncableEntity {
     /// JSON-encoded body for a PATCH (update) request.
     func updateRequestPayload() throws -> Data
 }
+
+/// A local entity that uses soft-delete (tombstone) semantics rather than hard delete.
+///
+/// `PersistenceService.save(_, action: .delete)` flips `isSoftDeleted` and bumps
+/// `updatedAt` automatically for conformers, so call sites never have to.
+protocol SoftDeletableEntity: AnyObject {
+    var isSoftDeleted: Bool { get set }
+    var updatedAt: Date { get set }
+}

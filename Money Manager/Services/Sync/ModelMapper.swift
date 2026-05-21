@@ -8,6 +8,9 @@ import SwiftData
 
 // MARK: - LocalSyncableEntity conformances
 
+extension Transaction: SoftDeletableEntity {}
+extension RecurringTransaction: SoftDeletableEntity {}
+
 extension Transaction: LocalSyncableEntity {
     static var entityType: EntityType { .transaction }
     static var endpoint: String { "/transactions" }
