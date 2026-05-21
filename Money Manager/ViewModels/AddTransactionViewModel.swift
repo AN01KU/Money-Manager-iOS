@@ -44,7 +44,9 @@ struct SplitCalculator {
     }
 
     var customSplitTotal: Double {
-        selectedMembers.compactMap { Double(customAmounts[$0] ?? "") }.reduce(0, +)
+        selectedMembers
+            .compactMap { Money.parse(customAmounts[$0] ?? "", currencyCode: CurrencyFormatter.currentCode)?.doubleValue }
+            .reduce(0, +)
     }
 
     /// `false` when `totalAmount` is zero but custom amounts are also zero — only valid when the
@@ -59,8 +61,9 @@ struct SplitCalculator {
             return selectedMembers.map { APIGroupTransactionSplitInput(userId: $0, amount: share) }
         } else {
             return selectedMembers.compactMap { id in
-                guard let raw = customAmounts[id], let value = Double(raw) else { return nil }
-                return APIGroupTransactionSplitInput(userId: id, amount: value)
+                guard let raw = customAmounts[id],
+                      let money = Money.parse(raw, currencyCode: CurrencyFormatter.currentCode) else { return nil }
+                return APIGroupTransactionSplitInput(userId: id, amount: money.doubleValue)
             }
         }
     }
@@ -151,7 +154,7 @@ struct SplitCalculator {
                    !description.trimmingCharacters(in: .whitespaces).isEmpty
         }
 
-        guard let amountValue = Double(amount), amountValue > 0 else { return false }
+        guard let amountValue = parsedAmountValue, amountValue > 0 else { return false }
 
         if isRecurring && description.trimmingCharacters(in: .whitespaces).isEmpty { return false }
 
@@ -164,9 +167,15 @@ struct SplitCalculator {
         return true
     }
 
+    /// User-entered amount parsed via locale-aware `Money.parse`. `nil` when the field is empty
+    /// or unparseable — callers decide how to react (validation vs. zero fallback).
+    private var parsedAmountValue: Double? {
+        Money.parse(amount, currencyCode: CurrencyFormatter.currentCode)?.doubleValue
+    }
+
     private var splitCalculator: SplitCalculator {
         SplitCalculator(
-            totalAmount: Double(amount) ?? 0,
+            totalAmount: parsedAmountValue ?? 0,
             selectedMembers: selectedMembers,
             customAmounts: customAmounts,
             splitType: splitType
@@ -261,7 +270,7 @@ struct SplitCalculator {
     // MARK: - Save
 
     func save(completion: @escaping () -> Void) {
-        guard let amountValue = Double(amount), amountValue > 0 else {
+        guard let amountValue = parsedAmountValue, amountValue > 0 else {
             errorMessage = "Please enter a valid amount"
             return
         }

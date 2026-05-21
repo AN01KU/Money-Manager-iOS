@@ -50,7 +50,11 @@ import SwiftData
     }
 
     func formatAmount(_ amount: Double) -> String {
-        amount.formatted(.number.precision(.fractionLength(0...2)))
+        // Route through Money so the displayed value uses the same Decimal-based formatting as
+        // the editor's parse/format pipeline. We render without the currency symbol here because
+        // the surrounding view supplies it separately.
+        let money = Money(amount: Decimal(amount), currencyCode: CurrencyFormatter.currentCode)
+        return money.editableString
     }
 
     func formatDateAndTime(_ date: Date, time: Date?) -> String {
