@@ -327,7 +327,7 @@ struct SplitCalculator {
             )
             persistence.modelContext.insert(recurring)
             do {
-                try persistence.saveRecurring(recurring, action: .create)
+                try persistence.save(recurring, action: .create)
                 AppLogger.data.info("Recurring transaction saved: \(recurring.id)")
                 recurringExpenseId = recurring.id
             } catch {
@@ -413,7 +413,7 @@ struct SplitCalculator {
                 recurring.category = selectedCategory
                 recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
-                try? persistence.saveRecurring(recurring, action: .update)
+                try? persistence.save(recurring, action: .update)
             }
         }
         isSaving = true

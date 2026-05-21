@@ -55,60 +55,6 @@ final class PersistenceService {
         }
     }
 
-    // MARK: - Entity-specific helpers
-
-    func saveRecurring(_ recurring: RecurringTransaction, action: ChangeAction) throws {
-        let httpMethod: HTTPMethod
-        let payload: Data?
-
-        switch action {
-        case .create:
-            httpMethod = .post
-            payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest())
-        case .update:
-            httpMethod = .patch
-            payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
-        case .delete:
-            httpMethod = .delete
-            payload = nil
-        }
-
-        try saveAndSync(
-            entityType: .recurring,
-            entityID: recurring.id,
-            action: action,
-            endpoint: "/recurring-transactions",
-            httpMethod: httpMethod,
-            payload: payload
-        )
-    }
-
-    func saveCategory(_ category: Category, action: ChangeAction) throws {
-        let httpMethod: HTTPMethod
-        let payload: Data?
-
-        switch action {
-        case .create:
-            httpMethod = .post
-            payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest())
-        case .update:
-            httpMethod = .patch
-            payload = try? AppAPIClient.apiEncoder.encode(category.toUpdateRequest())
-        case .delete:
-            httpMethod = .delete
-            payload = nil
-        }
-
-        try saveAndSync(
-            entityType: .category,
-            entityID: category.id,
-            action: action,
-            endpoint: "/categories",
-            httpMethod: httpMethod,
-            payload: payload
-        )
-    }
-
     // MARK: - Generic save<T>
 
     /// Saves any LocalSyncableEntity and enqueues the corresponding change record.

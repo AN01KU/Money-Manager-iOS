@@ -40,13 +40,10 @@ import SwiftData
         }
     }
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-    let persistence: PersistenceService
+    var modelContext: ModelContext { persistence.modelContext }
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
@@ -58,7 +55,7 @@ import SwiftData
         item.isActive.toggle()
         item.updatedAt = Date()
         do {
-            try persistence.saveRecurring(item, action: "update")
+            try persistence.save(item, action: .update)
             AppLogger.data.info("Recurring transaction toggled: \(item.id) isActive=\(item.isActive)")
         } catch {
             AppLogger.data.error("Error toggling recurring transaction: \(error)")
@@ -75,22 +72,21 @@ import SwiftData
         item.isSoftDeleted = true
         item.updatedAt = Date()
 
-        if let modelContext {
-            let descriptor = FetchDescriptor<Transaction>(
-                predicate: #Predicate { $0.recurringExpenseId == recurringId }
-            )
-            if let linked = try? modelContext.fetch(descriptor) {
-                for tx in linked { tx.recurringExpenseId = nil }
-            }
+        let mctx = modelContext
+        let descriptor = FetchDescriptor<Transaction>(
+            predicate: #Predicate { $0.recurringExpenseId == recurringId }
+        )
+        if let linked = try? mctx.fetch(descriptor) {
+            for tx in linked { tx.recurringExpenseId = nil }
         }
 
         do {
             try persistence.saveAndSync(
-                entityType: "recurring",
+                entityType: .recurring,
                 entityID: recurringId,
-                action: "delete",
+                action: .delete,
                 endpoint: "/recurring-transactions",
-                httpMethod: "DELETE",
+                httpMethod: .delete,
                 payload: nil
             )
             AppLogger.data.info("Recurring transaction deleted: \(recurringId)")
@@ -230,16 +226,13 @@ import SwiftData
     let frequencies = RecurringFrequency.allCases
 
     var customCategories: [Category] = []
-    let persistence: PersistenceService
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
 
     var isValid: Bool {
         guard let amountValue = Double(amount), amountValue > 0 else {
@@ -273,7 +266,7 @@ import SwiftData
             return false
         }
 
-        guard let modelContext = modelContext else { return true }
+        let modelContext = modelContext
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
@@ -294,7 +287,7 @@ import SwiftData
         modelContext.insert(recurringTransaction)
 
         do {
-            try persistence.saveRecurring(recurringTransaction, action: "create")
+            try persistence.save(recurringTransaction, action: .create)
             AppLogger.data.info("Recurring transaction saved: \(recurringTransaction.id)")
         } catch {
             AppLogger.data.error("Failed to save recurring transaction: \(error)")

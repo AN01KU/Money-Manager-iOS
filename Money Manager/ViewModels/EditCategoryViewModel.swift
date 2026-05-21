@@ -9,7 +9,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     var errorMessage = ""
 
     private let category: TransactionCategory
-    let persistence: PersistenceService
+    @ObservationIgnored var persistence: PersistenceService
 
     var modelContext: ModelContext { persistence.modelContext }
 
@@ -22,7 +22,6 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    #if DEBUG
     init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService = .testing) {
         self.category = category
         self.name = category.name
@@ -33,18 +32,6 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             self.editingPredefinedKey = category.predefinedCase?.serverKey
         }
     }
-    #else
-    init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService) {
-        self.category = category
-        self.name = category.name
-        self.persistence = persistence
-        super.init(icon: category.icon, color: category.colorHex)
-        self.allCategories = allCategories
-        if category.isPredefined {
-            self.editingPredefinedKey = category.predefinedCase?.serverKey
-        }
-    }
-    #endif
 
     func save() -> Bool {
         let (trimmedName, validationError) = validateName(name, excludingId: category.overrideRow?.id)
@@ -66,7 +53,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             row.updatedAt = Date()
 
             do {
-                try persistence.saveCategory(row, action: .update)
+                try persistence.save(row, action: .update)
             } catch {
                 errorMessage = "Failed to save changes"
                 showError = true
@@ -81,7 +68,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             context.insert(row)
 
             do {
-                try persistence.saveCategory(row, action: .create)
+                try persistence.save(row, action: .create)
             } catch {
                 errorMessage = "Failed to save changes"
                 showError = true

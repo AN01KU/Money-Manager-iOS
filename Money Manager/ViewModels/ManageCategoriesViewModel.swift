@@ -8,14 +8,11 @@ import SwiftData
     var categoryToDelete: TransactionCategory?
     var showDeleteConfirmation = false
 
-    let persistence: PersistenceService
+    @ObservationIgnored var persistence: PersistenceService
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
@@ -23,12 +20,13 @@ import SwiftData
         if let row = category.overrideRow {
             row.isHidden = true
             row.updatedAt = Date()
-            try? persistence.saveCategory(row, action: "update")
-        } else if category.isPredefined, let context = modelContext {
+            try? persistence.save(row, action: .update)
+        } else if category.isPredefined {
+            let context = modelContext
             let row = Category.makeOverride(for: category)
             row.isHidden = true
             context.insert(row)
-            try? persistence.saveCategory(row, action: "create")
+            try? persistence.save(row, action: .create)
         }
         AppLogger.data.info("Category hidden: \(category.name)")
     }
@@ -37,7 +35,7 @@ import SwiftData
         guard let row = category.overrideRow else { return }
         row.isHidden = false
         row.updatedAt = Date()
-        try? persistence.saveCategory(row, action: "update")
+        try? persistence.save(row, action: .update)
         AppLogger.data.info("Category restored: \(category.name)")
     }
 
@@ -48,7 +46,8 @@ import SwiftData
     }
 
     func confirmDelete() {
-        guard let category = categoryToDelete, let context = modelContext else { return }
+        guard let category = categoryToDelete else { return }
+        let context = modelContext
 
         if let row = category.overrideRow {
             let categoryName = row.name
@@ -87,9 +86,8 @@ import SwiftData
     var deleteConfirmedTrigger: Int = 0
 
     /// Resets predefined overrides to enum defaults by deleting the override rows.
-    func restoreDefaults(modelContext: ModelContext?) {
-        guard let context = modelContext else { return }
-        persistence.modelContext = context
+    func restoreDefaults() {
+        let context = modelContext
         let descriptor = FetchDescriptor<Category>(predicate: #Predicate { $0.isPredefined == true })
         deleteAndSync(rows: (try? context.fetch(descriptor)) ?? [], context: context)
         AppLogger.data.info("Default categories restored")
@@ -100,9 +98,8 @@ import SwiftData
 
     /// Deletes all Category rows — custom categories and predefined overrides.
     /// After this, the PredefinedCategory enum is the sole source of truth.
-    func resetAll(modelContext: ModelContext?) {
-        guard let context = modelContext else { return }
-        persistence.modelContext = context
+    func resetAll() {
+        let context = modelContext
         deleteAndSync(rows: (try? context.fetch(FetchDescriptor<Category>())) ?? [], context: context)
         resetTrigger += 1
     }

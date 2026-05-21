@@ -8,12 +8,9 @@ class AddCategoryViewModel: CategoryEditorViewModel {
     var showError = false
     var errorMessage = ""
 
-    let persistence: PersistenceService
+    @ObservationIgnored var persistence: PersistenceService
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -21,13 +18,13 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
         super.init(icon: AppIcons.Category.other, color: "#17C5CC")
     }
     
     func save() async -> Bool {
-        guard let modelContext = modelContext else { return false }
+        let modelContext = modelContext
 
         let (trimmedName, validationError) = validateName(name)
         if let validationError {
@@ -49,7 +46,7 @@ class AddCategoryViewModel: CategoryEditorViewModel {
         modelContext.insert(category)
         
         do {
-            try persistence.saveCategory(category, action: "create")
+            try persistence.save(category, action: .create)
         } catch {
             errorMessage = "Failed to save category locally"
             showError = true

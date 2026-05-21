@@ -66,14 +66,14 @@ struct PersistenceServiceTests {
         #expect(log[0].payload == nil)
     }
 
-    // MARK: - saveRecurring
+    // MARK: - save<RecurringTransaction>
 
     @Test func testSaveRecurring_create_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
         let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
         context.insert(r)
-        try svc.saveRecurring(r, action: .create)
+        try svc.save(r, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .recurring)
@@ -88,7 +88,7 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
         context.insert(r)
-        try svc.saveRecurring(r, action: .update)
+        try svc.save(r, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .recurring)
@@ -102,7 +102,7 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
         context.insert(r)
-        try svc.saveRecurring(r, action: .delete)
+        try svc.save(r, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .recurring)
@@ -112,14 +112,14 @@ struct PersistenceServiceTests {
         #expect(log[0].payload == nil)
     }
 
-    // MARK: - saveCategory
+    // MARK: - save<Category>
 
     @Test func testSaveCategory_create_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
         let cat = Category(name: "Fitness", icon: "gym", color: "#FF0000")
         context.insert(cat)
-        try svc.saveCategory(cat, action: .create)
+        try svc.save(cat, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .category)
@@ -134,7 +134,7 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let cat = Category(name: "Fitness", icon: "gym", color: "#FF0000")
         context.insert(cat)
-        try svc.saveCategory(cat, action: .update)
+        try svc.save(cat, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .category)
@@ -148,7 +148,7 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let cat = Category(name: "Fitness", icon: "gym", color: "#FF0000")
         context.insert(cat)
-        try svc.saveCategory(cat, action: .delete)
+        try svc.save(cat, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .category)
