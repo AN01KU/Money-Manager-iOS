@@ -562,12 +562,13 @@ struct AddTransactionViewModelTests {
         vm.amount = "1500"
         vm.selectedCategory = "Housing"
 
-        var completed = false
         vm.save { }
         #expect(vm.showRecurringAmountAlert == true)
 
         // User chooses to update only this transaction
+        var completed = false
         vm.saveThisTransactionOnly { completed = true }
+        _ = completed
 
         // Recurring amount stays unchanged
         let fetchedRecurring = try context.fetch(FetchDescriptor<RecurringTransaction>())

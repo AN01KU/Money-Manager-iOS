@@ -225,7 +225,7 @@ struct SyncServiceLaunchTests {
         let queue = SpySyncChangeQueue()
         let mock = mockWithValidPreflight()
         let networkMonitor = MockNetworkMonitor(isConnected: true)
-        let svc = makeSyncService(container: container, changeQueue: queue, mock: mock, networkMonitor: networkMonitor)
+        _ = makeSyncService(container: container, changeQueue: queue, mock: mock, networkMonitor: networkMonitor)
 
         storeSyncSessionID()
         defer {

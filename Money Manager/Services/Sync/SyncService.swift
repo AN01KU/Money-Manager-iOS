@@ -28,7 +28,6 @@ final class SyncService: SyncServiceProtocol {
     private var authService: AuthServiceProtocol?
     private var modelContainer: ModelContainer?
     private let changeQueue: any ChangeQueueManagerProtocol
-    private let persistence: PersistenceService
 
     private let lastSyncKey = "last_sync_at"
     nonisolated(unsafe) private var networkObserver: Any?
@@ -40,7 +39,6 @@ final class SyncService: SyncServiceProtocol {
 
     init(changeQueue: any ChangeQueueManagerProtocol) {
         self.changeQueue = changeQueue
-        self.persistence = PersistenceService(changeQueue: changeQueue)
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date
 
         networkObserver = NotificationCenter.default.addObserver(
@@ -229,24 +227,33 @@ final class SyncService: SyncServiceProtocol {
 
     private func enqueueLocalData(context: ModelContext) {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
-        for transaction in transactions where !transaction.isSoftDeleted {
-            persistence.enqueueCreate(transaction, context: context)
+        for tx in transactions where !tx.isSoftDeleted {
+            guard let payload = try? AppAPIClient.apiEncoder.encode(tx.toCreateRequest()) else { continue }
+            changeQueue.enqueue(entityType: .transaction, entityID: tx.id, action: .create,
+                                endpoint: "/transactions", httpMethod: .post, payload: payload, context: context)
         }
 
         let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
         let customOnly = categories.filter { !$0.isPredefined }
         AppLogger.sync.debug("[EnqueueLocalData] total Category rows=\(categories.count) uploading custom-only=\(customOnly.count)")
-        for category in customOnly {
-            persistence.enqueueCreate(category, context: context)
+        for cat in customOnly {
+            guard let payload = try? AppAPIClient.apiEncoder.encode(cat.toCreateRequest()) else { continue }
+            changeQueue.enqueue(entityType: .category, entityID: cat.id, action: .create,
+                                endpoint: "/categories", httpMethod: .post, payload: payload, context: context)
         }
 
         if let budget = (try? context.fetch(FetchDescriptor<UserBudget>()))?.first, budget.limit != nil {
-            persistence.enqueueUserBudget(budget, context: context)
+            if let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) {
+                changeQueue.enqueue(entityType: .budget, entityID: budget.id, action: .create,
+                                    endpoint: "/me/budget", httpMethod: .put, payload: payload, context: context)
+            }
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
-            persistence.enqueueCreate(item, context: context)
+            guard let payload = try? AppAPIClient.apiEncoder.encode(item.toCreateRequest()) else { continue }
+            changeQueue.enqueue(entityType: .recurring, entityID: item.id, action: .create,
+                                endpoint: "/recurring-transactions", httpMethod: .post, payload: payload, context: context)
         }
     }
     
@@ -399,12 +406,12 @@ final class SyncService: SyncServiceProtocol {
     
     private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
         let failedDescriptor = FetchDescriptor<FailedChange>(
-            predicate: #Predicate { $0.entityType.rawValue == "transaction" }
+            predicate: #Predicate { $0.entityType == "transaction" }
         )
         let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType.rawValue == "transaction" }
+            predicate: #Predicate { $0.entityType == "transaction" }
         )
         let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
@@ -475,12 +482,12 @@ final class SyncService: SyncServiceProtocol {
 
     private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
         let failedDescriptor = FetchDescriptor<FailedChange>(
-            predicate: #Predicate { $0.entityType.rawValue == "recurring" }
+            predicate: #Predicate { $0.entityType == "recurring" }
         )
         let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
 
         let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType.rawValue == "recurring" }
+            predicate: #Predicate { $0.entityType == "recurring" }
         )
         let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 
@@ -549,7 +556,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func upsertUserBudget(_ remote: APIUserBudget, context: ModelContext) {
         let hasPending = (try? context.fetch(
-            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType.rawValue == "budget" })
+            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType == "budget" })
         ))?.isEmpty == false
 
         // Don't overwrite a queued local write with the (possibly stale) server value.
@@ -572,7 +579,7 @@ final class SyncService: SyncServiceProtocol {
 
     private func upsertCategories(_ apiCategories: [APICategory], context: ModelContext) {
         let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType.rawValue == "category" }
+            predicate: #Predicate { $0.entityType == "category" }
         )
         let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
 

@@ -145,17 +145,17 @@ import SwiftData
 
         let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: limit))
         changeQueue.enqueue(
-            entityType: "budget",
+            entityType: .budget,
             entityID: budget.id,
-            action: "create",   // "create" so replayChange uses endpoint as-is (no entityID suffix)
+            action: .create,
             endpoint: "/me/budget",
-            httpMethod: "PUT",
+            httpMethod: .put,
             payload: payload,
             context: context
         )
     }
 
-    /// Clears the per-user budget by sending {\"limit\": null} to PUT /me/budget.
+    /// Clears the per-user budget by sending {"limit": null} to PUT /me/budget.
     func clearBudget(
         context: ModelContext,
         changeQueue: ChangeQueueManagerProtocol = changeQueueManager
@@ -171,11 +171,11 @@ import SwiftData
 
         let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: nil))
         changeQueue.enqueue(
-            entityType: "budget",
+            entityType: .budget,
             entityID: UserBudget.sentinelID,
-            action: "create",
+            action: .create,
             endpoint: "/me/budget",
-            httpMethod: "PUT",
+            httpMethod: .put,
             payload: payload,
             context: context
         )

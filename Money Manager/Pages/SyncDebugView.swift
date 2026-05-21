@@ -168,12 +168,17 @@ struct SyncDebugView: View {
     }
 
     private func retryFailed(_ failed: FailedChange) {
+        guard
+            let entityType = EntityType(rawValue: failed.entityType),
+            let action = ChangeAction(rawValue: failed.action),
+            let httpMethod = HTTPMethod(rawValue: failed.httpMethod)
+        else { return }
         changeQueueManager.enqueue(
-            entityType: failed.entityType,
+            entityType: entityType,
             entityID: failed.entityID,
-            action: failed.action,
+            action: action,
             endpoint: failed.endpoint,
-            httpMethod: failed.httpMethod,
+            httpMethod: httpMethod,
             payload: failed.payload,
             context: modelContext
         )

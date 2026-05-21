@@ -102,7 +102,7 @@ struct SplitCalculator {
     private(set) var editingRecurringExpenseId: UUID?
 
     let mode: AddTransactionMode
-    let persistence: PersistenceService
+    @ObservationIgnored var persistence: PersistenceService
     var modelContext: ModelContext { persistence.modelContext }
     var customCategories: [Category] = []
     private let groupService: GroupServiceProtocol
@@ -179,7 +179,6 @@ struct SplitCalculator {
 
     // MARK: - Init
 
-    #if DEBUG
     init(
         mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
@@ -190,18 +189,6 @@ struct SplitCalculator {
         self.persistence = persistence
         setup()
     }
-    #else
-    init(
-        mode: AddTransactionMode = .personal(),
-        groupService: GroupServiceProtocol = GroupService.shared,
-        persistence: PersistenceService
-    ) {
-        self.mode = mode
-        self.groupService = groupService
-        self.persistence = persistence
-        setup()
-    }
-    #endif
 
     func setup() {
         switch mode {
@@ -229,7 +216,7 @@ struct SplitCalculator {
 
     private func setupShared(members: [APIGroupMember], currentUserId: UUID?, editing: APIGroupTransaction?) {
         if let tx = editing {
-            let txAmount = Double(tx.totalAmount) ?? 0
+            let txAmount = tx.totalAmount
             amount = txAmount.editableString
             selectedCategory = tx.category
             description = tx.description ?? ""

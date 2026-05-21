@@ -33,13 +33,10 @@ enum TransactionTypeFilter: String, CaseIterable {
     private var userBudget: UserBudget?
     private var customCategories: [Category] = []
     private var categoryLookup: [String: Category] = [:]
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-    let persistence: PersistenceService
+    var modelContext: ModelContext { persistence.modelContext }
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
@@ -117,8 +114,6 @@ enum TransactionTypeFilter: String, CaseIterable {
 
         filteredTransactions = result
 
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
         currentBudget = userBudget?.limit != nil ? userBudget : nil
 
         if filterMode == .daily, let budget = currentBudget, let limit = budget.limit {
@@ -194,7 +189,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         transactionToDelete = nil
 
         do {
-            try persistence.saveTransaction(transaction, action: "delete")
+            try persistence.saveTransaction(transaction, action: .delete)
         } catch {
             AppLogger.data.error("Error deleting transaction: \(error)")
         }

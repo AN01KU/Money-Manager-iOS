@@ -152,7 +152,7 @@ final class GroupsListViewModel {
                 taskGroup.addTask { await self.fetchActivity(for: group) }
             }
 
-            for await (groupName, groupItems) in taskGroup {
+            for await (_, groupItems) in taskGroup {
                 items.append(contentsOf: groupItems)
 
                 if let next = iterator.next() {

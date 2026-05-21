@@ -153,10 +153,16 @@ struct TransactionDetailViewModelTests {
     @Test
     func testConfigureWithSwiftDataContext() throws {
         let context = ModelContext(try makeTestContainer())
+        let persistence = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
 
         let transaction = Transaction(amount: 100, category: "Food", date: Date())
-        let viewModel = TransactionDetailViewModel(transaction: transaction)
-        viewModel.modelContext = context
+        context.insert(transaction)
+        let viewModel = TransactionDetailViewModel(transaction: transaction, persistence: persistence)
 
         var completionCalled = false
         viewModel.deleteTransaction {

@@ -40,4 +40,25 @@ final class PendingChange {
         self.retryCount = 0
         self.nextRetryAt = nil
     }
+
+}
+
+extension PendingChange {
+    convenience init(
+        entityType: EntityType,
+        entityID: UUID,
+        action: ChangeAction,
+        endpoint: String,
+        httpMethod: HTTPMethod,
+        payload: Data?
+    ) {
+        self.init(
+            entityType: entityType.rawValue,
+            entityID: entityID,
+            action: action.rawValue,
+            endpoint: endpoint,
+            httpMethod: httpMethod.rawValue,
+            payload: payload
+        )
+    }
 }

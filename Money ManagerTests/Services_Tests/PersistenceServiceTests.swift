@@ -12,24 +12,12 @@ struct PersistenceServiceTests {
 
     private func makeService(context: ModelContext) -> PersistenceService {
         MockChangeQueueManager.shared.reset()
-        let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
-        svc.modelContext = context
-        return svc
-    }
-    // MARK: - saveAndSync: no modelContext
-
-    @Test func testSaveAndSyncWithNoContextDoesNotEnqueue() throws {
-        MockChangeQueueManager.shared.reset()
-        let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
-        try svc.saveAndSync(
-            entityType: .transaction,
-            entityID: UUID(),
-            action: .create,
-            endpoint: "/transactions",
-            httpMethod: .post,
-            payload: nil
+        return PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
         )
-        #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
     }
 
     // MARK: - saveTransaction
@@ -246,14 +234,6 @@ struct PersistenceServiceTests {
         #expect(log[0].httpMethod == .patch)
         #expect(log[0].entityID == cat.id)
         #expect(log[0].payload != nil)
-    }
-
-    @Test func testSaveGeneric_noContext_doesNotEnqueue() throws {
-        MockChangeQueueManager.shared.reset()
-        let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
-        let tx = Transaction(amount: 50, category: "Food", date: Date())
-        try svc.save(tx, action: .create)
-        #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
     }
 
     // MARK: - deleteCategory (id-only helper)

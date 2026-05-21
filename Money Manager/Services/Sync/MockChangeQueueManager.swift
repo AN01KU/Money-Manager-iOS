@@ -11,11 +11,11 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     static let shared = MockChangeQueueManager()
 
     struct EnqueueCall {
-        let entityType: String
+        let entityType: EntityType
         let entityID: UUID
-        let action: String
+        let action: ChangeAction
         let endpoint: String
-        let httpMethod: String
+        let httpMethod: HTTPMethod
         let payload: Data?
     }
 
@@ -37,11 +37,11 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     func configure(container: ModelContainer) {}
 
     func enqueue(
-        entityType: String,
+        entityType: EntityType,
         entityID: UUID,
-        action: String,
+        action: ChangeAction,
         endpoint: String,
-        httpMethod: String,
+        httpMethod: HTTPMethod,
         payload: Data?,
         context: ModelContext
     ) {
@@ -67,6 +67,6 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
 
     func purgeExpiredOrphans(olderThan days: Int, context: ModelContext) {}
 
-    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext) {}
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: EntityType, context: ModelContext) {}
 }
 #endif

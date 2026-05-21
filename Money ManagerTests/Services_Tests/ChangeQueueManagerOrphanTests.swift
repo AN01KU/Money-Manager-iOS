@@ -90,10 +90,10 @@ struct ChangeQueueManagerOrphanTests {
 
         let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
         #expect(orphaned.count == 1)
-        #expect(orphaned.first?.entityType == .budget)
+        #expect(orphaned.first?.entityType == EntityType.budget.rawValue)
         #expect(orphaned.first?.entityID == id)
-        #expect(orphaned.first?.action == .update)
-        #expect(orphaned.first?.httpMethod == .put)
+        #expect(orphaned.first?.action == ChangeAction.update.rawValue)
+        #expect(orphaned.first?.httpMethod == HTTPMethod.put.rawValue)
     }
 
     // MARK: - purgeExpiredOrphans

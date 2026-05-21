@@ -39,7 +39,7 @@ struct ChangeQueueManagerQueueTests {
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(all.count == 1)
-        #expect(all.first?.action == .create)
+        #expect(all.first?.action == ChangeAction.create.rawValue)
         let payloadString = all.first?.payload.flatMap { String(data: $0, encoding: .utf8) }
         #expect(payloadString == #"{"amount":"200"}"#)
     }
@@ -85,7 +85,7 @@ struct ChangeQueueManagerQueueTests {
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(all.count == 1)
-        #expect(all.first?.action == .delete)
+        #expect(all.first?.action == ChangeAction.delete.rawValue)
         #expect(all.first?.payload == nil)
     }
 
@@ -110,7 +110,7 @@ struct ChangeQueueManagerQueueTests {
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(all.count == 1)
-        #expect(all.first?.action == .update)
+        #expect(all.first?.action == ChangeAction.update.rawValue)
         let payloadString = all.first?.payload.flatMap { String(data: $0, encoding: .utf8) }
         #expect(payloadString == #"{"limit":"2000"}"#)
         #expect(all.first?.retryCount == 0)
