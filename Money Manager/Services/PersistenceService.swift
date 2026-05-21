@@ -19,15 +19,15 @@ final class PersistenceService {
     // MARK: - Save + Sync
 
     func saveAndSync(
-        entityType: String,
+        entityType: EntityType,
         entityID: UUID,
-        action: String,
+        action: ChangeAction,
         endpoint: String,
-        httpMethod: String,
+        httpMethod: HTTPMethod,
         payload: Data?
     ) throws {
         guard let modelContext else {
-            AppLogger.data.error("saveAndSync: modelContext not set for \(entityType) \(action)")
+            AppLogger.data.error("saveAndSync: modelContext not set for \(entityType.rawValue) \(action.rawValue)")
             return
         }
         try modelContext.save()
@@ -51,26 +51,24 @@ final class PersistenceService {
 
     // MARK: - Entity-specific helpers
 
-    func saveTransaction(_ transaction: Transaction, action: String) throws {
-        let httpMethod: String
+    func saveTransaction(_ transaction: Transaction, action: ChangeAction) throws {
+        let httpMethod: HTTPMethod
         let payload: Data?
 
         switch action {
-        case "create":
-            httpMethod = "POST"
+        case .create:
+            httpMethod = .post
             payload = try? AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
-        case "update":
-            httpMethod = "PATCH"
+        case .update:
+            httpMethod = .patch
             payload = try? AppAPIClient.apiEncoder.encode(transaction.toUpdateRequest())
-        case "delete":
-            httpMethod = "DELETE"
+        case .delete:
+            httpMethod = .delete
             payload = nil
-        default:
-            return
         }
 
         try saveAndSync(
-            entityType: "transaction",
+            entityType: .transaction,
             entityID: transaction.id,
             action: action,
             endpoint: "/transactions",
@@ -79,26 +77,24 @@ final class PersistenceService {
         )
     }
 
-    func saveRecurring(_ recurring: RecurringTransaction, action: String) throws {
-        let httpMethod: String
+    func saveRecurring(_ recurring: RecurringTransaction, action: ChangeAction) throws {
+        let httpMethod: HTTPMethod
         let payload: Data?
 
         switch action {
-        case "create":
-            httpMethod = "POST"
+        case .create:
+            httpMethod = .post
             payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest())
-        case "update":
-            httpMethod = "PATCH"
+        case .update:
+            httpMethod = .patch
             payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
-        case "delete":
-            httpMethod = "DELETE"
+        case .delete:
+            httpMethod = .delete
             payload = nil
-        default:
-            return
         }
 
         try saveAndSync(
-            entityType: "recurring",
+            entityType: .recurring,
             entityID: recurring.id,
             action: action,
             endpoint: "/recurring-transactions",
@@ -106,30 +102,58 @@ final class PersistenceService {
             payload: payload
         )
     }
-    
-    func saveCategory(_ category: Category, action: String) throws {
-        let httpMethod: String
+
+    func saveCategory(_ category: Category, action: ChangeAction) throws {
+        let httpMethod: HTTPMethod
         let payload: Data?
 
         switch action {
-        case "create":
-            httpMethod = "POST"
+        case .create:
+            httpMethod = .post
             payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest())
-        case "update":
-            httpMethod = "PATCH"
+        case .update:
+            httpMethod = .patch
             payload = try? AppAPIClient.apiEncoder.encode(category.toUpdateRequest())
-        case "delete":
-            httpMethod = "DELETE"
+        case .delete:
+            httpMethod = .delete
             payload = nil
-        default:
-            return
         }
 
         try saveAndSync(
-            entityType: "category",
+            entityType: .category,
             entityID: category.id,
             action: action,
             endpoint: "/categories",
+            httpMethod: httpMethod,
+            payload: payload
+        )
+    }
+
+    // MARK: - Generic save<T>
+
+    /// Saves any LocalSyncableEntity and enqueues the corresponding change record.
+    /// Old entity-specific save methods coexist; call sites migrate in subsequent issues.
+    func save<T: LocalSyncableEntity & PersistentModel>(_ entity: T, action: ChangeAction) throws {
+        let httpMethod: HTTPMethod
+        let payload: Data?
+
+        switch action {
+        case .create:
+            httpMethod = .post
+            payload = try? entity.createRequestPayload()
+        case .update:
+            httpMethod = .patch
+            payload = try? entity.updateRequestPayload()
+        case .delete:
+            httpMethod = .delete
+            payload = nil
+        }
+
+        try saveAndSync(
+            entityType: T.entityType,
+            entityID: entity.id,
+            action: action,
+            endpoint: T.endpoint,
             httpMethod: httpMethod,
             payload: payload
         )
@@ -146,40 +170,40 @@ final class PersistenceService {
     func enqueueCreate(_ transaction: Transaction, context: ModelContext) {
         guard let payload = try? AppAPIClient.apiEncoder.encode(transaction.toCreateRequest()) else { return }
         changeQueue.enqueue(
-            entityType: "transaction", entityID: transaction.id, action: "create",
-            endpoint: "/transactions", httpMethod: "POST", payload: payload, context: context
+            entityType: .transaction, entityID: transaction.id, action: .create,
+            endpoint: "/transactions", httpMethod: .post, payload: payload, context: context
         )
     }
 
     func enqueueCreate(_ recurring: RecurringTransaction, context: ModelContext) {
         guard let payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest()) else { return }
         changeQueue.enqueue(
-            entityType: "recurring", entityID: recurring.id, action: "create",
-            endpoint: "/recurring-transactions", httpMethod: "POST", payload: payload, context: context
+            entityType: .recurring, entityID: recurring.id, action: .create,
+            endpoint: "/recurring-transactions", httpMethod: .post, payload: payload, context: context
         )
     }
 
     func enqueueUserBudget(_ budget: UserBudget, context: ModelContext) {
         guard let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) else { return }
         changeQueue.enqueue(
-            entityType: "budget", entityID: budget.id, action: "create",
-            endpoint: "/me/budget", httpMethod: "PUT", payload: payload, context: context
+            entityType: .budget, entityID: budget.id, action: .create,
+            endpoint: "/me/budget", httpMethod: .put, payload: payload, context: context
         )
     }
 
     func enqueueCreate(_ category: Category, context: ModelContext) {
         guard let payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest()) else { return }
         changeQueue.enqueue(
-            entityType: "category", entityID: category.id, action: "create",
-            endpoint: "/categories", httpMethod: "POST", payload: payload, context: context
+            entityType: .category, entityID: category.id, action: .create,
+            endpoint: "/categories", httpMethod: .post, payload: payload, context: context
         )
     }
 
     /// Enqueues a DELETE for a category row that has already been removed from the context.
     func deleteCategory(id: UUID) throws {
         try saveAndSync(
-            entityType: "category", entityID: id, action: "delete",
-            endpoint: "/categories", httpMethod: "DELETE", payload: nil
+            entityType: .category, entityID: id, action: .delete,
+            endpoint: "/categories", httpMethod: .delete, payload: nil
         )
     }
 }

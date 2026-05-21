@@ -22,11 +22,11 @@ struct PersistenceServiceTests {
         MockChangeQueueManager.shared.reset()
         let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
         try svc.saveAndSync(
-            entityType: "transaction",
+            entityType: .transaction,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/transactions",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: nil
         )
         #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
@@ -39,13 +39,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         context.insert(tx)
-        try svc.saveTransaction(tx, action: "create")
+        try svc.saveTransaction(tx, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "transaction")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/transactions")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].httpMethod == .post)
         #expect(log[0].entityID == tx.id)
     }
 
@@ -54,13 +54,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         context.insert(tx)
-        try svc.saveTransaction(tx, action: "update")
+        try svc.saveTransaction(tx, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "transaction")
-        #expect(log[0].action == "update")
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .update)
         #expect(log[0].endpoint == "/transactions")
-        #expect(log[0].httpMethod == "PATCH")
+        #expect(log[0].httpMethod == .patch)
     }
 
     @Test func testSaveTransaction_delete_enqueuesWithCorrectContract() throws {
@@ -68,23 +68,14 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         context.insert(tx)
-        try svc.saveTransaction(tx, action: "delete")
+        try svc.saveTransaction(tx, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "transaction")
-        #expect(log[0].action == "delete")
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .delete)
         #expect(log[0].endpoint == "/transactions")
-        #expect(log[0].httpMethod == "DELETE")
+        #expect(log[0].httpMethod == .delete)
         #expect(log[0].payload == nil)
-    }
-
-    @Test func testSaveTransaction_unknownAction_doesNotEnqueue() throws {
-        let context = try makeContext()
-        let svc = makeService(context: context)
-        let tx = Transaction(amount: 100, category: "Food", date: Date())
-        context.insert(tx)
-        try svc.saveTransaction(tx, action: "unknown")
-        #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
     }
 
     // MARK: - saveRecurring
@@ -94,13 +85,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
         context.insert(r)
-        try svc.saveRecurring(r, action: "create")
+        try svc.saveRecurring(r, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "recurring")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .recurring)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/recurring-transactions")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].httpMethod == .post)
         #expect(log[0].entityID == r.id)
     }
 
@@ -109,13 +100,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
         context.insert(r)
-        try svc.saveRecurring(r, action: "update")
+        try svc.saveRecurring(r, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "recurring")
-        #expect(log[0].action == "update")
+        #expect(log[0].entityType == .recurring)
+        #expect(log[0].action == .update)
         #expect(log[0].endpoint == "/recurring-transactions")
-        #expect(log[0].httpMethod == "PATCH")
+        #expect(log[0].httpMethod == .patch)
     }
 
     @Test func testSaveRecurring_delete_enqueuesWithCorrectContract() throws {
@@ -123,13 +114,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
         context.insert(r)
-        try svc.saveRecurring(r, action: "delete")
+        try svc.saveRecurring(r, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "recurring")
-        #expect(log[0].action == "delete")
+        #expect(log[0].entityType == .recurring)
+        #expect(log[0].action == .delete)
         #expect(log[0].endpoint == "/recurring-transactions")
-        #expect(log[0].httpMethod == "DELETE")
+        #expect(log[0].httpMethod == .delete)
         #expect(log[0].payload == nil)
     }
 
@@ -140,13 +131,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let cat = Category(name: "Fitness", icon: "gym", color: "#FF0000")
         context.insert(cat)
-        try svc.saveCategory(cat, action: "create")
+        try svc.saveCategory(cat, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "category")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .category)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/categories")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].httpMethod == .post)
         #expect(log[0].entityID == cat.id)
     }
 
@@ -155,13 +146,13 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let cat = Category(name: "Fitness", icon: "gym", color: "#FF0000")
         context.insert(cat)
-        try svc.saveCategory(cat, action: "update")
+        try svc.saveCategory(cat, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "category")
-        #expect(log[0].action == "update")
+        #expect(log[0].entityType == .category)
+        #expect(log[0].action == .update)
         #expect(log[0].endpoint == "/categories")
-        #expect(log[0].httpMethod == "PATCH")
+        #expect(log[0].httpMethod == .patch)
     }
 
     @Test func testSaveCategory_delete_enqueuesWithCorrectContract() throws {
@@ -169,14 +160,100 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let cat = Category(name: "Fitness", icon: "gym", color: "#FF0000")
         context.insert(cat)
-        try svc.saveCategory(cat, action: "delete")
+        try svc.saveCategory(cat, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "category")
-        #expect(log[0].action == "delete")
+        #expect(log[0].entityType == .category)
+        #expect(log[0].action == .delete)
         #expect(log[0].endpoint == "/categories")
-        #expect(log[0].httpMethod == "DELETE")
+        #expect(log[0].httpMethod == .delete)
         #expect(log[0].payload == nil)
+    }
+
+    // MARK: - save<T> (generic)
+
+    @Test func testSaveGeneric_transaction_create_enqueuesCorrectContract() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let tx = Transaction(amount: 150, category: "Transport", date: Date())
+        context.insert(tx)
+        try svc.save(tx, action: .create)
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .create)
+        #expect(log[0].endpoint == "/transactions")
+        #expect(log[0].httpMethod == .post)
+        #expect(log[0].entityID == tx.id)
+        #expect(log[0].payload != nil)
+    }
+
+    @Test func testSaveGeneric_transaction_update_enqueuesCorrectContract() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let tx = Transaction(amount: 150, category: "Transport", date: Date())
+        context.insert(tx)
+        try svc.save(tx, action: .update)
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .update)
+        #expect(log[0].httpMethod == .patch)
+        #expect(log[0].payload != nil)
+    }
+
+    @Test func testSaveGeneric_transaction_delete_enqueuesNoPayload() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let tx = Transaction(amount: 150, category: "Transport", date: Date())
+        context.insert(tx)
+        try svc.save(tx, action: .delete)
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .delete)
+        #expect(log[0].httpMethod == .delete)
+        #expect(log[0].payload == nil)
+    }
+
+    @Test func testSaveGeneric_recurringTransaction_create_enqueuesCorrectContract() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let r = RecurringTransaction(name: "Gym", amount: 999, category: "Health", frequency: .monthly)
+        context.insert(r)
+        try svc.save(r, action: .create)
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].entityType == .recurring)
+        #expect(log[0].action == .create)
+        #expect(log[0].endpoint == "/recurring-transactions")
+        #expect(log[0].httpMethod == .post)
+        #expect(log[0].entityID == r.id)
+        #expect(log[0].payload != nil)
+    }
+
+    @Test func testSaveGeneric_category_update_enqueuesCorrectContract() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let cat = Category(name: "Shopping", icon: "bag", color: "#00FF00")
+        context.insert(cat)
+        try svc.save(cat, action: .update)
+        let log = MockChangeQueueManager.shared.enqueueCallLog
+        #expect(log.count == 1)
+        #expect(log[0].entityType == .category)
+        #expect(log[0].action == .update)
+        #expect(log[0].endpoint == "/categories")
+        #expect(log[0].httpMethod == .patch)
+        #expect(log[0].entityID == cat.id)
+        #expect(log[0].payload != nil)
+    }
+
+    @Test func testSaveGeneric_noContext_doesNotEnqueue() throws {
+        MockChangeQueueManager.shared.reset()
+        let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
+        let tx = Transaction(amount: 50, category: "Food", date: Date())
+        try svc.save(tx, action: .create)
+        #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
     }
 
     // MARK: - deleteCategory (id-only helper)
@@ -188,10 +265,10 @@ struct PersistenceServiceTests {
         try svc.deleteCategory(id: id)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "category")
-        #expect(log[0].action == "delete")
+        #expect(log[0].entityType == .category)
+        #expect(log[0].action == .delete)
         #expect(log[0].endpoint == "/categories")
-        #expect(log[0].httpMethod == "DELETE")
+        #expect(log[0].httpMethod == .delete)
         #expect(log[0].entityID == id)
     }
 
@@ -205,10 +282,10 @@ struct PersistenceServiceTests {
         svc.enqueueCreate(tx, context: context)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "transaction")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .transaction)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/transactions")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].httpMethod == .post)
         #expect(log[0].entityID == tx.id)
     }
 
@@ -220,10 +297,10 @@ struct PersistenceServiceTests {
         svc.enqueueCreate(r, context: context)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "recurring")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .recurring)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/recurring-transactions")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].httpMethod == .post)
     }
 
     @Test func testEnqueueUserBudget_enqueuesPutWithCorrectContract() throws {
@@ -234,10 +311,10 @@ struct PersistenceServiceTests {
         svc.enqueueUserBudget(budget, context: context)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "budget")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .budget)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/me/budget")
-        #expect(log[0].httpMethod == "PUT")
+        #expect(log[0].httpMethod == .put)
     }
 
     @Test func testEnqueueCreate_category_enqueuesWithCorrectContract() throws {
@@ -248,9 +325,9 @@ struct PersistenceServiceTests {
         svc.enqueueCreate(cat, context: context)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
-        #expect(log[0].entityType == "category")
-        #expect(log[0].action == "create")
+        #expect(log[0].entityType == .category)
+        #expect(log[0].action == .create)
         #expect(log[0].endpoint == "/categories")
-        #expect(log[0].httpMethod == "POST")
+        #expect(log[0].httpMethod == .post)
     }
 }
