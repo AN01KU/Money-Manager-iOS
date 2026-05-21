@@ -7,10 +7,7 @@ import SwiftData
 
 
     let transaction: Transaction
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
     var customCategories: [Category] = [] {
         didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
     }
@@ -32,9 +29,9 @@ import SwiftData
         transaction.settlementId != nil
     }
 
-    let persistence: PersistenceService
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(transaction: Transaction, persistence: PersistenceService = PersistenceService()) {
+    init(transaction: Transaction, persistence: PersistenceService = .testing) {
         self.transaction = transaction
         self.persistence = persistence
     }
@@ -43,13 +40,8 @@ import SwiftData
         transaction.isSoftDeleted = true
         transaction.updatedAt = Date()
 
-        guard persistence.modelContext != nil else {
-            completion()
-            return
-        }
-
         do {
-            try persistence.saveTransaction(transaction, action: "delete")
+            try persistence.save(transaction, action: .delete)
             AppLogger.data.info("Transaction deleted: \(self.transaction.id)")
             completion()
         } catch {

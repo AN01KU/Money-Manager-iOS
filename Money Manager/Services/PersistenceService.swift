@@ -57,32 +57,6 @@ final class PersistenceService {
 
     // MARK: - Entity-specific helpers
 
-    func saveTransaction(_ transaction: Transaction, action: ChangeAction) throws {
-        let httpMethod: HTTPMethod
-        let payload: Data?
-
-        switch action {
-        case .create:
-            httpMethod = .post
-            payload = try? AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
-        case .update:
-            httpMethod = .patch
-            payload = try? AppAPIClient.apiEncoder.encode(transaction.toUpdateRequest())
-        case .delete:
-            httpMethod = .delete
-            payload = nil
-        }
-
-        try saveAndSync(
-            entityType: .transaction,
-            entityID: transaction.id,
-            action: action,
-            endpoint: "/transactions",
-            httpMethod: httpMethod,
-            payload: payload
-        )
-    }
-
     func saveRecurring(_ recurring: RecurringTransaction, action: ChangeAction) throws {
         let httpMethod: HTTPMethod
         let payload: Data?

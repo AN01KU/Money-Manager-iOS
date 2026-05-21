@@ -20,14 +20,14 @@ struct PersistenceServiceTests {
         )
     }
 
-    // MARK: - saveTransaction
+    // MARK: - save<T> Transaction (migrated from saveTransaction)
 
     @Test func testSaveTransaction_create_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         context.insert(tx)
-        try svc.saveTransaction(tx, action: .create)
+        try svc.save(tx, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .transaction)
@@ -42,7 +42,7 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         context.insert(tx)
-        try svc.saveTransaction(tx, action: .update)
+        try svc.save(tx, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .transaction)
@@ -56,7 +56,7 @@ struct PersistenceServiceTests {
         let svc = makeService(context: context)
         let tx = Transaction(amount: 100, category: "Food", date: Date())
         context.insert(tx)
-        try svc.saveTransaction(tx, action: .delete)
+        try svc.save(tx, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
         #expect(log[0].entityType == .transaction)

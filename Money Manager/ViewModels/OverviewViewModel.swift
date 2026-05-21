@@ -189,7 +189,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         transactionToDelete = nil
 
         do {
-            try persistence.saveTransaction(transaction, action: .delete)
+            try persistence.save(transaction, action: .delete)
         } catch {
             AppLogger.data.error("Error deleting transaction: \(error)")
         }

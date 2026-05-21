@@ -378,7 +378,7 @@ struct SplitCalculator {
         }
 
         do {
-            try persistence.saveTransaction(transaction, action: action)
+            try persistence.save(transaction, action: action)
             AppLogger.data.info("Expense saved: \(transaction.id) action=\(action.rawValue)")
         } catch {
             AppLogger.data.error("Failed to save expense: \(error)")

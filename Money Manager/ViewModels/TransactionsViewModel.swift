@@ -20,16 +20,13 @@ import SwiftData
         return name
     }
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-    let persistence: PersistenceService
+    var modelContext: ModelContext { persistence.modelContext }
+    @ObservationIgnored var persistence: PersistenceService
 
     private var allTransactions: [Transaction] = []
     private var customCategories: [Category] = []
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
@@ -88,7 +85,7 @@ import SwiftData
         transactionToDelete = nil
         isConfirmingDelete = false
         do {
-            try persistence.saveTransaction(transaction, action: "delete")
+            try persistence.save(transaction, action: .delete)
         } catch {
             AppLogger.data.error("Error deleting transaction: \(error)")
         }
