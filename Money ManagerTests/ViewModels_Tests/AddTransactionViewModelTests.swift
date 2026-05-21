@@ -10,6 +10,15 @@ struct AddTransactionViewModelTests {
         ModelContext(try makeTestContainer())
     }
 
+    private func makePersistence(_ context: ModelContext) -> PersistenceService {
+        PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+    }
+
     // MARK: - Validation
 
     @Test
@@ -133,8 +142,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveCreatesNewTransaction() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
 
         vm.amount = "150.75"
         vm.selectedCategory = "Food & Dining"
@@ -161,8 +169,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveCreatesIncomeTransaction() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.transactionType = .income
 
         vm.amount = "5000"
@@ -177,8 +184,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithoutTimeSetTimeToNil() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
 
         vm.amount = "100"
         vm.selectedCategory = "Transport"
@@ -193,8 +199,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithEmptyDescriptionAndNotesSetsNil() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
 
         vm.amount = "50"
         vm.selectedCategory = "Other"
@@ -224,8 +229,7 @@ struct AddTransactionViewModelTests {
         context.insert(existing)
         try context.save()
 
-        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing), persistence: makePersistence(context))
 
         vm.amount = "200"
         vm.selectedCategory = "Transport"
@@ -249,8 +253,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveFailsWithZeroAmount() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "0"
         vm.selectedCategory = "Food"
 
@@ -264,8 +267,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveFailsWithNonNumericAmount() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "abc"
         vm.selectedCategory = "Food"
 
@@ -276,26 +278,12 @@ struct AddTransactionViewModelTests {
         #expect(vm.errorMessage != nil)
     }
 
-    @Test
-    func testSaveWithNoModelContextDoesNothing() {
-        let vm = AddTransactionViewModel(mode: .personal())
-        // No modelContext set
-        vm.amount = "100"
-        vm.selectedCategory = "Food"
-
-        var completed = false
-        vm.save { completed = true }
-
-        #expect(completed == false)
-    }
-
     // MARK: - Save: date handling
 
     @Test
     func testSaveSetsCorrectDateWithTime() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
 
         let specificDate = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 15))!
         let specificTime = Calendar.current.date(from: DateComponents(hour: 14, minute: 30))!
@@ -321,8 +309,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveSetsStartOfDayWhenNoTime() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
 
         let specificDate = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 15, hour: 18, minute: 45))!
 
@@ -369,8 +356,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithRecurringCreatesRecurringTransaction() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "5000"
         vm.selectedCategory = "Housing"
         vm.description = "Monthly Rent"
@@ -393,8 +379,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithRecurringMonthlySetsDayOfMonth() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "1000"
         vm.selectedCategory = "Food"
         vm.description = "Subscription"
@@ -411,8 +396,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithRecurringNonMonthlyDoesNotSetDayOfMonth() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "200"
         vm.selectedCategory = "Food"
         vm.description = "Weekly lunch"
@@ -428,8 +412,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithRecurringHasEndDatePersistsEndDate() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "500"
         vm.selectedCategory = "Housing"
         vm.description = "Lease"
@@ -448,8 +431,7 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveWithRecurringNoEndDateSetsNilEndDate() throws {
         let context = try makeContext()
-        let vm = AddTransactionViewModel(mode: .personal())
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(), persistence: makePersistence(context))
         vm.amount = "500"
         vm.selectedCategory = "Housing"
         vm.description = "Ongoing rent"
@@ -481,8 +463,7 @@ struct AddTransactionViewModelTests {
         context.insert(existing)
         try context.save()
 
-        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing), persistence: makePersistence(context))
         vm.setup()  // sets originalAmount = 1000, editingRecurringExpenseId
 
         // Change the amount — this should trigger the alert instead of saving
@@ -511,8 +492,7 @@ struct AddTransactionViewModelTests {
         context.insert(existing)
         try context.save()
 
-        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing), persistence: makePersistence(context))
         vm.setup()  // sets originalAmount = 1000
 
         // Keep the same amount — no alert expected
@@ -541,8 +521,7 @@ struct AddTransactionViewModelTests {
         context.insert(existing)
         try context.save()
 
-        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing), persistence: makePersistence(context))
         vm.setup()
 
         vm.amount = "2000"
@@ -577,8 +556,7 @@ struct AddTransactionViewModelTests {
         context.insert(existing)
         try context.save()
 
-        let vm = AddTransactionViewModel(mode: .personal(editing: existing))
-        vm.modelContext = context
+        let vm = AddTransactionViewModel(mode: .personal(editing: existing), persistence: makePersistence(context))
         vm.setup()
 
         vm.amount = "1500"

@@ -103,10 +103,7 @@ struct SplitCalculator {
 
     let mode: AddTransactionMode
     let persistence: PersistenceService
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
     var customCategories: [Category] = []
     private let groupService: GroupServiceProtocol
 
@@ -182,16 +179,29 @@ struct SplitCalculator {
 
     // MARK: - Init
 
+    #if DEBUG
     init(
         mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
-        persistence: PersistenceService = PersistenceService()
+        persistence: PersistenceService = .testing
     ) {
         self.mode = mode
         self.groupService = groupService
         self.persistence = persistence
         setup()
     }
+    #else
+    init(
+        mode: AddTransactionMode = .personal(),
+        groupService: GroupServiceProtocol = GroupService.shared,
+        persistence: PersistenceService
+    ) {
+        self.mode = mode
+        self.groupService = groupService
+        self.persistence = persistence
+        setup()
+    }
+    #endif
 
     func setup() {
         switch mode {
@@ -294,10 +304,6 @@ struct SplitCalculator {
     // MARK: - Private: personal save (unchanged logic)
 
     private func savePersonal(amountValue: Double, completion: @escaping () -> Void) {
-        guard modelContext != nil else {
-            isSaving = false
-            return
-        }
 
         let calendar = Calendar.current
         let baseDate = selectedDate
@@ -332,7 +338,7 @@ struct SplitCalculator {
                 categoryId: resolvedCategoryIdForRecurring,
                 type: transactionType.kind
             )
-            persistence.modelContext?.insert(recurring)
+            persistence.modelContext.insert(recurring)
             do {
                 try persistence.saveRecurring(recurring, action: .create)
                 AppLogger.data.info("Recurring transaction saved: \(recurring.id)")
@@ -379,7 +385,7 @@ struct SplitCalculator {
                 
                 categoryId: resolvedCategoryId
             )
-            persistence.modelContext?.insert(expense)
+            persistence.modelContext.insert(expense)
             transaction = expense
             action = .create
         }
@@ -410,7 +416,8 @@ struct SplitCalculator {
     func saveAlsoUpdatingRecurring(completion: @escaping () -> Void) {
         let amountValue = pendingAmountValue ?? 0
         pendingAmountValue = nil
-        if let recurringId = editingRecurringExpenseId, let ctx = persistence.modelContext {
+        if let recurringId = editingRecurringExpenseId {
+            let ctx = persistence.modelContext
             let descriptor = FetchDescriptor<RecurringTransaction>(
                 predicate: #Predicate { $0.id == recurringId && !$0.isSoftDeleted }
             )

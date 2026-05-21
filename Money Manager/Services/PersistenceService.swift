@@ -9,10 +9,20 @@ import SwiftData
 @MainActor
 final class PersistenceService {
 
-    var modelContext: ModelContext?
+    let modelContext: ModelContext
     private let changeQueue: ChangeQueueManagerProtocol
+    private let authService: AuthServiceProtocol
+    private let networkMonitor: any NetworkMonitorProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(
+        modelContext: ModelContext,
+        authService: AuthServiceProtocol,
+        networkMonitor: any NetworkMonitorProtocol,
+        changeQueue: ChangeQueueManagerProtocol
+    ) {
+        self.modelContext = modelContext
+        self.authService = authService
+        self.networkMonitor = networkMonitor
         self.changeQueue = changeQueue
     }
 
@@ -26,10 +36,6 @@ final class PersistenceService {
         httpMethod: HTTPMethod,
         payload: Data?
     ) throws {
-        guard let modelContext else {
-            AppLogger.data.error("saveAndSync: modelContext not set for \(entityType.rawValue) \(action.rawValue)")
-            return
-        }
         try modelContext.save()
 
         changeQueue.enqueue(
@@ -42,7 +48,7 @@ final class PersistenceService {
             context: modelContext
         )
 
-        if NetworkMonitor.shared.isConnected {
+        if networkMonitor.isConnected {
             Task {
                 await changeQueue.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
             }
@@ -160,7 +166,7 @@ final class PersistenceService {
     }
 
     func save() throws {
-        try modelContext?.save()
+        try modelContext.save()
     }
 
     // MARK: - Enqueue-only helpers (no modelContext.save — caller already inserted the entity)
@@ -207,3 +213,27 @@ final class PersistenceService {
         )
     }
 }
+
+// MARK: - Debug/Preview helpers
+
+#if DEBUG
+extension PersistenceService {
+    /// A shared in-memory PersistenceService for use in SwiftUI previews, tests,
+    /// and VM default-argument values. Never used in production builds.
+    @MainActor static let testing: PersistenceService = {
+        let schema = Schema([
+            Transaction.self, RecurringTransaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+            PendingChange.self, FailedChange.self, OrphanedChange.self,
+            SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
+        ])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        return PersistenceService(
+            modelContext: container.mainContext,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+    }()
+}
+#endif

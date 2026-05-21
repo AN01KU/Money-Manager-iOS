@@ -11,10 +11,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     private let category: TransactionCategory
     let persistence: PersistenceService
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
 
     override var colorConflictCategory: String? {
         allCategories.first(where: {
@@ -25,7 +22,8 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         })?.name
     }
 
-    init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService = PersistenceService()) {
+    #if DEBUG
+    init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService = .testing) {
         self.category = category
         self.name = category.name
         self.persistence = persistence
@@ -35,6 +33,18 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             self.editingPredefinedKey = category.predefinedCase?.serverKey
         }
     }
+    #else
+    init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService) {
+        self.category = category
+        self.name = category.name
+        self.persistence = persistence
+        super.init(icon: category.icon, color: category.colorHex)
+        self.allCategories = allCategories
+        if category.isPredefined {
+            self.editingPredefinedKey = category.predefinedCase?.serverKey
+        }
+    }
+    #endif
 
     func save() -> Bool {
         let (trimmedName, validationError) = validateName(name, excludingId: category.overrideRow?.id)
@@ -45,7 +55,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         }
 
         guard checkColorConflict() else { return false }
-        guard let context = modelContext else { return false }
+        let context = modelContext
 
         isSaving = true
         resetColorWarning()
@@ -56,7 +66,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             row.updatedAt = Date()
 
             do {
-                try persistence.saveCategory(row, action: "update")
+                try persistence.saveCategory(row, action: .update)
             } catch {
                 errorMessage = "Failed to save changes"
                 showError = true
@@ -71,7 +81,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
             context.insert(row)
 
             do {
-                try persistence.saveCategory(row, action: "create")
+                try persistence.saveCategory(row, action: .create)
             } catch {
                 errorMessage = "Failed to save changes"
                 showError = true

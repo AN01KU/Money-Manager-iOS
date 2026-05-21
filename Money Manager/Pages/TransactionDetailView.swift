@@ -14,11 +14,19 @@ struct TransactionDetailView: View {
     @State private var deleteTapped = 0
     @State private var deleteSuccess = false
 
-    init(transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
+    #if DEBUG
+    init(persistence: PersistenceService = .testing, transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
         self.transaction = transaction
         self.onEdit = onEdit
-        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction))
+        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction, persistence: persistence))
     }
+    #else
+    init(persistence: PersistenceService, transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
+        self.transaction = transaction
+        self.onEdit = onEdit
+        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction, persistence: persistence))
+    }
+    #endif
 
     private var linkedRecurring: RecurringTransaction? {
         guard let rid = transaction.recurringExpenseId else { return nil }
@@ -72,7 +80,6 @@ struct TransactionDetailView: View {
                 Text("This action cannot be undone.")
             }
             .task {
-                viewModel.modelContext = modelContext
                 viewModel.customCategories = customCategories
             }
             .onChange(of: customCategories) { _, newValue in

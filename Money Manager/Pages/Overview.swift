@@ -9,11 +9,28 @@ struct Overview: View {
 
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
 
-    @State private var viewModel = OverviewViewModel()
+    let persistence: PersistenceService
+    @State private var viewModel: OverviewViewModel
     @State private var navigationPath: [AppRoute] = []
     @State private var editingTransaction: Transaction?
     var pendingRoute: Binding<AppRoute?>?
     var onCategoryTapped: ((String) -> Void)?
+
+    #if DEBUG
+    init(persistence: PersistenceService = .testing, pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((String) -> Void)? = nil) {
+        self.persistence = persistence
+        _viewModel = State(wrappedValue: OverviewViewModel(persistence: persistence))
+        self.pendingRoute = pendingRoute
+        self.onCategoryTapped = onCategoryTapped
+    }
+    #else
+    init(persistence: PersistenceService, pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((String) -> Void)? = nil) {
+        self.persistence = persistence
+        _viewModel = State(wrappedValue: OverviewViewModel(persistence: persistence))
+        self.pendingRoute = pendingRoute
+        self.onCategoryTapped = onCategoryTapped
+    }
+    #endif
 
     private var queryData: QuerySnapshot {
         QuerySnapshot(transactions: allTransactions, userBudget: userBudgets.first, categories: customCategories)
@@ -25,13 +42,13 @@ struct Overview: View {
                 .navigationDestination(for: AppRoute.self) { route in
                     if case .transaction(let id) = route,
                        let transaction = allTransactions.first(where: { $0.id == id }) {
-                        TransactionDetailView(transaction: transaction, onEdit: { txn in
+                        TransactionDetailView(persistence: persistence, transaction: transaction, onEdit: { txn in
                             editingTransaction = txn
                         })
                     }
                 }
                 .sheet(item: $editingTransaction) { txn in
-                    AddTransactionView(transactionToEdit: txn)
+                    AddTransactionView(persistence: persistence, transactionToEdit: txn)
                 }
         }
         .onChange(of: pendingRoute?.wrappedValue) { _, route in
@@ -40,7 +57,6 @@ struct Overview: View {
             pendingRoute?.wrappedValue = nil
         }
         .onChange(of: queryData, initial: true) {
-            viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, userBudget: userBudgets.first, customCategories: customCategories)
         }
     }

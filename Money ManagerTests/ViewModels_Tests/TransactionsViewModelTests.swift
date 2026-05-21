@@ -192,8 +192,13 @@ struct TransactionsViewModelTests {
         context.insert(expense)
         try context.save()
 
-        let vm = TransactionsViewModel()
-        vm.modelContext = context
+        let persistence = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+        let vm = TransactionsViewModel(persistence: persistence)
         vm.update(allTransactions: [expense], customCategories: [])
 
         vm.deleteTransaction(expense)
