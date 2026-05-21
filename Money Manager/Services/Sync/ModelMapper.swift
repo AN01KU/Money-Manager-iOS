@@ -4,6 +4,50 @@
 //
 
 import Foundation
+import SwiftData
+
+// MARK: - LocalSyncableEntity conformances
+
+extension Transaction: LocalSyncableEntity {
+    static var entityType: EntityType { .transaction }
+    static var endpoint: String { "/transactions" }
+
+    func createRequestPayload() throws -> Data {
+        try AppAPIClient.apiEncoder.encode(toCreateRequest())
+    }
+
+    func updateRequestPayload() throws -> Data {
+        try AppAPIClient.apiEncoder.encode(toUpdateRequest())
+    }
+}
+
+extension RecurringTransaction: LocalSyncableEntity {
+    static var entityType: EntityType { .recurring }
+    static var endpoint: String { "/recurring-transactions" }
+
+    func createRequestPayload() throws -> Data {
+        try AppAPIClient.apiEncoder.encode(toCreateRequest())
+    }
+
+    func updateRequestPayload() throws -> Data {
+        try AppAPIClient.apiEncoder.encode(toUpdateRequest())
+    }
+}
+
+extension Category: LocalSyncableEntity {
+    static var entityType: EntityType { .category }
+    static var endpoint: String { "/categories" }
+
+    func createRequestPayload() throws -> Data {
+        try AppAPIClient.apiEncoder.encode(toCreateRequest())
+    }
+
+    func updateRequestPayload() throws -> Data {
+        try AppAPIClient.apiEncoder.encode(toUpdateRequest())
+    }
+}
+
+// MARK: - Request factories
 
 extension Transaction {
     func toCreateRequest() -> APICreateTransactionRequest {
