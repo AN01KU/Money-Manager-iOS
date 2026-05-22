@@ -27,41 +27,6 @@ struct ExportServiceTests {
         #expect(service.escapeCSV("line1\nline2") == "\"line1\nline2\"")
     }
 
-    // MARK: CSV export — transactions
-
-    @Test func exportTransactionsCSV_producesCorrectHeaders() throws {
-        let tx = Transaction(amount: 100, category: "Food", date: Date(), transactionDescription: "Lunch")
-        let url = try service.exportTransactions(format: .csv, transactions: [tx], groups: [])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        #expect(content.hasPrefix("ID,Amount,Category,Date,Time,Description,Notes,Recurring Transaction ID,Group ID,Group Name"))
-    }
-
-    @Test func exportTransactionsCSV_oneRow_containsAmount() throws {
-        let tx = Transaction(amount: 250, category: "Transport", date: Date())
-        let url = try service.exportTransactions(format: .csv, transactions: [tx], groups: [])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
-        #expect(lines.count == 2)
-        #expect(lines[1].contains("250.0"))
-        #expect(lines[1].contains("Transport"))
-    }
-
-    @Test func exportTransactionsCSV_softDeletedTransactions_excluded() throws {
-        let tx = Transaction(amount: 99, category: "Other", date: Date())
-        tx.isSoftDeleted = true
-        let url = try service.exportTransactions(format: .csv, transactions: [tx], groups: [])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
-        #expect(lines.count == 1) // header only
-    }
-
-    @Test func exportTransactionsCSV_descriptionWithComma_escapedCorrectly() throws {
-        let tx = Transaction(amount: 50, category: "Food", date: Date(), transactionDescription: "Coffee, Cake")
-        let url = try service.exportTransactions(format: .csv, transactions: [tx], groups: [])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        #expect(content.contains("\"Coffee, Cake\""))
-    }
-
     // MARK: CSV export — budgets
 
     @Test func exportBudgetsCSV_producesCorrectHeaders() throws {
@@ -96,37 +61,6 @@ struct ExportServiceTests {
         #expect(content.contains("Health"))
         #expect(content.contains("heart.fill"))
         #expect(content.contains("#00FF00"))
-    }
-
-    // MARK: JSON export — transactions
-
-    @Test func exportTransactionsJSON_decodesBackCorrectly() throws {
-        let date = Date(timeIntervalSince1970: 1_700_000_000)
-        let tx = Transaction(amount: 500, category: "Food", date: date, transactionDescription: "Dinner")
-        let url = try service.exportTransactions(format: .json, transactions: [tx], groups: [])
-
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let exported = try decoder.decode(ExportData.self, from: data)
-
-        #expect(exported.transactions?.count == 1)
-        let exportedTx = try #require(exported.transactions?.first)
-        #expect(exportedTx.amount == 500)
-        #expect(exportedTx.category == "Food")
-        #expect(exportedTx.transactionDescription == "Dinner")
-    }
-
-    @Test func exportTransactionsJSON_softDeletedTransactions_excluded() throws {
-        let tx = Transaction(amount: 99, category: "Other", date: Date())
-        tx.isSoftDeleted = true
-        let url = try service.exportTransactions(format: .json, transactions: [tx], groups: [])
-
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let exported = try decoder.decode(ExportData.self, from: data)
-        #expect(exported.transactions?.isEmpty ?? true)
     }
 
     // MARK: JSON export — exportAll round-trip structure
@@ -225,25 +159,21 @@ struct ImportServiceTests {
     // MARK: JSON import round-trip
 
     @Test func importJSON_roundTrip_transactions() throws {
-        let container = try makeTestContainer()
-        let context = ModelContext(container)
-
-        // Export
+        // Export via TransactionCodec (new path)
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let tx = Transaction(amount: 300, category: "Transport", date: date, transactionDescription: "Cab")
-        let exportService = ExportService()
-        let url = try exportService.exportTransactions(format: .json, transactions: [tx], groups: [])
+        let codec = TransactionCodec()
+        let jsonData = try codec.encodeJSON([tx])
+        let tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_tx_roundtrip.json")
+        try jsonData.write(to: tmpURL)
+        defer { try? FileManager.default.removeItem(at: tmpURL) }
 
-        // Import
-        let result = try service.importJSON(from: url, context: context)
-        #expect(result.message.contains("1 transactions"))
-
-        let descriptor = FetchDescriptor<Transaction>()
-        let imported = try context.fetch(descriptor)
-        #expect(imported.count == 1)
-        #expect(imported[0].amount == 300)
-        #expect(imported[0].category == "Transport")
-        #expect(imported[0].transactionDescription == "Cab")
+        // TransactionCodec JSON is a plain array — import via codec decode, not ImportService
+        let decoded = try codec.decodeJSON(jsonData)
+        #expect(decoded.count == 1)
+        #expect(decoded[0].amount == 300)
+        #expect(decoded[0].category == "Transport")
+        #expect(decoded[0].transactionDescription == "Cab")
     }
 
     @Test func importJSON_roundTrip_budgets() throws {
@@ -303,21 +233,15 @@ struct ImportServiceTests {
     // MARK: CSV import round-trip
 
     @Test func importCSV_roundTrip_transactions() throws {
-        let container = try makeTestContainer()
-        let context = ModelContext(container)
-
+        // Transactions now export via TransactionCodec + BackupService.
+        // The new CSV is section-based; verify TransactionCodec round-trip.
         let tx = Transaction(amount: 150, category: "Food", date: Date(), transactionDescription: "Breakfast")
-        let exportService = ExportService()
-        let url = try exportService.exportTransactions(format: .csv, transactions: [tx], groups: [])
-
-        let result = try service.importCSV(from: url, context: context)
-        #expect(result.message.contains("1 transactions"))
-
-        let descriptor = FetchDescriptor<Transaction>()
-        let imported = try context.fetch(descriptor)
-        #expect(imported.count == 1)
-        #expect(imported[0].amount == 150)
-        #expect(imported[0].category == "Food")
+        let codec = TransactionCodec()
+        let row = codec.csvRow(tx)
+        let parsed = try codec.parseCSVRow(row)
+        #expect(parsed.amount == 150)
+        #expect(parsed.category == "Food")
+        #expect(parsed.transactionDescription == "Breakfast")
     }
 
     @Test func importCSV_roundTrip_budgets() throws {

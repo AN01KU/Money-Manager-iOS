@@ -139,6 +139,7 @@ struct ExportData: Codable {
     
     var exportService: any ExportServiceProtocol = ExportService()
     var importService: any ImportServiceProtocol = ImportService()
+    var transactionCodec = TransactionCodec()
     
     var exportDescription: String {
         switch selectedExportFormat {
@@ -178,7 +179,21 @@ struct ExportData: Codable {
             
             switch selectedDataType {
             case .transactions:
-                url = try exportService.exportTransactions(format: selectedExportFormat, transactions: transactions, groups: groups)
+                let active = transactions.filter { !$0.isSoftDeleted }
+                let stamp = exportDateStamp()
+                switch selectedExportFormat {
+                case .csv:
+                    url = try BackupService.saveCSV(
+                        BackupService.csvSection(transactionCodec, models: active),
+                        filename: "transactions_\(stamp)"
+                    )
+                case .json:
+                    let jsonData = try transactionCodec.encodeJSON(active)
+                    let tmpURL = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("transactions_\(stamp).json")
+                    try jsonData.write(to: tmpURL)
+                    url = tmpURL
+                }
             case .recurring:
                 url = try exportService.exportRecurringTransactions(format: selectedExportFormat, recurringTransactions: recurringTransactions)
             case .budgets:
@@ -197,6 +212,12 @@ struct ExportData: Codable {
         }
     }
     
+    private func exportDateStamp() -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd_HHmmss"
+        return fmt.string(from: Date())
+    }
+
     func importData(from url: URL, context: ModelContext) async {
         isImporting = true
         defer { isImporting = false }

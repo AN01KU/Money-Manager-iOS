@@ -17,12 +17,6 @@ final class MockExportService: ExportServiceProtocol {
     var shouldThrow = false
     private let stubbedURL = FileManager.default.temporaryDirectory.appendingPathComponent("mock_export_result")
 
-    func exportTransactions(format: ExportFormat, transactions: [Transaction], groups: [SplitGroupModel]) throws -> URL {
-        if shouldThrow { throw NSError(domain: "mock", code: 1) }
-        callLog.append(CallRecord(format: format, dataType: .transactions))
-        return stubbedURL
-    }
-
     func exportRecurringTransactions(format: ExportFormat, recurringTransactions: [RecurringTransaction]) throws -> URL {
         if shouldThrow { throw NSError(domain: "mock", code: 1) }
         callLog.append(CallRecord(format: format, dataType: .recurring))
@@ -82,7 +76,8 @@ struct BackupViewModelBehaviorTests {
     }
 
     @Test
-    func testExport_callsExportServiceWithCorrectFormatAndDataType() async {
+    func testExport_transactions_routedThroughBackupService() async {
+        // Transactions now go through BackupService + TransactionCodec, not ExportService.
         let mockExport = MockExportService()
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
@@ -91,9 +86,10 @@ struct BackupViewModelBehaviorTests {
 
         await viewModel.exportData(transactions: [], recurringTransactions: [], budgets: [], categories: [])
 
-        #expect(mockExport.callLog.count == 1)
-        #expect(mockExport.callLog.first?.format == .json)
-        #expect(mockExport.callLog.first?.dataType == .transactions)
+        // exportService should NOT be called for transactions
+        #expect(mockExport.callLog.isEmpty)
+        #expect(viewModel.exportedFileURL != nil)
+        #expect(viewModel.showShareSheet == true)
     }
 
     @Test
@@ -113,7 +109,7 @@ struct BackupViewModelBehaviorTests {
         mockExport.shouldThrow = true
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .transactions
+        viewModel.selectedDataType = .budgets
         viewModel.exportService = mockExport
 
         await viewModel.exportData(transactions: [], recurringTransactions: [], budgets: [], categories: [])
@@ -700,91 +696,92 @@ struct BackupViewModelExportTests {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .transactions
-        
+
         let expense = Transaction(
             amount: 100.50,
             category: "Food & Dining",
             date: Date(),
             transactionDescription: "Lunch"
         )
-        
+
         await viewModel.exportData(
             transactions: [expense],
             recurringTransactions: [],
             budgets: [],
             categories: []
         )
-        
+
         #expect(viewModel.exportedFileURL != nil)
         #expect(viewModel.showShareSheet == true)
         #expect(viewModel.isExporting == false)
         #expect(viewModel.showError == false)
-        
+
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
-            #expect(content.contains("ID,Amount,Category"))
+            // TransactionCodec section-based format
+            #expect(content.contains("# transactions"))
+            #expect(content.contains("ID,Type,Amount,Category"))
             #expect(content.contains("100.5"))
             #expect(content.contains("Food & Dining"))
         }
     }
-    
+
     @Test
     func testExportTransactionsAsJSON() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .transactions
-        
+
         let expense = Transaction(
             amount: 200.0,
             category: "Transport",
             date: Date(),
             transactionDescription: "Uber"
         )
-        
+
         await viewModel.exportData(
             transactions: [expense],
             recurringTransactions: [],
             budgets: [],
             categories: []
         )
-        
+
         #expect(viewModel.exportedFileURL != nil)
         #expect(viewModel.showShareSheet == true)
-        
+
         if let url = viewModel.exportedFileURL {
+            // TransactionCodec encodes as JSON array of TransactionRecord
             let data = try! Data(contentsOf: url)
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let decoded = try! decoder.decode(ExportData.self, from: data)
-            #expect(decoded.transactions?.count == 1)
-            #expect(decoded.transactions?.first?.amount == 200.0)
-            #expect(decoded.transactions?.first?.category == "Transport")
+            let json = try! JSONSerialization.jsonObject(with: data) as! [[String: Any]]
+            #expect(json.count == 1)
+            #expect(json[0]["amount"] as? Double == 200.0)
+            #expect(json[0]["category"] as? String == "Transport")
         }
     }
-    
+
     @Test
     func testExportTransactionsFiltersDeletedTransactions() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .transactions
-        
+
         let active = Transaction(amount: 100, category: "Food", date: Date())
         let deleted = Transaction(amount: 200, category: "Food", date: Date())
         deleted.isSoftDeleted = true
-        
+
         await viewModel.exportData(
             transactions: [active, deleted],
             recurringTransactions: [],
             budgets: [],
             categories: []
         )
-        
+
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
             let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
-            // Header + 1 active expense only
-            #expect(lines.count == 2)
+            // Section marker + header + 1 active row
+            #expect(lines.count == 3)
         }
     }
     
