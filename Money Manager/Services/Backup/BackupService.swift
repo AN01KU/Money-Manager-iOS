@@ -32,7 +32,7 @@ struct BackupService {
     }()
 
     // Fallback formatters for reading older backup files.
-    static let legacyDateFormatters: [DateFormatter] = {
+    nonisolated(unsafe) static let legacyDateFormatters: [DateFormatter] = {
         let formats = [
             "yyyy-MM-dd'T'HH:mm:ssZ",
             "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
