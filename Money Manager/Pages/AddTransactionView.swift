@@ -3,7 +3,7 @@ import SwiftData
 
 struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(sort: \Category.name) private var customCategories: [Category]
 
     @State private var viewModel: AddTransactionViewModel
@@ -34,6 +34,7 @@ struct AddTransactionView: View {
                 personalScrollView
             }
         }
+        .task { viewModel.persistence = persistence }
         .alert("Update Recurring Transaction?", isPresented: $viewModel.showRecurringAmountAlert) {
             Button("Update Recurring Too") {
                 viewModel.saveAlsoUpdatingRecurring { saveSuccess = true; dismiss() }
@@ -82,7 +83,7 @@ struct AddTransactionView: View {
         .navigationDestination(isPresented: $viewModel.showCategoryPicker) {
             CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
         }
-        .task { viewModel.modelContext = modelContext; viewModel.customCategories = customCategories }
+        .task { viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
     }
 
@@ -412,7 +413,7 @@ struct AddTransactionView: View {
                 }
             }
         }
-        .task { viewModel.modelContext = modelContext; viewModel.customCategories = customCategories }
+        .task { viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
     }
 }

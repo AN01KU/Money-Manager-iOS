@@ -3,20 +3,20 @@ import SwiftData
 
 struct AddRecurringTransactionSheet: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(sort: \Category.name) private var customCategories: [Category]
 
     private let prefillAmount: String
     private let prefillCategory: String
     private let prefillType: TransactionKind
 
+    @State private var viewModel = AddRecurringTransactionViewModel()
+
     init(prefillAmount: String = "", prefillCategory: String = "", prefillType: TransactionKind = .expense) {
         self.prefillAmount = prefillAmount
         self.prefillCategory = prefillCategory
         self.prefillType = prefillType
     }
-
-    @State private var viewModel = AddRecurringTransactionViewModel()
     @State private var amount100Tapped = 0
     @State private var amount500Tapped = 0
     @State private var amount1000Tapped = 0
@@ -182,7 +182,7 @@ struct AddRecurringTransactionSheet: View {
             }
             .sensoryFeedback(.success, trigger: saveSuccess)
             .task {
-                viewModel.modelContext = modelContext
+                viewModel.persistence = persistence
                 viewModel.customCategories = customCategories
                 viewModel.prefill(amount: prefillAmount, category: prefillCategory, type: prefillType)
             }

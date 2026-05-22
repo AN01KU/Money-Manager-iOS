@@ -220,29 +220,19 @@ struct SyncServiceLaunchTests {
     // MARK: - syncOnReconnect: posting notification triggers sync
 
     @Test
-    func testSyncOnReconnect_viaNotification_callsReplayAll() async throws {
+    func testSyncOnReconnect_whenConnectedWithValidPreflight_callsReplayAll() async throws {
         let container = try makeContainer()
         let queue = SpySyncChangeQueue()
         let mock = mockWithValidPreflight()
         let networkMonitor = MockNetworkMonitor(isConnected: true)
-        _ = makeSyncService(container: container, changeQueue: queue, mock: mock, networkMonitor: networkMonitor)
+        let svc = makeSyncService(container: container, changeQueue: queue, mock: mock, networkMonitor: networkMonitor)
 
         storeSyncSessionID()
-        defer {
-            clearSyncSessionID()
-            networkMonitor.isConnected = false
-        }
+        defer { clearSyncSessionID() }
 
-        queue.onReplayAll = { }
-        NotificationCenter.default.post(name: .networkDidBecomeAvailable, object: nil)
+        await svc.syncOnReconnect()
 
-        // Poll until replayAll is called or 5s timeout — avoids flaky fixed sleeps.
-        let deadline = Date().addingTimeInterval(5)
-        while queue.replayAllCallCount == 0 && Date() < deadline {
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        }
-
-        #expect(queue.replayAllCallCount >= 1)
+        #expect(queue.replayAllCallCount == 1)
     }
 }
 

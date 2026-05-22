@@ -3,6 +3,7 @@ import SwiftData
 
 struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query(sort: \Category.name) private var customCategories: [Category]
 
@@ -10,13 +11,18 @@ struct TransactionsView: View {
     var categoryFilter: Binding<String?>?
     var onGroupTapped: ((UUID) -> Void)?
 
+    init(categoryFilter: Binding<String?>? = nil, onGroupTapped: ((UUID) -> Void)? = nil) {
+        self.categoryFilter = categoryFilter
+        self.onGroupTapped = onGroupTapped
+    }
+
     var body: some View {
         NavigationStack {
             TransactionsBody(viewModel: viewModel, onGroupTapped: onGroupTapped)
                 .navigationTitle("Transactions")
         }
+        .task { viewModel.persistence = persistence }
         .onChange(of: TransactionsQuerySnapshot(transactions: allTransactions, categories: customCategories), initial: true) {
-            viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
         .onChange(of: categoryFilter?.wrappedValue) { _, newValue in

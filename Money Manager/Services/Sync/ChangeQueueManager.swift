@@ -40,24 +40,25 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     }
 
     func enqueue(
-        entityType: String,
+        entityType: EntityType,
         entityID: UUID,
-        action: String,
+        action: ChangeAction,
         endpoint: String,
-        httpMethod: String,
+        httpMethod: HTTPMethod,
         payload: Data?,
         context: ModelContext
     ) {
+        let entityTypeRaw = entityType.rawValue
         let existingDescriptor = FetchDescriptor<PendingChange>(
             predicate: #Predicate { change in
-                change.entityID == entityID && change.entityType == entityType
+                change.entityID == entityID && change.entityType == entityTypeRaw
             },
             sortBy: [SortDescriptor(\.createdAt)]
         )
 
         if let existingChanges = try? context.fetch(existingDescriptor),
            let existing = existingChanges.first {
-            switch (existing.action, action) {
+            switch (existing.action, action.rawValue) {
             case ("create", "update"):
                 existing.payload = payload
                 existing.retryCount = 0
@@ -69,27 +70,27 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             case ("update", "delete"):
                 existing.action = "delete"
                 existing.endpoint = endpoint
-                existing.httpMethod = httpMethod
+                existing.httpMethod = httpMethod.rawValue
                 existing.payload = nil
                 existing.retryCount = 0
             default:
                 let change = PendingChange(
-                    entityType: entityType,
+                    entityType: entityType.rawValue,
                     entityID: entityID,
-                    action: action,
+                    action: action.rawValue,
                     endpoint: endpoint,
-                    httpMethod: httpMethod,
+                    httpMethod: httpMethod.rawValue,
                     payload: payload
                 )
                 context.insert(change)
             }
         } else {
             let change = PendingChange(
-                entityType: entityType,
+                entityType: entityType.rawValue,
                 entityID: entityID,
-                action: action,
+                action: action.rawValue,
                 endpoint: endpoint,
-                httpMethod: httpMethod,
+                httpMethod: httpMethod.rawValue,
                 payload: payload
             )
             context.insert(change)
@@ -406,15 +407,16 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         try? context.save()
     }
 
-    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: String, context: ModelContext) {
+    func removeStaleChanges(for entityIDs: Set<UUID>, entityType: EntityType, context: ModelContext) {
         guard !entityIDs.isEmpty else { return }
+        let raw = entityType.rawValue
         let descriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == entityType }
+            predicate: #Predicate { $0.entityType == raw }
         )
         guard let changes = try? context.fetch(descriptor) else { return }
         var removed = 0
         for change in changes where entityIDs.contains(change.entityID) {
-            AppLogger.sync.warning("Conflict: server wins for \(entityType)=\(change.entityID) — removing stale pending change")
+            AppLogger.sync.warning("Conflict: server wins for \(entityType.rawValue)=\(change.entityID) — removing stale pending change")
             context.delete(change)
             removed += 1
         }

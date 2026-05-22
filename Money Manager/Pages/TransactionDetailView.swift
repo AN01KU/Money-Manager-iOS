@@ -4,6 +4,7 @@ import SwiftData
 struct TransactionDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(sort: \Category.name) private var customCategories: [Category]
     @Query private var allRecurring: [RecurringTransaction]
 
@@ -14,19 +15,11 @@ struct TransactionDetailView: View {
     @State private var deleteTapped = 0
     @State private var deleteSuccess = false
 
-    #if DEBUG
-    init(persistence: PersistenceService = .testing, transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
+    init(transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
         self.transaction = transaction
         self.onEdit = onEdit
-        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction, persistence: persistence))
+        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction))
     }
-    #else
-    init(persistence: PersistenceService, transaction: Transaction, onEdit: ((Transaction) -> Void)? = nil) {
-        self.transaction = transaction
-        self.onEdit = onEdit
-        self._viewModel = State(wrappedValue: TransactionDetailViewModel(transaction: transaction, persistence: persistence))
-    }
-    #endif
 
     private var linkedRecurring: RecurringTransaction? {
         guard let rid = transaction.recurringExpenseId else { return nil }
@@ -80,6 +73,7 @@ struct TransactionDetailView: View {
                 Text("This action cannot be undone.")
             }
             .task {
+                viewModel.persistence = persistence
                 viewModel.customCategories = customCategories
             }
             .onChange(of: customCategories) { _, newValue in
@@ -304,4 +298,5 @@ struct DetailRow: View {
         transactionDescription: "Lunch at cafe",
         notes: "With the team"
     ))
+    .modelContainer(for: [Transaction.self, Category.self, RecurringTransaction.self], inMemory: true)
 }

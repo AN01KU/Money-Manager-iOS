@@ -23,7 +23,7 @@ struct BudgetsViewModelTests {
         let vm = makeVM()
         let expense1 = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
         let expense2 = Transaction(amount: 300, category: "Transport", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense1, expense2], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense1, expense2], userBudget: nil)
         #expect(vm.totalSpent == 800)
     }
 
@@ -33,21 +33,21 @@ struct BudgetsViewModelTests {
         let active = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
         let deleted = Transaction(amount: 300, category: "Transport", date: Self.fixedRef)
         deleted.isSoftDeleted = true
-        vm.configure(allTransactions: [active, deleted], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [active, deleted], userBudget: nil)
         #expect(vm.totalSpent == 500)
     }
 
     @Test
     func testTotalSpentReturnsZeroForNoTransactions() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.totalSpent == 0)
     }
 
     @Test
     func testRemainingBudgetWhenNoBudgetSet() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.remainingBudget == 0)
     }
 
@@ -55,7 +55,7 @@ struct BudgetsViewModelTests {
     func testRemainingBudgetCalculatesCorrectly() {
         let vm = makeVM()
         let expense = Transaction(amount: 300, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.remainingBudget == 700)
     }
 
@@ -63,7 +63,7 @@ struct BudgetsViewModelTests {
     func testRemainingBudgetNeverNegative() {
         let vm = makeVM()
         let expense = Transaction(amount: 1500, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.remainingBudget == 0)
     }
 
@@ -71,7 +71,7 @@ struct BudgetsViewModelTests {
     func testBudgetPercentageCalculatesCorrectly() {
         let vm = makeVM()
         let expense = Transaction(amount: 250, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.budgetPercentage == 25)
     }
 
@@ -79,7 +79,7 @@ struct BudgetsViewModelTests {
     func testBudgetPercentageIsZeroWhenNoBudget() {
         let vm = makeVM()
         let expense = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: nil)
         #expect(vm.budgetPercentage == 0)
     }
 
@@ -87,7 +87,7 @@ struct BudgetsViewModelTests {
     func testBudgetPercentageIsZeroWhenLimitIsNil() {
         let vm = makeVM()
         let expense = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: UserBudget(limit: nil), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: UserBudget(limit: nil))
         #expect(vm.budgetPercentage == 0)
     }
 
@@ -95,7 +95,7 @@ struct BudgetsViewModelTests {
     func testBudgetPercentageAtLimit() {
         let vm = makeVM()
         let expense = Transaction(amount: 1000, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.budgetPercentage == 100)
     }
 
@@ -103,7 +103,7 @@ struct BudgetsViewModelTests {
     func testBudgetPercentageOverBudget() {
         let vm = makeVM()
         let expense = Transaction(amount: 1500, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.budgetPercentage == 150)
     }
 
@@ -111,28 +111,28 @@ struct BudgetsViewModelTests {
     func testDailyAverageCalculatesCorrectly() {
         let vm = makeVM()
         let expense = Transaction(amount: 200, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.dailyAverage > 0)
     }
 
     @Test
     func testDailyAverageIsZeroWhenNoBudget() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.dailyAverage == 0)
     }
 
     @Test
     func testBudgetLimitExposesScalar() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: budget(limit: 5000), modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: budget(limit: 5000))
         #expect(vm.budgetLimit == 5000)
     }
 
     @Test
     func testBudgetLimitIsNilWhenNoBudget() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.budgetLimit == nil)
     }
 
@@ -143,7 +143,7 @@ struct BudgetsViewModelTests {
         let lastMonth = calendar.date(byAdding: .month, value: -1, to: Self.fixedRef)!
         let expenseThisMonth = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
         let expenseLastMonth = Transaction(amount: 300, category: "Food", date: lastMonth)
-        vm.configure(allTransactions: [expenseThisMonth, expenseLastMonth], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expenseThisMonth, expenseLastMonth], userBudget: nil)
         #expect(vm.currentMonthTransactions.count == 1)
         #expect(vm.currentMonthTransactions.first?.amount == 500)
     }
@@ -182,7 +182,7 @@ struct BudgetsViewModelTests {
         let lastDayOfJan = Self.calendar.date(from: DateComponents(year: 2026, month: 1, day: 31, hour: 23, minute: 59))!
         let vm = BudgetsViewModel()
         vm.referenceDate = lastDayOfJan
-        vm.configure(allTransactions: [], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: budget(limit: 1000))
         // daysRemaining is computed from startOfDay(Jan 31) to Feb 1 = 1 day, but guard passes
         // This test guards that dailyAverage depends on daysRemaining > 0
         #expect(vm.dailyAverage >= 0)
@@ -195,7 +195,7 @@ struct BudgetsViewModelTests {
         let vm = makeVM()
         let lastDayOfJan = Self.calendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
         let expense = Transaction(amount: 500, category: "Food", date: lastDayOfJan)
-        vm.configure(allTransactions: [expense], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: nil)
         #expect(vm.currentMonthTransactions.count == 1)
     }
 
@@ -204,7 +204,7 @@ struct BudgetsViewModelTests {
         let vm = makeVM()
         let firstDayOfFeb = Self.calendar.date(from: DateComponents(year: 2026, month: 2, day: 1))!
         let expense = Transaction(amount: 500, category: "Transport", date: firstDayOfFeb)
-        vm.configure(allTransactions: [expense], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: nil)
         #expect(vm.currentMonthTransactions.isEmpty)
     }
 
@@ -213,7 +213,7 @@ struct BudgetsViewModelTests {
         let vm = makeVM()
         let firstDayOfJan = Self.calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
         let expense = Transaction(amount: 300, category: "Food", date: firstDayOfJan)
-        vm.configure(allTransactions: [expense], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: nil)
         #expect(vm.currentMonthTransactions.count == 1)
     }
 
@@ -224,7 +224,7 @@ struct BudgetsViewModelTests {
         let vm = makeVM()
         let expense = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
         let income = Transaction(type: .income, amount: 2000, category: "Salary", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense, income], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense, income], userBudget: nil)
         #expect(vm.currentMonthTransactions.count == 1)
         #expect(vm.currentMonthTransactions.first?.category == "Food")
     }
@@ -235,7 +235,7 @@ struct BudgetsViewModelTests {
     func testProjectedMonthEndIsPositiveForCurrentMonth() {
         let vm = makeVM()
         let expense = Transaction(amount: 500, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 5000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 5000))
         #expect(vm.projectedMonthEnd > 0)
     }
 
@@ -244,7 +244,7 @@ struct BudgetsViewModelTests {
         // Mid-month: daysElapsed < daysInMonth → projection > totalSpent
         let vm = makeVM()
         let expense = Transaction(amount: 300, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: nil)
         #expect(vm.projectedMonthEnd > vm.totalSpent)
     }
 
@@ -253,7 +253,7 @@ struct BudgetsViewModelTests {
     @Test
     func testSpendingInsightNilWhenNoBudget() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.spendingInsight == nil)
     }
 
@@ -263,7 +263,7 @@ struct BudgetsViewModelTests {
         let firstOfJan = Self.calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
         let vm = BudgetsViewModel()
         vm.referenceDate = firstOfJan
-        vm.configure(allTransactions: [], userBudget: budget(limit: 5000), modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: budget(limit: 5000))
         #expect(vm.spendingInsight == nil)
     }
 
@@ -272,7 +272,7 @@ struct BudgetsViewModelTests {
         // Fixed mid-month reference guarantees daysElapsed > 1
         let vm = makeVM()
         let expense = Transaction(amount: 2000, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.spendingInsight?.contains("exceeded") == true)
     }
 
@@ -281,7 +281,7 @@ struct BudgetsViewModelTests {
         // Fixed mid-month reference guarantees daysElapsed > 1 → insight always runs
         let vm = makeVM()
         let expense = Transaction(amount: 1, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1_000_000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1_000_000))
         #expect(vm.spendingInsight?.contains("On track") == true)
     }
 
@@ -291,7 +291,7 @@ struct BudgetsViewModelTests {
         let vm = BudgetsViewModel()
         vm.referenceDate = firstOfJan
         let expense = Transaction(amount: 500, category: "Food", date: firstOfJan)
-        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: budget(limit: 1000))
         #expect(vm.spendingInsight == nil)
     }
 
@@ -299,7 +299,7 @@ struct BudgetsViewModelTests {
     func testSpendingInsightNilLimitBudgetReturnsNil() {
         let vm = makeVM()
         let expense = Transaction(amount: 100, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [expense], userBudget: UserBudget(limit: nil), modelContext: nil)
+        vm.configure(allTransactions: [expense], userBudget: UserBudget(limit: nil))
         #expect(vm.spendingInsight == nil)
     }
 
@@ -307,14 +307,14 @@ struct BudgetsViewModelTests {
     func testDaysRemainingForCurrentMonth() {
         // Jan 15, 2026 → 17 days remain (Jan 15 to Feb 1)
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.daysRemaining == 17)
     }
 
     @Test
     func testDailyAverageIsZeroWhenNoBudgetSet() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.dailyAverage == 0)
     }
 }

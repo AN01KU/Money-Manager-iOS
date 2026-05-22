@@ -24,20 +24,20 @@ struct BudgetsViewModelInsightTests {
 
     @Test func testInsightIconIsCheckmarkWhenNoBudgetSet() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.insightIcon == "checkmark.circle.fill")
     }
 
     @Test func testInsightIconIsExclamationWhenOverBudget() {
         let vm = makeVM()
         let tx = Transaction(amount: 600, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [tx], userBudget: budget(limit: 500), modelContext: nil)
+        vm.configure(allTransactions: [tx], userBudget: budget(limit: 500))
         #expect(vm.insightIcon == "exclamationmark.triangle.fill")
     }
 
     @Test func testInsightIconIsCheckmarkWhenOnTrack() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: budget(limit: 5000), modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: budget(limit: 5000))
         #expect(vm.insightIcon == "checkmark.circle.fill")
     }
 
@@ -45,20 +45,20 @@ struct BudgetsViewModelInsightTests {
 
     @Test func testInsightColorIsPositiveWhenNoBudgetSet() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.insightColor == AppColors.positive)
     }
 
     @Test func testInsightColorIsExpenseWhenOverBudget() {
         let vm = makeVM()
         let tx = Transaction(amount: 300, category: "Food", date: Self.fixedRef)
-        vm.configure(allTransactions: [tx], userBudget: budget(limit: 200), modelContext: nil)
+        vm.configure(allTransactions: [tx], userBudget: budget(limit: 200))
         #expect(vm.insightColor == AppColors.expense)
     }
 
     @Test func testInsightColorIsPositiveWhenOnTrack() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: budget(limit: 10000), modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: budget(limit: 10000))
         #expect(vm.insightColor == AppColors.positive)
     }
 
@@ -67,7 +67,7 @@ struct BudgetsViewModelInsightTests {
     @Test func testDaysRemainingIsPositiveInCurrentMonth() {
         // Fixed reference: Jan 15. Jan has 31 days → 17 days remain (Jan 15 to Feb 1).
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.daysRemaining == 17)
     }
 
@@ -75,14 +75,14 @@ struct BudgetsViewModelInsightTests {
 
     @Test func testDailyAverageIsZeroWhenNoBudget() {
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: nil, modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: nil)
         #expect(vm.dailyAverage == 0)
     }
 
     @Test func testDailyAverageIsPositiveWhenBudgetRemainsAndDaysLeft() {
         // Fixed mid-month reference guarantees daysRemaining > 0
         let vm = makeVM()
-        vm.configure(allTransactions: [], userBudget: budget(limit: 3000), modelContext: nil)
+        vm.configure(allTransactions: [], userBudget: budget(limit: 3000))
         #expect(vm.dailyAverage > 0)
     }
 }

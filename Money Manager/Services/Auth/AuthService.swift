@@ -92,7 +92,7 @@ final class AuthService: AuthServiceProtocol {
             // clearAllUserData deletes PendingChange records, so no stale
             // changes can be replayed for the old user after this point.
             if isDifferentUser {
-                SyncService.shared.clearAllUserData()
+                NotificationCenter.default.post(name: .userDidSwitchAccount, object: nil)
             }
 
             session.saveToken(response.token)

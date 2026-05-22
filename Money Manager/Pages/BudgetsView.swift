@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct BudgetsView: View {
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var userBudgets: [UserBudget]
 
@@ -71,11 +71,12 @@ struct BudgetsView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Budgets")
         .navigationBarTitleDisplayMode(.inline)
+        .task { viewModel.persistence = persistence }
         .sheet(isPresented: $viewModel.showBudgetSheet) {
             BudgetSheet()
         }
         .onChange(of: BudgetsQuerySnapshot(transactions: allTransactions, userBudget: userBudgets.first), initial: true) {
-            viewModel.configure(allTransactions: allTransactions, userBudget: userBudgets.first, modelContext: modelContext)
+            viewModel.configure(allTransactions: allTransactions, userBudget: userBudgets.first)
         }
     }
 }

@@ -6,22 +6,31 @@ import Testing
 @MainActor
 struct BudgetsViewModelMutationTests {
 
-    private func makeContext() throws -> ModelContext {
-        ModelContext(try makeTestContainer())
+    private func makeService() throws -> (PersistenceService, ModelContext) {
+        let context = ModelContext(try makeTestContainer())
+        let svc = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+        return (svc, context)
     }
 
-    private func makeViewModel() -> BudgetsViewModel {
-        BudgetsViewModel()
+    private func makeViewModel(persistence: PersistenceService) -> BudgetsViewModel {
+        let vm = BudgetsViewModel()
+        vm.persistence = persistence
+        return vm
     }
 
     // MARK: - saveBudget: create
 
     @Test
     func testSaveBudget_newLimit_createsUserBudgetInSwiftData() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, context) = try makeService()
+        let vm = makeViewModel(persistence: svc)
 
-        try vm.saveBudget(limit: 5000, context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.saveBudget(limit: 5000)
 
         let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
@@ -32,14 +41,14 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testSaveBudget_existingRow_updatesLimitWithoutDuplicate() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, context) = try makeService()
+        let vm = makeViewModel(persistence: svc)
 
         let existing = UserBudget(limit: 3000)
         context.insert(existing)
         try context.save()
 
-        try vm.saveBudget(limit: 4500, context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.saveBudget(limit: 4500)
 
         let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
@@ -50,11 +59,11 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testSaveBudget_zeroLimit_throwsValidationError() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, context) = try makeService()
+        let vm = makeViewModel(persistence: svc)
 
         #expect(throws: BudgetsViewModel.BudgetValidationError.zeroLimit) {
-            try vm.saveBudget(limit: 0, context: context, changeQueue: MockChangeQueueManager.shared)
+            try vm.saveBudget(limit: 0)
         }
 
         let all = try context.fetch(FetchDescriptor<UserBudget>())
@@ -65,11 +74,11 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testSaveBudget_enqueuesPutWithCorrectContract() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, _) = try makeService()
+        let vm = makeViewModel(persistence: svc)
         MockChangeQueueManager.shared.reset()
 
-        try vm.saveBudget(limit: 2000, context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.saveBudget(limit: 2000)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
@@ -80,11 +89,11 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testSaveBudget_payloadContainsLimit() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, _) = try makeService()
+        let vm = makeViewModel(persistence: svc)
         MockChangeQueueManager.shared.reset()
 
-        try vm.saveBudget(limit: 3500, context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.saveBudget(limit: 3500)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
@@ -98,15 +107,15 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testSaveBudget_existingRow_stillEnqueuesPut() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, context) = try makeService()
+        let vm = makeViewModel(persistence: svc)
 
         let existing = UserBudget(limit: 1000)
         context.insert(existing)
         try context.save()
 
         MockChangeQueueManager.shared.reset()
-        try vm.saveBudget(limit: 1500, context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.saveBudget(limit: 1500)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)
@@ -118,14 +127,14 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testClearBudget_setsLimitToNilInSwiftData() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, context) = try makeService()
+        let vm = makeViewModel(persistence: svc)
 
         let existing = UserBudget(limit: 3000)
         context.insert(existing)
         try context.save()
 
-        try vm.clearBudget(context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.clearBudget()
 
         let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
@@ -134,10 +143,10 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testClearBudget_whenNoBudgetRow_createsClearedRow() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, context) = try makeService()
+        let vm = makeViewModel(persistence: svc)
 
-        try vm.clearBudget(context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.clearBudget()
 
         let all = try context.fetch(FetchDescriptor<UserBudget>())
         #expect(all.count == 1)
@@ -146,11 +155,11 @@ struct BudgetsViewModelMutationTests {
 
     @Test
     func testClearBudget_enqueuesPutWithNullLimit() throws {
-        let context = try makeContext()
-        let vm = makeViewModel()
+        let (svc, _) = try makeService()
+        let vm = makeViewModel(persistence: svc)
         MockChangeQueueManager.shared.reset()
 
-        try vm.clearBudget(context: context, changeQueue: MockChangeQueueManager.shared)
+        try vm.clearBudget()
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
         #expect(log.count == 1)

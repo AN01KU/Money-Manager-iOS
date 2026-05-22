@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct RecurringTransactionsView: View {
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(filter: #Predicate<RecurringTransaction> { !$0.isSoftDeleted }, sort: \RecurringTransaction.name)
     private var recurringTransactions: [RecurringTransaction]
 
@@ -54,6 +54,7 @@ struct RecurringTransactionsView: View {
                 .accessibilityIdentifier("recurring.add-button")
             }
         }
+        .task { viewModel.persistence = persistence }
         .sheet(isPresented: $viewModel.showAddSheet) {
             AddRecurringTransactionSheet()
         }
@@ -73,7 +74,6 @@ struct RecurringTransactionsView: View {
             Text("This will permanently delete \"\(itemToDelete?.name ?? "")\". Future transactions will no longer be generated.")
         }
         .task {
-            viewModel.modelContext = modelContext
             viewModel.update(recurring: recurringTransactions)
         }
         .onChange(of: recurringTransactions) { _, newValue in

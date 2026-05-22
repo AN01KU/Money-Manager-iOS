@@ -6,6 +6,19 @@ import Testing
 @MainActor
 struct RecurringTransactionsViewModelTests {
 
+    private func makeService(items: [RecurringTransaction] = []) throws -> (RecurringTransactionsViewModel, ModelContext) {
+        let context = ModelContext(try makeTestContainer())
+        for item in items { context.insert(item) }
+        if !items.isEmpty { try context.save() }
+        let svc = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+        return (RecurringTransactionsViewModel(persistence: svc), context)
+    }
+
     @Test
     func testActiveRecurringFiltersOutInactive() {
         let viewModel = RecurringTransactionsViewModel()
@@ -45,89 +58,67 @@ struct RecurringTransactionsViewModelTests {
     }
 
     @Test
-    func testToggleSwapsActiveState() {
-        let viewModel = RecurringTransactionsViewModel()
-
+    func testToggleSwapsActiveState() throws {
         let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
-
+        let (viewModel, _) = try makeService(items: [active])
         viewModel.update(recurring: [active])
 
         #expect(viewModel.activeRecurring.count == 1)
-
         viewModel.toggle(active)
-
         #expect(active.isActive == false)
     }
 
     @Test
-    func testToggleInactiveBecomesActive() {
-        let viewModel = RecurringTransactionsViewModel()
-
+    func testToggleInactiveBecomesActive() throws {
         let inactive = RecurringTransaction(name: "Old Gym", amount: 500, category: "Health", frequency: .monthly, isActive: false)
-
+        let (viewModel, _) = try makeService(items: [inactive])
         viewModel.update(recurring: [inactive])
 
         #expect(viewModel.pausedRecurring.count == 1)
-
         viewModel.toggle(inactive)
-
         #expect(inactive.isActive == true)
     }
 
     @Test
-    func testDeactivateSetsIsActiveToFalse() {
-        let viewModel = RecurringTransactionsViewModel()
-
+    func testDeactivateSetsIsActiveToFalse() throws {
         let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
-
+        let (viewModel, _) = try makeService(items: [active])
         viewModel.update(recurring: [active])
 
         #expect(viewModel.activeRecurring.count == 1)
-
         viewModel.toggle(active)
-
         #expect(active.isActive == false)
     }
 
     @Test
-    func testDeactivateDoesNothingForUnrelatedItem() {
-        let viewModel = RecurringTransactionsViewModel()
-
+    func testDeactivateDoesNothingForUnrelatedItem() throws {
         let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
         let other = RecurringTransaction(name: "Other", amount: 100, category: "Other", frequency: .monthly, isActive: true)
-
+        let (viewModel, _) = try makeService(items: [active, other])
         viewModel.update(recurring: [active])
 
-        // toggling an item not in the list should not affect active
         viewModel.toggle(other)
-
         #expect(active.isActive == true)
     }
 
     @Test
-    func testDeactivateRemovesFromActiveList() {
-        let viewModel = RecurringTransactionsViewModel()
-
+    func testDeactivateRemovesFromActiveList() throws {
         let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
         let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, isActive: true)
-
+        let (viewModel, _) = try makeService(items: [active1, active2])
         viewModel.update(recurring: [active1, active2])
 
         #expect(viewModel.activeRecurring.count == 2)
-
         viewModel.toggle(active1)
-
         #expect(viewModel.activeRecurring.count == 1)
         #expect(viewModel.activeRecurring.first?.name == "Gym")
     }
 
     @Test
-    func testDeleteDoesNothingForUnrelatedItem() {
-        let viewModel = RecurringTransactionsViewModel()
-
+    func testDeleteDoesNothingForUnrelatedItem() throws {
         let paused = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
         let other = RecurringTransaction(name: "Other", amount: 50, category: "Other", frequency: .monthly, isActive: false)
-
+        let (viewModel, _) = try makeService(items: [paused, other])
         viewModel.update(recurring: [paused])
 
         viewModel.deleteItem(other)
@@ -136,11 +127,10 @@ struct RecurringTransactionsViewModelTests {
     }
 
     @Test
-    func testDeleteRemovesItemFromAllRecurring() {
+    func testDeleteRemovesItemFromAllRecurring() throws {
         let item = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly)
         let other = RecurringTransaction(name: "Keeper", amount: 200, category: "Food", frequency: .monthly)
-
-        let viewModel = RecurringTransactionsViewModel()
+        let (viewModel, _) = try makeService(items: [item, other])
         viewModel.update(recurring: [item, other])
 
         viewModel.deleteItem(item)
@@ -151,10 +141,9 @@ struct RecurringTransactionsViewModelTests {
     }
 
     @Test
-    func testDeleteSoftDeletesRecord() {
+    func testDeleteSoftDeletesRecord() throws {
         let paused = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly, isActive: false)
-
-        let viewModel = RecurringTransactionsViewModel()
+        let (viewModel, _) = try makeService(items: [paused])
         viewModel.update(recurring: [paused])
 
         viewModel.deleteItem(paused)
@@ -173,8 +162,12 @@ struct RecurringTransactionsViewModelTests {
         context.insert(tx)
         try context.save()
 
-        let persistence = PersistenceService(changeQueue: MockChangeQueueManager.shared)
-        persistence.modelContext = context
+        let persistence = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
         let viewModel = RecurringTransactionsViewModel(persistence: persistence)
         viewModel.update(recurring: [recurring])
 
@@ -457,8 +450,9 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveTrimsWhitespaceFromName() {
-        let viewModel = AddRecurringTransactionViewModel()
+    func testSaveTrimsWhitespaceFromName() throws {
+        let (svc, _) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "  Netflix  "
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
@@ -480,18 +474,26 @@ struct AddRecurringTransactionViewModelTests {
         #expect(viewModel.frequencies.contains(.yearly))
     }
 
+    private func makeService() throws -> (PersistenceService, ModelContext) {
+        let context = ModelContext(try makeTestContainer())
+        let svc = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+        return (svc, context)
+    }
+
     @Test
     func testSaveWithModelContextPersistsRecurringTransaction() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Netflix"
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
-
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
 
         let result = viewModel.save()
 
@@ -506,16 +508,14 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSaveSetsDayOfMonthOnlyForMonthly() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
 
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
@@ -526,15 +526,13 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSaveDoesNotSetDayOfMonthForNonMonthly() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.frequency = .weekly
 
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
@@ -545,16 +543,14 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSaveWithEndDatePersistsEndDate() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Subscription"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = true
         viewModel.endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
 
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
@@ -565,15 +561,13 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSaveWithoutEndDateSetsNilEndDate() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Subscription"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = false
 
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
@@ -584,15 +578,13 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSaveWithNotesPersistsNotes() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.notes = "Test notes"
 
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
@@ -603,15 +595,13 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSaveWithEmptyNotesSetsNil() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
         viewModel.selectedCategory = "Food"
         viewModel.notes = ""
 
-        let context = ModelContext(try makeTestContainer())
-
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let descriptor = FetchDescriptor<RecurringTransaction>()
@@ -644,14 +634,13 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSavePersistsIncomeType() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Salary"
         viewModel.amount = "50000"
         viewModel.selectedCategory = "Income"
         viewModel.transactionType = .income
 
-        let context = ModelContext(try makeTestContainer())
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let items = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
@@ -660,14 +649,13 @@ struct AddRecurringTransactionViewModelTests {
 
     @Test
     func testSavePersistsExpenseType() throws {
-        let viewModel = AddRecurringTransactionViewModel()
+        let (svc, context) = try makeService()
+        let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Netflix"
         viewModel.amount = "649"
         viewModel.selectedCategory = "Entertainment"
         viewModel.transactionType = .expense
 
-        let context = ModelContext(try makeTestContainer())
-        viewModel.modelContext = context
         _ = viewModel.save()
 
         let items = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []

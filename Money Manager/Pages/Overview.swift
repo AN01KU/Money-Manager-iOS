@@ -3,34 +3,23 @@ import SwiftData
 
 struct Overview: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var userBudgets: [UserBudget]
     @Query(sort: \Category.name) private var customCategories: [Category]
 
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
 
-    let persistence: PersistenceService
-    @State private var viewModel: OverviewViewModel
+    @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []
     @State private var editingTransaction: Transaction?
     var pendingRoute: Binding<AppRoute?>?
     var onCategoryTapped: ((String) -> Void)?
 
-    #if DEBUG
-    init(persistence: PersistenceService = .testing, pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((String) -> Void)? = nil) {
-        self.persistence = persistence
-        _viewModel = State(wrappedValue: OverviewViewModel(persistence: persistence))
+    init(pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((String) -> Void)? = nil) {
         self.pendingRoute = pendingRoute
         self.onCategoryTapped = onCategoryTapped
     }
-    #else
-    init(persistence: PersistenceService, pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((String) -> Void)? = nil) {
-        self.persistence = persistence
-        _viewModel = State(wrappedValue: OverviewViewModel(persistence: persistence))
-        self.pendingRoute = pendingRoute
-        self.onCategoryTapped = onCategoryTapped
-    }
-    #endif
 
     private var queryData: QuerySnapshot {
         QuerySnapshot(transactions: allTransactions, userBudget: userBudgets.first, categories: customCategories)
@@ -42,15 +31,16 @@ struct Overview: View {
                 .navigationDestination(for: AppRoute.self) { route in
                     if case .transaction(let id) = route,
                        let transaction = allTransactions.first(where: { $0.id == id }) {
-                        TransactionDetailView(persistence: persistence, transaction: transaction, onEdit: { txn in
+                        TransactionDetailView(transaction: transaction, onEdit: { txn in
                             editingTransaction = txn
                         })
                     }
                 }
                 .sheet(item: $editingTransaction) { txn in
-                    AddTransactionView(persistence: persistence, transactionToEdit: txn)
+                    AddTransactionView(transactionToEdit: txn)
                 }
         }
+        .task { viewModel.persistence = persistence }
         .onChange(of: pendingRoute?.wrappedValue) { _, route in
             guard let route, case .transaction = route else { return }
             navigationPath = [route]
@@ -519,3 +509,4 @@ private func previewContainer(
     Overview()
         .modelContainer(previewContainer(transactions: transactions))
 }
+

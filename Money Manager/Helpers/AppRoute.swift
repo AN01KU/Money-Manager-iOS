@@ -6,6 +6,7 @@ extension Notification.Name {
     static let authStateDidChange = Notification.Name("authStateDidChange")
     static let syncSessionOrphaned = Notification.Name("syncSessionOrphaned")
     static let userDidLogout = Notification.Name("userDidLogout")
+    static let userDidSwitchAccount = Notification.Name("userDidSwitchAccount")
 }
 
 /// Supported deep link routes.

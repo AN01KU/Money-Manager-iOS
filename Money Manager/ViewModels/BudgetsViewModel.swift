@@ -9,7 +9,8 @@ import SwiftData
     var allTransactions: [Transaction] = []
     /// The single per-user budget row fetched from SwiftData.
     var userBudget: UserBudget?
-    var modelContext: ModelContext?
+
+    @ObservationIgnored var persistence: PersistenceService = .testing
 
     var currentMonthTransactions: [Transaction] {
         let calendar = Calendar.current
@@ -104,10 +105,9 @@ import SwiftData
         }
     }
 
-    func configure(allTransactions: [Transaction], userBudget: UserBudget?, modelContext: ModelContext?) {
+    func configure(allTransactions: [Transaction], userBudget: UserBudget?) {
         self.allTransactions = allTransactions
         self.userBudget = userBudget
-        self.modelContext = modelContext
     }
 
     // MARK: - Mutations
@@ -123,13 +123,10 @@ import SwiftData
     }
 
     /// Sets the per-user budget to `limit`. Enqueues a PUT /me/budget sync change.
-    func saveBudget(
-        limit: Double,
-        context: ModelContext,
-        changeQueue: ChangeQueueManagerProtocol = changeQueueManager
-    ) throws {
+    func saveBudget(limit: Double) throws {
         guard limit > 0 else { throw BudgetValidationError.zeroLimit }
 
+        let context = persistence.modelContext
         let budget: UserBudget
         let existing = try context.fetch(FetchDescriptor<UserBudget>()).first
         if let existing {
@@ -141,25 +138,21 @@ import SwiftData
             context.insert(newBudget)
             budget = newBudget
         }
-        try context.save()
 
         let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: limit))
-        changeQueue.enqueue(
+        try persistence.saveAndSync(
             entityType: .budget,
             entityID: budget.id,
             action: .create,
             endpoint: "/me/budget",
             httpMethod: .put,
-            payload: payload,
-            context: context
+            payload: payload
         )
     }
 
     /// Clears the per-user budget by sending {"limit": null} to PUT /me/budget.
-    func clearBudget(
-        context: ModelContext,
-        changeQueue: ChangeQueueManagerProtocol = changeQueueManager
-    ) throws {
+    func clearBudget() throws {
+        let context = persistence.modelContext
         let existing = try context.fetch(FetchDescriptor<UserBudget>()).first
         if let existing {
             existing.limit = nil
@@ -167,17 +160,15 @@ import SwiftData
         } else {
             context.insert(UserBudget(limit: nil))
         }
-        try context.save()
 
         let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: nil))
-        changeQueue.enqueue(
+        try persistence.saveAndSync(
             entityType: .budget,
             entityID: UserBudget.sentinelID,
             action: .create,
             endpoint: "/me/budget",
             httpMethod: .put,
-            payload: payload,
-            context: context
+            payload: payload
         )
     }
 }
