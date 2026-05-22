@@ -142,12 +142,15 @@ final class AddTransactionTests: XCTestCase {
         openAddTransactionScreen()
 
         let descriptionField = app.textFields.matching(identifier: "description-field").firstMatch
-        if descriptionField.waitForExistence(timeout: 2) {
-            descriptionField.tap()
-            descriptionField.typeText("Test expense description")
-            let value = descriptionField.value as? String ?? ""
-            XCTAssertEqual(value, "Test expense description", "Description should be entered")
+        XCTAssertTrue(descriptionField.waitForExistence(timeout: 3), "Description field should exist")
+        descriptionField.tap()
+        descriptionField.press(forDuration: 1.0)
+        if app.menuItems["Select All"].waitForExistence(timeout: 1) {
+            app.menuItems["Select All"].tap()
         }
+        descriptionField.typeText("Test expense description")
+        let value = descriptionField.value as? String ?? ""
+        XCTAssertEqual(value, "Test expense description", "Description should be entered")
     }
 
     // MARK: - Save and Cancel Flow
