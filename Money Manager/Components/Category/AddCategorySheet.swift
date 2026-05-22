@@ -3,14 +3,18 @@ import SwiftData
 
 struct AddCategorySheet: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
-    
+    @Environment(\.persistence) private var persistence
+
     let allCategories: [Category]
     @State private var viewModel = AddCategoryViewModel()
     @State private var iconTapped = 0
     @State private var colorTapped = 0
     @State private var saveSuccess = 0
-    
+
+    init(allCategories: [Category]) {
+        self.allCategories = allCategories
+    }
+
     var body: some View {
         NavigationStack {
             CategoryEditorView(
@@ -59,8 +63,8 @@ struct AddCategorySheet: View {
                 Text(viewModel.colorWarningMessage)
             }
             .sensoryFeedback(.success, trigger: saveSuccess)
-            .task {
-                viewModel.modelContext = modelContext
+            .task { viewModel.persistence = persistence }
+            .onAppear {
                 viewModel.allCategories = allCategories
             }
         }

@@ -22,6 +22,7 @@ let changeQueueManager = serviceFactory.changeQueueManager
 struct Money_ManagerApp: App {
     let container: ModelContainer
     let storeRecoveryFailed: Bool
+    let persistence: PersistenceService
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -62,6 +63,12 @@ struct Money_ManagerApp: App {
             storeRecoveryFailed = true
         }
         container = resolvedContainer
+        persistence = PersistenceService(
+            modelContext: resolvedContainer.mainContext,
+            authService: authService,
+            networkMonitor: NetworkMonitor.shared,
+            changeQueue: changeQueueManager
+        )
 
         Self.migrateMonthlyBudgetToScalar(context: resolvedContainer.mainContext)
 
@@ -156,6 +163,7 @@ struct Money_ManagerApp: App {
                 .environment(\.authService, authService)
                 .environment(\.syncService, syncService)
                 .environment(\.changeQueueManager, changeQueueManager)
+                .environment(\.persistence, persistence)
                 .alert("Storage Error", isPresented: .constant(storeRecoveryFailed)) {
                     Button("OK", role: .cancel) {}
                 } message: {

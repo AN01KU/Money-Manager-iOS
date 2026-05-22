@@ -3,6 +3,7 @@ import SwiftData
 
 struct ManageCategoriesView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query private var overrides: [Category]
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }) private var allTransactions: [Transaction]
 
@@ -125,13 +126,13 @@ struct ManageCategoriesView: View {
                 Menu {
                     Button {
                         showResetMenu += 1
-                        viewModel.restoreDefaults(modelContext: modelContext)
+                        viewModel.restoreDefaults()
                     } label: {
                         Label("Restore Defaults", systemImage: "arrow.counterclockwise")
                     }
                     Button(role: .destructive) {
                         showResetMenu += 1
-                        viewModel.resetAll(modelContext: modelContext)
+                        viewModel.resetAll()
                     } label: {
                         Label("Reset All Categories", systemImage: "trash")
                     }
@@ -151,6 +152,7 @@ struct ManageCategoriesView: View {
                 .accessibilityIdentifier("categories.add-button")
             }
         }
+        .task { viewModel.persistence = persistence }
         .sheet(isPresented: $viewModel.showAddCategory) {
             AddCategorySheet(allCategories: overrides)
         }
@@ -165,7 +167,6 @@ struct ManageCategoriesView: View {
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.deleteConfirmedTrigger)
         .sensoryFeedback(.success, trigger: viewModel.resetTrigger)
-        .task { viewModel.modelContext = modelContext }
     }
 }
 

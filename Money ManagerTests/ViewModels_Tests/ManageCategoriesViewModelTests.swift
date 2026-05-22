@@ -33,6 +33,16 @@ struct ManageCategoriesViewModelTests {
         )
     }
 
+    private func makeService(context: ModelContext) -> PersistenceService {
+        MockChangeQueueManager.shared.reset()
+        return PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+    }
+
     @Test
     func testHideCategoryUpdatesOverrideRow() throws {
         let context = try makeContext()
@@ -47,8 +57,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: row
         )
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.hideCategory(category)
 
         #expect(row.isHidden == true)
@@ -72,8 +81,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: nil
         )
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.hideCategory(category)
 
         let rows = try context.fetch(FetchDescriptor<Money_Manager.Category>())
@@ -98,8 +106,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: row
         )
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.restoreCategory(category)
 
         #expect(row.isHidden == false)
@@ -161,8 +168,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: row
         )
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.deleteCategory(category)
         viewModel.confirmDelete()
 
@@ -196,8 +202,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: row
         )
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.deleteCategory(category)
         viewModel.confirmDelete()
 
@@ -228,8 +233,8 @@ struct ManageCategoriesViewModelTests {
         context.insert(override)
         try context.save()
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.restoreDefaults(modelContext: context)
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
+        viewModel.restoreDefaults()
 
         // Override row should be deleted — enum is now the source of truth
         let remaining = try context.fetch(FetchDescriptor<Money_Manager.Category>(
@@ -237,13 +242,6 @@ struct ManageCategoriesViewModelTests {
         ))
         #expect(remaining.isEmpty)
         #expect(viewModel.resetTrigger == 1)
-    }
-
-    @Test
-    func testRestoreDefaultsWithNilContextDoesNothing() {
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.restoreDefaults(modelContext: nil)
-        #expect(viewModel.resetTrigger == 0)
     }
 
     @Test
@@ -256,29 +254,15 @@ struct ManageCategoriesViewModelTests {
         context.insert(override)
         try context.save()
 
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.resetAll(modelContext: context)
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
+        viewModel.resetAll()
 
         let remaining = try context.fetch(FetchDescriptor<Money_Manager.Category>())
         #expect(remaining.isEmpty)
         #expect(viewModel.resetTrigger == 1)
     }
 
-    @Test
-    func testResetAllWithNilContextDoesNothing() {
-        let viewModel = ManageCategoriesViewModel()
-        viewModel.resetAll(modelContext: nil)
-        #expect(viewModel.resetTrigger == 0)
-    }
-
     // MARK: - First-time hide: single POST with predefined_key + is_hidden
-
-    private func makeServiceWithSpy(context: ModelContext) -> PersistenceService {
-        MockChangeQueueManager.shared.reset()
-        let svc = PersistenceService(changeQueue: MockChangeQueueManager.shared)
-        svc.modelContext = context
-        return svc
-    }
 
     @Test
     func testHidePredefinedFirstTime_enqueueSinglePostWithBothFields() throws {
@@ -296,9 +280,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: nil
         )
 
-        let svc = makeServiceWithSpy(context: context)
-        let viewModel = ManageCategoriesViewModel(persistence: svc)
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.hideCategory(category)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -328,9 +310,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: nil
         )
 
-        let svc = makeServiceWithSpy(context: context)
-        let viewModel = ManageCategoriesViewModel(persistence: svc)
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.hideCategory(category)
 
         let decoder = JSONDecoder()
@@ -359,9 +339,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: row
         )
 
-        let svc = makeServiceWithSpy(context: context)
-        let viewModel = ManageCategoriesViewModel(persistence: svc)
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.hideCategory(category)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -389,9 +367,7 @@ struct ManageCategoriesViewModelTests {
             overrideRow: row
         )
 
-        let svc = makeServiceWithSpy(context: context)
-        let viewModel = ManageCategoriesViewModel(persistence: svc)
-        viewModel.modelContext = context
+        let viewModel = ManageCategoriesViewModel(persistence: makeService(context: context))
         viewModel.restoreCategory(category)
 
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -414,6 +390,15 @@ struct AddCategoryViewModelTests {
         ModelContext(try makeTestContainer())
     }
 
+    private func makeService(context: ModelContext) -> PersistenceService {
+        PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+    }
+
     @Test
     func testDefaultValues() {
         let viewModel = AddCategoryViewModel()
@@ -427,8 +412,7 @@ struct AddCategoryViewModelTests {
     @Test
     func testSaveCreatesCategory() async throws {
         let context = try makeContext()
-        let viewModel = AddCategoryViewModel()
-        viewModel.modelContext = context
+        let viewModel = AddCategoryViewModel(persistence: makeService(context: context))
         viewModel.name = "  Groceries  "
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#FF6B6B"
@@ -471,8 +455,7 @@ struct AddCategoryViewModelTests {
         let context = try makeContext()
         let existing = Category(name: "Food", icon: "fork.knife", color: "#FF6B6B")
 
-        let viewModel = AddCategoryViewModel()
-        viewModel.modelContext = context
+        let viewModel = AddCategoryViewModel(persistence: makeService(context: context))
         viewModel.allCategories = [existing]
         viewModel.name = "New Category"
         viewModel.selectedColor = "#FF6B6B"
@@ -488,8 +471,7 @@ struct AddCategoryViewModelTests {
         let context = try makeContext()
         let existing = Category(name: "Food", icon: "fork.knife", color: "#FF6B6B")
 
-        let viewModel = AddCategoryViewModel()
-        viewModel.modelContext = context
+        let viewModel = AddCategoryViewModel(persistence: makeService(context: context))
         viewModel.allCategories = [existing]
         viewModel.name = "New Category"
         viewModel.selectedColor = "#FF6B6B"
@@ -512,8 +494,7 @@ struct AddCategoryViewModelTests {
         context.insert(existing)
         try context.save()
 
-        let viewModel = AddCategoryViewModel()
-        viewModel.modelContext = context
+        let viewModel = AddCategoryViewModel(persistence: makeService(context: context))
         viewModel.allCategories = [existing]
         viewModel.name = "Coffee"
 
@@ -531,6 +512,15 @@ struct EditCategoryViewModelTests {
 
     private func makeContext() throws -> ModelContext {
         ModelContext(try makeTestContainer())
+    }
+
+    private func makeService(context: ModelContext) -> PersistenceService {
+        PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
     }
 
     private func makeTransactionCategory(from row: Money_Manager.Category) -> TransactionCategory {
@@ -577,8 +567,7 @@ struct EditCategoryViewModelTests {
         context.insert(row)
 
         let category = makeTransactionCategory(from: row)
-        let viewModel = EditCategoryViewModel(category: category)
-        viewModel.modelContext = context
+        let viewModel = EditCategoryViewModel(category: category, persistence: makeService(context: context))
         viewModel.name = "  Updated Food  "
         viewModel.selectedIcon = "cart.circle.fill"
         viewModel.selectedColor = "#00FF00"
@@ -644,8 +633,7 @@ struct EditCategoryViewModelTests {
         context.insert(row1)
 
         let category = makeTransactionCategory(from: row1)
-        let viewModel = EditCategoryViewModel(category: category, allCategories: [row1, row2])
-        viewModel.modelContext = context
+        let viewModel = EditCategoryViewModel(category: category, allCategories: [row1, row2], persistence: makeService(context: context))
         viewModel.selectedColor = "#00FF00"
 
         let blocked = viewModel.save()
@@ -675,8 +663,7 @@ struct EditCategoryViewModelTests {
             overrideRow: nil
         )
 
-        let viewModel = EditCategoryViewModel(category: category)
-        viewModel.modelContext = context
+        let viewModel = EditCategoryViewModel(category: category, persistence: makeService(context: context))
         viewModel.name = "Eating Out"
 
         let result = viewModel.save()
