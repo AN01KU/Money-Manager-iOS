@@ -204,6 +204,39 @@ struct PersistenceServiceTests {
         #expect(log[0].payload == nil)
     }
 
+    // MARK: - Soft-delete semantics (centralized in PersistenceService)
+
+    @Test func testSaveTransaction_delete_marksSoftDeletedAndBumpsUpdatedAt() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let tx = Transaction(amount: 100, category: "Food", date: Date())
+        context.insert(tx)
+        // Backdate updatedAt so we can assert it advances.
+        let oldUpdatedAt = Date(timeIntervalSinceNow: -3600)
+        tx.updatedAt = oldUpdatedAt
+        #expect(tx.isSoftDeleted == false)
+
+        try svc.save(tx, action: .delete)
+
+        #expect(tx.isSoftDeleted == true)
+        #expect(tx.updatedAt > oldUpdatedAt)
+    }
+
+    @Test func testSaveRecurring_delete_marksSoftDeletedAndBumpsUpdatedAt() throws {
+        let context = try makeContext()
+        let svc = makeService(context: context)
+        let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        context.insert(r)
+        let oldUpdatedAt = Date(timeIntervalSinceNow: -3600)
+        r.updatedAt = oldUpdatedAt
+        #expect(r.isSoftDeleted == false)
+
+        try svc.save(r, action: .delete)
+
+        #expect(r.isSoftDeleted == true)
+        #expect(r.updatedAt > oldUpdatedAt)
+    }
+
     @Test func testSaveGeneric_recurringTransaction_create_enqueuesCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
