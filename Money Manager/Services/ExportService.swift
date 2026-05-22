@@ -2,7 +2,6 @@ import Foundation
 import SwiftData
 
 protocol ExportServiceProtocol {
-    func exportRecurringTransactions(format: ExportFormat, recurringTransactions: [RecurringTransaction]) throws -> URL
     func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL
     func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL
     func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL
@@ -17,13 +16,6 @@ struct ExportService: ExportServiceProtocol {
     }()
 
     // MARK: - Public API
-
-    func exportRecurringTransactions(format: ExportFormat, recurringTransactions: [RecurringTransaction]) throws -> URL {
-        switch format {
-        case .csv: return try exportRecurringTransactionsToCSV(recurringTransactions: recurringTransactions)
-        case .json: return try exportRecurringTransactionsToJSON(recurringTransactions: recurringTransactions)
-        }
-    }
 
     func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL {
         switch format {
@@ -45,65 +37,6 @@ struct ExportService: ExportServiceProtocol {
         case .csv: return try exportAllToCSV(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         case .json: return try exportAllToJSON(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         }
-    }
-
-    // MARK: - Recurring Transactions
-
-    private func exportRecurringTransactionsToCSV(recurringTransactions: [RecurringTransaction]) throws -> URL {
-        var csv = "ID,Name,Amount,Category,Frequency,Day of Month,Days of Week,Start Date,End Date,Is Active,Notes\n"
-
-        for recurring in recurringTransactions {
-            let id = recurring.id.uuidString
-            let name = escapeCSV(recurring.name)
-            let amount = String(recurring.amount)
-            let category = escapeCSV(recurring.category)
-            let frequency = recurring.frequency.rawValue
-            let dayOfMonth = recurring.dayOfMonth.map { String($0) } ?? ""
-            let daysOfWeek = recurring.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? ""
-            let startDate = iso8601Formatter.string(from: recurring.startDate)
-            let endDate = recurring.endDate.map { iso8601Formatter.string(from: $0) } ?? ""
-            let isActive = String(recurring.isActive)
-            let notes = escapeCSV(recurring.notes ?? "")
-
-            let row = [id, name, amount, category, frequency, dayOfMonth, daysOfWeek, startDate, endDate, isActive, notes].joined(separator: ",")
-            csv += row + "\n"
-        }
-
-        let fileName = "recurring_transactions_\(dateString()).csv"
-        return try saveToTempFile(csv, fileName: fileName)
-    }
-
-    private func exportRecurringTransactionsToJSON(recurringTransactions: [RecurringTransaction]) throws -> URL {
-        let recurringData = recurringTransactions.map { recurring in
-            ExportData.RecurringTransactionData(
-                id: recurring.id.uuidString,
-                name: recurring.name,
-                amount: recurring.amount,
-                category: recurring.category,
-                frequency: recurring.frequency.rawValue,
-                dayOfMonth: recurring.dayOfMonth,
-                daysOfWeek: recurring.daysOfWeek,
-                startDate: recurring.startDate,
-                endDate: recurring.endDate,
-                isActive: recurring.isActive,
-                lastAddedDate: recurring.lastAddedDate,
-                notes: recurring.notes,
-                createdAt: recurring.createdAt,
-                updatedAt: recurring.updatedAt,
-                type: recurring.type.rawValue
-            )
-        }
-
-        let exportData = ExportData(
-            exportDate: Date(),
-            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            transactions: nil,
-            recurringTransactions: recurringData,
-            budgets: nil,
-            categories: nil
-        )
-
-        return try saveToJSON(exportData, fileName: "recurring_transactions_\(dateString()).json")
     }
 
     // MARK: - Budgets

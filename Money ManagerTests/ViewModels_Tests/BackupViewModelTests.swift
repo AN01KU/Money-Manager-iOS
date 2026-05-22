@@ -17,12 +17,6 @@ final class MockExportService: ExportServiceProtocol {
     var shouldThrow = false
     private let stubbedURL = FileManager.default.temporaryDirectory.appendingPathComponent("mock_export_result")
 
-    func exportRecurringTransactions(format: ExportFormat, recurringTransactions: [RecurringTransaction]) throws -> URL {
-        if shouldThrow { throw NSError(domain: "mock", code: 1) }
-        callLog.append(CallRecord(format: format, dataType: .recurring))
-        return stubbedURL
-    }
-
     func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL {
         if shouldThrow { throw NSError(domain: "mock", code: 1) }
         callLog.append(CallRecord(format: format, dataType: .budgets))
@@ -917,18 +911,20 @@ struct BackupViewModelExportTests {
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
+            // RecurringTransactionCodec section-based format
+            #expect(content.contains("# recurring transactions"))
             #expect(content.contains("ID,Name,Amount,Category"))
             #expect(content.contains("Netflix"))
             #expect(content.contains("649"))
         }
     }
-    
+
     @Test
     func testExportRecurringTransactionsAsJSON() async {
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .recurring
-        
+
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
@@ -938,18 +934,22 @@ struct BackupViewModelExportTests {
             startDate: Date(),
             isActive: true
         )
-        
+
         await viewModel.exportData(
             transactions: [],
             recurringTransactions: [recurring],
             budgets: [],
             categories: []
         )
-        
+
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
+            // RecurringTransactionCodec encodes as plain JSON array
             let data = try! Data(contentsOf: url)
-            #expect(data.count > 0)
+            let json = try! JSONSerialization.jsonObject(with: data) as! [[String: Any]]
+            #expect(json.count == 1)
+            #expect(json[0]["name"] as? String == "Netflix")
+            #expect(json[0]["amount"] as? Double == 649)
         }
     }
     
