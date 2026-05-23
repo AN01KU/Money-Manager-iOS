@@ -128,12 +128,14 @@ struct BudgetSheet: View {
             try modelContext.save()
             let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: amount))
             changeQueueManager.enqueue(
-                entityType: .budget,
-                entityID: UserBudget.sentinelID,
-                action: .create,
-                endpoint: "/me/budget",
-                httpMethod: .put,
-                payload: payload,
+                PendingChangeDraft(
+                    entityType: .budget,
+                    entityID: UserBudget.sentinelID,
+                    action: .create,
+                    endpoint: "/me/budget",
+                    httpMethod: .put,
+                    payload: payload
+                ),
                 context: modelContext
             )
 

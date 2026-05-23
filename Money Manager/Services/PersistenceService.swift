@@ -39,12 +39,14 @@ final class PersistenceService {
         try modelContext.save()
 
         changeQueue.enqueue(
-            entityType: entityType,
-            entityID: entityID,
-            action: action,
-            endpoint: endpoint,
-            httpMethod: httpMethod,
-            payload: payload,
+            PendingChangeDraft(
+                entityType: entityType,
+                entityID: entityID,
+                action: action,
+                endpoint: endpoint,
+                httpMethod: httpMethod,
+                payload: payload
+            ),
             context: modelContext
         )
 
@@ -98,8 +100,9 @@ final class PersistenceService {
     func enqueueUserBudget(_ budget: UserBudget, context: ModelContext) {
         guard let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) else { return }
         changeQueue.enqueue(
-            entityType: .budget, entityID: budget.id, action: .create,
-            endpoint: "/me/budget", httpMethod: .put, payload: payload, context: context
+            PendingChangeDraft(entityType: .budget, entityID: budget.id, action: .create,
+                               endpoint: "/me/budget", httpMethod: .put, payload: payload),
+            context: context
         )
     }
 

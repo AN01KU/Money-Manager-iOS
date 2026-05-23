@@ -44,13 +44,14 @@ struct SyncServiceInitTests {
 
 // MARK: - Spy
 
+@MainActor
 private final class SpyChangeQueueManager: ChangeQueueManagerProtocol {
     var pendingCount: Int { 0 }
     var failedCount: Int { 0 }
     var configureCallCount = 0
 
     func configure(container: ModelContainer) { configureCallCount += 1 }
-    func enqueue(entityType: EntityType, entityID: UUID, action: ChangeAction, endpoint: String, httpMethod: HTTPMethod, payload: Data?, context: ModelContext) {}
+    func enqueue(_ draft: PendingChangeDraft, context: ModelContext) {}
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {}
     func clearAll(context: ModelContext) {}
     func orphanAll(context: ModelContext) {}

@@ -25,15 +25,15 @@ struct ChangeQueueManagerQueueTests {
         let entityID = UUID()
 
         manager.enqueue(
-            entityType: .expense, entityID: entityID,
-            action: .create, endpoint: "/expenses",
-            httpMethod: .post, payload: #"{"amount":"100"}"#.data(using: .utf8),
+            PendingChangeDraft(entityType: .expense, entityID: entityID,
+                               action: .create, endpoint: "/expenses",
+                               httpMethod: .post, payload: #"{"amount":"100"}"#.data(using: .utf8)),
             context: context
         )
         manager.enqueue(
-            entityType: .expense, entityID: entityID,
-            action: .update, endpoint: "/expenses",
-            httpMethod: .put, payload: #"{"amount":"200"}"#.data(using: .utf8),
+            PendingChangeDraft(entityType: .expense, entityID: entityID,
+                               action: .update, endpoint: "/expenses",
+                               httpMethod: .put, payload: #"{"amount":"200"}"#.data(using: .utf8)),
             context: context
         )
 
@@ -51,14 +51,16 @@ struct ChangeQueueManagerQueueTests {
         let entityID = UUID()
 
         manager.enqueue(
-            entityType: .expense, entityID: entityID,
-            action: .create, endpoint: "/expenses",
-            httpMethod: .post, payload: nil, context: context
+            PendingChangeDraft(entityType: .expense, entityID: entityID,
+                               action: .create, endpoint: "/expenses",
+                               httpMethod: .post, payload: nil),
+            context: context
         )
         manager.enqueue(
-            entityType: .expense, entityID: entityID,
-            action: .delete, endpoint: "/expenses",
-            httpMethod: .delete, payload: nil, context: context
+            PendingChangeDraft(entityType: .expense, entityID: entityID,
+                               action: .delete, endpoint: "/expenses",
+                               httpMethod: .delete, payload: nil),
+            context: context
         )
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
@@ -72,15 +74,16 @@ struct ChangeQueueManagerQueueTests {
         let entityID = UUID()
 
         manager.enqueue(
-            entityType: .budget, entityID: entityID,
-            action: .update, endpoint: "/budgets",
-            httpMethod: .put, payload: #"{"limit":"5000"}"#.data(using: .utf8),
+            PendingChangeDraft(entityType: .budget, entityID: entityID,
+                               action: .update, endpoint: "/budgets",
+                               httpMethod: .put, payload: #"{"limit":"5000"}"#.data(using: .utf8)),
             context: context
         )
         manager.enqueue(
-            entityType: .budget, entityID: entityID,
-            action: .delete, endpoint: "/budgets",
-            httpMethod: .delete, payload: nil, context: context
+            PendingChangeDraft(entityType: .budget, entityID: entityID,
+                               action: .delete, endpoint: "/budgets",
+                               httpMethod: .delete, payload: nil),
+            context: context
         )
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
@@ -96,15 +99,15 @@ struct ChangeQueueManagerQueueTests {
         let id = UUID()
 
         manager.enqueue(
-            entityType: .budget, entityID: id,
-            action: .update, endpoint: "/budgets",
-            httpMethod: .put, payload: #"{"limit":"1000"}"#.data(using: .utf8),
+            PendingChangeDraft(entityType: .budget, entityID: id,
+                               action: .update, endpoint: "/budgets",
+                               httpMethod: .put, payload: #"{"limit":"1000"}"#.data(using: .utf8)),
             context: context
         )
         manager.enqueue(
-            entityType: .budget, entityID: id,
-            action: .update, endpoint: "/budgets",
-            httpMethod: .put, payload: #"{"limit":"2000"}"#.data(using: .utf8),
+            PendingChangeDraft(entityType: .budget, entityID: id,
+                               action: .update, endpoint: "/budgets",
+                               httpMethod: .put, payload: #"{"limit":"2000"}"#.data(using: .utf8)),
             context: context
         )
 
@@ -123,14 +126,16 @@ struct ChangeQueueManagerQueueTests {
         let id = UUID()
 
         manager.enqueue(
-            entityType: .expense, entityID: id,
-            action: .delete, endpoint: "/expenses/\(id)",
-            httpMethod: .delete, payload: nil, context: context
+            PendingChangeDraft(entityType: .expense, entityID: id,
+                               action: .delete, endpoint: "/expenses/\(id)",
+                               httpMethod: .delete, payload: nil),
+            context: context
         )
         manager.enqueue(
-            entityType: .expense, entityID: id,
-            action: .update, endpoint: "/expenses/\(id)",
-            httpMethod: .put, payload: nil, context: context
+            PendingChangeDraft(entityType: .expense, entityID: id,
+                               action: .update, endpoint: "/expenses/\(id)",
+                               httpMethod: .put, payload: nil),
+            context: context
         )
 
         let changes = try context.fetch(FetchDescriptor<PendingChange>())
@@ -142,10 +147,18 @@ struct ChangeQueueManagerQueueTests {
         let context = ModelContext(container)
         let manager = makeManager(container: container)
 
-        manager.enqueue(entityType: .expense, entityID: UUID(), action: .create,
-                        endpoint: "/expenses", httpMethod: .post, payload: nil, context: context)
-        manager.enqueue(entityType: .expense, entityID: UUID(), action: .create,
-                        endpoint: "/expenses", httpMethod: .post, payload: nil, context: context)
+        manager.enqueue(
+            PendingChangeDraft(entityType: .expense, entityID: UUID(),
+                               action: .create, endpoint: "/expenses",
+                               httpMethod: .post, payload: nil),
+            context: context
+        )
+        manager.enqueue(
+            PendingChangeDraft(entityType: .expense, entityID: UUID(),
+                               action: .create, endpoint: "/expenses",
+                               httpMethod: .post, payload: nil),
+            context: context
+        )
 
         let all = try context.fetch(FetchDescriptor<PendingChange>())
         #expect(all.count == 2)
@@ -158,10 +171,18 @@ struct ChangeQueueManagerQueueTests {
         let context = ModelContext(container)
         let manager = makeManager(container: container)
 
-        manager.enqueue(entityType: .expense, entityID: UUID(), action: .create,
-                        endpoint: "/expenses", httpMethod: .post, payload: nil, context: context)
-        manager.enqueue(entityType: .budget, entityID: UUID(), action: .create,
-                        endpoint: "/budgets", httpMethod: .post, payload: nil, context: context)
+        manager.enqueue(
+            PendingChangeDraft(entityType: .expense, entityID: UUID(),
+                               action: .create, endpoint: "/expenses",
+                               httpMethod: .post, payload: nil),
+            context: context
+        )
+        manager.enqueue(
+            PendingChangeDraft(entityType: .budget, entityID: UUID(),
+                               action: .create, endpoint: "/budgets",
+                               httpMethod: .post, payload: nil),
+            context: context
+        )
 
         manager.clearAll(context: context)
 
@@ -189,12 +210,20 @@ struct ChangeQueueManagerQueueTests {
 
         #expect(manager.pendingCount == 0)
 
-        manager.enqueue(entityType: .expense, entityID: UUID(), action: .create,
-                        endpoint: "/expenses", httpMethod: .post, payload: nil, context: context)
+        manager.enqueue(
+            PendingChangeDraft(entityType: .expense, entityID: UUID(),
+                               action: .create, endpoint: "/expenses",
+                               httpMethod: .post, payload: nil),
+            context: context
+        )
         #expect(manager.pendingCount == 1)
 
-        manager.enqueue(entityType: .budget, entityID: UUID(), action: .create,
-                        endpoint: "/budgets", httpMethod: .post, payload: nil, context: context)
+        manager.enqueue(
+            PendingChangeDraft(entityType: .budget, entityID: UUID(),
+                               action: .create, endpoint: "/budgets",
+                               httpMethod: .post, payload: nil),
+            context: context
+        )
         #expect(manager.pendingCount == 2)
     }
 

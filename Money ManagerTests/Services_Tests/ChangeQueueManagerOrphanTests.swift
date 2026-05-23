@@ -80,9 +80,9 @@ struct ChangeQueueManagerOrphanTests {
 
         let id = UUID()
         manager.enqueue(
-            entityType: .budget, entityID: id,
-            action: .update, endpoint: "/budgets",
-            httpMethod: .put, payload: "{}".data(using: .utf8),
+            PendingChangeDraft(entityType: .budget, entityID: id,
+                               action: .update, endpoint: "/budgets",
+                               httpMethod: .put, payload: "{}".data(using: .utf8)),
             context: context
         )
 

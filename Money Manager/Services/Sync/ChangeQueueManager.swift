@@ -6,6 +6,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 final class ChangeQueueManager: ChangeQueueManagerProtocol {
     static let shared = ChangeQueueManager()
 
@@ -39,16 +40,9 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         return (try? context.fetchCount(descriptor)) ?? 0
     }
 
-    func enqueue(
-        entityType: EntityType,
-        entityID: UUID,
-        action: ChangeAction,
-        endpoint: String,
-        httpMethod: HTTPMethod,
-        payload: Data?,
-        context: ModelContext
-    ) {
-        let entityTypeRaw = entityType.rawValue
+    func enqueue(_ draft: PendingChangeDraft, context: ModelContext) {
+        let entityTypeRaw = draft.entityType.rawValue
+        let entityID = draft.entityID
         let existingDescriptor = FetchDescriptor<PendingChange>(
             predicate: #Predicate { change in
                 change.entityID == entityID && change.entityType == entityTypeRaw
@@ -58,42 +52,40 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
 
         if let existingChanges = try? context.fetch(existingDescriptor),
            let existing = existingChanges.first {
-            switch (existing.action, action.rawValue) {
+            switch (existing.action, draft.action.rawValue) {
             case ("create", "update"):
-                existing.payload = payload
+                existing.payload = draft.payload
                 existing.retryCount = 0
             case ("create", "delete"):
                 context.delete(existing)
             case ("update", "update"):
-                existing.payload = payload
+                existing.payload = draft.payload
                 existing.retryCount = 0
             case ("update", "delete"):
                 existing.action = "delete"
-                existing.endpoint = endpoint
-                existing.httpMethod = httpMethod.rawValue
+                existing.endpoint = draft.endpoint
+                existing.httpMethod = draft.httpMethod.rawValue
                 existing.payload = nil
                 existing.retryCount = 0
             default:
-                let change = PendingChange(
-                    entityType: entityType.rawValue,
-                    entityID: entityID,
-                    action: action.rawValue,
-                    endpoint: endpoint,
-                    httpMethod: httpMethod.rawValue,
-                    payload: payload
-                )
-                context.insert(change)
+                context.insert(PendingChange(
+                    entityType: draft.entityType.rawValue,
+                    entityID: draft.entityID,
+                    action: draft.action.rawValue,
+                    endpoint: draft.endpoint,
+                    httpMethod: draft.httpMethod.rawValue,
+                    payload: draft.payload
+                ))
             }
         } else {
-            let change = PendingChange(
-                entityType: entityType.rawValue,
-                entityID: entityID,
-                action: action.rawValue,
-                endpoint: endpoint,
-                httpMethod: httpMethod.rawValue,
-                payload: payload
-            )
-            context.insert(change)
+            context.insert(PendingChange(
+                entityType: draft.entityType.rawValue,
+                entityID: draft.entityID,
+                action: draft.action.rawValue,
+                endpoint: draft.endpoint,
+                httpMethod: draft.httpMethod.rawValue,
+                payload: draft.payload
+            ))
         }
 
         try? context.save()

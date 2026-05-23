@@ -259,8 +259,11 @@ final class SyncService: SyncServiceProtocol {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for tx in transactions where !tx.isSoftDeleted {
             guard let payload = try? AppAPIClient.apiEncoder.encode(tx.toCreateRequest()) else { continue }
-            changeQueue.enqueue(entityType: .transaction, entityID: tx.id, action: .create,
-                                endpoint: "/transactions", httpMethod: .post, payload: payload, context: context)
+            changeQueue.enqueue(
+                PendingChangeDraft(entityType: .transaction, entityID: tx.id, action: .create,
+                                   endpoint: "/transactions", httpMethod: .post, payload: payload),
+                context: context
+            )
         }
 
         let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
@@ -268,22 +271,31 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.debug("[EnqueueLocalData] total Category rows=\(categories.count) uploading custom-only=\(customOnly.count)")
         for cat in customOnly {
             guard let payload = try? AppAPIClient.apiEncoder.encode(cat.toCreateRequest()) else { continue }
-            changeQueue.enqueue(entityType: .category, entityID: cat.id, action: .create,
-                                endpoint: "/categories", httpMethod: .post, payload: payload, context: context)
+            changeQueue.enqueue(
+                PendingChangeDraft(entityType: .category, entityID: cat.id, action: .create,
+                                   endpoint: "/categories", httpMethod: .post, payload: payload),
+                context: context
+            )
         }
 
         if let budget = (try? context.fetch(FetchDescriptor<UserBudget>()))?.first, budget.limit != nil {
             if let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) {
-                changeQueue.enqueue(entityType: .budget, entityID: budget.id, action: .create,
-                                    endpoint: "/me/budget", httpMethod: .put, payload: payload, context: context)
+                changeQueue.enqueue(
+                    PendingChangeDraft(entityType: .budget, entityID: budget.id, action: .create,
+                                       endpoint: "/me/budget", httpMethod: .put, payload: payload),
+                    context: context
+                )
             }
         }
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
             guard let payload = try? AppAPIClient.apiEncoder.encode(item.toCreateRequest()) else { continue }
-            changeQueue.enqueue(entityType: .recurring, entityID: item.id, action: .create,
-                                endpoint: "/recurring-transactions", httpMethod: .post, payload: payload, context: context)
+            changeQueue.enqueue(
+                PendingChangeDraft(entityType: .recurring, entityID: item.id, action: .create,
+                                   endpoint: "/recurring-transactions", httpMethod: .post, payload: payload),
+                context: context
+            )
         }
     }
     

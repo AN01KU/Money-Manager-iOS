@@ -7,24 +7,16 @@ import Foundation
 import SwiftData
 
 #if DEBUG
+@MainActor
 final class MockChangeQueueManager: ChangeQueueManagerProtocol {
     static let shared = MockChangeQueueManager()
-
-    struct EnqueueCall {
-        let entityType: EntityType
-        let entityID: UUID
-        let action: ChangeAction
-        let endpoint: String
-        let httpMethod: HTTPMethod
-        let payload: Data?
-    }
 
     private init() {}
 
     var pendingCount: Int { 0 }
     var failedCount: Int { 0 }
 
-    private(set) var enqueueCallLog: [EnqueueCall] = []
+    private(set) var enqueueCallLog: [PendingChangeDraft] = []
     private(set) var replayAllCallCount: Int = 0
     private(set) var orphanAllCallCount: Int = 0
 
@@ -36,23 +28,8 @@ final class MockChangeQueueManager: ChangeQueueManagerProtocol {
 
     func configure(container: ModelContainer) {}
 
-    func enqueue(
-        entityType: EntityType,
-        entityID: UUID,
-        action: ChangeAction,
-        endpoint: String,
-        httpMethod: HTTPMethod,
-        payload: Data?,
-        context: ModelContext
-    ) {
-        enqueueCallLog.append(EnqueueCall(
-            entityType: entityType,
-            entityID: entityID,
-            action: action,
-            endpoint: endpoint,
-            httpMethod: httpMethod,
-            payload: payload
-        ))
+    func enqueue(_ draft: PendingChangeDraft, context: ModelContext) {
+        enqueueCallLog.append(draft)
     }
 
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {

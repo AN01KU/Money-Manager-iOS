@@ -175,12 +175,14 @@ struct SyncDebugView: View {
             let httpMethod = HTTPMethod(rawValue: failed.httpMethod)
         else { return }
         changeQueueManager.enqueue(
-            entityType: entityType,
-            entityID: failed.entityID,
-            action: action,
-            endpoint: failed.endpoint,
-            httpMethod: httpMethod,
-            payload: failed.payload,
+            PendingChangeDraft(
+                entityType: entityType,
+                entityID: failed.entityID,
+                action: action,
+                endpoint: failed.endpoint,
+                httpMethod: httpMethod,
+                payload: failed.payload
+            ),
             context: modelContext
         )
         modelContext.delete(failed)

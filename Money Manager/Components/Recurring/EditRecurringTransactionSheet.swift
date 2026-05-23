@@ -209,12 +209,14 @@ struct EditRecurringTransactionSheet: View {
 
             let payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
             changeQueueManager.enqueue(
-                entityType: .recurring,
-                entityID: recurring.id,
-                action: .update,
-                endpoint: "/recurring-transactions",
-                httpMethod: .patch,
-                payload: payload,
+                PendingChangeDraft(
+                    entityType: .recurring,
+                    entityID: recurring.id,
+                    action: .update,
+                    endpoint: "/recurring-transactions",
+                    httpMethod: .patch,
+                    payload: payload
+                ),
                 context: modelContext
             )
 

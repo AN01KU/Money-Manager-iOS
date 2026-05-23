@@ -134,15 +134,12 @@ struct SyncServicePullErrorTests {
 
 // MARK: - Stub
 
+@MainActor
 private final class NoOpChangeQueue: ChangeQueueManagerProtocol {
     var pendingCount: Int { 0 }
     var failedCount: Int { 0 }
     func configure(container: ModelContainer) {}
-    func enqueue(
-        entityType: EntityType, entityID: UUID, action: ChangeAction,
-        endpoint: String, httpMethod: HTTPMethod, payload: Data?,
-        context: ModelContext
-    ) {}
+    func enqueue(_ draft: PendingChangeDraft, context: ModelContext) {}
     func replayAll(context: ModelContext, isAuthenticated: Bool) async {}
     func clearAll(context: ModelContext) {}
     func orphanAll(context: ModelContext) {}
