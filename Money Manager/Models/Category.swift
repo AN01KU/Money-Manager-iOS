@@ -48,7 +48,7 @@ final class Category {
 
     /// "Other" category can never be deleted.
     var isDeletable: Bool {
-        key != "other"
+        key != PredefinedCategory.other.serverKey
     }
 
     /// Builds a user-override row for a predefined `TransactionCategory`.

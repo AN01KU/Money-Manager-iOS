@@ -72,7 +72,7 @@ struct TransactionCategory: Identifiable {
                     colorHex: ov?.color ?? base.color,
                     isHidden: ov?.isHidden ?? base.isHidden,
                     isPredefined: true,
-                    isDeletable: base.key != "other",
+                    isDeletable: base.key != PredefinedCategory.other.serverKey,
                     overrideRow: ov
                 )
             }
@@ -111,8 +111,8 @@ struct TransactionCategory: Identifiable {
 
         let all = predefinedSource + customSource
         return all.sorted {
-            if $0.key == "other" { return false }
-            if $1.key == "other" { return true }
+            if $0.key == PredefinedCategory.other.serverKey { return false }
+            if $1.key == PredefinedCategory.other.serverKey { return true }
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
     }
