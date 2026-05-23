@@ -16,6 +16,7 @@ struct SettingsView: View {
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
+    @Environment(\.networkMonitor) private var networkMonitor
     @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
     @State private var authVersion = 0
     @State private var lastKnownAuthState: Bool? = nil
@@ -105,7 +106,7 @@ struct SettingsView: View {
                         SettingsSection(header: "SYNC") {
                             SyncRow(
                                 isSyncing: isSyncingManually || syncService.isSyncing,
-                                isConnected: NetworkMonitor.shared.isConnected,
+                                isConnected: networkMonitor.isConnected,
                                 onSyncNow: {
                                     isSyncingManually = true
                                     Task {

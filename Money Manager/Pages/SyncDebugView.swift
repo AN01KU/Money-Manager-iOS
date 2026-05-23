@@ -7,6 +7,7 @@ struct SyncDebugView: View {
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
+    @Environment(\.networkMonitor) private var networkMonitor
     @Query(sort: \PendingChange.createdAt) private var pendingChanges: [PendingChange]
     @Query(sort: \FailedChange.failedAt, order: .reverse) private var failedChanges: [FailedChange]
 
@@ -80,7 +81,7 @@ struct SyncDebugView: View {
                         if isFullSyncing { Spacer(); ProgressView() }
                     }
                 }
-                .disabled(isFullSyncing || !NetworkMonitor.shared.isConnected)
+                .disabled(isFullSyncing || !networkMonitor.isConnected)
 
                 Button {
                     isSyncing = true
