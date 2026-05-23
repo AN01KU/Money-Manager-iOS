@@ -328,24 +328,13 @@ struct AddTransactionView: View {
 
     // MARK: - Toolbar
 
-    @ToolbarContentBuilder
     private var personalToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button("Cancel") { dismiss() }
-                .accessibilityIdentifier("cancel-button")
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if viewModel.isSaving {
-                ProgressView()
-            } else {
-                Button("Save") {
-                    viewModel.save(completion: { saveSuccess = true; dismiss() })
-                }
-                .fontWeight(.semibold)
-                .disabled(!viewModel.isValid)
-                .accessibilityIdentifier("save-button")
-            }
-        }
+        EditorToolbar(
+            isSaving: viewModel.isSaving,
+            isValid: viewModel.isValid,
+            onCancel: { dismiss() },
+            onSave: { viewModel.save(completion: { saveSuccess = true; dismiss() }) }
+        )
     }
 
     // MARK: - Helpers
@@ -387,20 +376,12 @@ struct AddTransactionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier(viewModel.navigationTitleIdentifier)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Cancel") { dismiss() }
-                    .accessibilityIdentifier("cancel-button")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                if viewModel.isSaving {
-                    ProgressView()
-                } else {
-                    Button("Save") { viewModel.save(completion: { saveSuccess = true; dismiss() }) }
-                        .fontWeight(.semibold)
-                        .disabled(!viewModel.isValid)
-                        .accessibilityIdentifier("save-button")
-                }
-            }
+            EditorToolbar(
+                isSaving: viewModel.isSaving,
+                isValid: viewModel.isValid,
+                onCancel: { dismiss() },
+                onSave: { viewModel.save(completion: { saveSuccess = true; dismiss() }) }
+            )
         }
         .task { viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
