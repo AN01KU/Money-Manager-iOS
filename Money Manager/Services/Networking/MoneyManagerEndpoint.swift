@@ -1,6 +1,12 @@
 import APIClient
 import Foundation
 
+enum HTTPHeaderName: String {
+    case authorization    = "Authorization"
+    case syncSessionID    = "X-Sync-Session-ID"
+    case syncVersion      = "X-Sync-Version"
+}
+
 enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
 
     // MARK: - Auth
@@ -90,6 +96,28 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
             ]
         default:
             return nil
+        }
+    }
+
+    /// Whether this endpoint requires a Bearer token.
+    /// Only the public auth endpoints (login, signup) and health probe are exempt.
+    var requiresAuth: Bool {
+        switch self {
+        case .login, .signup, .health:
+            return false
+        default:
+            return true
+        }
+    }
+
+    /// Whether this endpoint should carry sync-session headers on write requests.
+    /// Auth-management and health endpoints are exempt — they don't mutate sync-tracked entities.
+    var requiresSyncSession: Bool {
+        switch self {
+        case .login, .signup, .logout, .verifyEmail, .resendVerification, .health:
+            return false
+        default:
+            return true
         }
     }
 }

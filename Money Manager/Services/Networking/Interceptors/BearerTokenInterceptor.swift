@@ -7,7 +7,9 @@ import Foundation
 /// `/auth/verify-email`, `/auth/logout`, and `/auth/resend-verification` are protected
 /// routes that require a valid token.
 struct BearerTokenInterceptor: BaseAPI.RequestInterceptor {
-    private static let publicPaths: Set<String> = ["/auth/login", "/auth/signup"]
+    private static let publicPaths: Set<String> = Set(
+        [MoneyManagerEndpoint.login, .signup, .health].map(\.path)
+    )
 
     func adapt(_ request: URLRequest) async throws -> URLRequest {
         guard let path = request.url?.path, !Self.publicPaths.contains(path) else {
@@ -25,7 +27,7 @@ struct BearerTokenInterceptor: BaseAPI.RequestInterceptor {
         #endif
         guard let token else { return request }
         var modified = request
-        modified.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        modified.setValue("Bearer \(token)", forHTTPHeaderField: HTTPHeaderName.authorization.rawValue)
         return modified
     }
 }

@@ -119,4 +119,160 @@ struct MoneyManagerEndpointTests {
         #expect(url.scheme == "https" || url.scheme == "http")
         #expect(!(url.host ?? "").isEmpty)
     }
+
+    // MARK: - requiresAuth
+
+    @Test func testLoginDoesNotRequireAuth() {
+        #expect(MoneyManagerEndpoint.login.requiresAuth == false)
+    }
+
+    @Test func testSignupDoesNotRequireAuth() {
+        #expect(MoneyManagerEndpoint.signup.requiresAuth == false)
+    }
+
+    @Test func testHealthDoesNotRequireAuth() {
+        #expect(MoneyManagerEndpoint.health.requiresAuth == false)
+    }
+
+    @Test func testLogoutRequiresAuth() {
+        #expect(MoneyManagerEndpoint.logout.requiresAuth == true)
+    }
+
+    @Test func testVerifyEmailRequiresAuth() {
+        #expect(MoneyManagerEndpoint.verifyEmail.requiresAuth == true)
+    }
+
+    @Test func testResendVerificationRequiresAuth() {
+        #expect(MoneyManagerEndpoint.resendVerification.requiresAuth == true)
+    }
+
+    @Test func testMeRequiresAuth() {
+        #expect(MoneyManagerEndpoint.me.requiresAuth == true)
+    }
+
+    @Test func testUpdateMeRequiresAuth() {
+        #expect(MoneyManagerEndpoint.updateMe.requiresAuth == true)
+    }
+
+    @Test func testSyncPreflightRequiresAuth() {
+        #expect(MoneyManagerEndpoint.syncPreflight.requiresAuth == true)
+    }
+
+    @Test func testPredefinedCategoriesRequiresAuth() {
+        #expect(MoneyManagerEndpoint.predefinedCategories.requiresAuth == true)
+    }
+
+    @Test func testSyncCategoriesRequiresAuth() {
+        #expect(MoneyManagerEndpoint.syncCategories.requiresAuth == true)
+    }
+
+    @Test func testSyncBudgetsRequiresAuth() {
+        #expect(MoneyManagerEndpoint.syncBudgets.requiresAuth == true)
+    }
+
+    @Test func testGetBudgetRequiresAuth() {
+        #expect(MoneyManagerEndpoint.getBudget.requiresAuth == true)
+    }
+
+    @Test func testSetBudgetRequiresAuth() {
+        #expect(MoneyManagerEndpoint.setBudget.requiresAuth == true)
+    }
+
+    @Test func testSyncRecurringRequiresAuth() {
+        #expect(MoneyManagerEndpoint.syncRecurring.requiresAuth == true)
+    }
+
+    @Test func testSyncTransactionsRequiresAuth() {
+        #expect(MoneyManagerEndpoint.syncTransactions(limit: 10, offset: 0).requiresAuth == true)
+    }
+
+    @Test func testGroupsRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groups.requiresAuth == true)
+    }
+
+    @Test func testGroupRequiresAuth() {
+        #expect(MoneyManagerEndpoint.group(UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupMembersRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupMembers(UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupMemberRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupMember(groupId: UUID(), userId: UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupAddMemberRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupAddMember(UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupLeaveRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupLeave(UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupBalancesRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupBalances(UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupTransactionsRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupTransactions(UUID()).requiresAuth == true)
+    }
+
+    @Test func testGroupTransactionRequiresAuth() {
+        #expect(MoneyManagerEndpoint.groupTransaction(groupId: UUID(), transactionId: UUID()).requiresAuth == true)
+    }
+
+    @Test func testSettlementsRequiresAuth() {
+        #expect(MoneyManagerEndpoint.settlements.requiresAuth == true)
+    }
+
+    @Test func testSettlementRequiresAuth() {
+        #expect(MoneyManagerEndpoint.settlement(UUID()).requiresAuth == true)
+    }
+
+    @Test func testRawRequiresAuth() {
+        #expect(MoneyManagerEndpoint.raw("/transactions/abc").requiresAuth == true)
+    }
+
+    // MARK: - requiresSyncSession
+
+    @Test func testLoginDoesNotRequireSyncSession() {
+        #expect(MoneyManagerEndpoint.login.requiresSyncSession == false)
+    }
+
+    @Test func testSignupDoesNotRequireSyncSession() {
+        #expect(MoneyManagerEndpoint.signup.requiresSyncSession == false)
+    }
+
+    @Test func testLogoutDoesNotRequireSyncSession() {
+        #expect(MoneyManagerEndpoint.logout.requiresSyncSession == false)
+    }
+
+    @Test func testVerifyEmailDoesNotRequireSyncSession() {
+        #expect(MoneyManagerEndpoint.verifyEmail.requiresSyncSession == false)
+    }
+
+    @Test func testResendVerificationDoesNotRequireSyncSession() {
+        #expect(MoneyManagerEndpoint.resendVerification.requiresSyncSession == false)
+    }
+
+    @Test func testHealthDoesNotRequireSyncSession() {
+        #expect(MoneyManagerEndpoint.health.requiresSyncSession == false)
+    }
+
+    @Test func testSyncCategoriesRequiresSyncSession() {
+        #expect(MoneyManagerEndpoint.syncCategories.requiresSyncSession == true)
+    }
+
+    @Test func testSyncTransactionsRequiresSyncSession() {
+        #expect(MoneyManagerEndpoint.syncTransactions(limit: 10, offset: 0).requiresSyncSession == true)
+    }
+
+    @Test func testGroupsRequiresSyncSession() {
+        #expect(MoneyManagerEndpoint.groups.requiresSyncSession == true)
+    }
+
+    @Test func testRawRequiresSyncSession() {
+        #expect(MoneyManagerEndpoint.raw("/transactions/abc").requiresSyncSession == true)
+    }
 }
