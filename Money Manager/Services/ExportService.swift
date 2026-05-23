@@ -2,7 +2,6 @@ import Foundation
 import SwiftData
 
 protocol ExportServiceProtocol {
-    func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL
     func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL
     func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL
 }
@@ -17,13 +16,6 @@ struct ExportService: ExportServiceProtocol {
 
     // MARK: - Public API
 
-    func exportBudgets(format: ExportFormat, budgets: [MonthlyBudget]) throws -> URL {
-        switch format {
-        case .csv: return try exportBudgetsToCSV(budgets: budgets)
-        case .json: return try exportBudgetsToJSON(budgets: budgets)
-        }
-    }
-
     func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL {
         switch format {
         case .csv: return try exportCategoriesToCSV(categories: categories)
@@ -37,47 +29,6 @@ struct ExportService: ExportServiceProtocol {
         case .csv: return try exportAllToCSV(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         case .json: return try exportAllToJSON(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         }
-    }
-
-    // MARK: - Budgets
-
-    private func exportBudgetsToCSV(budgets: [MonthlyBudget]) throws -> URL {
-        var csv = "ID,Year,Month,Limit\n"
-
-        for budget in budgets {
-            let row = [
-                budget.id.uuidString,
-                String(budget.year),
-                String(budget.month),
-                String(budget.limit)
-            ].joined(separator: ",")
-            csv += row + "\n"
-        }
-
-        let fileName = "budgets_\(dateString()).csv"
-        return try saveToTempFile(csv, fileName: fileName)
-    }
-
-    private func exportBudgetsToJSON(budgets: [MonthlyBudget]) throws -> URL {
-        let budgetData = budgets.map { budget in
-            ExportData.MonthlyBudgetData(
-                id: budget.id.uuidString,
-                year: budget.year,
-                month: budget.month,
-                limit: budget.limit
-            )
-        }
-
-        let exportData = ExportData(
-            exportDate: Date(),
-            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            transactions: nil,
-            recurringTransactions: nil,
-            budgets: budgetData,
-            categories: nil
-        )
-
-        return try saveToJSON(exportData, fileName: "budgets_\(dateString()).json")
     }
 
     // MARK: - Categories

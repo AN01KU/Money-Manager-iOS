@@ -27,24 +27,6 @@ struct ExportServiceTests {
         #expect(service.escapeCSV("line1\nline2") == "\"line1\nline2\"")
     }
 
-    // MARK: CSV export — budgets
-
-    @Test func exportBudgetsCSV_producesCorrectHeaders() throws {
-        let budget = MonthlyBudget(year: 2026, month: 3, limit: 5000)
-        let url = try service.exportBudgets(format: .csv, budgets: [budget])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        #expect(content.hasPrefix("ID,Year,Month,Limit"))
-    }
-
-    @Test func exportBudgetsCSV_oneRow_correctValues() throws {
-        let budget = MonthlyBudget(year: 2026, month: 4, limit: 8000)
-        let url = try service.exportBudgets(format: .csv, budgets: [budget])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        #expect(content.contains("2026"))
-        #expect(content.contains("4"))
-        #expect(content.contains("8000.0"))
-    }
-
     // MARK: CSV export — categories
 
     @Test func exportCategoriesCSV_producesCorrectHeaders() throws {
@@ -176,25 +158,6 @@ struct ImportServiceTests {
         #expect(decoded[0].transactionDescription == "Cab")
     }
 
-    @Test func importJSON_roundTrip_budgets() throws {
-        let container = try makeTestContainer()
-        let context = ModelContext(container)
-
-        let budget = MonthlyBudget(year: 2026, month: 4, limit: 7000)
-        let exportService = ExportService()
-        let url = try exportService.exportBudgets(format: .json, budgets: [budget])
-
-        let result = try service.importJSON(from: url, context: context)
-        #expect(result.message.contains("1 budgets"))
-
-        let descriptor = FetchDescriptor<MonthlyBudget>()
-        let imported = try context.fetch(descriptor)
-        #expect(imported.count == 1)
-        #expect(imported[0].year == 2026)
-        #expect(imported[0].month == 4)
-        #expect(imported[0].limit == 7000)
-    }
-
     @Test func importJSON_roundTrip_categories() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
@@ -242,18 +205,6 @@ struct ImportServiceTests {
         #expect(parsed.amount == 150)
         #expect(parsed.category == "Food")
         #expect(parsed.transactionDescription == "Breakfast")
-    }
-
-    @Test func importCSV_roundTrip_budgets() throws {
-        let container = try makeTestContainer()
-        let context = ModelContext(container)
-
-        let budget = MonthlyBudget(year: 2026, month: 6, limit: 4000)
-        let exportService = ExportService()
-        let url = try exportService.exportBudgets(format: .csv, budgets: [budget])
-
-        let result = try service.importCSV(from: url, context: context)
-        #expect(result.message.contains("1 budgets"))
     }
 
     @Test func importCSV_roundTrip_allSections() throws {
