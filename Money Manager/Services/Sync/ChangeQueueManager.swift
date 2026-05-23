@@ -10,16 +10,16 @@ import SwiftData
 final class ChangeQueueManager: ChangeQueueManagerProtocol {
     static let shared = ChangeQueueManager()
 
-    static let maxRetryCount = 5
-    /// Base delay in seconds — actual delay is `baseRetryDelay * 2^retryCount + jitter`
-    private static let baseRetryDelay: TimeInterval = 2.0
-
     private var apiClient: any APIClientProtocol
     private var modelContainer: ModelContainer?
     private var isReplaying = false
+    let retryScheduler: RetryScheduler
 
-    init(apiClient: any APIClientProtocol = AppAPIClient.shared) {
+    static var maxRetryCount: Int { shared.retryScheduler.maxRetryCount }
+
+    init(apiClient: any APIClientProtocol = AppAPIClient.shared, retryScheduler: RetryScheduler = RetryScheduler()) {
         self.apiClient = apiClient
+        self.retryScheduler = retryScheduler
     }
 
     func configure(container: ModelContainer) {
@@ -116,8 +116,8 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
             }
 
             // Items that already hit the limit get moved to the dead letter queue
-            if change.retryCount >= ChangeQueueManager.maxRetryCount {
-                moveToDeadLetter(change, lastError: "Exceeded max retry count (\(ChangeQueueManager.maxRetryCount))", context: context)
+            if change.retryCount >= retryScheduler.maxRetryCount {
+                moveToDeadLetter(change, lastError: "Exceeded max retry count (\(retryScheduler.maxRetryCount))", context: context)
                 continue
             }
 
@@ -207,15 +207,6 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
         }
     }
 
-    /// Returns the next retry date using exponential backoff with random jitter.
-    /// Delays: ~2s, ~4s, ~8s, ~16s, ~32s for retries 1–5.
-    private static func backoffDate(forRetry retryCount: Int) -> Date {
-        let exponent = min(retryCount, 10)
-        let base = baseRetryDelay * pow(2.0, Double(exponent))
-        let jitter = Double.random(in: 0..<base * 0.2)
-        return Date(timeIntervalSinceNow: base + jitter)
-    }
-
     /// Removes the pending change and saves. Use when the server conflict is resolved
     /// without touching the local entity (e.g. STALE_WRITE, duplicate create).
     private func discardChange(_ change: PendingChange, context: ModelContext) {
@@ -235,13 +226,13 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
     /// Increments retry count and schedules backoff, or dead-letters if the limit is reached.
     private func retryOrDeadLetter(_ change: PendingChange, error: String, context: ModelContext) {
         change.retryCount += 1
-        AppLogger.sync.warning("replayAll: retry \(change.retryCount)/\(ChangeQueueManager.maxRetryCount) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) error=\(error)")
-        if change.retryCount >= ChangeQueueManager.maxRetryCount {
+        AppLogger.sync.warning("replayAll: retry \(change.retryCount)/\(self.retryScheduler.maxRetryCount) for entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) error=\(error)")
+        if let nextRetry = retryScheduler.nextRetryDate(after: change.retryCount) {
+            change.nextRetryAt = nextRetry
+            try? context.save()
+        } else {
             AppLogger.sync.error("replayAll: dead-lettering entityType=\(change.entityType) entityID=\(change.entityID) action=\(change.action) after \(change.retryCount) retries — final error: \(error)")
             moveToDeadLetter(change, lastError: error, context: context)
-        } else {
-            change.nextRetryAt = Self.backoffDate(forRetry: change.retryCount)
-            try? context.save()
         }
     }
 
