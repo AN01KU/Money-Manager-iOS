@@ -21,14 +21,11 @@ import SwiftData
 
     /// Active recurring transactions with a next occurrence falling within the current calendar month.
     var upcomingThisMonth: [RecurringTransaction] {
-        let calendar = Calendar.current
-        let now = Date()
-        guard let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now)),
-              let end = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: start) else { return [] }
+        let interval = Calendar.current.monthInterval(for: Date())
         return activeRecurring
             .filter { item in
                 guard let next = item.nextOccurrence else { return false }
-                return next >= start && next <= end
+                return interval.contains(next)
             }
             .sorted { ($0.nextOccurrence ?? .distantFuture) < ($1.nextOccurrence ?? .distantFuture) }
     }
