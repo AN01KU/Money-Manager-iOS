@@ -89,12 +89,6 @@ struct AddTransactionView: View {
 
     // MARK: - Amount + Category card
 
-    @State private var categoryTapped = 0
-    @State private var amount10Tapped = 0
-    @State private var amount100Tapped = 0
-    @State private var amountPlus10Tapped = 0
-    @State private var amountPlus100Tapped = 0
-
     private var amountCard: some View {
         TxnCard {
             VStack(alignment: .leading, spacing: AppConstants.UI.spacing12) {
@@ -110,14 +104,14 @@ struct AddTransactionView: View {
                     .accessibilityIdentifier("amount-field")
 
                 HStack(spacing: AppConstants.UI.spacingSM) {
-                    QuickAmountButton(amount: -10) { amount10Tapped += 1; adjustAmount(by: -10) }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amount10Tapped)
-                    QuickAmountButton(amount: -100) { amount100Tapped += 1; adjustAmount(by: -100) }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amount100Tapped)
-                    QuickAmountButton(amount: 10) { amountPlus10Tapped += 1; adjustAmount(by: 10) }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amountPlus10Tapped)
-                    QuickAmountButton(amount: 100) { amountPlus100Tapped += 1; adjustAmount(by: 100) }
-                        .sensoryFeedback(.impact(weight: .light), trigger: amountPlus100Tapped)
+                    QuickAmountButton(amount: -10) { adjustAmount(by: -10) }
+                        .tapFeedback()
+                    QuickAmountButton(amount: -100) { adjustAmount(by: -100) }
+                        .tapFeedback()
+                    QuickAmountButton(amount: 10) { adjustAmount(by: 10) }
+                        .tapFeedback()
+                    QuickAmountButton(amount: 100) { adjustAmount(by: 100) }
+                        .tapFeedback()
                 }
 
                 Divider()
@@ -128,7 +122,6 @@ struct AddTransactionView: View {
                         .foregroundStyle(AppColors.label2)
 
                     Button {
-                        categoryTapped += 1
                         viewModel.showCategoryPicker = true
                     } label: {
                         HStack(spacing: AppConstants.UI.spacingSM) {
@@ -150,7 +143,7 @@ struct AddTransactionView: View {
                         .background(AppColors.primaryBg)
                         .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.radius10))
                     }
-                    .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
+                    .tapFeedback()
                     .accessibilityIdentifier("category-picker-button")
                 }
             }
@@ -190,9 +183,6 @@ struct AddTransactionView: View {
 
     // MARK: - Date card
 
-    @State private var todayTapped = 0
-    @State private var yesterdayTapped = 0
-
     private var dateCard: some View {
         TxnCard {
             VStack(alignment: .leading, spacing: AppConstants.UI.spacing12) {
@@ -207,13 +197,12 @@ struct AddTransactionView: View {
                 }
 
                 HStack(spacing: AppConstants.UI.spacingSM) {
-                    QuickDateButton(label: "Today") { todayTapped += 1; viewModel.selectedDate = Date() }
-                        .sensoryFeedback(.impact(weight: .light), trigger: todayTapped)
+                    QuickDateButton(label: "Today") { viewModel.selectedDate = Date() }
+                        .tapFeedback()
                     QuickDateButton(label: "Yesterday") {
-                        yesterdayTapped += 1
                         viewModel.selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                     }
-                    .sensoryFeedback(.impact(weight: .light), trigger: yesterdayTapped)
+                    .tapFeedback()
                 }
 
                 if !viewModel.isRecurring {
