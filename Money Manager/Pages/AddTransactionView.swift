@@ -57,7 +57,7 @@ struct AddTransactionView: View {
     private var personalScrollView: some View {
         ScrollView {
             VStack(spacing: AppConstants.UI.spacing20) {
-                amountCard
+                AmountCard(viewModel: viewModel, customCategories: customCategories)
                 typeSegment
                 DateRow(viewModel: viewModel)
                 detailsCard
@@ -78,40 +78,6 @@ struct AddTransactionView: View {
         }
         .task { viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
-    }
-
-    // MARK: - Amount + Category card
-
-    private var amountCard: some View {
-        TxnCard {
-            VStack(alignment: .leading, spacing: AppConstants.UI.spacing12) {
-                Text("Amount *")
-                    .font(AppTypography.subhead)
-                    .foregroundStyle(AppColors.label2)
-
-                TextField("0.00", text: $viewModel.amount)
-                    .keyboardType(.decimalPad)
-                    .font(.system(size: 40, weight: .light))
-                    .foregroundStyle(viewModel.amount.isEmpty ? AppColors.label3 : AppColors.label)
-                    .disabled(viewModel.isEditingShared)
-                    .accessibilityIdentifier("amount-field")
-
-                HStack(spacing: AppConstants.UI.spacingSM) {
-                    QuickAmountButton(amount: -10) { adjustAmount(by: -10) }
-                        .tapFeedback()
-                    QuickAmountButton(amount: -100) { adjustAmount(by: -100) }
-                        .tapFeedback()
-                    QuickAmountButton(amount: 10) { adjustAmount(by: 10) }
-                        .tapFeedback()
-                    QuickAmountButton(amount: 100) { adjustAmount(by: 100) }
-                        .tapFeedback()
-                }
-
-                Divider()
-
-                EditorCategoryRow(viewModel: viewModel, customCategories: customCategories)
-            }
-        }
     }
 
     // MARK: - Type segment
@@ -186,16 +152,6 @@ struct AddTransactionView: View {
             onCancel: { dismiss() },
             onSave: { viewModel.save(completion: { saveSuccess = true; dismiss() }) }
         )
-    }
-
-    // MARK: - Helpers
-
-    private func adjustAmount(by delta: Int) {
-        let current = Double(viewModel.amount) ?? 0
-        let result = max(0, current + Double(delta))
-        viewModel.amount = result.truncatingRemainder(dividingBy: 1) == 0
-            ? String(Int(result))
-            : String(result)
     }
 
     // MARK: - Shared form (BAU — unchanged layout)
