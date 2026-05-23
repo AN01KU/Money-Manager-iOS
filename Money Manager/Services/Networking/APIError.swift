@@ -130,6 +130,19 @@ enum APIError: Error, LocalizedError, Equatable {
     }
 }
 
+enum ServerErrorCode: String {
+    case staleWrite = "STALE_WRITE"
+    case overrideAlreadyExists = "OVERRIDE_ALREADY_EXISTS"
+    case predefinedNotFound = "PREDEFINED_NOT_FOUND"
+    case invalidIcon = "INVALID_ICON"
+    case invalidColor = "INVALID_COLOR"
+    case idOwnedByAnotherUser = "ID_OWNED_BY_ANOTHER_USER"
+    case idOwnedByAnotherGroup = "ID_OWNED_BY_ANOTHER_GROUP"
+    case mixedCurrencySettlement = "MIXED_CURRENCY_SETTLEMENT"
+    case mixedCurrencyGroupTx = "MIXED_CURRENCY_GROUP_TX"
+    case addMemberFailed = "add_member_failed"
+}
+
 extension APIError {
     init(from httpResponse: HTTPURLResponse, data: Data?) {
         let message = Self.parseErrorMessage(from: data)
@@ -142,39 +155,30 @@ extension APIError {
                 self = .unauthorized
             }
         case 400:
-            let code = Self.parseErrorCode(from: data)
-            if code == "INVALID_ICON" {
-                self = .invalidField("icon")
-            } else if code == "INVALID_COLOR" {
-                self = .invalidField("color")
-            } else if code == "MIXED_CURRENCY_SETTLEMENT" {
-                self = .mixedCurrencySettlement
-            } else if code == "MIXED_CURRENCY_GROUP_TX" {
-                self = .mixedCurrencyGroupTx
-            } else if code == "add_member_failed" {
-                self = .addMemberFailed
-            } else {
-                self = .httpError(statusCode: 400, message: message)
+            switch ServerErrorCode(rawValue: Self.parseErrorCode(from: data) ?? "") {
+            case .invalidIcon:       self = .invalidField("icon")
+            case .invalidColor:      self = .invalidField("color")
+            case .mixedCurrencySettlement: self = .mixedCurrencySettlement
+            case .mixedCurrencyGroupTx:    self = .mixedCurrencyGroupTx
+            case .addMemberFailed:   self = .addMemberFailed
+            default:                 self = .httpError(statusCode: 400, message: message)
             }
         case 404:
-            if Self.parseErrorCode(from: data) == "PREDEFINED_NOT_FOUND" {
-                self = .predefinedNotFound
-            } else {
-                self = .notFound
+            switch ServerErrorCode(rawValue: Self.parseErrorCode(from: data) ?? "") {
+            case .predefinedNotFound: self = .predefinedNotFound
+            default:                  self = .notFound
             }
         case 409:
             if let reason = Self.parseSyncSessionReason(from: data) {
                 self = .syncSessionInvalid(reason: reason)
-            } else if Self.parseErrorCode(from: data) == "STALE_WRITE" {
-                self = .staleWrite
-            } else if Self.parseErrorCode(from: data) == "OVERRIDE_ALREADY_EXISTS" {
-                self = .overrideAlreadyExists
-            } else if Self.parseErrorCode(from: data) == "ID_OWNED_BY_ANOTHER_USER" {
-                self = .idOwnedByAnotherUser
-            } else if Self.parseErrorCode(from: data) == "ID_OWNED_BY_ANOTHER_GROUP" {
-                self = .idOwnedByAnotherGroup
             } else {
-                self = .conflict
+                switch ServerErrorCode(rawValue: Self.parseErrorCode(from: data) ?? "") {
+                case .staleWrite:             self = .staleWrite
+                case .overrideAlreadyExists:  self = .overrideAlreadyExists
+                case .idOwnedByAnotherUser:   self = .idOwnedByAnotherUser
+                case .idOwnedByAnotherGroup:  self = .idOwnedByAnotherGroup
+                default:                      self = .conflict
+                }
             }
         case 502:
             // Backend signals a transient DB blip. Client must NOT orphan its
