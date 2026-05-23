@@ -86,6 +86,54 @@ struct AuthServiceTests {
     }
 
     @Test
+    func testSignup_withDifferentUser_postsUserDidSwitchAccountNotification() async throws {
+        let (svc, mock, session) = makeService()
+        session.saveLastLoggedInEmail("old@example.com")
+        let user = makeUser(email: "new@example.com", username: "New")
+        let response = makeAuthResponse(user: user)
+        mock.postHandler = { _, _ in response }
+
+        var notificationFired = false
+        let token = NotificationCenter.default.addObserver(
+            forName: .userDidSwitchAccount,
+            object: nil,
+            queue: .main
+        ) { _ in notificationFired = true }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        try await svc.signup(email: "new@example.com", username: "New", password: "pass", inviteCode: "INV")
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        #expect(notificationFired)
+    }
+
+    @Test
+    func testSignup_withSameUser_doesNotPostUserDidSwitchAccountNotification() async throws {
+        let (svc, mock, session) = makeService()
+        session.saveLastLoggedInEmail("same@example.com")
+        let user = makeUser(email: "same@example.com", username: "Same")
+        let response = makeAuthResponse(user: user)
+        mock.postHandler = { _, _ in response }
+
+        var notificationFired = false
+        let token = NotificationCenter.default.addObserver(
+            forName: .userDidSwitchAccount,
+            object: nil,
+            queue: .main
+        ) { _ in notificationFired = true }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        try await svc.signup(email: "same@example.com", username: "Same", password: "pass", inviteCode: "INV")
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        #expect(!notificationFired)
+    }
+
+    @Test
     func testSignup_withDuplicateEmail_surfacesConflictError() async throws {
         let (svc, mock, _) = makeService()
         mock.postHandler = { _, _ in throw APIError.conflict }

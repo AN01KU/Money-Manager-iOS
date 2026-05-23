@@ -120,7 +120,7 @@ final class AuthService: AuthServiceProtocol {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post(.signup, body: request)
             if isDifferentUser {
-                SyncService.shared.clearAllUserData()
+                NotificationCenter.default.post(name: .userDidSwitchAccount, object: nil)
             }
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)

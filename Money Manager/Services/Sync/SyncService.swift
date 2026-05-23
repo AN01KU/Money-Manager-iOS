@@ -32,6 +32,7 @@ final class SyncService: SyncServiceProtocol {
     private let lastSyncKey = "last_sync_at"
     nonisolated(unsafe) private var networkObserver: Any?
     nonisolated(unsafe) private var logoutObserver: Any?
+    nonisolated(unsafe) private var switchAccountObserver: Any?
 
     private convenience init() {
         self.init(changeQueue: ChangeQueueManager.shared)
@@ -62,6 +63,16 @@ final class SyncService: SyncServiceProtocol {
                 self?.clearGroupData()
             }
         }
+
+        switchAccountObserver = NotificationCenter.default.addObserver(
+            forName: .userDidSwitchAccount,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.clearAllUserData()
+            }
+        }
     }
 
     deinit {
@@ -69,6 +80,9 @@ final class SyncService: SyncServiceProtocol {
             NotificationCenter.default.removeObserver(observer)
         }
         if let observer = logoutObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = switchAccountObserver {
             NotificationCenter.default.removeObserver(observer)
         }
     }
