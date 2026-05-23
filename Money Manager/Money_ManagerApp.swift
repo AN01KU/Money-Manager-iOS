@@ -1,33 +1,21 @@
 import SwiftUI
 import SwiftData
 
-#if DEBUG
-private let processInfo = ProcessInfo.processInfo
-private let useTestData = processInfo.useTestData
-private let skipOnboarding = processInfo.skipOnboarding
-private let resetOnboarding = processInfo.resetOnboarding
-private let isScreenshotMode = processInfo.isScreenshotMode
-private let useMockServices = isScreenshotMode ? false : processInfo.useMockServices
-private var serviceFactory = ServiceFactory(useMockServices)
-#else
-private var serviceFactory = ServiceFactory()
-#endif
-
-// MARK: GLOBAL Services
-let authService: AuthServiceProtocol = serviceFactory.authService
-let changeQueueManager = serviceFactory.changeQueueManager
-
 @main
 struct Money_ManagerApp: App {
     let container: ModelContainer
     let storeRecoveryFailed: Bool
     let services: AppServices
-    let persistence: PersistenceService
-    let syncService: SyncServiceProtocol
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         #if DEBUG
+        let processInfo = ProcessInfo.processInfo
+        let skipOnboarding = processInfo.skipOnboarding
+        let resetOnboarding = processInfo.resetOnboarding
+        let isScreenshotMode = processInfo.isScreenshotMode
+        let useTestData = processInfo.useTestData
+
         if skipOnboarding || isScreenshotMode {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
             UserDefaults.standard.set(true, forKey: "hasSeenLogin")
@@ -76,34 +64,6 @@ struct Money_ManagerApp: App {
         services = AppServices.live(container: resolvedContainer)
         #endif
 
-        persistence = PersistenceService(
-            modelContext: resolvedContainer.mainContext,
-            authService: authService,
-            networkMonitor: NetworkMonitor.shared,
-            changeQueue: changeQueueManager
-        )
-        #if DEBUG
-        if useMockServices {
-            syncService = MockSyncService.shared
-        } else {
-            syncService = SyncService(
-                api: AppAPIClient.shared,
-                changeQueue: changeQueueManager,
-                networkMonitor: NetworkMonitor.shared,
-                authService: authService,
-                container: resolvedContainer
-            )
-        }
-        #else
-        syncService = SyncService(
-            api: AppAPIClient.shared,
-            changeQueue: changeQueueManager,
-            networkMonitor: NetworkMonitor.shared,
-            authService: authService,
-            container: resolvedContainer
-        )
-        #endif
-
         Self.migrateMonthlyBudgetToScalar(context: resolvedContainer.mainContext)
 
         // Only generate recurring transactions locally when not logged in.
@@ -117,8 +77,6 @@ struct Money_ManagerApp: App {
             Self.injectTestData(context: container.mainContext)
         }
         #endif
-
-        NetworkMonitor.shared.startMonitoring()
     }
 
     /// One-shot migration: carry the most-recent MonthlyBudget.limit into UserBudget, then purge all old rows.
@@ -167,7 +125,7 @@ struct Money_ManagerApp: App {
             return nil
         }
     }
-    
+
     #if DEBUG
     private static func injectTestData(context: ModelContext) {
         try? context.delete(model: Transaction.self)
@@ -192,11 +150,12 @@ struct Money_ManagerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environment(\.authService, authService)
-                .environment(\.syncService, syncService)
-                .environment(\.changeQueueManager, changeQueueManager)
-                .environment(\.persistence, persistence)
-                .environment(\.groupService, GroupService.shared)
+                .environment(\.authService, services.authService)
+                .environment(\.syncService, services.syncService)
+                .environment(\.changeQueueManager, services.changeQueueManager)
+                .environment(\.persistence, services.persistence)
+                .environment(\.networkMonitor, services.networkMonitor)
+                .environment(\.groupService, services.groupService)
                 .alert("Storage Error", isPresented: .constant(storeRecoveryFailed)) {
                     Button("OK", role: .cancel) {}
                 } message: {
@@ -205,7 +164,7 @@ struct Money_ManagerApp: App {
                 .onAppear {
                     Task {
                         #if DEBUG
-                        if isScreenshotMode,
+                        if ProcessInfo.processInfo.isScreenshotMode,
                            let token = ProcessInfo.processInfo.environment["SCREENSHOT_TOKEN"],
                            !token.isEmpty {
                             // Store in UserDefaults so APIClient can read it without keychain
@@ -213,16 +172,16 @@ struct Money_ManagerApp: App {
                             UserDefaults.standard.set(token, forKey: "screenshot_token_override")
                             // Each run uses a fresh throwaway user — wipe any leftover local
                             // SwiftData from the previous run so we don't see stale/duplicate data.
-                            syncService.clearAllUserData()
-                            await authService.checkAuthState()
-                            await syncService.fullSync()
+                            services.syncService.clearAllUserData()
+                            await services.authService.checkAuthState()
+                            await services.syncService.fullSync()
                             return
                         }
                         #endif
-                        await syncService.bootstrapPredefinedCategories()
-                        await authService.checkAuthState()
-                        if authService.isAuthenticated {
-                            await syncService.syncOnLaunch()
+                        await services.syncService.bootstrapPredefinedCategories()
+                        await services.authService.checkAuthState()
+                        if services.authService.isAuthenticated {
+                            await services.syncService.syncOnLaunch()
                         }
                     }
                 }
@@ -236,13 +195,13 @@ struct Money_ManagerApp: App {
         }
         .modelContainer(container)
     }
-    
+
     private func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .active:
-            if authService.hasCheckedAuth && authService.isAuthenticated {
+            if services.authService.hasCheckedAuth && services.authService.isAuthenticated {
                 Task {
-                    await syncService.syncOnReconnect()
+                    await services.syncService.syncOnReconnect()
                 }
             }
         case .background:

@@ -11,6 +11,9 @@ import SwiftData
 struct BudgetSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.authService) private var authService
+    @Environment(\.changeQueueManager) private var changeQueueManager
+    @Environment(\.networkMonitor) private var networkMonitor
 
     @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
@@ -134,7 +137,7 @@ struct BudgetSheet: View {
                 context: modelContext
             )
 
-            if NetworkMonitor.shared.isConnected {
+            if networkMonitor.isConnected {
                 Task {
                     await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
                 }

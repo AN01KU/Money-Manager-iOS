@@ -6,6 +6,7 @@ struct EditRecurringTransactionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.authService) private var authService
     @Environment(\.changeQueueManager) private var changeQueueManager
+    @Environment(\.networkMonitor) private var networkMonitor
     @Query(sort: \Category.name) private var customCategories: [Category]
 
     @Bindable var recurring: RecurringTransaction
@@ -217,7 +218,7 @@ struct EditRecurringTransactionSheet: View {
                 context: modelContext
             )
 
-            if NetworkMonitor.shared.isConnected {
+            if networkMonitor.isConnected {
                 Task {
                     await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
                 }

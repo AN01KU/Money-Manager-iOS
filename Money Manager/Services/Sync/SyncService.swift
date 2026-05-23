@@ -59,14 +59,15 @@ final class SyncService: SyncServiceProtocol {
         changeQueue: any ChangeQueueManagerProtocol,
         networkMonitor: any NetworkMonitorProtocol,
         authService: AuthServiceProtocol,
-        container: ModelContainer
+        container: ModelContainer,
+        groupService: GroupServiceProtocol = GroupService.shared
     ) {
         self.apiClient = api
         self.changeQueue = changeQueue
         self.networkMonitor = networkMonitor
         self.authService = authService
         self.modelContainer = container
-        self.groupService = GroupService.shared
+        self.groupService = groupService
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date
 
         changeQueue.configure(container: container)

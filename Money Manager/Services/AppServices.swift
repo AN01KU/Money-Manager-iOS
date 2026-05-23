@@ -28,12 +28,14 @@ extension AppServices {
 
         let changeQueue = ChangeQueueManager(apiClient: AppAPIClient.shared)
         let authService = AuthService.shared
+        let groupService = GroupService.shared
         let syncService = SyncService(
             api: AppAPIClient.shared,
             changeQueue: changeQueue,
             networkMonitor: networkMonitor,
             authService: authService,
-            container: container
+            container: container,
+            groupService: groupService
         )
         let persistence = PersistenceService(
             modelContext: container.mainContext,
@@ -46,7 +48,7 @@ extension AppServices {
             syncService: syncService,
             changeQueueManager: changeQueue,
             persistence: persistence,
-            groupService: GroupService.shared,
+            groupService: groupService,
             networkMonitor: networkMonitor
         )
     }

@@ -5,12 +5,13 @@ import SwiftUI
 struct SyncStatusView: View {
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
+    @Environment(\.networkMonitor) private var networkMonitor
 
     private var status: SyncStatus {
         if syncService.isSyncing {
             return .syncing
         }
-        if !NetworkMonitor.shared.isConnected {
+        if !networkMonitor.isConnected {
             return .offline
         }
         if changeQueueManager.failedCount > 0 {
