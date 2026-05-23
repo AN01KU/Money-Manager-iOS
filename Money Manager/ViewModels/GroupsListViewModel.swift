@@ -66,7 +66,7 @@ final class GroupsListViewModel {
     var selectedTab: GroupsTab = .groups
     var searchText = ""
 
-    let groupService: GroupServiceProtocol
+    var groupService: GroupServiceProtocol
     private(set) var currentUserId: UUID?
 
     init(groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {

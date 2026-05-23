@@ -6,6 +6,7 @@ extension EnvironmentValues {
     @Entry var syncService: SyncServiceProtocol = SyncService.shared
     @Entry var changeQueueManager: ChangeQueueManagerProtocol = ChangeQueueManager.shared
     @Entry var networkMonitor: any NetworkMonitorProtocol = NetworkMonitor.shared
+    @Entry var groupService: GroupServiceProtocol = GroupService.shared
 }
 
 // MARK: - PersistenceService environment key

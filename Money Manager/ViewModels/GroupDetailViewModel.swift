@@ -69,7 +69,7 @@ final class GroupDetailViewModel {
     var showLeaveGroup = false
     var didDeleteOrLeave = false
 
-    let groupService: GroupServiceProtocol
+    var groupService: GroupServiceProtocol
     let currentUserId: UUID?
 
     init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {

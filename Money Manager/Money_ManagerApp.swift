@@ -164,6 +164,7 @@ struct Money_ManagerApp: App {
                 .environment(\.syncService, syncService)
                 .environment(\.changeQueueManager, changeQueueManager)
                 .environment(\.persistence, persistence)
+                .environment(\.groupService, GroupService.shared)
                 .alert("Storage Error", isPresented: .constant(storeRecoveryFailed)) {
                     Button("OK", role: .cancel) {}
                 } message: {

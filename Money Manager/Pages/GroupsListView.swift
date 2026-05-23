@@ -7,6 +7,7 @@ import SwiftUI
 
 struct GroupsListView: View {
     @Environment(\.authService) private var authService
+    @Environment(\.groupService) private var groupService
     @State private var viewModel = GroupsListViewModel()
     @State private var showCreateGroup = false
     @State private var navigationPath: [UUID] = []
@@ -42,6 +43,7 @@ struct GroupsListView: View {
                 }
             }
             .task {
+                viewModel.groupService = groupService
                 viewModel.setCurrentUser(authService.currentUser?.id)
                 await viewModel.load()
                 handlePendingRoute()

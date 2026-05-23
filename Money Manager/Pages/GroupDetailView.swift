@@ -8,6 +8,7 @@ import SwiftUI
 
 struct GroupDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.groupService) private var groupService
     @State private var viewModel: GroupDetailViewModel
     @State private var selectedTransaction: APIGroupTransaction?
     @State private var transactionToEdit: APIGroupTransaction?
@@ -154,6 +155,7 @@ struct GroupDetailView: View {
             viewModel.transactionSearchText = ""
         }
         .task {
+            viewModel.groupService = groupService
             await viewModel.loadData()
         }
     }
