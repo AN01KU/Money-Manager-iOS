@@ -21,6 +21,7 @@ let changeQueueManager = serviceFactory.changeQueueManager
 struct Money_ManagerApp: App {
     let container: ModelContainer
     let storeRecoveryFailed: Bool
+    let services: AppServices
     let persistence: PersistenceService
     let syncService: SyncServiceProtocol
     @Environment(\.scenePhase) private var scenePhase
@@ -63,6 +64,18 @@ struct Money_ManagerApp: App {
             storeRecoveryFailed = true
         }
         container = resolvedContainer
+
+        #if DEBUG
+        let isUITestMode = CommandLine.arguments.contains("-uiTestMode")
+        if isUITestMode {
+            services = AppServices.uiTestMocks()
+        } else {
+            services = AppServices.live(container: resolvedContainer)
+        }
+        #else
+        services = AppServices.live(container: resolvedContainer)
+        #endif
+
         persistence = PersistenceService(
             modelContext: resolvedContainer.mainContext,
             authService: authService,
