@@ -3,34 +3,42 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
-/// Verifies that SyncService accepts an injected ChangeQueueManagerProtocol,
-/// breaking the global-variable initialization cycle that caused launch crashes.
+/// Verifies that SyncService accepts constructor-injected dependencies
+/// and wires them at init time.
 @MainActor
 struct SyncServiceInitTests {
 
-    @Test("SyncService.shared uses ChangeQueueManager.shared by default")
-    func sharedUsesDefaultChangeQueue() {
-        // SyncService.shared must be accessible without crashing — the crash
-        // happened because the stored property initializer referenced the global
-        // `changeQueueManager` while `syncService` was still initializing.
+    @Test("SyncService.shared is accessible in DEBUG builds")
+    func sharedIsAccessible() {
         let svc = SyncService.shared
         #expect(svc.isSyncing == false)
     }
 
-    @Test("SyncService can be constructed with a mock ChangeQueueManager")
-    func constructWithMockChangeQueue() {
-        let mock = SpyChangeQueueManager()
-        let svc = SyncService(changeQueue: mock)
-        #expect(svc.isSyncing == false)
+    @Test("SyncService injects changeQueue and calls configure during init")
+    func injectedQueueReceivesConfigureDuringInit() throws {
+        let queue = SpyChangeQueueManager()
+        let container = try makeTestContainer()
+        let _ = SyncService(
+            api: MockAPIClient(),
+            changeQueue: queue,
+            networkMonitor: MockNetworkMonitor(isConnected: false),
+            authService: MockAuthService.shared,
+            container: container
+        )
+        #expect(queue.configureCallCount == 1)
     }
 
-    @Test("SyncService injected queue is used during configure")
-    func injectedQueueReceivesConfigure() throws {
-        let mock = SpyChangeQueueManager()
-        let svc = SyncService(changeQueue: mock)
+    @Test("SyncService constructed with injected dependencies starts not syncing")
+    func constructedServiceStartsIdle() throws {
         let container = try makeTestContainer()
-        svc.configure(container: container, authService: MockAuthService.shared)
-        #expect(mock.configureCallCount == 1)
+        let svc = SyncService(
+            api: MockAPIClient(),
+            changeQueue: SpyChangeQueueManager(),
+            networkMonitor: MockNetworkMonitor(isConnected: false),
+            authService: MockAuthService.shared,
+            container: container
+        )
+        #expect(svc.isSyncing == false)
     }
 }
 

@@ -15,18 +15,20 @@ enum PreflightOutcome {
 @Observable
 @MainActor
 final class SyncService: SyncServiceProtocol {
+    #if DEBUG
     static let shared = SyncService()
-    
+    #endif
+
     var isSyncing: Bool = false
     var lastSyncedAt: Date?
     var syncSuccessCount: Int = 0
     var syncFailureCount: Int = 0
 
-    var apiClient: any APIClientProtocol = AppAPIClient.shared
-    private let groupService = GroupService.shared
-    var networkMonitor: any NetworkMonitorProtocol = NetworkMonitor.shared
-    private var authService: AuthServiceProtocol?
-    private var modelContainer: ModelContainer?
+    let apiClient: any APIClientProtocol
+    private let groupService: GroupServiceProtocol
+    let networkMonitor: any NetworkMonitorProtocol
+    private let authService: AuthServiceProtocol
+    private let modelContainer: ModelContainer
     private let changeQueue: any ChangeQueueManagerProtocol
 
     private let lastSyncKey = "last_sync_at"
@@ -34,13 +36,40 @@ final class SyncService: SyncServiceProtocol {
     nonisolated(unsafe) private var logoutObserver: Any?
     nonisolated(unsafe) private var switchAccountObserver: Any?
 
+    #if DEBUG
     private convenience init() {
-        self.init(changeQueue: ChangeQueueManager.shared)
+        let schema = Schema([
+            Transaction.self, RecurringTransaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+            PendingChange.self, FailedChange.self, OrphanedChange.self,
+            SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
+        ])
+        let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        self.init(
+            api: AppAPIClient.shared,
+            changeQueue: ChangeQueueManager.shared,
+            networkMonitor: NetworkMonitor.shared,
+            authService: MockAuthService.shared,
+            container: container
+        )
     }
+    #endif
 
-    init(changeQueue: any ChangeQueueManagerProtocol) {
+    init(
+        api: any APIClientProtocol,
+        changeQueue: any ChangeQueueManagerProtocol,
+        networkMonitor: any NetworkMonitorProtocol,
+        authService: AuthServiceProtocol,
+        container: ModelContainer
+    ) {
+        self.apiClient = api
         self.changeQueue = changeQueue
+        self.networkMonitor = networkMonitor
+        self.authService = authService
+        self.modelContainer = container
+        self.groupService = GroupService.shared
         lastSyncedAt = UserDefaults.standard.object(forKey: lastSyncKey) as? Date
+
+        changeQueue.configure(container: container)
 
         networkObserver = NotificationCenter.default.addObserver(
             forName: .networkDidBecomeAvailable,
@@ -49,7 +78,7 @@ final class SyncService: SyncServiceProtocol {
         ) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
-                guard self.authService?.isAuthenticated == true else { return }
+                guard self.authService.isAuthenticated else { return }
                 await self.syncOnReconnect()
             }
         }
@@ -87,15 +116,8 @@ final class SyncService: SyncServiceProtocol {
         }
     }
 
-    func configure(container: ModelContainer, authService: AuthServiceProtocol) {
-        self.modelContainer = container
-        self.authService = authService
-        changeQueue.configure(container: container)
-    }
-
     func clearGroupData() {
-        guard let container = modelContainer else { return }
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
         try? context.delete(model: SplitGroupModel.self)
         try? context.delete(model: GroupMemberModel.self)
         try? context.delete(model: GroupTransactionModel.self)
@@ -104,8 +126,7 @@ final class SyncService: SyncServiceProtocol {
     }
 
     func clearAllUserData() {
-        guard let container = modelContainer else { return }
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
         try? context.delete(model: Transaction.self)
         try? context.delete(model: RecurringTransaction.self)
         try? context.delete(model: MonthlyBudget.self)
@@ -124,11 +145,10 @@ final class SyncService: SyncServiceProtocol {
     }
     
     func syncOnLaunch() async {
-        guard authService?.isAuthenticated == true else { return }
-        guard let container = modelContainer else { return }
+        guard authService.isAuthenticated else { return }
 
         AppLogger.sync.info("Sync on launch started")
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
 
         changeQueue.purgeExpiredOrphans(olderThan: 7, context: context)
 
@@ -151,18 +171,17 @@ final class SyncService: SyncServiceProtocol {
 
     func syncOnReconnect() async {
         guard networkMonitor.isConnected else { return }
-        guard let container = modelContainer else { return }
 
         isSyncing = true
         defer { isSyncing = false }
 
         AppLogger.sync.info("Sync on reconnect started")
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
 
         let preflight = await runPreflight()
         switch preflight {
         case .valid:
-            await changeQueue.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+            await changeQueue.replayAll(context: context, isAuthenticated: authService.isAuthenticated)
         case .skipped:
             AppLogger.sync.info("Preflight skipped (no sync session) — not replaying queue")
         case .invalid(let reason):
@@ -201,13 +220,11 @@ final class SyncService: SyncServiceProtocol {
     }
 
     func fullSync() async {
-        guard let container = modelContainer else { return }
-
         isSyncing = true
         defer { isSyncing = false }
 
         AppLogger.sync.info("Full sync started")
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
 
         await pullFromServer(context: context)
         updateLastSyncTime()
@@ -216,13 +233,11 @@ final class SyncService: SyncServiceProtocol {
     }
 
     func bootstrapAfterSignup() async {
-        guard let container = modelContainer else { return }
-
         isSyncing = true
         defer { isSyncing = false }
 
         AppLogger.sync.info("Bootstrap after signup started")
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
 
         // 1. Pull any existing category overrides/custom categories from server
         await pullCategories(context: context)
@@ -231,7 +246,7 @@ final class SyncService: SyncServiceProtocol {
         enqueueLocalData(context: context)
 
         // 3. Push everything to server
-        await changeQueue.replayAll(context: context, isAuthenticated: authService?.isAuthenticated == true)
+        await changeQueue.replayAll(context: context, isAuthenticated: authService.isAuthenticated)
 
         // 4. Pull canonical state
         await pullFromServer(context: context)
@@ -307,8 +322,7 @@ final class SyncService: SyncServiceProtocol {
     }
 
     func bootstrapPredefinedCategories() async {
-        guard let container = modelContainer else { return }
-        let context = ModelContext(container)
+        let context = ModelContext(modelContainer)
         do {
             let response: APIListResponse<APIPredefinedCategory> = try await apiClient.get(.predefinedCategories)
             upsertPredefinedCategories(response.data, context: context)

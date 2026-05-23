@@ -13,11 +13,14 @@ struct SyncServicePullErrorTests {
     }
 
     private func makeSyncService(container: ModelContainer, mock: MockAPIClient) -> SyncService {
-        let svc = SyncService(changeQueue: NoOpChangeQueue())
         MockAuthService.shared.reset()
-        svc.configure(container: container, authService: MockAuthService.shared)
-        svc.apiClient = mock
-        return svc
+        return SyncService(
+            api: mock,
+            changeQueue: NoOpChangeQueue(),
+            networkMonitor: MockNetworkMonitor(isConnected: true),
+            authService: MockAuthService.shared,
+            container: container
+        )
     }
 
     // MARK: - pullPredefinedCategories increments syncFailureCount on error

@@ -15,8 +15,6 @@ struct SyncServiceLaunchTests {
         try makeTestContainer()
     }
 
-    /// Builds a SyncService with an injected spy change queue, configured with an
-    /// in-memory container + MockAuthService so tests don't hit network or Keychain.
     @discardableResult
     private func makeSyncService(
         container: ModelContainer,
@@ -24,12 +22,14 @@ struct SyncServiceLaunchTests {
         mock: MockAPIClient,
         networkMonitor: MockNetworkMonitor? = nil
     ) -> SyncService {
-        let svc = SyncService(changeQueue: changeQueue)
         MockAuthService.shared.reset()
-        svc.configure(container: container, authService: MockAuthService.shared)
-        svc.apiClient = mock
-        if let networkMonitor { svc.networkMonitor = networkMonitor }
-        return svc
+        return SyncService(
+            api: mock,
+            changeQueue: changeQueue,
+            networkMonitor: networkMonitor ?? MockNetworkMonitor(isConnected: true),
+            authService: MockAuthService.shared,
+            container: container
+        )
     }
 
     /// Returns a MockAPIClient that accepts preflight POST and all GET calls needed by pullFromServer.

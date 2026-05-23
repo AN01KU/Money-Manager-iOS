@@ -18,16 +18,17 @@ struct SyncServiceUpsertTests {
         try makeTestContainer()
     }
 
-    /// Returns a SyncService.shared configured with in-memory container and mock auth.
-    /// Sets the apiClient to the provided mock.
     private func makeSyncService(
         container: ModelContainer,
         mock: MockAPIClient
     ) -> SyncService {
-        let svc = SyncService.shared
-        svc.configure(container: container, authService: makeAuth())
-        svc.apiClient = mock
-        return svc
+        SyncService(
+            api: mock,
+            changeQueue: ChangeQueueManager(),
+            networkMonitor: MockNetworkMonitor(isConnected: true),
+            authService: makeAuth(),
+            container: container
+        )
     }
 
     private func apiTransaction(

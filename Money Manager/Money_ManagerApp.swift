@@ -13,9 +13,8 @@ private var serviceFactory = ServiceFactory(useMockServices)
 private var serviceFactory = ServiceFactory()
 #endif
 
-// MARK:  GLOBAL Services
+// MARK: GLOBAL Services
 let authService: AuthServiceProtocol = serviceFactory.authService
-let syncService: SyncServiceProtocol = serviceFactory.syncService
 let changeQueueManager = serviceFactory.changeQueueManager
 
 @main
@@ -23,6 +22,7 @@ struct Money_ManagerApp: App {
     let container: ModelContainer
     let storeRecoveryFailed: Bool
     let persistence: PersistenceService
+    let syncService: SyncServiceProtocol
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -69,6 +69,27 @@ struct Money_ManagerApp: App {
             networkMonitor: NetworkMonitor.shared,
             changeQueue: changeQueueManager
         )
+        #if DEBUG
+        if useMockServices {
+            syncService = MockSyncService.shared
+        } else {
+            syncService = SyncService(
+                api: AppAPIClient.shared,
+                changeQueue: changeQueueManager,
+                networkMonitor: NetworkMonitor.shared,
+                authService: authService,
+                container: resolvedContainer
+            )
+        }
+        #else
+        syncService = SyncService(
+            api: AppAPIClient.shared,
+            changeQueue: changeQueueManager,
+            networkMonitor: NetworkMonitor.shared,
+            authService: authService,
+            container: resolvedContainer
+        )
+        #endif
 
         Self.migrateMonthlyBudgetToScalar(context: resolvedContainer.mainContext)
 
@@ -85,8 +106,6 @@ struct Money_ManagerApp: App {
         #endif
 
         NetworkMonitor.shared.startMonitoring()
-
-        syncService.configure(container: container, authService: authService)
     }
 
     /// One-shot migration: carry the most-recent MonthlyBudget.limit into UserBudget, then purge all old rows.
@@ -181,7 +200,7 @@ struct Money_ManagerApp: App {
                             UserDefaults.standard.set(token, forKey: "screenshot_token_override")
                             // Each run uses a fresh throwaway user — wipe any leftover local
                             // SwiftData from the previous run so we don't see stale/duplicate data.
-                            SyncService.shared.clearAllUserData()
+                            syncService.clearAllUserData()
                             await authService.checkAuthState()
                             await syncService.fullSync()
                             return

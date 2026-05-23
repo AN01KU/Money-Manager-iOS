@@ -5,25 +5,18 @@
 
 #if DEBUG
 import Foundation
-import SwiftData
 
 @Observable
 final class MockSyncService: SyncServiceProtocol {
     static let shared = MockSyncService()
-    
+
     var isSyncing: Bool = false
     var lastSyncedAt: Date? = Date()
     var syncSuccessCount: Int = 0
     var syncFailureCount: Int = 0
-    
-    private var modelContainer: ModelContainer?
-    
+
     private init() {}
-    
-    func configure(container: ModelContainer, authService: AuthServiceProtocol) {
-        self.modelContainer = container
-    }
-    
+
     func bootstrapPredefinedCategories() async {}
 
     func syncOnLaunch() async {}
@@ -40,6 +33,7 @@ final class MockSyncService: SyncServiceProtocol {
     func bootstrapAfterSignup() async {}
 
     func clearGroupData() {}
+    func clearAllUserData() {}
 
     func recordSyncError() { syncFailureCount += 1 }
 }

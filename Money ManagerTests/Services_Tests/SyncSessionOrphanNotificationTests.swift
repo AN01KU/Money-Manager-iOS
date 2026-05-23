@@ -58,10 +58,14 @@ struct SyncSessionOrphanNotificationTests {
         let container = try makeContainer()
         let mock = mockWithInvalidPreflight()
 
-        let svc = SyncService(changeQueue: ChangeQueueManager())
         MockAuthService.shared.reset()
-        svc.configure(container: container, authService: MockAuthService.shared)
-        svc.apiClient = mock
+        let svc = SyncService(
+            api: mock,
+            changeQueue: ChangeQueueManager(),
+            networkMonitor: MockNetworkMonitor(isConnected: true),
+            authService: MockAuthService.shared,
+            container: container
+        )
 
         // Store a sync session ID so runPreflight actually calls the API
         SessionStore.shared.saveSyncSessionID(UUID())
