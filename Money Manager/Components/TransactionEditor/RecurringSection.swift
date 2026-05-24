@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RecurringSection: View {
-    @Bindable var viewModel: AddTransactionViewModel
+    @Bindable var viewModel: TransactionEditorViewModel
 
     var body: some View {
         TxnCard {

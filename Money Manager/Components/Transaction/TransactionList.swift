@@ -98,7 +98,7 @@ struct TransactionList: View {
             })
         }
         .sheet(item: $editingTransaction) { txn in
-            AddTransactionView(transactionToEdit: txn)
+            TransactionEditorView(mode: .edit(txn))
         }
         .onChange(of: transactions.map(\.persistentModelID)) { _, _ in
             swipedTransactionID = nil

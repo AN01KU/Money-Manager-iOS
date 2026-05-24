@@ -104,7 +104,7 @@ private struct TransactionsBody: View {
         }
         .background(AppColors.background)
         .searchable(text: $viewModel.searchText, prompt: "Search transactions")
-        .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
+        .sheet(isPresented: $viewModel.showAddTransaction) { TransactionEditorView() }
         .alert("Delete Transaction?", isPresented: $viewModel.isConfirmingDelete) {
             Button("Cancel", role: .cancel) { viewModel.cancelDeleteTransaction() }
             Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }

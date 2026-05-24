@@ -35,7 +35,7 @@ struct Overview: View {
                     }
                 }
                 .sheet(item: $editingTransaction) { txn in
-                    AddTransactionView(transactionToEdit: txn)
+                    TransactionEditorView(mode: .edit(txn))
                 }
         }
         .task { viewModel.persistence = persistence }
@@ -443,7 +443,7 @@ private func previewContainer(
 ) -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Transaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+        for: Transaction.self, UserBudget.self, Category.self,
         configurations: config
     )
     let context = container.mainContext
