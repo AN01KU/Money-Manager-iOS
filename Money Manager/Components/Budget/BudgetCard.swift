@@ -108,7 +108,7 @@ struct BudgetCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)
@@ -124,7 +124,7 @@ struct BudgetProgressBar: View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
+                    .fill(AppColors.chipBackground)
                     .frame(height: 16)
                 
                 RoundedRectangle(cornerRadius: 8)

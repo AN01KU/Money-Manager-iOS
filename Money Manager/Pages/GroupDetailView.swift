@@ -47,7 +47,7 @@ struct GroupDetailView: View {
                 }
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppColors.background)
         .navigationTitle(viewModel.group.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

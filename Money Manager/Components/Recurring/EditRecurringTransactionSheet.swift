@@ -65,7 +65,7 @@ struct EditRecurringTransactionSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(AppColors.inputBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
@@ -133,7 +133,7 @@ struct EditRecurringTransactionSheet: View {
                                     .fontWeight(selected ? .semibold : .regular)
                                     .foregroundStyle(selected ? Color.white : Color.primary)
                                     .frame(minWidth: 36, minHeight: 36)
-                                    .background(selected ? Color.accentColor : Color(.systemGray5))
+                                    .background(selected ? Color.accentColor : AppColors.chipBackground)
                                     .clipShape(Circle())
                                 }
                             }

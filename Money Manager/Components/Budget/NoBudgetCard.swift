@@ -19,7 +19,7 @@ struct NoBudgetCard: View {
             action: onSetBudget
         )
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)

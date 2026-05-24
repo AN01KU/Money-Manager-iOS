@@ -41,7 +41,7 @@ struct BudgetOverviewCard: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(AppColors.inputBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(isDaily ? "Daily" : "Monthly") budget, \(CurrencyFormatter.format(spent)) of \(CurrencyFormatter.format(budget.limit ?? 0)), \(percentage) percent used")

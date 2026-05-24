@@ -44,7 +44,7 @@ struct BudgetsView: View {
                         }
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemBackground))
+                        .background(AppColors.surface)
                         .clipShape(.rect(cornerRadius: 12))
                         .padding(.horizontal)
                     }
@@ -67,7 +67,7 @@ struct BudgetsView: View {
             }
             .padding(.bottom, 40)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppColors.background)
         .navigationTitle("Budgets")
         .navigationBarTitleDisplayMode(.inline)
         .task { viewModel.persistence = persistence }

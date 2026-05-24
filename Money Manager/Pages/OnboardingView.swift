@@ -100,7 +100,7 @@ struct OnboardingView: View {
                 onNext: { withAnimation { currentPage += 1 } }
             )
         }
-        .background(Color(.systemBackground))
+        .background(AppColors.surface)
     }
 }
 
@@ -121,7 +121,7 @@ private struct OnboardingBottomSection: View {
             HStack(spacing: 8) {
                 ForEach(0..<pageCount, id: \.self) { index in
                     Capsule()
-                        .fill(index == currentPage ? AppColors.accent : Color(.systemGray4))
+                        .fill(index == currentPage ? AppColors.accent : AppColors.pageIndicator)
                         .frame(width: index == currentPage ? 24 : 8, height: 8)
                         .animation(.easeInOut(duration: 0.2), value: currentPage)
                 }

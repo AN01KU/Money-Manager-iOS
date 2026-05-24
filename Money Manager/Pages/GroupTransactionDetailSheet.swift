@@ -62,7 +62,7 @@ struct GroupTransactionDetailSheet: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(AppColors.inputBackground)
                     .clipShape(.rect(cornerRadius: 16))
 
                     // Splits breakdown
@@ -85,7 +85,7 @@ struct GroupTransactionDetailSheet: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(AppColors.inputBackground)
                         .clipShape(.rect(cornerRadius: 16))
                     }
 

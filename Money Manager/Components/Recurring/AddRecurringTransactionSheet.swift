@@ -92,7 +92,7 @@ struct AddRecurringTransactionSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(AppColors.inputBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)

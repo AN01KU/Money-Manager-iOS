@@ -40,7 +40,15 @@ enum AppColors {
 
     // MARK: - Structural
     /// Dividers and row borders
-    static let separator  = Color("Separator", bundle: .main)
+    static let separator       = Color("Separator", bundle: .main)
+    /// Input field and chip container backgrounds (≈ systemGray6)
+    static let inputBackground = Color("InputBackground", bundle: .main)
+    /// Selected chip / highlighted list row background (≈ systemGray5)
+    static let chipBackground  = Color("ChipBackground", bundle: .main)
+    /// Inactive page-indicator dot (≈ systemGray4)
+    static let pageIndicator   = Color("PageIndicator", bundle: .main)
+    /// Disabled interactive element background
+    static let disabled        = label3
 
     // MARK: - Budget status (convenience aliases)
     static let budgetSafe    = income

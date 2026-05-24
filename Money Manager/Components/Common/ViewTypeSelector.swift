@@ -29,7 +29,7 @@ struct ViewTypeSelector: View {
                         .foregroundStyle(selectedView == viewType ? AppColors.accent : .secondary)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
-                        .background(selectedView == viewType ? AppColors.accentLight : Color(.systemGray6))
+                        .background(selectedView == viewType ? AppColors.accentLight : AppColors.inputBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.borderless)

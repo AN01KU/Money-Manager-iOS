@@ -29,7 +29,7 @@ struct EmailVerificationView: View {
                 .padding(24)
             }
             .dismissKeyboardOnScroll()
-            .background(Color(.systemBackground))
+            .background(AppColors.surface)
             .navigationBarTitleDisplayMode(.inline)
             .alert("Verification Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") { errorMessage = nil }
@@ -66,7 +66,7 @@ struct EmailVerificationView: View {
                 .font(.title2.monospacedDigit())
                 .multilineTextAlignment(.center)
                 .padding()
-                .background(Color(.systemGray6))
+                .background(AppColors.inputBackground)
                 .clipShape(.rect(cornerRadius: 12))
                 .onChange(of: code) { _, newValue in
                     // Strip non-digits and cap at 6
@@ -97,7 +97,7 @@ struct EmailVerificationView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(code.count == 6 ? AppColors.accent : Color.gray)
+                .background(code.count == 6 ? AppColors.accent : AppColors.disabled)
                 .foregroundStyle(.white)
                 .clipShape(.rect(cornerRadius: 12))
             }

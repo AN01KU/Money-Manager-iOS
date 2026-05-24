@@ -268,7 +268,7 @@ private struct AddTransactionAmountSection: View {
                         Image(systemName: "chevron.down").foregroundStyle(.secondary)
                     }
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(AppColors.inputBackground)
                     .clipShape(.rect(cornerRadius: 8))
                 }
                 .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
@@ -308,7 +308,7 @@ private struct AddTransactionPaidBySection: View {
                             if isSelected { Image(systemName: "checkmark").font(.subheadline.weight(.semibold)).foregroundStyle(.primary) }
                         }
                     }
-                    .listRowBackground(isSelected ? Color(.systemGray5) : Color(.systemBackground))
+                    .listRowBackground(isSelected ? AppColors.chipBackground : AppColors.surface)
                 }
             }
         }
@@ -342,7 +342,7 @@ private struct AddTransactionSplitMembersSection: View {
                             }
                         }
                     }
-                    .listRowBackground(isIncluded ? Color(.systemGray5) : Color(.systemBackground))
+                    .listRowBackground(isIncluded ? AppColors.chipBackground : AppColors.surface)
                 }
             }
         }
