@@ -145,13 +145,8 @@ struct BudgetProgressBar: View {
     }
     
     private var progressColors: [Color] {
-        if percentage <= 50 {
-            return [AppColors.budgetSafe, AppColors.budgetSafe.opacity(0.7)]
-        } else if percentage <= 80 {
-            return [AppColors.budgetCaution, AppColors.budgetCaution.opacity(0.7)]
-        } else {
-            return [AppColors.budgetDanger, AppColors.budgetDanger.opacity(0.7)]
-        }
+        let color = BudgetStatus(percentage: percentage).color
+        return [color, color.opacity(0.7)]
     }
 }
 

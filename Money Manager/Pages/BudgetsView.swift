@@ -29,8 +29,7 @@ struct BudgetsView: View {
                     if let limit = budget.limit {
                         BudgetStatusBanner(
                             spent: viewModel.totalSpent,
-                            limit: limit,
-                            percentage: viewModel.budgetPercentage
+                            limit: limit
                         )
                         .padding(.horizontal)
                     }

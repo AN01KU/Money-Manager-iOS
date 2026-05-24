@@ -143,9 +143,8 @@ private struct OverviewHeaderCard: View {
     }
 
     private var budgetColor: Color {
-        if budgetPercentage >= 100 { return AppColors.budgetDanger }
-        if budgetPercentage >= 80 { return AppColors.budgetCaution }
-        return AppColors.budgetSafe
+        guard let budget = viewModel.currentBudget, let limit = budget.limit else { return AppColors.budgetSafe }
+        return BudgetStatus(spent: viewModel.totalSpent, limit: limit).color
     }
 
     var body: some View {

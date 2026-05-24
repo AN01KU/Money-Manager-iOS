@@ -10,82 +10,40 @@ import SwiftUI
 struct BudgetStatusBanner: View {
     let spent: Double
     let limit: Double
-    let percentage: Int
-    
+
+    private var status: BudgetStatus { BudgetStatus(spent: spent, limit: limit) }
+
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: statusIcon)
+            Image(systemName: status.icon)
                 .font(.title2)
-                .foregroundStyle(statusColor)
-            
+                .foregroundStyle(status.color)
+
             VStack(alignment: .leading, spacing: 4) {
-                Text(statusTitle)
+                Text(status.title)
                     .font(.body)
                     .fontWeight(.semibold)
-                Text(statusMessage)
+                Text(status.message(spent: spent, limit: limit))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
         }
         .padding()
-        .background(statusColor.opacity(0.1))
-        .foregroundStyle(statusColor)
+        .background(status.color.opacity(0.1))
+        .foregroundStyle(status.color)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(statusTitle), \(statusMessage)")
-    }
-    
-    private var statusIcon: String {
-        if percentage > 100 {
-            return "exclamationmark.triangle.fill"
-        } else if percentage > 80 {
-            return "exclamationmark.circle.fill"
-        } else {
-            return "checkmark.circle.fill"
-        }
-    }
-    
-    private var statusColor: Color {
-        if percentage > 100 {
-            return AppColors.budgetDanger
-        } else if percentage > 80 {
-            return AppColors.budgetCaution
-        } else {
-            return AppColors.budgetSafe
-        }
-    }
-    
-    private var statusTitle: String {
-        if percentage > 100 {
-            return "Over Budget"
-        } else if percentage > 80 {
-            return "Approaching Limit"
-        } else {
-            return "Within Budget"
-        }
-    }
-    
-    private var statusMessage: String {
-        if percentage > 100 {
-            let over = CurrencyFormatter.format(spent - limit)
-            return "You've exceeded by \(over)"
-        } else if percentage > 80 {
-            let remaining = CurrencyFormatter.format(limit - spent)
-            return "\(remaining) remaining"
-        } else {
-            let remaining = CurrencyFormatter.format(limit - spent)
-            return "\(remaining) remaining this month"
-        }
+        .accessibilityLabel("\(status.title), \(status.message(spent: spent, limit: limit))")
     }
 }
 
 #Preview {
     VStack(spacing: 16) {
-        BudgetStatusBanner(spent: 45000, limit: 50000, percentage: 90)
-        BudgetStatusBanner(spent: 30000, limit: 50000, percentage: 60)
-        BudgetStatusBanner(spent: 55000, limit: 50000, percentage: 110)
+        BudgetStatusBanner(spent: 45000, limit: 50000)
+        BudgetStatusBanner(spent: 30000, limit: 50000)
+        BudgetStatusBanner(spent: 55000, limit: 50000)
     }
     .padding()
 }

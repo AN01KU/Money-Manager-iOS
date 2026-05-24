@@ -77,15 +77,15 @@ import SwiftData
 
     var insightIcon: String {
         guard let limit = budgetLimit, limit > 0 else { return "checkmark.circle.fill" }
-        if totalSpent >= limit { return "exclamationmark.triangle.fill" }
+        if totalSpent >= limit { return BudgetStatus.danger.icon }
         if projectedMonthEnd > limit { return "arrow.up.circle.fill" }
-        return "checkmark.circle.fill"
+        return BudgetStatus.safe.icon
     }
 
     var insightColor: Color {
         guard let limit = budgetLimit, limit > 0 else { return AppColors.positive }
-        if totalSpent >= limit { return AppColors.expense }
-        if projectedMonthEnd > limit { return AppColors.budgetCaution }
+        if totalSpent >= limit { return BudgetStatus.danger.color }
+        if projectedMonthEnd > limit { return BudgetStatus.caution.color }
         return AppColors.positive
     }
 
