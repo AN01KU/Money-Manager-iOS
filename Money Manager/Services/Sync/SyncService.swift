@@ -39,7 +39,7 @@ final class SyncService: SyncServiceProtocol {
     #if DEBUG
     private convenience init() {
         let schema = Schema([
-            Transaction.self, RecurringTransaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
             PendingChange.self, FailedChange.self, OrphanedChange.self,
             SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
         ])
@@ -130,7 +130,6 @@ final class SyncService: SyncServiceProtocol {
         let context = ModelContext(modelContainer)
         try? context.delete(model: Transaction.self)
         try? context.delete(model: RecurringTransaction.self)
-        try? context.delete(model: MonthlyBudget.self)
         try? context.delete(model: UserBudget.self)
         try? context.delete(model: Category.self)
         try? context.delete(model: PendingChange.self)
@@ -299,6 +298,28 @@ final class SyncService: SyncServiceProtocol {
         }
     }
     
+    // MARK: - Pull Pipeline
+
+    private let pullHandlers: [any PullEntityHandler] = [
+        TransactionPullHandler()
+    ]
+
+    private func runPullPipeline(context: ModelContext) async {
+        for handler in pullHandlers {
+            do {
+                try await handler.pull(api: apiClient, changeQueue: changeQueue, context: context)
+                syncCheckpoint(
+                    entityType: handler.entityLabel,
+                    serverCount: handler.lastServerCount,
+                    localCount: handler.lastLocalCount
+                )
+            } catch {
+                AppLogger.sync.error("Failed to pull \(handler.entityLabel): \(error)")
+                recordSyncError()
+            }
+        }
+    }
+
     private func pullFromServer(context: ModelContext) async {
         isSyncing = true
         defer { isSyncing = false }
@@ -307,7 +328,7 @@ final class SyncService: SyncServiceProtocol {
         await pullCategories(context: context)
         await pullBudgets(context: context)
         await pullRecurring(context: context)
-        await pullTransactions(context: context)
+        await runPullPipeline(context: context)
 
         updateLastSyncTime()
     }
@@ -420,107 +441,6 @@ final class SyncService: SyncServiceProtocol {
             AppLogger.sync.error("Failed to pull recurring: \(error)")
             recordSyncError()
         }
-    }
-
-    private func pullTransactions(context: ModelContext) async {
-        do {
-            var allTransactions: [APITransaction] = []
-            var offset = 0
-            let limit = 100
-
-            while true {
-                let response: APIPaginatedResponse<APITransaction> = try await apiClient.get(.syncTransactions(limit: limit, offset: offset))
-                allTransactions.append(contentsOf: response.data)
-                AppLogger.sync.info("pullTransactions: page offset=\(offset) returned=\(response.data.count) total=\(response.pagination.total)")
-
-                if response.data.count < limit || offset + response.data.count >= response.pagination.total {
-                    break
-                }
-                offset += limit
-            }
-
-            AppLogger.sync.info("pullTransactions: fetched \(allTransactions.count) transactions from server")
-            upsertTransactions(allTransactions, context: context)
-        } catch {
-            AppLogger.sync.error("Failed to pull transactions: \(error)")
-            recordSyncError()
-        }
-    }
-    
-    private func upsertTransactions(_ apiTransactions: [APITransaction], context: ModelContext) {
-        let failedDescriptor = FetchDescriptor<FailedChange>(
-            predicate: #Predicate { $0.entityType == "transaction" }
-        )
-        let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
-
-        let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "transaction" }
-        )
-        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
-
-        let descriptor = FetchDescriptor<Transaction>()
-        let localTransactions = (try? context.fetch(descriptor)) ?? []
-        let localByID = Dictionary(uniqueKeysWithValues: localTransactions.map { ($0.id, $0) })
-
-        var serverWonIDs = Set<UUID>()
-
-        for remote in apiTransactions {
-            guard isValid(remote) else { continue }
-            if let local = localByID[remote.id] {
-                if local.groupName == nil, let name = remote.groupName {
-                    local.groupName = name
-                }
-                if local.groupId == nil, let id = remote.groupId {
-                    local.groupId = id
-                }
-                if remote.updatedAt > local.updatedAt {
-                    serverWonIDs.insert(remote.id)
-                    local.applyRemote(remote)
-                }
-            } else {
-                let tx = Transaction(
-                    id: remote.id,
-                    type: remote.type,
-                    amount: remote.amount,
-                    category: remote.category,
-                    date: remote.date,
-                    time: remote.time,
-                    transactionDescription: remote.description,
-                    notes: remote.notes,
-                    recurringExpenseId: remote.recurringExpenseId,
-                    groupTransactionId: remote.groupTransactionId,
-                    settlementId: remote.settlementId
-                )
-                tx.groupId = remote.groupId
-                tx.groupName = remote.groupName
-                context.insert(tx)
-            }
-        }
-
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .transaction, context: context)
-
-        // Remove local transactions that the server no longer returns and have no pending upload.
-        // The server responds with is_deleted=false only, so anything missing from that set is
-        // either soft-deleted on the server or an orphan (e.g. stale settlement/group transactions).
-        //
-        // We only purge transactions that are server-owned (settlement, group, or recurring) —
-        // plain personal transactions without a pending change are left alone to avoid
-        // accidentally wiping entries created offline before a first sync.
-        let serverIDs = Set(apiTransactions.map { $0.id })
-        for local in localTransactions {
-            guard !serverIDs.contains(local.id) else { continue }      // still on server — keep
-            guard !pendingIDs.contains(local.id) else { continue }     // pending upload — keep
-            guard !failedIDs.contains(local.id) else { continue }      // failed upload — keep
-            let isServerOwned = local.settlementId != nil
-                || local.groupTransactionId != nil
-                || local.recurringExpenseId != nil
-            guard isServerOwned else { continue }                      // personal offline txn — keep
-            AppLogger.sync.info("Purging server-owned transaction not returned by server: id=\(local.id) amount=\(local.amount) category=\(local.category) date=\(local.date) recurringId=\(local.recurringExpenseId?.uuidString ?? "nil") settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
-            context.delete(local)
-        }
-
-        try? context.save()
-        syncCheckpoint(entityType: "transaction", serverCount: apiTransactions.count, localCount: localTransactions.count)
     }
 
     private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
@@ -826,14 +746,6 @@ final class SyncService: SyncServiceProtocol {
     }
 
     // MARK: - Validation
-
-    private func isValid(_ api: APITransaction) -> Bool {
-        guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
-            AppLogger.sync.error("Validation failed: transaction \(api.id) has empty category")
-            return false
-        }
-        return true
-    }
 
     private func isValid(_ api: APIRecurringTransaction) -> Bool {
         guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
