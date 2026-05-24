@@ -277,6 +277,139 @@ final class TransactionPullHandler: CollectionPullHandler {
     }
 }
 
+// MARK: - PredefinedCategoryPullHandler
+
+/// Pulls server-seeded predefined categories and upserts them locally.
+///
+/// Replaces `SyncService.pullPredefinedCategories` + `bootstrapPredefinedCategories` +
+/// `upsertPredefinedCategories`. No purge of user-owned rows; only removes
+/// server-predefined rows that the admin has permanently deleted.
+final class PredefinedCategoryPullHandler: SingletonPullHandler {
+    let entityLabel = "predefined-category"
+
+    private(set) var lastServerCount = 0
+    private(set) var lastLocalCount = 0
+
+    func pull(
+        api: any APIClientProtocol,
+        changeQueue: any ChangeQueueManagerProtocol,
+        context: ModelContext
+    ) async throws {
+        let response: APIListResponse<APIPredefinedCategory> = try await api.get(.predefinedCategories)
+        let remote = response.data
+        lastServerCount = remote.count
+
+        let allLocals = (try? context.fetch(FetchDescriptor<Category>())) ?? []
+        let predefinedLocals = allLocals.filter { $0.isServerPredefined }
+        lastLocalCount = predefinedLocals.count
+
+        upsert(remote, locals: allLocals, context: context)
+
+        try? context.save()
+    }
+
+    // MARK: - Private
+
+    private func upsert(
+        _ remoteItems: [APIPredefinedCategory],
+        locals: [Category],
+        context: ModelContext
+    ) {
+        // Build lookup by key, deduplicating stale rows
+        var localByKey = [String: Category]()
+        for cat in locals where cat.isServerPredefined && !cat.key.isEmpty {
+            if let existing = localByKey[cat.key] {
+                AppLogger.sync.warning("[PredefinedCategoryPullHandler] duplicate row for key=\(cat.key), purging older")
+                context.delete(existing.updatedAt < cat.updatedAt ? existing : cat)
+                localByKey[cat.key] = existing.updatedAt >= cat.updatedAt ? existing : cat
+            } else {
+                localByKey[cat.key] = cat
+            }
+        }
+
+        let serverKeys = Set(remoteItems.map { $0.key })
+
+        for remote in remoteItems {
+            let paletteHex = PredefinedCategory.allCases
+                .first { $0.serverKey == remote.key }?.paletteHex ?? remote.color
+            if let local = localByKey[remote.key] {
+                let remoteUpdatedAt = remote.updatedAt ?? local.updatedAt
+                if remoteUpdatedAt > local.updatedAt {
+                    local.name = remote.name
+                    local.icon = remote.icon
+                    local.isHidden = remote.isHidden ?? false
+                    local.updatedAt = remoteUpdatedAt
+                }
+                local.color = paletteHex
+            } else {
+                let category = Category(
+                    id: remote.id,
+                    key: remote.key,
+                    name: remote.name,
+                    icon: remote.icon,
+                    color: paletteHex,
+                    isPredefined: true,
+                    isServerPredefined: true
+                )
+                category.isHidden = remote.isHidden ?? false
+                category.updatedAt = remote.updatedAt ?? Date()
+                context.insert(category)
+            }
+        }
+
+        // Remove rows the admin permanently deleted
+        for local in locals where local.isServerPredefined {
+            if !serverKeys.contains(local.key) {
+                context.delete(local)
+            }
+        }
+    }
+}
+
+// MARK: - UserBudgetPullHandler
+
+/// Pulls the per-user budget limit from the server and upserts it locally.
+///
+/// Replaces `SyncService.pullBudgets` + `upsertUserBudget`. Skips the server
+/// value when a pending budget change is queued (LWW-safe offline path).
+final class UserBudgetPullHandler: SingletonPullHandler {
+    let entityLabel = "budget"
+
+    private(set) var lastServerCount = 0
+    private(set) var lastLocalCount = 0
+
+    func pull(
+        api: any APIClientProtocol,
+        changeQueue: any ChangeQueueManagerProtocol,
+        context: ModelContext
+    ) async throws {
+        let remote: APIUserBudget = try await api.get(.getBudget)
+        lastServerCount = 1
+
+        let locals = (try? context.fetch(FetchDescriptor<UserBudget>())) ?? []
+        lastLocalCount = locals.count
+
+        let hasPending = (try? context.fetch(
+            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType == "budget" })
+        ))?.isEmpty == false
+
+        if hasPending {
+            AppLogger.sync.debug("[UserBudgetPullHandler] pending budget change queued — skipping server overwrite")
+            return
+        }
+
+        if let local = locals.first {
+            local.limit = remote.limit
+        } else {
+            context.insert(UserBudget(limit: remote.limit))
+        }
+
+        changeQueue.removeStaleChanges(for: [UserBudget.sentinelID], entityType: .budget, context: context)
+        try? context.save()
+        AppLogger.sync.debug("[UserBudgetPullHandler] limit=\(remote.limit.map { "\($0)" } ?? "nil")")
+    }
+}
+
 // MARK: - CategoryPullHandler
 
 /// Pulls user-owned categories from the server and upserts them locally.

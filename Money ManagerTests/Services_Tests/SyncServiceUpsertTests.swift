@@ -99,6 +99,8 @@ struct SyncServiceUpsertTests {
         let mock = MockAPIClient()
         mock.getHandler = { endpoint in
             switch endpoint {
+            case .predefinedCategories:
+                return APIListResponse<APIPredefinedCategory>(data: [])
             case .syncCategories:
                 return APIListResponse(data: categories)
             case .getBudget:
@@ -451,7 +453,6 @@ struct SyncServiceUpsertTests {
 
         context.insert(Transaction(amount: 5, category: "Food", date: Date()))
         context.insert(RecurringTransaction(name: "Sub", amount: 10, category: "Bills", frequency: .monthly, startDate: Date()))
-        context.insert(MonthlyBudget(year: 2025, month: 1, limit: 500))
         context.insert(UserBudget(limit: 5000))
         context.insert(Category(name: "Travel", icon: "star", color: "#000"))
         try context.save()
@@ -461,7 +462,6 @@ struct SyncServiceUpsertTests {
 
         #expect(try context.fetch(FetchDescriptor<Transaction>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<RecurringTransaction>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<MonthlyBudget>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<UserBudget>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<Money_Manager.Category>()).isEmpty)
     }

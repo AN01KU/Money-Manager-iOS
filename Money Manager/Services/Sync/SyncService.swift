@@ -298,6 +298,8 @@ final class SyncService: SyncServiceProtocol {
     // MARK: - Pull Pipeline
 
     private let pullHandlers: [any PullEntityHandler] = [
+        PredefinedCategoryPullHandler(),
+        UserBudgetPullHandler(),
         RecurringTransactionPullHandler(),
         TransactionPullHandler(),
         CategoryPullHandler()
@@ -323,123 +325,20 @@ final class SyncService: SyncServiceProtocol {
         isSyncing = true
         defer { isSyncing = false }
 
-        await pullPredefinedCategories(context: context)
-        await pullBudgets(context: context)
         await runPullPipeline(context: context)
 
         updateLastSyncTime()
     }
 
-    private func pullPredefinedCategories(context: ModelContext) async {
-        do {
-            let response: APIListResponse<APIPredefinedCategory> = try await apiClient.get(.predefinedCategories)
-            AppLogger.sync.debug("[pullPredefined] received \(response.data.count) rows: \(response.data.map { "\($0.key)" }.joined(separator: ", "))")
-            upsertPredefinedCategories(response.data, context: context)
-        } catch {
-            AppLogger.sync.error("Failed to pull predefined categories: \(error)")
-            recordSyncError()
-        }
-    }
-
     func bootstrapPredefinedCategories() async {
         let context = ModelContext(modelContainer)
+        let handler = PredefinedCategoryPullHandler()
         do {
-            let response: APIListResponse<APIPredefinedCategory> = try await apiClient.get(.predefinedCategories)
-            upsertPredefinedCategories(response.data, context: context)
-            AppLogger.sync.info("Bootstrapped \(response.data.count) predefined categories")
+            try await handler.pull(api: apiClient, changeQueue: changeQueue, context: context)
+            AppLogger.sync.info("Bootstrapped \(handler.lastServerCount) predefined categories")
         } catch {
             AppLogger.sync.error("Failed to fetch predefined categories: \(error)")
         }
-    }
-
-    private func upsertPredefinedCategories(_ categories: [APIPredefinedCategory], context: ModelContext) {
-        let localCategories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
-        // Use keepingCurrent to safely handle any duplicate keys in local store.
-        var localServerPredefinedByKey = [String: Category]()
-        for cat in localCategories where cat.isServerPredefined && !cat.key.isEmpty {
-            if let existing = localServerPredefinedByKey[cat.key] {
-                // Duplicate — purge the older one
-                AppLogger.sync.warning("[upsertPredefined] duplicate isServerPredefined row for key=\(cat.key), purging older")
-                context.delete(existing.updatedAt < cat.updatedAt ? existing : cat)
-                localServerPredefinedByKey[cat.key] = existing.updatedAt >= cat.updatedAt ? existing : cat
-            } else {
-                localServerPredefinedByKey[cat.key] = cat
-            }
-        }
-
-        let serverKeys = Set(categories.map { $0.key })
-
-        for remote in categories {
-            let paletteHex = PredefinedCategory.allCases
-                .first { $0.serverKey == remote.key }?.paletteHex ?? remote.color
-            if let local = localServerPredefinedByKey[remote.key] {
-                let remoteUpdatedAt = remote.updatedAt ?? local.updatedAt
-                if remoteUpdatedAt > local.updatedAt {
-                    local.name = remote.name
-                    local.icon = remote.icon
-                    local.isHidden = remote.isHidden ?? false
-                    local.updatedAt = remoteUpdatedAt
-                }
-                // Always migrate color to palette hex
-                local.color = paletteHex
-            } else {
-                // Insert new server-predefined row
-                let category = Category(
-                    id: remote.id,
-                    key: remote.key,
-                    name: remote.name,
-                    icon: remote.icon,
-                    color: paletteHex,
-                    isPredefined: true,
-                    isServerPredefined: true
-                )
-                category.isHidden = remote.isHidden ?? false
-                category.updatedAt = remote.updatedAt ?? Date()
-                context.insert(category)
-            }
-        }
-
-        // Remove server-predefined rows the admin has permanently deleted
-        for local in localCategories where local.isServerPredefined {
-            if !serverKeys.contains(local.key) {
-                context.delete(local)
-            }
-        }
-
-        try? context.save()
-    }
-
-    private func pullBudgets(context: ModelContext) async {
-        do {
-            let response: APIUserBudget = try await apiClient.get(.getBudget)
-            upsertUserBudget(response, context: context)
-        } catch {
-            AppLogger.sync.error("Failed to pull budget: \(error)")
-            recordSyncError()
-        }
-    }
-
-    private func upsertUserBudget(_ remote: APIUserBudget, context: ModelContext) {
-        let hasPending = (try? context.fetch(
-            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType == "budget" })
-        ))?.isEmpty == false
-
-        // Don't overwrite a queued local write with the (possibly stale) server value.
-        if hasPending {
-            AppLogger.sync.debug("[upsertUserBudget] pending budget change queued — skipping server overwrite")
-            return
-        }
-
-        let local = (try? context.fetch(FetchDescriptor<UserBudget>()))?.first
-        if let local {
-            local.limit = remote.limit
-        } else {
-            context.insert(UserBudget(limit: remote.limit))
-        }
-
-        changeQueue.removeStaleChanges(for: [UserBudget.sentinelID], entityType: .budget, context: context)
-        try? context.save()
-        AppLogger.sync.debug("[upsertUserBudget] limit=\(remote.limit.map { "\($0)" } ?? "nil")")
     }
 
     private func pullGroups(context: ModelContext) async {
