@@ -8,7 +8,7 @@ struct BudgetsViewModelTests {
 
     // Fixed mid-month reference: January 15, 2026 — never the 1st or last day of any month.
     private static let calendar = Calendar.current
-    private static let fixedRef = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+    nonisolated private static let fixedRef = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15))!
 
     private func makeVM(referenceDate: Date = fixedRef) -> BudgetsViewModel {
         let vm = BudgetsViewModel()

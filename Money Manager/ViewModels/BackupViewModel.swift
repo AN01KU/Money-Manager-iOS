@@ -6,16 +6,16 @@ import UniformTypeIdentifiers
 enum ExportFormat: String, CaseIterable, Identifiable {
     case csv = "CSV"
     case json = "JSON"
-    
+
     var id: String { rawValue }
-    
+
     var fileExtension: String {
         switch self {
         case .csv: return "csv"
         case .json: return "json"
         }
     }
-    
+
     var utType: UTType {
         switch self {
         case .csv: return .commaSeparatedText
@@ -30,9 +30,9 @@ enum ExportDataType: String, CaseIterable, Identifiable {
     case budgets = "Budgets"
     case categories = "Categories"
     case all = "All Data"
-    
+
     var id: String { rawValue }
-    
+
     var icon: String {
         switch self {
         case .transactions: return "creditcard.fill"
@@ -51,7 +51,7 @@ struct ExportData: Codable {
     var recurringTransactions: [RecurringTransactionData]?
     var budgets: [MonthlyBudgetData]?
     var categories: [CategoryData]?
-    
+
     struct TransactionData: Codable {
         let id: String
         let type: String
@@ -77,7 +77,7 @@ struct ExportData: Codable {
             self.groupTransactionId = groupTransactionId
         }
     }
-    
+
     struct RecurringTransactionData: Codable {
         let id: String
         let name: String
@@ -110,7 +110,7 @@ struct ExportData: Codable {
         let month: Int
         let limit: Double
     }
-    
+
     struct CategoryData: Codable {
         let id: String
         let name: String
@@ -132,18 +132,16 @@ struct ExportData: Codable {
     var showError = false
     var successMessage: String?
     var showSuccess = false
-    
+
     var selectedExportFormat: ExportFormat = .csv
     var selectedDataType: ExportDataType = .all
     var selectedImportFormat: ExportFormat = .json
-    
-    var exportService: any ExportServiceProtocol = ExportService()
-    var importService: any ImportServiceProtocol = ImportService()
-    var transactionCodec = TransactionCodec()
-    var recurringCodec = RecurringTransactionCodec()
-    var budgetCodec = BudgetCodec()
-    var categoryCodec = CategoryCodec()
-    
+
+    private var transactionCodec = TransactionCodec()
+    private var recurringCodec = RecurringTransactionCodec()
+    private var budgetCodec = BudgetCodec()
+    private var categoryCodec = CategoryCodec()
+
     var exportDescription: String {
         switch selectedExportFormat {
         case .csv:
@@ -157,7 +155,7 @@ struct ExportData: Codable {
             }
         }
     }
-    
+
     var importDescription: String {
         switch selectedImportFormat {
         case .json:
@@ -166,7 +164,7 @@ struct ExportData: Codable {
             return "Import transactions, budgets, or categories from CSV files."
         }
     }
-    
+
     func exportData(
         transactions: [Transaction],
         recurringTransactions: [RecurringTransaction],
@@ -176,14 +174,14 @@ struct ExportData: Codable {
     ) async {
         isExporting = true
         defer { isExporting = false }
-        
+
         do {
             let url: URL
-            
+            let stamp = exportDateStamp()
+
             switch selectedDataType {
             case .transactions:
                 let active = transactions.filter { !$0.isSoftDeleted }
-                let stamp = exportDateStamp()
                 switch selectedExportFormat {
                 case .csv:
                     url = try BackupService.saveCSV(
@@ -198,7 +196,6 @@ struct ExportData: Codable {
                     url = tmpURL
                 }
             case .recurring:
-                let stamp = exportDateStamp()
                 switch selectedExportFormat {
                 case .csv:
                     url = try BackupService.saveCSV(
@@ -213,7 +210,6 @@ struct ExportData: Codable {
                     url = tmpURL
                 }
             case .budgets:
-                let stamp = exportDateStamp()
                 switch selectedExportFormat {
                 case .csv:
                     url = try BackupService.saveCSV(
@@ -228,7 +224,6 @@ struct ExportData: Codable {
                     url = tmpURL
                 }
             case .categories:
-                let stamp = exportDateStamp()
                 switch selectedExportFormat {
                 case .csv:
                     url = try BackupService.saveCSV(
@@ -243,9 +238,36 @@ struct ExportData: Codable {
                     url = tmpURL
                 }
             case .all:
-                url = try exportService.exportAll(format: selectedExportFormat, transactions: transactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
+                let active = transactions.filter { !$0.isSoftDeleted }
+                switch selectedExportFormat {
+                case .csv:
+                    let csv = BackupService.csvSection(transactionCodec, models: active)
+                        + BackupService.csvSection(recurringCodec, models: recurringTransactions)
+                        + BackupService.csvSection(budgetCodec, models: budgets)
+                        + BackupService.csvSection(categoryCodec, models: categories)
+                    url = try BackupService.saveCSV(csv, filename: "money_manager_backup_\(stamp)")
+                case .json:
+                    let dict: [String: Data] = [
+                        transactionCodec.entityName: try transactionCodec.encodeJSON(active),
+                        recurringCodec.entityName: try recurringCodec.encodeJSON(recurringTransactions),
+                        budgetCodec.entityName: try budgetCodec.encodeJSON(budgets),
+                        categoryCodec.entityName: try categoryCodec.encodeJSON(categories)
+                    ]
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                    // Encode each section as raw JSON by re-serializing
+                    var jsonObj: [String: Any] = [:]
+                    for (key, data) in dict {
+                        jsonObj[key] = try JSONSerialization.jsonObject(with: data)
+                    }
+                    let jsonData = try JSONSerialization.data(withJSONObject: jsonObj, options: [.prettyPrinted, .sortedKeys])
+                    let tmpURL = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("money_manager_backup_\(stamp).json")
+                    try jsonData.write(to: tmpURL)
+                    url = tmpURL
+                }
             }
-            
+
             exportedFileURL = url
             showShareSheet = true
         } catch {
@@ -253,7 +275,7 @@ struct ExportData: Codable {
             showError = true
         }
     }
-    
+
     private func exportDateStamp() -> String {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd_HHmmss"
@@ -263,22 +285,358 @@ struct ExportData: Codable {
     func importData(from url: URL, context: ModelContext) async {
         isImporting = true
         defer { isImporting = false }
-        
+
         do {
             let result: ImportResult
-            
+
             switch selectedImportFormat {
             case .json:
-                result = try importService.importJSON(from: url, context: context)
+                result = try importJSON(from: url, context: context)
             case .csv:
-                result = try importService.importCSV(from: url, context: context)
+                result = try importCSV(from: url, context: context)
             }
-            
+
             successMessage = result.message
             showSuccess = true
         } catch {
             errorMessage = "Import failed: \(error.localizedDescription)"
             showError = true
         }
+    }
+
+    // MARK: - Import
+
+    private func importJSON(from url: URL, context: ModelContext) throws -> ImportResult {
+        let data = try Data(contentsOf: url)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let exportData = try decoder.decode(ExportData.self, from: data)
+        return try processImportedData(exportData, context: context)
+    }
+
+    private func importCSV(from url: URL, context: ModelContext) throws -> ImportResult {
+        let content = try String(contentsOf: url, encoding: .utf8)
+
+        if content.contains("# TRANSACTIONS") || content.contains("# BUDGETS") || content.contains("# CATEGORIES") {
+            return try importSectionBasedCSV(content: content, context: context)
+        }
+
+        let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        guard lines.count > 1 else { return ImportResult(message: "No data found to import") }
+
+        let headers = parseCSVLine(lines[0])
+        var transactions: [ExportData.TransactionData] = []
+        var budgets: [ExportData.MonthlyBudgetData] = []
+        var categories: [ExportData.CategoryData] = []
+        let lowercaseHeaders = headers.map { $0.lowercased() }
+        let firstHeader = lowercaseHeaders.first ?? ""
+
+        if firstHeader == "id" && lowercaseHeaders.contains("amount") && lowercaseHeaders.contains("category") {
+            for i in 1..<lines.count {
+                if let tx = parseTransactionCSVRow(parseCSVLine(lines[i]), headers: lowercaseHeaders) {
+                    transactions.append(tx)
+                }
+            }
+        } else if firstHeader == "id" && lowercaseHeaders.contains("limit") && lowercaseHeaders.contains("year") {
+            for i in 1..<lines.count {
+                if let b = parseBudgetCSVRow(parseCSVLine(lines[i]), headers: lowercaseHeaders) {
+                    budgets.append(b)
+                }
+            }
+        } else if firstHeader == "id" && lowercaseHeaders.contains("name") && lowercaseHeaders.contains("icon") {
+            for i in 1..<lines.count {
+                if let c = parseCategoryCSVRow(parseCSVLine(lines[i]), headers: lowercaseHeaders) {
+                    categories.append(c)
+                }
+            }
+        }
+
+        let exportData = ExportData(
+            exportDate: Date(),
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            transactions: transactions.isEmpty ? nil : transactions,
+            budgets: budgets.isEmpty ? nil : budgets,
+            categories: categories.isEmpty ? nil : categories
+        )
+        return try processImportedData(exportData, context: context)
+    }
+
+    private func importSectionBasedCSV(content: String, context: ModelContext) throws -> ImportResult {
+        var transactions: [ExportData.TransactionData] = []
+        var budgets: [ExportData.MonthlyBudgetData] = []
+        var categories: [ExportData.CategoryData] = []
+
+        for section in content.components(separatedBy: "\n# ") {
+            let lines = section.components(separatedBy: .newlines).filter { !$0.isEmpty }
+            guard lines.count > 1 else { continue }
+
+            let sectionHeader = lines[0]
+            let headers = parseCSVLine(lines[1]).map { $0.lowercased() }
+
+            if sectionHeader.contains("TRANSACTIONS") {
+                for i in 2..<lines.count {
+                    if let tx = parseTransactionCSVRow(parseCSVLine(lines[i]), headers: headers) {
+                        transactions.append(tx)
+                    }
+                }
+            } else if sectionHeader.contains("BUDGETS") {
+                for i in 2..<lines.count {
+                    if let b = parseBudgetCSVRow(parseCSVLine(lines[i]), headers: headers) {
+                        budgets.append(b)
+                    }
+                }
+            } else if sectionHeader.contains("CATEGORIES") {
+                for i in 2..<lines.count {
+                    if let c = parseCategoryCSVRow(parseCSVLine(lines[i]), headers: headers) {
+                        categories.append(c)
+                    }
+                }
+            }
+        }
+
+        let exportData = ExportData(
+            exportDate: Date(),
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            transactions: transactions.isEmpty ? nil : transactions,
+            budgets: budgets.isEmpty ? nil : budgets,
+            categories: categories.isEmpty ? nil : categories
+        )
+        return try processImportedData(exportData, context: context)
+    }
+
+    private func processImportedData(_ exportData: ExportData, context: ModelContext) throws -> ImportResult {
+        var transactionsImported = 0
+        var recurringImported = 0
+        var budgetsImported = 0
+        var categoriesImported = 0
+        var recurringIdMap: [String: UUID] = [:]
+
+        if let recurringTransactions = exportData.recurringTransactions {
+            for recurringData in recurringTransactions {
+                let recurringTransaction = RecurringTransaction(
+                    id: UUID(uuidString: recurringData.id) ?? UUID(),
+                    name: recurringData.name,
+                    amount: recurringData.amount,
+                    category: recurringData.category,
+                    frequency: RecurringFrequency(rawValue: recurringData.frequency) ?? .monthly,
+                    dayOfMonth: recurringData.dayOfMonth,
+                    daysOfWeek: recurringData.daysOfWeek,
+                    startDate: recurringData.startDate,
+                    endDate: recurringData.endDate,
+                    isActive: recurringData.isActive,
+                    lastAddedDate: recurringData.lastAddedDate,
+                    notes: recurringData.notes,
+                    type: TransactionKind(rawValue: recurringData.type) ?? .expense
+                )
+                context.insert(recurringTransaction)
+                recurringImported += 1
+                recurringIdMap[recurringData.id] = recurringTransaction.id
+            }
+        }
+
+        if let transactions = exportData.transactions {
+            for transactionData in transactions {
+                let recurringExpenseId: UUID?
+                if let recIdString = transactionData.recurringExpenseId,
+                   let recId = recurringIdMap[recIdString] {
+                    recurringExpenseId = recId
+                } else {
+                    recurringExpenseId = nil
+                }
+
+                let transaction = Transaction(
+                    id: UUID(uuidString: transactionData.id) ?? UUID(),
+                    type: TransactionKind(rawValue: transactionData.type) ?? .expense,
+                    amount: transactionData.amount,
+                    category: transactionData.category,
+                    date: transactionData.date,
+                    time: transactionData.time,
+                    transactionDescription: transactionData.transactionDescription,
+                    notes: transactionData.notes,
+                    recurringExpenseId: recurringExpenseId,
+                    groupTransactionId: transactionData.groupTransactionId.flatMap { UUID(uuidString: $0) }
+                )
+                context.insert(transaction)
+                transactionsImported += 1
+            }
+        }
+
+        if let budgets = exportData.budgets {
+            for budgetData in budgets {
+                let budget = MonthlyBudget(
+                    id: UUID(uuidString: budgetData.id) ?? UUID(),
+                    year: budgetData.year,
+                    month: budgetData.month,
+                    limit: budgetData.limit
+                )
+                context.insert(budget)
+                budgetsImported += 1
+            }
+        }
+
+        if let categories = exportData.categories {
+            for categoryData in categories {
+                let isPredefined = categoryData.isPredefined ?? false
+                let predefinedKey = categoryData.predefinedKey
+
+                if isPredefined, let key = predefinedKey {
+                    let descriptor = FetchDescriptor<Category>(
+                        predicate: #Predicate { $0.predefinedKey == key }
+                    )
+                    if let existing = try? context.fetch(descriptor).first {
+                        existing.name = categoryData.name
+                        existing.icon = categoryData.icon
+                        existing.color = categoryData.color
+                        existing.isHidden = categoryData.isHidden
+                        existing.updatedAt = Date()
+                        continue
+                    }
+                }
+
+                let category = Category(
+                    id: UUID(uuidString: categoryData.id) ?? UUID(),
+                    name: categoryData.name,
+                    icon: categoryData.icon,
+                    color: categoryData.color,
+                    isPredefined: isPredefined,
+                    predefinedKey: predefinedKey
+                )
+                category.isHidden = categoryData.isHidden
+                context.insert(category)
+                categoriesImported += 1
+            }
+        }
+
+        try context.save()
+
+        var parts: [String] = []
+        if recurringImported > 0 { parts.append("\(recurringImported) recurring transactions") }
+        if transactionsImported > 0 { parts.append("\(transactionsImported) transactions") }
+        if budgetsImported > 0 { parts.append("\(budgetsImported) budgets") }
+        if categoriesImported > 0 { parts.append("\(categoriesImported) categories") }
+
+        let message = parts.isEmpty ? "No data found to import" : parts.joined(separator: ", ")
+        return ImportResult(message: "Imported: \(message)")
+    }
+
+    // MARK: - CSV Parsing Helpers
+
+    func parseCSVLine(_ line: String) -> [String] {
+        var result: [String] = []
+        var current = ""
+        var inQuotes = false
+
+        for char in line {
+            if char == "\"" {
+                inQuotes.toggle()
+            } else if char == "," && !inQuotes {
+                result.append(current.trimmingCharacters(in: .whitespaces))
+                current = ""
+            } else {
+                current.append(char)
+            }
+        }
+        result.append(current.trimmingCharacters(in: .whitespaces))
+        return result
+    }
+
+    func parseTransactionCSVRow(_ values: [String], headers: [String]) -> ExportData.TransactionData? {
+        guard values.count == headers.count else { return nil }
+
+        let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let dateStr = dict["date"] ?? ""
+        let timeStr = dict["time"] ?? ""
+        let date = isoFormatter.date(from: dateStr) ?? Date()
+        let time = timeStr.isEmpty ? nil : isoFormatter.date(from: timeStr)
+
+        return ExportData.TransactionData(
+            id: dict["id"] ?? UUID().uuidString,
+            type: dict["type"] ?? "transaction",
+            amount: Double(dict["amount"] ?? "0") ?? 0,
+            category: dict["category"] ?? "Other",
+            date: date,
+            time: time,
+            transactionDescription: nonEmpty(dict["description"]),
+            notes: nonEmpty(dict["notes"]),
+            recurringExpenseId: nonEmpty(dict["recurring expense id"]),
+            groupTransactionId: nonEmpty(dict["group transaction id"])
+        )
+    }
+
+    func parseBudgetCSVRow(_ values: [String], headers: [String]) -> ExportData.MonthlyBudgetData? {
+        guard values.count == headers.count else { return nil }
+        let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
+        return ExportData.MonthlyBudgetData(
+            id: dict["id"] ?? UUID().uuidString,
+            year: Int(dict["year"] ?? "2026") ?? 2026,
+            month: Int(dict["month"] ?? "1") ?? 1,
+            limit: Double(dict["limit"] ?? "0") ?? 0
+        )
+    }
+
+    func parseCategoryCSVRow(_ values: [String], headers: [String]) -> ExportData.CategoryData? {
+        guard values.count == headers.count else { return nil }
+        let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
+        return ExportData.CategoryData(
+            id: dict["id"] ?? UUID().uuidString,
+            name: dict["name"] ?? "Custom",
+            icon: dict["icon"] ?? "folder.fill",
+            color: dict["color"] ?? "#808080",
+            isHidden: dict["is hidden"]?.lowercased() == "true",
+            isPredefined: dict["is predefined"]?.lowercased() == "true",
+            predefinedKey: nonEmpty(dict["predefined key"])
+        )
+    }
+
+    func parseDate(_ dateStr: String, _ timeStr: String? = nil) -> (date: Date, time: Date?) {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let dateFormats = [
+            "d MMM yyyy 'at' h:mm a",
+            "d MMM yyyy 'at' h:mm:ss a",
+            "MMM d, yyyy 'at' h:mm a",
+            "MM/dd/yyyy",
+            "yyyy-MM-dd"
+        ]
+
+        var parsedDate: Date?
+        var parsedTime: Date?
+
+        if !dateStr.isEmpty {
+            parsedDate = isoFormatter.date(from: dateStr)
+            if parsedDate == nil {
+                for format in dateFormats {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = format
+                    if let date = formatter.date(from: dateStr) {
+                        parsedDate = date
+                        break
+                    }
+                }
+            }
+        }
+
+        if let timeStr = timeStr, !timeStr.isEmpty {
+            parsedTime = isoFormatter.date(from: timeStr)
+            if parsedTime == nil {
+                for format in dateFormats {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = format
+                    if let time = formatter.date(from: timeStr) {
+                        parsedTime = time
+                        break
+                    }
+                }
+            }
+        }
+
+        return (parsedDate ?? Date(), parsedTime)
+    }
+
+    private func nonEmpty(_ value: String?) -> String? {
+        value?.isEmpty == false ? value : nil
     }
 }

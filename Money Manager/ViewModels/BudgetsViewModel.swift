@@ -12,26 +12,27 @@ import SwiftData
 
     @ObservationIgnored var persistence: PersistenceService = .testing
 
-    var currentMonthTransactions: [Transaction] {
+    private var monthInterval: DateInterval? {
         let calendar = Calendar.current
         guard
             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)),
             let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-        else { return [] }
+        else { return nil }
+        return DateInterval(start: startOfMonth, end: firstDayNextMonth)
+    }
 
-        return allTransactions.filter { transaction in
-            !transaction.isSoftDeleted &&
-            transaction.type == .expense &&
-            transaction.date >= startOfMonth &&
-            transaction.date < firstDayNextMonth
-        }
+    private var spending: Spending {
+        guard let interval = monthInterval else { return Spending(income: 0, expense: 0, byCategory: [:], filtered: []) }
+        return Spending.from(transactions: allTransactions, in: interval)
+    }
+
+    var currentMonthTransactions: [Transaction] {
+        spending.filtered.filter { $0.type == .expense }
     }
 
     var budgetLimit: Double? { userBudget?.limit }
 
-    var totalSpent: Double {
-        currentMonthTransactions.reduce(0) { $0 + $1.amount }
-    }
+    var totalSpent: Double { NSDecimalNumber(decimal: spending.expense).doubleValue }
 
     var remainingBudget: Double {
         guard let limit = budgetLimit else { return 0 }
@@ -44,15 +45,9 @@ import SwiftData
     }
 
     var daysRemaining: Int {
-        let calendar = Calendar.current
-        let today = referenceDate
-        guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)),
-            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-        else { return 0 }
-
-        let startOfToday = calendar.startOfDay(for: today)
-        let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: firstDayNextMonth).day ?? 0
+        guard let interval = monthInterval else { return 0 }
+        let startOfToday = Calendar.current.startOfDay(for: referenceDate)
+        let daysLeft = Calendar.current.dateComponents([.day], from: startOfToday, to: interval.end).day ?? 0
         return max(0, daysLeft)
     }
 
@@ -62,10 +57,8 @@ import SwiftData
     }
 
     private var daysElapsed: Int {
-        let calendar = Calendar.current
-        let today = referenceDate
-        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) else { return 1 }
-        return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
+        guard let interval = monthInterval else { return 1 }
+        return max(1, (Calendar.current.dateComponents([.day], from: interval.start, to: referenceDate).day ?? 0) + 1)
     }
 
     var projectedMonthEnd: Double {
