@@ -16,7 +16,7 @@ struct Spending {
         let active = transactions.filter {
             !$0.isSoftDeleted &&
             $0.date >= interval.start &&
-            $0.date <= interval.end
+            $0.date < interval.end
         }
 
         let matched: [Transaction]

@@ -50,46 +50,23 @@ enum TransactionTypeFilter: String, CaseIterable {
 
     func recalculate() {
         let calendar = Calendar.current
+        let interval = filterMode == .daily
+            ? calendar.dayInterval(for: selectedDate)
+            : calendar.monthInterval(for: selectedDate)
 
-        let dateFiltered: [Transaction]
-        if filterMode == .daily {
-            let startOfDay = calendar.startOfDay(for: selectedDate)
-            guard let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) else {
-                filteredTransactions = []
-                return
-            }
+        // date + isSoftDeleted filtering delegated to Spending.from
+        let spending = Spending.from(transactions: allTransactions, in: interval)
 
-            dateFiltered = allTransactions.filter { transaction in
-                !transaction.isSoftDeleted &&
-                transaction.date >= startOfDay &&
-                transaction.date <= endOfDay
-            }
-        } else {
-            guard
-                let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
-                let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-            else {
-                filteredTransactions = []
-                return
-            }
-
-            dateFiltered = allTransactions.filter { transaction in
-                !transaction.isSoftDeleted &&
-                transaction.date >= startOfMonth &&
-                transaction.date < firstDayNextMonth
-            }
-        }
-
-        // Apply category filter. Totals and recent list are computed at this scope —
-        // after category drill-down but before search/type filters, which are transient UI state.
+        // Apply category drill-down. Totals and recent list use this scope —
+        // before search/type filters, which are transient UI state.
         let categoryFiltered: [Transaction]
         if let categoryFilter = selectedCategoryFilter {
-            categoryFiltered = dateFiltered.filter { $0.category == categoryFilter }
+            categoryFiltered = spending.filtered.filter { $0.category == categoryFilter }
         } else {
-            categoryFiltered = dateFiltered
+            categoryFiltered = spending.filtered
         }
 
-        // Totals reflect the month + category scope, not the search term.
+        // Totals reflect the date + category scope, not the search term or type filter.
         totalSpent  = categoryFiltered.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
         totalIncome = categoryFiltered.filter { $0.type == .income  }.reduce(0) { $0 + $1.amount }
 
@@ -120,7 +97,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         }
 
         // Category chart: derive from categoryFiltered (before type/search filters) so the
-        // chart base is always the full month/category scope, not a search-narrowed subset.
+        // chart base is always the full date + category scope, not a search-narrowed subset.
         let categoryBase: [Transaction]
         let categoryTotal: Double
         if transactionTypeFilter == .income {
