@@ -276,3 +276,131 @@ final class TransactionPullHandler: CollectionPullHandler {
         }
     }
 }
+
+// MARK: - CategoryPullHandler
+
+/// Pulls user-owned categories from the server and upserts them locally.
+///
+/// Replaces `SyncService.upsertCategories`. Purges local custom categories absent
+/// from the server response unless they have a pending change queued.
+/// Never touches server-predefined rows (those are managed separately).
+final class CategoryPullHandler: CollectionPullHandler {
+    let entityLabel = "category"
+
+    private(set) var lastServerCount = 0
+    private(set) var lastLocalCount = 0
+
+    func pull(
+        api: any APIClientProtocol,
+        changeQueue: any ChangeQueueManagerProtocol,
+        context: ModelContext
+    ) async throws {
+        let response: APIListResponse<APICategory> = try await api.get(.syncCategories)
+        let remote = response.data
+        lastServerCount = remote.count
+
+        let locals = (try? context.fetch(FetchDescriptor<Category>())) ?? []
+        lastLocalCount = locals.filter { !$0.isServerPredefined }.count
+
+        let serverWonIDs = upsert(remote, locals: locals, context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .category, context: context)
+        purge(remote, locals: locals, context: context)
+
+        try? context.save()
+    }
+
+    // MARK: - Private
+
+    private func isValid(_ api: APICategory) -> Bool {
+        guard !api.name.trimmingCharacters(in: .whitespaces).isEmpty else {
+            AppLogger.sync.error("Validation failed: category \(api.id) has empty name")
+            return false
+        }
+        return true
+    }
+
+    private func upsert(
+        _ remoteItems: [APICategory],
+        locals: [Category],
+        context: ModelContext
+    ) -> Set<UUID> {
+        let localByID = Dictionary(uniqueKeysWithValues: locals.map { ($0.id, $0) })
+        var localByPredServerKey = [String: Category]()
+        for cat in locals where cat.isPredefined && !cat.key.isEmpty {
+            localByPredServerKey[cat.key] = cat
+        }
+
+        var serverWonIDs = Set<UUID>()
+
+        for remote in remoteItems {
+            guard isValid(remote) else { continue }
+
+            let normalizedPredefinedKey = remote.predefinedKey
+                .flatMap { PredefinedCategory.normalizeKey($0) }
+                ?? remote.predefinedKey
+
+            let remoteIsHidden = remote.isHidden ?? false
+            let remoteIsPredefined = remote.isPredefined ?? false
+
+            if let local = localByID[remote.id] {
+                if remote.updatedAt > local.updatedAt {
+                    serverWonIDs.insert(remote.id)
+                    local.key = remote.key
+                    local.name = remote.name
+                    local.icon = remote.icon
+                    local.color = remote.color
+                    local.isHidden = remoteIsHidden
+                    local.isPredefined = remoteIsPredefined
+                    local.predefinedKey = normalizedPredefinedKey
+                    local.updatedAt = remote.updatedAt
+                }
+            } else if remoteIsPredefined, let local = localByPredServerKey[remote.key] {
+                serverWonIDs.insert(local.id)
+                local.id = remote.id
+                local.key = remote.key
+                local.name = remote.name
+                local.icon = remote.icon
+                local.color = remote.color
+                local.isHidden = remoteIsHidden
+                local.isPredefined = remoteIsPredefined
+                local.predefinedKey = normalizedPredefinedKey
+                local.updatedAt = remote.updatedAt
+            } else {
+                let category = Category(
+                    id: remote.id,
+                    key: remote.key,
+                    name: remote.name,
+                    icon: remote.icon,
+                    color: remote.color,
+                    isPredefined: remoteIsPredefined,
+                    predefinedKey: normalizedPredefinedKey
+                )
+                category.isHidden = remoteIsHidden
+                category.updatedAt = remote.updatedAt
+                context.insert(category)
+            }
+        }
+        return serverWonIDs
+    }
+
+    private func purge(
+        _ remoteItems: [APICategory],
+        locals: [Category],
+        context: ModelContext
+    ) {
+        let pendingIDs = Set(
+            (try? context.fetch(FetchDescriptor<PendingChange>(
+                predicate: #Predicate { $0.entityType == "category" }
+            )))?.map { $0.entityID } ?? []
+        )
+        let serverIDs = Set(remoteItems.map { $0.id })
+
+        for local in locals {
+            guard !local.isPredefined, !local.isServerPredefined else { continue }
+            guard !serverIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            AppLogger.sync.debug("Purging custom category not on server: \(local.id) name=\(local.name)")
+            context.delete(local)
+        }
+    }
+}

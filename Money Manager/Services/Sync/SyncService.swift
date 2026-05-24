@@ -239,16 +239,13 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.info("Bootstrap after signup started")
         let context = ModelContext(modelContainer)
 
-        // 1. Pull any existing category overrides/custom categories from server
-        await pullCategories(context: context)
-
-        // 2. Enqueue all local user data as creates
+        // 1. Enqueue all local user data as creates
         enqueueLocalData(context: context)
 
-        // 3. Push everything to server
+        // 2. Push everything to server
         await changeQueue.replayAll(context: context, isAuthenticated: authService.isAuthenticated)
 
-        // 4. Pull canonical state
+        // 3. Pull canonical state
         await pullFromServer(context: context)
         updateLastSyncTime()
         AppLogger.sync.info("Bootstrap after signup complete")
@@ -302,7 +299,8 @@ final class SyncService: SyncServiceProtocol {
 
     private let pullHandlers: [any PullEntityHandler] = [
         RecurringTransactionPullHandler(),
-        TransactionPullHandler()
+        TransactionPullHandler(),
+        CategoryPullHandler()
     ]
 
     private func runPullPipeline(context: ModelContext) async {
@@ -326,7 +324,6 @@ final class SyncService: SyncServiceProtocol {
         defer { isSyncing = false }
 
         await pullPredefinedCategories(context: context)
-        await pullCategories(context: context)
         await pullBudgets(context: context)
         await runPullPipeline(context: context)
 
@@ -340,17 +337,6 @@ final class SyncService: SyncServiceProtocol {
             upsertPredefinedCategories(response.data, context: context)
         } catch {
             AppLogger.sync.error("Failed to pull predefined categories: \(error)")
-            recordSyncError()
-        }
-    }
-
-    private func pullCategories(context: ModelContext) async {
-        do {
-            let response: APIListResponse<APICategory> = try await apiClient.get(.syncCategories)
-            AppLogger.sync.debug("[pullCategories] received \(response.data.count) rows: \(response.data.map { "\($0.key) isPredefined=\($0.isPredefined ?? false)" }.joined(separator: ", "))")
-            upsertCategories(response.data, context: context)
-        } catch {
-            AppLogger.sync.error("Failed to pull categories: \(error)")
             recordSyncError()
         }
     }
@@ -456,100 +442,6 @@ final class SyncService: SyncServiceProtocol {
         AppLogger.sync.debug("[upsertUserBudget] limit=\(remote.limit.map { "\($0)" } ?? "nil")")
     }
 
-    private func upsertCategories(_ apiCategories: [APICategory], context: ModelContext) {
-        let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "category" }
-        )
-        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
-
-        let descriptor = FetchDescriptor<Category>()
-        let localCategories = (try? context.fetch(descriptor)) ?? []
-        let localByID = Dictionary(uniqueKeysWithValues: localCategories.map { ($0.id, $0) })
-
-        var serverWonIDs = Set<UUID>()
-        // Predefined rows always store the canonical serverKey in `key`, so we can
-        // dedupe by it without consulting the legacy camelCase `predefinedKey` field.
-        var localByPredServerKey = [String: Category]()
-        for cat in localCategories where cat.isPredefined && !cat.key.isEmpty {
-            localByPredServerKey[cat.key] = cat
-        }
-
-        AppLogger.sync.debug("[UpsertCategories] server returned \(apiCategories.count) categories")
-        for remote in apiCategories {
-            guard isValid(remote) else { continue }
-
-            // Always store the canonical serverKey form locally, even if the server
-            // returned a legacy camelCase value (e.g. "foodDining").
-            let normalizedPredefinedKey = remote.predefinedKey
-                .flatMap { PredefinedCategory.normalizeKey($0) }
-                ?? remote.predefinedKey
-
-            let remoteIsHidden = remote.isHidden ?? false
-            let remoteIsPredefined = remote.isPredefined ?? false
-
-            AppLogger.sync.debug("[UpsertCategories] remote id=\(remote.id) key=\(remote.key) name=\(remote.name) isPredefined=\(remoteIsPredefined) predefinedKey=\(normalizedPredefinedKey ?? "nil") isHidden=\(remoteIsHidden)")
-
-            if let local = localByID[remote.id] {
-                if remote.updatedAt > local.updatedAt {
-                    serverWonIDs.insert(remote.id)
-                    AppLogger.sync.debug("[UpsertCategories] updating by ID: \(remote.name) isHidden=\(remoteIsHidden) predefinedKey=\(normalizedPredefinedKey ?? "nil")")
-                    local.key = remote.key
-                    local.name = remote.name
-                    local.icon = remote.icon
-                    local.color = remote.color
-                    local.isHidden = remoteIsHidden
-                    local.isPredefined = remoteIsPredefined
-                    local.predefinedKey = normalizedPredefinedKey
-                    local.updatedAt = remote.updatedAt
-                }
-            } else if remoteIsPredefined,
-                      let local = localByPredServerKey[remote.key] {
-                AppLogger.sync.debug("[UpsertCategories] updating by serverKey=\(remote.key): \(remote.name) isHidden=\(remoteIsHidden)")
-                serverWonIDs.insert(local.id)
-                local.id = remote.id
-                local.key = remote.key
-                local.name = remote.name
-                local.icon = remote.icon
-                local.color = remote.color
-                local.isHidden = remoteIsHidden
-                local.isPredefined = remoteIsPredefined
-                local.predefinedKey = normalizedPredefinedKey
-                local.updatedAt = remote.updatedAt
-            } else {
-                AppLogger.sync.debug("[UpsertCategories] inserting new row: \(remote.name) isPredefined=\(remoteIsPredefined) predefinedKey=\(normalizedPredefinedKey ?? "nil") isHidden=\(remoteIsHidden)")
-                let category = Category(
-                    id: remote.id,
-                    key: remote.key,
-                    name: remote.name,
-                    icon: remote.icon,
-                    color: remote.color,
-                    isPredefined: remoteIsPredefined,
-                    predefinedKey: normalizedPredefinedKey
-                )
-                category.isHidden = remoteIsHidden
-                category.updatedAt = remote.updatedAt
-                context.insert(category)
-            }
-        }
-
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .category, context: context)
-
-        // Purge local custom categories the server no longer returns and have no pending upload.
-        // Never touch server-predefined rows — those are managed by upsertPredefinedCategories.
-        let serverCategoryIDs = Set(apiCategories.map { $0.id })
-        for local in localCategories {
-            guard !local.isPredefined, !local.isServerPredefined else { continue }
-            guard !serverCategoryIDs.contains(local.id) else { continue }
-            guard !pendingIDs.contains(local.id) else { continue }
-            AppLogger.sync.debug("Purging custom category not on server: \(local.id) name=\(local.name)")
-            context.delete(local)
-        }
-
-        try? context.save()
-        let userOwnedLocalCount = localCategories.filter { !$0.isServerPredefined }.count
-        syncCheckpoint(entityType: "category", serverCount: apiCategories.count, localCount: userOwnedLocalCount)
-    }
-    
     private func pullGroups(context: ModelContext) async {
         do {
             let groups = try await groupService.fetchGroups()
@@ -659,16 +551,6 @@ final class SyncService: SyncServiceProtocol {
         } catch {
             AppLogger.sync.error("pullGroupTransactions failed for group=\(groupId): \(error)")
         }
-    }
-
-    // MARK: - Validation
-
-    private func isValid(_ api: APICategory) -> Bool {
-        guard !api.name.trimmingCharacters(in: .whitespaces).isEmpty else {
-            AppLogger.sync.error("Validation failed: category \(api.id) has empty name")
-            return false
-        }
-        return true
     }
 
     // MARK: - Sync Checkpoint
