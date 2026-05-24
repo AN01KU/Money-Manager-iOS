@@ -229,13 +229,14 @@ private struct AddTransactionSplitMembersSection: View {
     }
 }
 
+
 // MARK: - Previews
 
 #Preview("Group Transaction") {
-    let groupId = UUID()
-    let alice = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
-    let bob   = APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joinedAt: Date())
-    let group = APIGroupWithDetails(id: groupId, name: "Weekend Trip", createdBy: alice.id, createdAt: Date(), members: [alice, bob], balances: [])
+    let aliceId = UUID()
+    let alice = GroupMember(from: APIGroupMember(id: aliceId, email: "alice@example.com", username: "alice", joinedAt: Date()))
+    let bob   = GroupMember(from: APIGroupMember(id: UUID(), email: "bob@example.com",   username: "bob",   joinedAt: Date()))
+    let group = SplitGroup(id: UUID(), name: "Weekend Trip", createdBy: aliceId, createdAt: Date(), members: [alice, bob], balances: [], settlements: [])
     AddTransactionView(mode: .shared(group: group, members: [alice, bob], onAdd: { _ in }), groupService: GroupService.shared)
         .modelContainer(for: [Transaction.self, Category.self], inMemory: true)
 }

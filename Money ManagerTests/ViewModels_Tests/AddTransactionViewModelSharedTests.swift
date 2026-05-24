@@ -12,28 +12,29 @@ struct AddTransactionViewModelSharedTests {
 
     // MARK: - Helpers
 
-    private func makeMember(id: UUID = UUID(), username: String = "alice") -> APIGroupMember {
-        APIGroupMember(id: id, email: "\(username)@example.com", username: username, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), username: String = "alice") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: "\(username)@example.com", username: username, joinedAt: Date()))
     }
 
-    private func makeGroup(id: UUID = UUID(), members: [APIGroupMember] = []) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: [])
+    private func makeGroup(id: UUID = UUID(), members: [GroupMember] = []) -> SplitGroup {
+        SplitGroup(id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: [], settlements: [])
     }
 
-    private func makeGroupTransaction(id: UUID = UUID(), paidBy: UUID, amount: Double, splits: [APIGroupTransactionSplit] = []) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeGroupTransaction(id: UUID = UUID(), paidBy: UUID, amount: Double, splits: [APIGroupTransactionSplit] = []) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: paidBy,
             totalAmount: amount, category: "Food", date: Date(),
             description: "Dinner", notes: nil, isDeleted: false,
             createdAt: Date(), updatedAt: Date(), splits: splits
         )
+        return try! GroupTransaction(from: dto)
     }
 
     private func sharedMode(
-        group: APIGroupWithDetails,
-        members: [APIGroupMember],
+        group: SplitGroup,
+        members: [GroupMember],
         currentUserId: UUID? = nil,
-        editing: APIGroupTransaction? = nil
+        editing: GroupTransaction? = nil
     ) -> AddTransactionMode {
         .shared(group: group, members: members, currentUserId: currentUserId, editing: editing, onAdd: { _ in })
     }
@@ -294,7 +295,7 @@ struct AddTransactionViewModelSharedTests {
         let bob = makeMember(username: "bob")
         let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice, bob])
-        var addedTransaction: APIGroupTransaction?
+        var addedTransaction: GroupTransaction?
         let mode = AddTransactionMode.shared(
             group: group, members: [alice, bob],
             currentUserId: alice.id, editing: nil,

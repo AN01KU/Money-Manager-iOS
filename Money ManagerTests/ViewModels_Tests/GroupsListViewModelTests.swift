@@ -11,42 +11,32 @@ struct GroupsListViewModelTests {
         id: UUID = UUID(),
         name: String = "Test Group",
         createdBy: UUID = UUID(),
-        balances: [APIGroupBalance] = [],
-        members: [APIGroupMember] = []
-    ) -> APIGroupWithDetails {
-        APIGroupWithDetails(
-            id: id,
-            name: name,
-            createdBy: createdBy,
-            createdAt: Date(),
-            members: members,
-            balances: balances
-        )
+        balances: [GroupBalance] = [],
+        members: [GroupMember] = []
+    ) -> SplitGroup {
+        SplitGroup(id: id, name: name, createdBy: createdBy, createdAt: Date(), members: members, balances: balances, settlements: [])
     }
 
-    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
-        APIGroupBalance(userId: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> GroupBalance {
+        GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
-    private func makeTransaction(description: String = "Test", totalAmount: Double = 10.0, paidBy: UUID = UUID(), createdAt: Date = Date()) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeTransaction(description: String = "Test", totalAmount: Double = 10.0, paidBy: UUID = UUID(), createdAt: Date = Date()) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: UUID(), groupId: UUID(), paidByUserId: paidBy,
             totalAmount: totalAmount, category: "Food", date: createdAt,
             description: description, notes: nil, isDeleted: false,
             createdAt: createdAt, updatedAt: Date(), splits: []
         )
+        return try! GroupTransaction(from: dto)
     }
 
     private func makeActivityTransaction(description: String = "Test", totalAmount: Double = 10.0, createdAt: Date = Date()) -> ActivityTransaction {
         ActivityTransaction(id: UUID(), date: createdAt, description: description, category: "Food", totalAmount: totalAmount, paidByUserId: UUID())
     }
 
-    private func makeDetails(groupId: UUID, groupName: String) -> APIGroupDetails {
-        let body = APIGroupDetailsBody(
-            id: groupId, name: groupName, createdBy: UUID(), createdAt: Date(),
-            members: [], balances: [], settlements: []
-        )
-        return APIGroupDetails(group: body, isMember: true)
+    private func makeDetails(groupId: UUID, groupName: String) -> SplitGroup {
+        SplitGroup(id: groupId, name: groupName, createdBy: UUID(), createdAt: Date(), members: [], balances: [], settlements: [])
     }
 
     // MARK: - Initial state
@@ -228,14 +218,14 @@ struct GroupsListViewModelTests {
     @Test
     func testDisplayNameReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date())
+        let member = GroupMember(from: APIGroupMember(id: UUID(), email: "alice@example.com", username: "alice", joinedAt: Date()))
         #expect(vm.displayName(for: member) == "alice")
     }
 
     @Test
     func testDisplayNameWithNoAtSignReturnsUsername() {
         let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
-        let member = APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joinedAt: Date())
+        let member = GroupMember(from: APIGroupMember(id: UUID(), email: "noatsign", username: "noatsign", joinedAt: Date()))
         #expect(vm.displayName(for: member) == "noatsign")
     }
 

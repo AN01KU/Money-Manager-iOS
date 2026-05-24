@@ -13,7 +13,7 @@ struct CreateGroupSheet: View {
     @State private var errorMessage = ""
 
     let groupService: GroupServiceProtocol
-    var onCreate: (APIGroupWithDetails) -> Void
+    var onCreate: (SplitGroup) -> Void
 
     var body: some View {
         NavigationStack {
@@ -56,15 +56,7 @@ struct CreateGroupSheet: View {
         isLoading = true
         Task {
             do {
-                let created = try await groupService.createGroup(name: trimmed)
-                let newGroup = APIGroupWithDetails(
-                    id: created.id,
-                    name: created.name,
-                    createdBy: created.createdBy,
-                    createdAt: created.createdAt,
-                    members: [],
-                    balances: []
-                )
+                let newGroup = try await groupService.createGroup(name: trimmed)
                 onCreate(newGroup)
                 dismiss()
             } catch {

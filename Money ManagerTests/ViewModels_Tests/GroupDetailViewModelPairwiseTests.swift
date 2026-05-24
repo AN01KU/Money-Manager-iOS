@@ -9,25 +9,26 @@ struct GroupDetailViewModelPairwiseTests {
 
     // MARK: - Helpers
 
-    private func makeGroup(id: UUID = UUID()) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: "Test", createdBy: UUID(), createdAt: Date(), members: [], balances: [])
+    private func makeGroup(id: UUID = UUID()) -> SplitGroup {
+        SplitGroup(id: id, name: "Test", createdBy: UUID(), createdAt: Date(), members: [], balances: [], settlements: [])
     }
 
-    private func makeMember(id: UUID = UUID(), email: String = "u@example.com") -> APIGroupMember {
-        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), email: String = "u@example.com") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date()))
     }
 
-    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
-        APIGroupBalance(userId: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> GroupBalance {
+        GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
-    private func makeTransaction(id: UUID = UUID(), totalAmount: Double, paidBy: UUID = UUID()) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeTransaction(id: UUID = UUID(), totalAmount: Double, paidBy: UUID = UUID()) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: paidBy,
             totalAmount: totalAmount, category: "Food", date: Date(),
             description: "tx", notes: nil, isDeleted: false,
             createdAt: Date(), updatedAt: Date(), splits: []
         )
+        return try! GroupTransaction(from: dto)
     }
 
     // MARK: - pairwiseDebts: no balances
@@ -193,13 +194,10 @@ struct GroupDetailViewModelPairwiseTests {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
         let alice = makeMember()
-        mock.stubbedGroupDetails = {
-            let body = APIGroupDetailsBody(
-                id: groupId, name: "Test", createdBy: UUID(), createdAt: Date(),
-                members: [alice], balances: [makeBalance(userId: alice.id, amount: 50)], settlements: []
-            )
-            return APIGroupDetails(group: body, isMember: true)
-        }()
+        mock.stubbedGroupDetails = SplitGroup(
+            id: groupId, name: "Test", createdBy: UUID(), createdAt: Date(),
+            members: [alice], balances: [makeBalance(userId: alice.id, amount: 50)], settlements: []
+        )
         mock.stubbedTransactions = []
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
         let old = makeTransaction(totalAmount: 100, paidBy: alice.id)
@@ -232,13 +230,10 @@ struct GroupDetailViewModelPairwiseTests {
         let groupId = UUID()
         let alice = makeMember()
         let bob = makeMember()
-        mock.stubbedGroupDetails = {
-            let body = APIGroupDetailsBody(
-                id: groupId, name: "Test", createdBy: UUID(), createdAt: Date(),
-                members: [alice, bob], balances: [], settlements: []
-            )
-            return APIGroupDetails(group: body, isMember: true)
-        }()
+        mock.stubbedGroupDetails = SplitGroup(
+            id: groupId, name: "Test", createdBy: UUID(), createdAt: Date(),
+            members: [alice, bob], balances: [], settlements: []
+        )
         mock.stubbedTransactions = []
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
         let tx = makeTransaction(totalAmount: 100, paidBy: alice.id)

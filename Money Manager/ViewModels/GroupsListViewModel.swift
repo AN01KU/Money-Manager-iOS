@@ -59,7 +59,7 @@ struct ActivitySettlement: Identifiable {
 @MainActor
 @Observable
 final class GroupsListViewModel {
-    var groups: [APIGroupWithDetails] = []
+    var groups: [SplitGroup] = []
     var isLoading = false
     var errorMessage: String?
     var showCreateGroup = false
@@ -78,7 +78,7 @@ final class GroupsListViewModel {
         currentUserId = userId
     }
 
-    var filteredGroups: [APIGroupWithDetails] {
+    var filteredGroups: [SplitGroup] {
         guard !searchText.isEmpty else { return groups }
         return groups.filter { $0.name.localizedStandardContains(searchText) }
     }
@@ -163,14 +163,14 @@ final class GroupsListViewModel {
         recentActivity = items.sorted { $0.date > $1.date }
     }
 
-    private func fetchActivity(for group: APIGroupWithDetails) async -> (String, [ActivityItem]) {
-        let apiTransactions = (try? await groupService.fetchGroupTransactions(groupId: group.id)) ?? []
+    private func fetchActivity(for group: SplitGroup) async -> (String, [ActivityItem]) {
+        let transactions = (try? await groupService.fetchGroupTransactions(groupId: group.id)) ?? []
         let details = try? await groupService.fetchGroupDetails(groupId: group.id)
-        let apiSettlements = details?.group.settlements ?? []
-        let members = details?.group.members ?? group.members
+        let groupSettlements = details?.settlements ?? []
+        let members = details?.members ?? group.members
         let memberMap = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0.username) })
 
-        var items: [ActivityItem] = apiTransactions.map { tx in
+        var items: [ActivityItem] = transactions.map { tx in
             .transaction(
                 ActivityTransaction(
                     id: tx.id, date: tx.date, description: tx.description,
@@ -181,7 +181,7 @@ final class GroupsListViewModel {
         }
 
         if let userId = currentUserId {
-            for s in apiSettlements where s.fromUser == userId || s.toUser == userId {
+            for s in groupSettlements where s.fromUser == userId || s.toUser == userId {
                 items.append(.settlement(
                     ActivitySettlement(
                         id: s.id, date: s.createdAt,
@@ -197,30 +197,21 @@ final class GroupsListViewModel {
         return (group.name, items)
     }
 
-    func createGroup(name: String) async throws -> APIGroupWithDetails {
-        let created = try await groupService.createGroup(name: name)
-        // Wrap in APIGroupWithDetails so the list updates immediately
-        let newGroup = APIGroupWithDetails(
-            id: created.id,
-            name: created.name,
-            createdBy: created.createdBy,
-            createdAt: created.createdAt,
-            members: [],
-            balances: []
-        )
+    func createGroup(name: String) async throws -> SplitGroup {
+        let newGroup = try await groupService.createGroup(name: name)
         groups.insert(newGroup, at: 0)
         return newGroup
     }
 
     // MARK: - Helpers
 
-    func userBalance(for group: APIGroupWithDetails) -> Double {
+    func userBalance(for group: SplitGroup) -> Double {
         guard let userId = currentUserId else { return 0 }
         let balance = group.balances.first(where: { $0.userId == userId })
         return balance?.amount ?? 0
     }
 
-    func displayName(for member: APIGroupMember) -> String {
+    func displayName(for member: GroupMember) -> String {
         member.username
     }
 }

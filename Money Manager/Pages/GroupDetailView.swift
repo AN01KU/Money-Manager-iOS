@@ -10,14 +10,14 @@ struct GroupDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.groupService) private var groupService
     @State private var viewModel: GroupDetailViewModel
-    @State private var selectedTransaction: APIGroupTransaction?
-    @State private var transactionToEdit: APIGroupTransaction?
+    @State private var selectedTransaction: GroupTransaction?
+    @State private var transactionToEdit: GroupTransaction?
     @State private var showRenameAlert = false
     @State private var renameText = ""
 
     var onGroupDeleted: ((UUID) -> Void)?
 
-    init(group: APIGroupWithDetails, currentUserId: UUID?, onGroupDeleted: ((UUID) -> Void)? = nil) {
+    init(group: SplitGroup, currentUserId: UUID?, onGroupDeleted: ((UUID) -> Void)? = nil) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group, currentUserId: currentUserId))
         self.onGroupDeleted = onGroupDeleted
     }
@@ -244,12 +244,12 @@ struct GroupDetailView: View {
     private struct GroupTransactionSection: Identifiable {
         let id: String
         let label: String
-        let transactions: [APIGroupTransaction]
+        let transactions: [GroupTransaction]
     }
 
     private var groupedTransactions: [GroupTransactionSection] {
         let calendar = Calendar.current
-        var grouped: [String: [APIGroupTransaction]] = [:]
+        var grouped: [String: [GroupTransaction]] = [:]
 
         for tx in viewModel.filteredTransactions {
             let key = calendar.dayKey(for: tx.date)
@@ -423,13 +423,14 @@ private struct GroupDetailMenuButton: View {
 // MARK: - Previews
 
 #Preview("Group Detail") {
-    let group = APIGroupWithDetails(
+    let group = SplitGroup(
         id: UUID(),
         name: "Weekend Trip",
         createdBy: UUID(),
         createdAt: Date(),
         members: [],
-        balances: []
+        balances: [],
+        settlements: []
     )
     NavigationStack {
         GroupDetailView(group: group, currentUserId: nil)

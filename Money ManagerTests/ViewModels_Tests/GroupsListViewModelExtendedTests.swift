@@ -13,13 +13,13 @@ struct GroupsListViewModelExtendedTests {
         id: UUID = UUID(),
         name: String = "Test Group",
         createdBy: UUID = UUID(),
-        balances: [APIGroupBalance] = []
-    ) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: name, createdBy: createdBy, createdAt: Date(), members: [], balances: balances)
+        balances: [GroupBalance] = []
+    ) -> SplitGroup {
+        SplitGroup(id: id, name: name, createdBy: createdBy, createdAt: Date(), members: [], balances: balances, settlements: [])
     }
 
-    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
-        APIGroupBalance(userId: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> GroupBalance {
+        GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
     private func makeTransaction(id: UUID = UUID(), description: String = "tx", date: Date = Date()) -> ActivityTransaction {

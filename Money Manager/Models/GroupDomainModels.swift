@@ -24,6 +24,16 @@ struct SplitGroup: Identifiable, Hashable, Sendable {
     let balances: [GroupBalance]
     let settlements: [Settlement]
 
+    init(id: UUID, name: String, createdBy: UUID, createdAt: Date, members: [GroupMember], balances: [GroupBalance], settlements: [Settlement]) {
+        self.id = id
+        self.name = name
+        self.createdBy = createdBy
+        self.createdAt = createdAt
+        self.members = members
+        self.balances = balances
+        self.settlements = settlements
+    }
+
     init(from dto: APIGroupWithDetails) throws {
         let trimmed = dto.name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { throw GroupMappingError.emptyName }

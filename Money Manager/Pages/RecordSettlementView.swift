@@ -8,11 +8,11 @@ import SwiftUI
 struct RecordSettlementView: View {
     @Environment(\.dismiss) private var dismiss
 
-    let group: APIGroupWithDetails
-    let members: [APIGroupMember]
-    let balances: [APIGroupBalance]
+    let group: SplitGroup
+    let members: [GroupMember]
+    let balances: [GroupBalance]
     let groupService: GroupServiceProtocol
-    var onSettle: (APISettlement) -> Void
+    var onSettle: (Settlement) -> Void
 
     @State private var fromUserId: UUID?
     @State private var toUserId: UUID?
@@ -23,13 +23,13 @@ struct RecordSettlementView: View {
     @State private var errorMessage = ""
 
     /// Backend: negative balance = owes money (paid less than share)
-    private var membersWhoOwe: [APIGroupMember] {
+    private var membersWhoOwe: [GroupMember] {
         let ids = balances.filter { $0.amount < 0 }.map(\.userId)
         return members.filter { ids.contains($0.id) }
     }
 
     /// Backend: positive balance = is owed money (paid more than share)
-    private var membersWhoAreOwed: [APIGroupMember] {
+    private var membersWhoAreOwed: [GroupMember] {
         let ids = balances.filter { $0.amount > 0 }.map(\.userId)
         return members.filter { ids.contains($0.id) }
     }
@@ -174,7 +174,7 @@ struct RecordSettlementView: View {
         }
     }
 
-    private func displayName(for member: APIGroupMember) -> String {
+    private func displayName(for member: GroupMember) -> String {
         member.email.components(separatedBy: "@").first?.capitalized ?? member.email
     }
 

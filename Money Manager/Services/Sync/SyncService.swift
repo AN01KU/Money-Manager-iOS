@@ -334,7 +334,7 @@ final class SyncService: SyncServiceProtocol {
         }
     }
 
-    private func upsertGroups(_ apiGroups: [APIGroupWithDetails], context: ModelContext) async {
+    private func upsertGroups(_ apiGroups: [SplitGroup], context: ModelContext) async {
         // Fetch all existing local models
         let localGroups = (try? context.fetch(FetchDescriptor<SplitGroupModel>())) ?? []
         let localGroupsByID = Dictionary(uniqueKeysWithValues: localGroups.map { ($0.id, $0) })

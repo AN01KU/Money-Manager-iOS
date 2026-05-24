@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct GroupTransactionRow: View {
-    let transaction: APIGroupTransaction
-    let members: [APIGroupMember]
+    let transaction: GroupTransaction
+    let members: [GroupMember]
     var currentUserId: UUID? = nil
 
     private var amount: Double { transaction.totalAmount }

@@ -10,12 +10,12 @@ struct AddTransactionViewModelEditSharedTests {
 
     // MARK: - Helpers
 
-    private func makeMember(id: UUID = UUID(), username: String = "alice") -> APIGroupMember {
-        APIGroupMember(id: id, email: "\(username)@example.com", username: username, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), username: String = "alice") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: "\(username)@example.com", username: username, joinedAt: Date()))
     }
 
-    private func makeGroup(id: UUID = UUID(), members: [APIGroupMember] = []) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: [])
+    private func makeGroup(id: UUID = UUID(), members: [GroupMember] = []) -> SplitGroup {
+        SplitGroup(id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: [], settlements: [])
     }
 
     private func makeGroupTransaction(
@@ -26,13 +26,14 @@ struct AddTransactionViewModelEditSharedTests {
         description: String? = "Dinner",
         notes: String? = nil,
         updatedAt: Date = Date()
-    ) -> APIGroupTransaction {
-        APIGroupTransaction(
+    ) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: paidBy,
             totalAmount: amount, category: category, date: Date(),
             description: description, notes: notes, isDeleted: false,
             createdAt: Date(), updatedAt: updatedAt, splits: []
         )
+        return try! GroupTransaction(from: dto)
     }
 
     // MARK: - saveSharedEdit success
@@ -42,7 +43,7 @@ struct AddTransactionViewModelEditSharedTests {
         let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
         let existingTx = makeGroupTransaction(paidBy: alice.id)
-        var addedTx: APIGroupTransaction?
+        var addedTx: GroupTransaction?
         let mode = AddTransactionMode.shared(
             group: group, members: [alice],
             currentUserId: alice.id, editing: existingTx,

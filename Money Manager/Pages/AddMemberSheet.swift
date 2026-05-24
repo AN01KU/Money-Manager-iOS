@@ -9,7 +9,7 @@ struct AddMemberSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
 
-    let existingMembers: [APIGroupMember]
+    let existingMembers: [GroupMember]
     var onAdd: (String) -> Void
 
     private var trimmed: String { email.trimmingCharacters(in: .whitespaces) }

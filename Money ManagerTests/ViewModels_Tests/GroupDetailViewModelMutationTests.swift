@@ -9,25 +9,26 @@ struct GroupDetailViewModelMutationTests {
 
     // MARK: - Helpers
 
-    private func makeGroup(id: UUID = UUID(), createdBy: UUID = UUID()) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: "Test Group", createdBy: createdBy, createdAt: Date(), members: [], balances: [])
+    private func makeGroup(id: UUID = UUID(), createdBy: UUID = UUID()) -> SplitGroup {
+        SplitGroup(id: id, name: "Test Group", createdBy: createdBy, createdAt: Date(), members: [], balances: [], settlements: [])
     }
 
-    private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> APIGroupMember {
-        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date()))
     }
 
-    private func makeTransaction(id: UUID = UUID(), description: String? = nil, category: String = "Food", totalAmount: Double = 50) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeTransaction(id: UUID = UUID(), description: String? = nil, category: String = "Food", totalAmount: Double = 50) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: UUID(),
             totalAmount: totalAmount, category: category, date: Date(),
             description: description, notes: nil, isDeleted: false,
             createdAt: Date(), updatedAt: Date(), splits: []
         )
+        return try! GroupTransaction(from: dto)
     }
 
-    private func makeSettlement(id: UUID = UUID(), groupId: UUID = UUID()) -> APISettlement {
-        APISettlement(id: id, groupId: groupId, fromUser: UUID(), toUser: UUID(), amount: 20, notes: nil, createdAt: Date())
+    private func makeSettlement(id: UUID = UUID(), groupId: UUID = UUID()) -> Settlement {
+        Settlement(from: APISettlement(id: id, groupId: groupId, fromUser: UUID(), toUser: UUID(), amount: 20, notes: nil, createdAt: Date()))
     }
 
     // MARK: - filteredTransactions
@@ -280,13 +281,10 @@ struct GroupDetailViewModelMutationTests {
         let mock = MockGroupService.fresh()
         let groupId = UUID()
         let alice = makeMember()
-        mock.stubbedGroupDetails = {
-            let body = APIGroupDetailsBody(
-                id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(),
-                members: [alice], balances: [], settlements: []
-            )
-            return APIGroupDetails(group: body, isMember: true)
-        }()
+        mock.stubbedGroupDetails = SplitGroup(
+            id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(),
+            members: [alice], balances: [], settlements: []
+        )
         mock.stubbedTransactions = []
         let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
         let settlement = makeSettlement(groupId: groupId)

@@ -3,8 +3,8 @@ import SwiftUI
 struct GroupTransactionDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let transaction: APIGroupTransaction
-    let members: [APIGroupMember]
+    let transaction: GroupTransaction
+    let members: [GroupMember]
     let currentUserId: UUID?
     let onDelete: (() -> Void)?
     let onEdit: (() -> Void)?

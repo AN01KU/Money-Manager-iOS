@@ -3,7 +3,7 @@ import SwiftData
 
 enum AddTransactionMode {
     case personal(editing: Transaction? = nil)
-    case shared(group: APIGroupWithDetails, members: [APIGroupMember], currentUserId: UUID? = nil, editing: APIGroupTransaction? = nil, onAdd: (APIGroupTransaction) -> Void)
+    case shared(group: SplitGroup, members: [GroupMember], currentUserId: UUID? = nil, editing: GroupTransaction? = nil, onAdd: (GroupTransaction) -> Void)
 }
 
 enum TransactionType: String, CaseIterable {
@@ -223,7 +223,7 @@ struct SplitCalculator {
         transactionType = TransactionType(kind: expense.type)
     }
 
-    private func setupShared(members: [APIGroupMember], currentUserId: UUID?, editing: APIGroupTransaction?) {
+    private func setupShared(members: [GroupMember], currentUserId: UUID?, editing: GroupTransaction?) {
         if let tx = editing {
             let txAmount = tx.totalAmount
             amount = txAmount.editableString
@@ -246,7 +246,7 @@ struct SplitCalculator {
         )
     }
 
-    func displayName(for member: APIGroupMember) -> String {
+    func displayName(for member: GroupMember) -> String {
         member.username
     }
 
@@ -293,7 +293,7 @@ struct SplitCalculator {
         case .personal:
             savePersonal(amountValue: amountValue, completion: completion)
         case .shared(let group, _, _, _, let onAdd):
-            saveShared(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
+            saveShared(amountValue: amountValue, groupId: group.id, onAdd: onAdd, completion: completion)
         }
     }
 
@@ -433,21 +433,21 @@ struct SplitCalculator {
 
     private func saveShared(
         amountValue: Double,
-        group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupTransaction) -> Void,
+        groupId: UUID,
+        onAdd: @escaping (GroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         if case .shared(_, _, _, let editing, _) = mode, let existing = editing {
-            saveSharedEdit(existing: existing, group: group, onAdd: onAdd, completion: completion)
+            saveSharedEdit(existing: existing, groupId: groupId, onAdd: onAdd, completion: completion)
         } else {
-            saveSharedCreate(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
+            saveSharedCreate(amountValue: amountValue, groupId: groupId, onAdd: onAdd, completion: completion)
         }
     }
 
     private func saveSharedCreate(
         amountValue: Double,
-        group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupTransaction) -> Void,
+        groupId: UUID,
+        onAdd: @escaping (GroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         guard let paidBy = paidByUserId else {
@@ -471,7 +471,7 @@ struct SplitCalculator {
 
         Task {
             do {
-                let expense = try await groupService.createGroupTransaction(request, groupId: group.id)
+                let expense = try await groupService.createGroupTransaction(request, groupId: groupId)
                 onAdd(expense)
                 isSaving = false
                 completion()
@@ -484,9 +484,9 @@ struct SplitCalculator {
     }
 
     private func saveSharedEdit(
-        existing: APIGroupTransaction,
-        group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupTransaction) -> Void,
+        existing: GroupTransaction,
+        groupId: UUID,
+        onAdd: @escaping (GroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         let trimmedDescription = description.trimmingCharacters(in: .whitespaces)
@@ -503,7 +503,7 @@ struct SplitCalculator {
 
         Task {
             do {
-                let updated = try await groupService.updateGroupTransaction(request, groupId: group.id, transactionId: existing.id)
+                let updated = try await groupService.updateGroupTransaction(request, groupId: groupId, transactionId: existing.id)
                 onAdd(updated)
                 isSaving = false
                 completion()

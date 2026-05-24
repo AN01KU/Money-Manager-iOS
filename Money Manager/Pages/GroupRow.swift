@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct GroupRow: View {
-    let group: APIGroupWithDetails
+    let group: SplitGroup
     let memberCount: Int
     let userBalance: Double
 

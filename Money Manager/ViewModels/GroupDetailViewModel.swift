@@ -21,11 +21,11 @@ struct PairwiseDebt: Identifiable {
 @MainActor
 @Observable
 final class GroupDetailViewModel {
-    var group: APIGroupWithDetails
-    var transactions: [APIGroupTransaction] = []
-    var members: [APIGroupMember] = []
-    var balances: [APIGroupBalance] = []
-    var settlements: [APISettlement] = []
+    var group: SplitGroup
+    var transactions: [GroupTransaction] = []
+    var members: [GroupMember] = []
+    var balances: [GroupBalance] = []
+    var settlements: [Settlement] = []
     var isLoading = false
     var selectedSection: GroupSection = .transactions
 
@@ -48,7 +48,7 @@ final class GroupDetailViewModel {
     // Transaction search
     var transactionSearchText = ""
 
-    var filteredTransactions: [APIGroupTransaction] {
+    var filteredTransactions: [GroupTransaction] {
         guard !transactionSearchText.isEmpty else { return transactions }
         return transactions.filter { tx in
             (tx.description?.localizedStandardContains(transactionSearchText) ?? false) ||
@@ -72,7 +72,7 @@ final class GroupDetailViewModel {
     var groupService: GroupServiceProtocol
     let currentUserId: UUID?
 
-    init(group: APIGroupWithDetails, groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {
+    init(group: SplitGroup, groupService: GroupServiceProtocol = GroupService.shared, currentUserId: UUID? = nil) {
         self.group = group
         self.members = group.members
         self.balances = group.balances
@@ -133,9 +133,9 @@ final class GroupDetailViewModel {
         do {
             let details = try await groupService.fetchGroupDetails(groupId: group.id)
             transactions = try await groupService.fetchGroupTransactions(groupId: group.id)
-            members     = details.group.members
-            balances    = details.group.balances
-            settlements = details.group.settlements ?? []
+            members     = details.members
+            balances    = details.balances
+            settlements = details.settlements
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
@@ -150,13 +150,14 @@ final class GroupDetailViewModel {
         Task {
             do {
                 let updated = try await groupService.renameGroup(groupId: group.id, name: trimmed)
-                group = APIGroupWithDetails(
+                group = SplitGroup(
                     id: updated.id,
                     name: updated.name,
                     createdBy: updated.createdBy,
                     createdAt: updated.createdAt,
                     members: members,
-                    balances: balances
+                    balances: balances,
+                    settlements: settlements
                 )
                 isRenamed = true
             } catch {
@@ -180,12 +181,12 @@ final class GroupDetailViewModel {
 
     // MARK: - Remove Member
 
-    func canRemoveMember(_ member: APIGroupMember) -> Bool {
+    func canRemoveMember(_ member: GroupMember) -> Bool {
         guard let currentUserId else { return false }
         return member.id != currentUserId
     }
 
-    func removeMember(_ member: APIGroupMember) {
+    func removeMember(_ member: GroupMember) {
         let original = members
         members.removeAll { $0.id == member.id }
 
@@ -240,13 +241,13 @@ final class GroupDetailViewModel {
 
     // MARK: - After transaction added / edited / deleted
 
-    func transactionAdded(_ transaction: APIGroupTransaction) {
+    func transactionAdded(_ transaction: GroupTransaction) {
         transactions.insert(transaction, at: 0)
         // Reload so balances reflect server-authoritative split amounts.
         Task { await loadData() }
     }
 
-    func transactionEdited(replacing old: APIGroupTransaction, with updated: APIGroupTransaction) {
+    func transactionEdited(replacing old: GroupTransaction, with updated: GroupTransaction) {
         if let idx = transactions.firstIndex(where: { $0.id == old.id }) {
             transactions[idx] = updated
         } else {
@@ -256,7 +257,7 @@ final class GroupDetailViewModel {
         Task { await loadData() }
     }
 
-    func deleteTransaction(_ transaction: APIGroupTransaction) {
+    func deleteTransaction(_ transaction: GroupTransaction) {
         transactions.removeAll { $0.id == transaction.id }
 
         Task {
@@ -273,12 +274,12 @@ final class GroupDetailViewModel {
 
     // MARK: - After settlement recorded / deleted
 
-    func settlementRecorded(_ settlement: APISettlement) {
+    func settlementRecorded(_ settlement: Settlement) {
         settlements.insert(settlement, at: 0)
         Task { await loadData() }
     }
 
-    func deleteSettlement(_ settlement: APISettlement) {
+    func deleteSettlement(_ settlement: Settlement) {
         let original = settlements
         settlements.removeAll { $0.id == settlement.id }
 
@@ -295,7 +296,7 @@ final class GroupDetailViewModel {
 
     // MARK: - Helpers
 
-    func displayName(for member: APIGroupMember) -> String {
+    func displayName(for member: GroupMember) -> String {
         member.username
     }
 
@@ -303,7 +304,7 @@ final class GroupDetailViewModel {
         members.first(where: { $0.id == userId })?.username ?? "Unknown"
     }
 
-    func isPending(_ member: APIGroupMember) -> Bool {
+    func isPending(_ member: GroupMember) -> Bool {
         pendingMemberEmails.contains(member.email.lowercased())
     }
 

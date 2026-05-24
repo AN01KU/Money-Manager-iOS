@@ -7,44 +7,34 @@ struct GroupDetailViewModelTests {
 
     // MARK: - Helpers
 
-    private func makeGroup(id: UUID = UUID(), createdBy: UUID = UUID()) -> APIGroupWithDetails {
-        APIGroupWithDetails(
-            id: id,
-            name: "Test Group",
-            createdBy: createdBy,
-            createdAt: Date(),
-            members: [],
-            balances: []
-        )
+    private func makeGroup(id: UUID = UUID(), createdBy: UUID = UUID()) -> SplitGroup {
+        SplitGroup(id: id, name: "Test Group", createdBy: createdBy, createdAt: Date(), members: [], balances: [], settlements: [])
     }
 
-    private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> APIGroupMember {
-        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), email: String = "user@example.com") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date()))
     }
 
-    private func makeTransaction(totalAmount: Double, paidBy: UUID = UUID()) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeTransaction(totalAmount: Double, paidBy: UUID = UUID()) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: UUID(), groupId: UUID(), paidByUserId: paidBy,
             totalAmount: totalAmount, category: "Food", date: Date(),
             description: "Test", notes: nil, isDeleted: false,
             createdAt: Date(), updatedAt: Date(), splits: []
         )
+        return try! GroupTransaction(from: dto)
     }
 
-    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
-        APIGroupBalance(userId: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> GroupBalance {
+        GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
     private func makeDetails(
         groupId: UUID,
-        members: [APIGroupMember] = [],
-        balances: [APIGroupBalance] = []
-    ) -> APIGroupDetails {
-        let body = APIGroupDetailsBody(
-            id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(),
-            members: members, balances: balances, settlements: []
-        )
-        return APIGroupDetails(group: body, isMember: true)
+        members: [GroupMember] = [],
+        balances: [GroupBalance] = []
+    ) -> SplitGroup {
+        SplitGroup(id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: balances, settlements: [])
     }
 
     // MARK: - Initial state
@@ -52,10 +42,11 @@ struct GroupDetailViewModelTests {
     @Test
     func testInitSeedsMembersAndBalancesFromGroup() {
         let alice = makeMember(email: "alice@example.com")
-        let group = APIGroupWithDetails(
+        let group = SplitGroup(
             id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
             members: [alice],
-            balances: [makeBalance(userId: alice.id, amount: 50.00)]
+            balances: [makeBalance(userId: alice.id, amount: 50.00)],
+            settlements: []
         )
         let vm = GroupDetailViewModel(group: group)
         #expect(vm.members.count == 1)
@@ -88,9 +79,9 @@ struct GroupDetailViewModelTests {
     func testLoadDataKeepsInitialMembersWhenDetailsReturnEmpty() async {
         let mock = MockGroupService.fresh()
         let alice = makeMember(email: "alice@example.com")
-        let group = APIGroupWithDetails(
+        let group = SplitGroup(
             id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
-            members: [alice], balances: []
+            members: [alice], balances: [], settlements: []
         )
         let vm = GroupDetailViewModel(group: group, groupService: mock)
         await vm.loadData()
@@ -274,11 +265,11 @@ struct GroupDetailViewModelTests {
         let bob   = makeMember(email: "bob@example.com")
         let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
         vm.members = [alice, bob]
-        let settlement = APISettlement(
+        let settlement = Settlement(from: APISettlement(
             id: UUID(), groupId: vm.group.id,
             fromUser: bob.id, toUser: alice.id,
             amount: 50.00, notes: nil, createdAt: Date()
-        )
+        ))
         vm.settlementRecorded(settlement)
         #expect(vm.settlements.count == 1)
         #expect(vm.settlements.first?.id == settlement.id)

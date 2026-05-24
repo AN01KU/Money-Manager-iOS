@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct GroupMemberRow: View {
-    let member: APIGroupMember
+    let member: GroupMember
     let isAdmin: Bool
     var isPending: Bool = false
     var balance: Double? = nil
