@@ -154,6 +154,7 @@ struct Money_ManagerApp: App {
                 .environment(\.syncService, services.syncService)
                 .environment(\.changeQueueManager, services.changeQueueManager)
                 .environment(\.persistence, services.persistence)
+                .environment(\.budgetRepository, services.budgetRepository)
                 .environment(\.networkMonitor, services.networkMonitor)
                 .environment(\.groupService, services.groupService)
                 .alert("Storage Error", isPresented: .constant(storeRecoveryFailed)) {

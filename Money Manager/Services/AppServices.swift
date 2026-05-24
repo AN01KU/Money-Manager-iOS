@@ -13,6 +13,7 @@ struct AppServices {
     let syncService: SyncServiceProtocol
     let changeQueueManager: ChangeQueueManagerProtocol
     let persistence: PersistenceService
+    let budgetRepository: BudgetRepository
     let groupService: GroupServiceProtocol
     let networkMonitor: any NetworkMonitorProtocol
 }
@@ -43,11 +44,13 @@ extension AppServices {
             networkMonitor: networkMonitor,
             changeQueue: changeQueue
         )
+        let budgetRepository = BudgetRepository(persistence: persistence)
         return AppServices(
             authService: authService,
             syncService: syncService,
             changeQueueManager: changeQueue,
             persistence: persistence,
+            budgetRepository: budgetRepository,
             groupService: groupService,
             networkMonitor: networkMonitor
         )
@@ -67,11 +70,13 @@ extension AppServices {
             networkMonitor: networkMonitor,
             changeQueue: changeQueue
         )
+        let budgetRepository = BudgetRepository(persistence: persistence)
         return AppServices(
             authService: MockAuthService.shared,
             syncService: MockSyncService.shared,
             changeQueueManager: changeQueue,
             persistence: persistence,
+            budgetRepository: budgetRepository,
             groupService: MockGroupService.shared,
             networkMonitor: networkMonitor
         )
@@ -83,11 +88,13 @@ extension AppServices {
         let networkMonitor = MockNetworkMonitor()
         let changeQueue = MockChangeQueueManager.shared
         let persistence = PersistenceService.testing
+        let budgetRepository = BudgetRepository(persistence: persistence)
         return AppServices(
             authService: MockAuthService.shared,
             syncService: MockSyncService.shared,
             changeQueueManager: changeQueue,
             persistence: persistence,
+            budgetRepository: budgetRepository,
             groupService: MockGroupService.shared,
             networkMonitor: networkMonitor
         )

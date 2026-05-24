@@ -527,45 +527,6 @@ struct OverviewViewModelTests {
         #expect(result.icon == AppIcons.Category.other)
     }
     
-    // MARK: - Ensure Budget Exists Tests
-    
-    @Test
-    func testEnsureBudgetExistsDoesNothingWhenBudgetExists() throws {
-        let viewModel = OverviewViewModel()
-        let existingBudget = UserBudget(limit: 5000)
-        viewModel.update(allTransactions: [], userBudget: existingBudget, customCategories: [])
-        let context = ModelContext(try makeTestContainer())
-        viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
-        // currentBudget is already set — no new row created
-        #expect(viewModel.currentBudget != nil)
-    }
-
-    @Test
-    func testEnsureBudgetExistsCreatesBudgetWhenNoneExists() throws {
-        let viewModel = OverviewViewModel()
-        viewModel.filterMode = .monthly
-        viewModel.selectedDate = Date()
-        viewModel.update(allTransactions: [], userBudget: nil, customCategories: [])
-        let context = ModelContext(try makeTestContainer())
-        #expect(viewModel.currentBudget == nil)
-        viewModel.ensureBudgetExists(defaultBudgetLimit: 5000, modelContext: context)
-        let rows = (try? context.fetch(FetchDescriptor<UserBudget>())) ?? []
-        #expect(rows.count == 1)
-        #expect(rows.first?.limit == 5000)
-    }
-
-    @Test
-    func testEnsureBudgetExistsDoesNothingWhenLimitIsZero() throws {
-        let viewModel = OverviewViewModel()
-        viewModel.filterMode = .monthly
-        viewModel.selectedDate = Date()
-        viewModel.update(allTransactions: [], userBudget: nil, customCategories: [])
-        let context = ModelContext(try makeTestContainer())
-        viewModel.ensureBudgetExists(defaultBudgetLimit: 0, modelContext: context)
-        let rows = (try? context.fetch(FetchDescriptor<UserBudget>())) ?? []
-        #expect(rows.isEmpty)
-    }
-    
     // MARK: - Delete Expense Flow
     
     @Test

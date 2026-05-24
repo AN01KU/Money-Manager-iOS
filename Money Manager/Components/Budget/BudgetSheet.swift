@@ -10,12 +10,8 @@ import SwiftData
 
 struct BudgetSheet: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.authService) private var authService
-    @Environment(\.changeQueueManager) private var changeQueueManager
-    @Environment(\.networkMonitor) private var networkMonitor
+    @Environment(\.budgetRepository) private var budgetRepository
 
-    @AppStorage(UserDefaults.Keys.defaultBudgetLimit.rawValue) private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
     @State private var isSaving = false
     @State private var showError = false
@@ -102,11 +98,8 @@ struct BudgetSheet: View {
     }
 
     private func loadExistingBudget() {
-        if let existing = (try? modelContext.fetch(FetchDescriptor<UserBudget>()))?.first,
-           let limit = existing.limit {
+        if let existing = budgetRepository.currentBudget(), let limit = existing.limit {
             budgetAmount = limit.formatted(.number.precision(.fractionLength(0)))
-        } else if defaultBudgetLimit > 0 {
-            budgetAmount = defaultBudgetLimit.formatted(.number.precision(.fractionLength(0)))
         }
     }
 
@@ -114,46 +107,16 @@ struct BudgetSheet: View {
         guard let amount = Double(budgetAmount), amount > 0 else { return }
 
         isSaving = true
-        defaultBudgetLimit = amount
-
-        let existing = (try? modelContext.fetch(FetchDescriptor<UserBudget>()))?.first
-        if let existing {
-            existing.limit = amount
-            existing.updatedAt = Date()
-        } else {
-            modelContext.insert(UserBudget(limit: amount))
-        }
-
         do {
-            try modelContext.save()
-            let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: amount))
-            changeQueueManager.enqueue(
-                PendingChangeDraft(
-                    entityType: .budget,
-                    entityID: UserBudget.sentinelID,
-                    action: .create,
-                    endpoint: "/me/budget",
-                    httpMethod: .put,
-                    payload: payload
-                ),
-                context: modelContext
-            )
-
-            if networkMonitor.isConnected {
-                Task {
-                    await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
-                }
-            }
+            try budgetRepository.setLimit(amount)
+            isSaving = false
+            successTriggered += 1
+            dismiss()
         } catch {
-            errorMessage = "Failed to save budget locally"
+            errorMessage = error.localizedDescription
             showError = true
             isSaving = false
-            return
         }
-
-        isSaving = false
-        successTriggered += 1
-        dismiss()
     }
 }
 

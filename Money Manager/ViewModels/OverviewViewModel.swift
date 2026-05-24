@@ -152,17 +152,6 @@ enum TransactionTypeFilter: String, CaseIterable {
         }
     }
 
-    func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {
-        guard currentBudget == nil, defaultBudgetLimit > 0 else { return }
-        let existing = (try? modelContext.fetch(FetchDescriptor<UserBudget>()))?.first
-        if let existing {
-            existing.limit = defaultBudgetLimit
-        } else {
-            modelContext.insert(UserBudget(limit: defaultBudgetLimit))
-        }
-        try? modelContext.save()
-    }
-
     func filterByCategory(_ categoryName: String) {
         selectedCategoryFilter = categoryName
         selectedView = .daily

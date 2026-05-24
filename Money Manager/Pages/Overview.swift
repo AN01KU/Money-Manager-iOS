@@ -8,8 +8,6 @@ struct Overview: View {
     @Query private var userBudgets: [UserBudget]
     @Query(sort: \Category.name) private var customCategories: [Category]
 
-    @AppStorage(UserDefaults.Keys.defaultBudgetLimit.rawValue) private var defaultBudgetLimit: Double = 0
-
     @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []
     @State private var editingTransaction: Transaction?
@@ -27,7 +25,7 @@ struct Overview: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            OverviewBody(viewModel: viewModel, defaultBudgetLimit: defaultBudgetLimit, onCategoryTapped: onCategoryTapped)
+            OverviewBody(viewModel: viewModel, onCategoryTapped: onCategoryTapped)
                 .navigationDestination(for: AppRoute.self) { route in
                     if case .transaction(let id) = route,
                        let transaction = allTransactions.first(where: { $0.id == id }) {
@@ -56,9 +54,7 @@ struct Overview: View {
 
 private struct OverviewBody: View {
     @Bindable var viewModel: OverviewViewModel
-    let defaultBudgetLimit: Double
     let onCategoryTapped: ((String) -> Void)?
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.authService) private var authService
 
     var body: some View {
@@ -70,9 +66,6 @@ private struct OverviewBody: View {
         .toolbar { overviewToolbar }
         .sheet(isPresented: $viewModel.showBudgetSheet) {
             BudgetSheet()
-        }
-        .task(id: viewModel.selectedDate) {
-            viewModel.ensureBudgetExists(defaultBudgetLimit: defaultBudgetLimit, modelContext: modelContext)
         }
     }
 

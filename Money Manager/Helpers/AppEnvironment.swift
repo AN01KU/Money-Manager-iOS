@@ -114,3 +114,22 @@ extension EnvironmentValues {
         set { self[PersistenceServiceKey.self] = newValue }
     }
 }
+
+// MARK: - BudgetRepository environment key
+
+private struct BudgetRepositoryKey: EnvironmentKey {
+    static let defaultValue: BudgetRepository = {
+        #if DEBUG
+        return .testing
+        #else
+        fatalError("BudgetRepository must be injected via .environment(\\.budgetRepository, ...) before use")
+        #endif
+    }()
+}
+
+extension EnvironmentValues {
+    var budgetRepository: BudgetRepository {
+        get { self[BudgetRepositoryKey.self] }
+        set { self[BudgetRepositoryKey.self] = newValue }
+    }
+}
