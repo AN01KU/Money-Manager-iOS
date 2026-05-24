@@ -17,7 +17,7 @@ struct SettingsView: View {
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
     @Environment(\.networkMonitor) private var networkMonitor
-    @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
+    @AppStorage(UserDefaults.Keys.selectedCurrency.rawValue) private var selectedCurrency = "INR"
     @State private var authVersion = 0
     @State private var lastKnownAuthState: Bool? = nil
     @State private var navigationPath: [SettingsRoute] = []

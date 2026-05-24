@@ -17,12 +17,12 @@ struct Money_ManagerApp: App {
         let useTestData = processInfo.useTestData
 
         if skipOnboarding || isScreenshotMode {
-            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "hasSeenLogin")
+            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.hasCompletedOnboarding.rawValue)
+            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.hasSeenLogin.rawValue)
         }
         if resetOnboarding {
-            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(false, forKey: "hasSeenLogin")
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.hasCompletedOnboarding.rawValue)
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.hasSeenLogin.rawValue)
         }
         #endif
 
@@ -81,7 +81,7 @@ struct Money_ManagerApp: App {
 
     /// One-shot migration: carry the most-recent MonthlyBudget.limit into UserBudget, then purge all old rows.
     private static func migrateMonthlyBudgetToScalar(context: ModelContext) {
-        let migrationKey = "budgetMigratedToScalar"
+        let migrationKey = UserDefaults.Keys.budgetMigratedToScalar.rawValue
         guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
         defer { UserDefaults.standard.set(true, forKey: migrationKey) }
 
@@ -169,7 +169,7 @@ struct Money_ManagerApp: App {
                            !token.isEmpty {
                             // Store in UserDefaults so APIClient can read it without keychain
                             // (keychain writes fail under CODE_SIGNING_ALLOWED=NO in UI tests).
-                            UserDefaults.standard.set(token, forKey: "screenshot_token_override")
+                            UserDefaults.standard.set(token, forKey: UserDefaults.Keys.screenshotTokenOverride.rawValue)
                             // Each run uses a fresh throwaway user — wipe any leftover local
                             // SwiftData from the previous run so we don't see stale/duplicate data.
                             services.syncService.clearAllUserData()

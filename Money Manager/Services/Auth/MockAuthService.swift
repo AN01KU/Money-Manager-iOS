@@ -139,7 +139,7 @@ final class MockAuthService: AuthServiceProtocol {
         callLog.append(.updateCurrency(code))
         switch updateCurrencyResult {
         case .success:
-            UserDefaults.standard.set(code, forKey: "selectedCurrency")
+            UserDefaults.standard.set(code, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
             if case .authenticated(let user) = authState {
                 authState = .authenticated(APIUser(
                     id: user.id,

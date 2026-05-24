@@ -31,7 +31,7 @@ final class SyncService: SyncServiceProtocol {
     private let modelContainer: ModelContainer
     private let changeQueue: any ChangeQueueManagerProtocol
 
-    private let lastSyncKey = "last_sync_at"
+    private let lastSyncKey = UserDefaults.Keys.lastSyncAt.rawValue
     nonisolated(unsafe) private var networkObserver: Any?
     nonisolated(unsafe) private var logoutObserver: Any?
     nonisolated(unsafe) private var switchAccountObserver: Any?
@@ -140,8 +140,8 @@ final class SyncService: SyncServiceProtocol {
         try? context.delete(model: GroupTransactionModel.self)
         try? context.delete(model: GroupBalanceModel.self)
         try? context.save()
-        for key in ["last_sync_at", "selectedCurrency", "defaultBudgetLimit", "userTimezone"] {
-            UserDefaults.standard.removeObject(forKey: key)
+        for key: UserDefaults.Keys in [.lastSyncAt, .selectedCurrency, .defaultBudgetLimit, .userTimezone] {
+            UserDefaults.standard.removeObject(forKey: key.rawValue)
         }
     }
     

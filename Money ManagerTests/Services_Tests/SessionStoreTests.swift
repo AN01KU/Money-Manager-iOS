@@ -25,15 +25,15 @@ struct SessionStoreTests {
     @Test
     func testGetSyncSessionIDReturnsNilWhenNotSet() {
         let store = makeStore()
-        let original = UserDefaults.standard.string(forKey: "sync_session_id")
+        let original = UserDefaults.standard.string(forKey: UserDefaults.Keys.syncSessionID.rawValue)
         defer {
             if let original {
-                UserDefaults.standard.set(original, forKey: "sync_session_id")
+                UserDefaults.standard.set(original, forKey: UserDefaults.Keys.syncSessionID.rawValue)
             } else {
-                UserDefaults.standard.removeObject(forKey: "sync_session_id")
+                UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue)
             }
         }
-        UserDefaults.standard.removeObject(forKey: "sync_session_id")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue)
 
         #expect(store.getSyncSessionID() == nil)
     }
@@ -43,7 +43,7 @@ struct SessionStoreTests {
         let store = makeStore()
         let id = UUID()
         store.saveSyncSessionID(id)
-        defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue) }
 
         #expect(store.getSyncSessionID() == id)
     }
@@ -55,7 +55,7 @@ struct SessionStoreTests {
         let second = UUID()
         store.saveSyncSessionID(first)
         store.saveSyncSessionID(second)
-        defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue) }
 
         #expect(store.getSyncSessionID() == second)
     }
@@ -66,7 +66,7 @@ struct SessionStoreTests {
         store.saveToken("tok")
         store.saveSyncSessionID(UUID())
         store.clearSession()
-        defer { UserDefaults.standard.removeObject(forKey: "sync_session_id") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue) }
 
         #expect(store.getSyncSessionID() == nil)
     }
@@ -155,15 +155,15 @@ struct SessionStoreTests {
     @Test
     func testGetLastLoggedInEmailReturnsNilWhenNotSet() {
         let store = makeStore()
-        let original = UserDefaults.standard.string(forKey: "last_logged_in_email")
+        let original = UserDefaults.standard.string(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
         defer {
             if let original {
-                UserDefaults.standard.set(original, forKey: "last_logged_in_email")
+                UserDefaults.standard.set(original, forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
             } else {
-                UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+                UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
             }
         }
-        UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
 
         #expect(store.getLastLoggedInEmail() == nil)
     }
@@ -171,7 +171,7 @@ struct SessionStoreTests {
     @Test
     func testSaveLastLoggedInEmailPersistsNormalized() {
         let store = makeStore()
-        defer { UserDefaults.standard.removeObject(forKey: "last_logged_in_email") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue) }
 
         store.saveLastLoggedInEmail("User@Example.COM")
 
@@ -181,7 +181,7 @@ struct SessionStoreTests {
     @Test
     func testSaveLastLoggedInEmailOverwritesPreviousValue() {
         let store = makeStore()
-        defer { UserDefaults.standard.removeObject(forKey: "last_logged_in_email") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue) }
 
         store.saveLastLoggedInEmail("first@example.com")
         store.saveLastLoggedInEmail("second@example.com")
@@ -195,7 +195,7 @@ struct SessionStoreTests {
     @Test
     func testEmailIsDetectableAsDifferentAfterBeingSetFromCheckAuthState() {
         let store = makeStore()
-        defer { UserDefaults.standard.removeObject(forKey: "last_logged_in_email") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue) }
 
         // Simulate what checkAuthState() now does: save the email returned by /me
         store.saveLastLoggedInEmail("userA@example.com")
@@ -213,15 +213,15 @@ struct SessionStoreTests {
     @Test
     func testMissingEmailAllowsSilentAccountSwitch() {
         let store = makeStore()
-        let original = UserDefaults.standard.string(forKey: "last_logged_in_email")
+        let original = UserDefaults.standard.string(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
         defer {
             if let original {
-                UserDefaults.standard.set(original, forKey: "last_logged_in_email")
+                UserDefaults.standard.set(original, forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
             } else {
-                UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+                UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
             }
         }
-        UserDefaults.standard.removeObject(forKey: "last_logged_in_email")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
 
         // No email saved — this is the pre-fix state after reinstall + Keychain token present
         let storedEmail = store.getLastLoggedInEmail()

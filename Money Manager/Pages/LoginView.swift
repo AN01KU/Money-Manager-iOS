@@ -7,7 +7,7 @@ struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.authService) private var authService
     @Environment(\.syncService) private var syncService
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage(UserDefaults.Keys.hasCompletedOnboarding.rawValue) private var hasCompletedOnboarding = false
     @State private var email = ""
     @State private var password = ""
     @State private var showSignup = false

@@ -9,7 +9,7 @@ import SwiftUI
 import Charts
 
 struct OnboardingView: View {
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage(UserDefaults.Keys.hasCompletedOnboarding.rawValue) private var hasCompletedOnboarding = false
     @State private var currentPage = 0
 
     private let pages: [OnboardingPage] = [

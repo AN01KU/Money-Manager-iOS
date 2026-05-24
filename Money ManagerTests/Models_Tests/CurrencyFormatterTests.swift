@@ -53,15 +53,15 @@ struct CurrencyFormatterTests {
     
     @Test
     func testCurrentCodeDefaultsToINR() {
-        let original = UserDefaults.standard.string(forKey: "selectedCurrency")
+        let original = UserDefaults.standard.string(forKey: UserDefaults.Keys.selectedCurrency.rawValue)
         defer {
             if let original {
-                UserDefaults.standard.set(original, forKey: "selectedCurrency")
+                UserDefaults.standard.set(original, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
             } else {
-                UserDefaults.standard.removeObject(forKey: "selectedCurrency")
+                UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.selectedCurrency.rawValue)
             }
         }
-        UserDefaults.standard.removeObject(forKey: "selectedCurrency")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.selectedCurrency.rawValue)
 
         let code = CurrencyFormatter.currentCode
 

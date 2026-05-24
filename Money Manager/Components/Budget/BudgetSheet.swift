@@ -15,7 +15,7 @@ struct BudgetSheet: View {
     @Environment(\.changeQueueManager) private var changeQueueManager
     @Environment(\.networkMonitor) private var networkMonitor
 
-    @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
+    @AppStorage(UserDefaults.Keys.defaultBudgetLimit.rawValue) private var defaultBudgetLimit: Double = 0
     @State private var budgetAmount: String = ""
     @State private var isSaving = false
     @State private var showError = false

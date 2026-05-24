@@ -8,7 +8,7 @@ struct Overview: View {
     @Query private var userBudgets: [UserBudget]
     @Query(sort: \Category.name) private var customCategories: [Category]
 
-    @AppStorage("defaultBudgetLimit") private var defaultBudgetLimit: Double = 0
+    @AppStorage(UserDefaults.Keys.defaultBudgetLimit.rawValue) private var defaultBudgetLimit: Double = 0
 
     @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []

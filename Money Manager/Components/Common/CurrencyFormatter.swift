@@ -36,7 +36,7 @@ struct CurrencyFormatter {
     ]
 
     static var currentCode: String {
-        UserDefaults.standard.string(forKey: "selectedCurrency") ?? "INR"
+        UserDefaults.standard.string(forKey: UserDefaults.Keys.selectedCurrency.rawValue) ?? "INR"
     }
 
     static var currentSymbol: String {

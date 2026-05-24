@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CurrencyPickerView: View {
     @Environment(\.authService) private var authService
-    @AppStorage("selectedCurrency") private var selectedCurrency = "INR"
+    @AppStorage(UserDefaults.Keys.selectedCurrency.rawValue) private var selectedCurrency = "INR"
     @State private var searchText = ""
     @State private var selectionToggled = 0
     @State private var isUpdating = false

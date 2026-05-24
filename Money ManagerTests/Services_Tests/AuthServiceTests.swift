@@ -269,11 +269,11 @@ struct AuthServiceTests {
         let updatedUser = makeUser(id: user.id, email: user.email, username: user.username, currency: "USD")
         svc.authState = .authenticated(user)
         mock.patchHandler = { _, _ in updatedUser }
-        defer { UserDefaults.standard.removeObject(forKey: "selectedCurrency") }
+        defer { UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.selectedCurrency.rawValue) }
 
         try await svc.updateCurrency("USD")
 
-        #expect(UserDefaults.standard.string(forKey: "selectedCurrency") == "USD")
+        #expect(UserDefaults.standard.string(forKey: UserDefaults.Keys.selectedCurrency.rawValue) == "USD")
         if case .authenticated(let u) = svc.authState {
             #expect(u.currency == "USD")
         } else {

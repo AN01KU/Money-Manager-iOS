@@ -21,7 +21,7 @@ struct APIClientSyncHeaderTests {
 
     private func adapted(_ request: URLRequest, syncSessionID: UUID?) async throws -> URLRequest {
         // Set up SessionStore state
-        UserDefaults.standard.removeObject(forKey: "sync_session_id")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue)
         if let id = syncSessionID {
             SessionStore.shared.saveSyncSessionID(id)
         }

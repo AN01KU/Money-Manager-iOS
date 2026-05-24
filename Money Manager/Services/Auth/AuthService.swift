@@ -54,8 +54,8 @@ final class AuthService: AuthServiceProtocol {
             let user: APIUser = try await apiClient.get(.me)
             AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             session.saveLastLoggedInEmail(user.email.lowercased())
-            UserDefaults.standard.set(user.currency, forKey: "selectedCurrency")
-            UserDefaults.standard.set(user.timezone, forKey: "userTimezone")
+            UserDefaults.standard.set(user.currency, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
+            UserDefaults.standard.set(user.timezone, forKey: UserDefaults.Keys.userTimezone.rawValue)
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
             AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
@@ -98,8 +98,8 @@ final class AuthService: AuthServiceProtocol {
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
-            UserDefaults.standard.set(response.user.currency, forKey: "selectedCurrency")
-            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
+            UserDefaults.standard.set(response.user.currency, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
+            UserDefaults.standard.set(response.user.timezone, forKey: UserDefaults.Keys.userTimezone.rawValue)
             authState = .authenticated(response.user)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -125,7 +125,7 @@ final class AuthService: AuthServiceProtocol {
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
-            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
+            UserDefaults.standard.set(response.user.timezone, forKey: UserDefaults.Keys.userTimezone.rawValue)
             authState = .authenticated(response.user)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -173,7 +173,7 @@ final class AuthService: AuthServiceProtocol {
     func updateCurrency(_ code: String) async throws {
         let request = APIUpdateMeRequest(username: nil, email: nil, password: nil, currency: code)
         let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
-        UserDefaults.standard.set(updatedUser.currency, forKey: "selectedCurrency")
+        UserDefaults.standard.set(updatedUser.currency, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
         authState = .authenticated(updatedUser)
     }
 
@@ -181,7 +181,7 @@ final class AuthService: AuthServiceProtocol {
     func logout() {
         let syncSessionID = session.getSyncSessionID()
         session.clearSession()
-        UserDefaults.standard.removeObject(forKey: "last_sync_at")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastSyncAt.rawValue)
         NotificationCenter.default.post(name: .userDidLogout, object: nil)
         authState = .guest
 

@@ -89,7 +89,7 @@ final class SessionStore {
         #if DEBUG
         // During screenshot UI tests, keychain writes fail under CODE_SIGNING_ALLOWED=NO.
         // The app stores the token in UserDefaults instead; read it here as a fallback.
-        if let override = UserDefaults.standard.string(forKey: "screenshot_token_override"),
+        if let override = UserDefaults.standard.string(forKey: UserDefaults.Keys.screenshotTokenOverride.rawValue),
            !override.isEmpty {
             return override
         }
@@ -108,30 +108,26 @@ final class SessionStore {
 
     // MARK: - Sync Session ID
 
-    private let syncSessionIDKey = "sync_session_id"
-
     func saveSyncSessionID(_ id: UUID) {
-        UserDefaults.standard.set(id.uuidString, forKey: syncSessionIDKey)
+        UserDefaults.standard.set(id.uuidString, forKey: UserDefaults.Keys.syncSessionID.rawValue)
     }
 
     func getSyncSessionID() -> UUID? {
-        guard let raw = UserDefaults.standard.string(forKey: syncSessionIDKey) else { return nil }
+        guard let raw = UserDefaults.standard.string(forKey: UserDefaults.Keys.syncSessionID.rawValue) else { return nil }
         return UUID(uuidString: raw)
     }
 
     func clearSyncSessionID() {
-        UserDefaults.standard.removeObject(forKey: syncSessionIDKey)
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.syncSessionID.rawValue)
     }
 
     // MARK: - Last Logged In Email
 
-    private let lastEmailKey = "last_logged_in_email"
-
     func saveLastLoggedInEmail(_ email: String) {
-        UserDefaults.standard.set(email.lowercased(), forKey: lastEmailKey)
+        UserDefaults.standard.set(email.lowercased(), forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
     }
 
     func getLastLoggedInEmail() -> String? {
-        UserDefaults.standard.string(forKey: lastEmailKey)
+        UserDefaults.standard.string(forKey: UserDefaults.Keys.lastLoggedInEmail.rawValue)
     }
 }
