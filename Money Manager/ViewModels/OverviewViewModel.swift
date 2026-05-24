@@ -99,11 +99,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         var result = categoryFiltered
 
         if !searchText.isEmpty {
-            result = result.filter { transaction in
-                transaction.category.localizedStandardContains(searchText) ||
-                (transaction.transactionDescription?.localizedStandardContains(searchText) ?? false) ||
-                (transaction.notes?.localizedStandardContains(searchText) ?? false)
-            }
+            result = result.filter { $0.matches(searchText: searchText) }
         }
 
         switch transactionTypeFilter {
