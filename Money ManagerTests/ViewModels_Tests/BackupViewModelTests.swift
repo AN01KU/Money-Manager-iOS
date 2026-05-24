@@ -223,180 +223,151 @@ struct BackupViewModelTests {
         #expect(viewModel.importDescription.contains("CSV"))
     }
     
-    // MARK: - CSV Escape Tests
-    
+    // MARK: - CSV Escape Tests (delegated to BackupService)
+
     @Test
     func testEscapeCSVWithComma() {
-        let service = ExportService()
-        let result = service.escapeCSV("Hello, World")
-        #expect(result == "\"Hello, World\"")
+        #expect(BackupService.escapeCSVField("Hello, World") == "\"Hello, World\"")
     }
-    
+
     @Test
     func testEscapeCSVWithQuote() {
-        let service = ExportService()
-        let result = service.escapeCSV("He said \"Hello\"")
-        #expect(result == "\"He said \"\"Hello\"\"\"")
+        #expect(BackupService.escapeCSVField("He said \"Hello\"") == "\"He said \"\"Hello\"\"\"")
     }
-    
+
     @Test
     func testEscapeCSVWithNewline() {
-        let service = ExportService()
-        let result = service.escapeCSV("Line1\nLine2")
-        #expect(result == "\"Line1\nLine2\"")
+        #expect(BackupService.escapeCSVField("Line1\nLine2") == "\"Line1\nLine2\"")
     }
-    
+
     @Test
     func testEscapeCSVWithoutSpecialChars() {
-        let service = ExportService()
-        let result = service.escapeCSV("Simple Text")
-        #expect(result == "Simple Text")
+        #expect(BackupService.escapeCSVField("Simple Text") == "Simple Text")
     }
-    
+
     @Test
     func testEscapeCSVEmptyString() {
-        let service = ExportService()
-        let result = service.escapeCSV("")
-        #expect(result == "")
+        #expect(BackupService.escapeCSVField("") == "")
     }
-    
-    // MARK: - CSV Line Parse Tests
-    
+
+    // MARK: - CSV Line Parse Tests (delegated to BackupViewModel)
+
     @Test
     func testParseCSVLineSimple() {
-        let service = ImportService()
-        let result = service.parseCSVLine("a,b,c")
-        #expect(result == ["a", "b", "c"])
+        let vm = BackupViewModel()
+        #expect(vm.parseCSVLine("a,b,c") == ["a", "b", "c"])
     }
-    
+
     @Test
     func testParseCSVLineWithQuotes() {
-        let service = ImportService()
-        let result = service.parseCSVLine("\"a,b\",c")
+        let vm = BackupViewModel()
+        let result = vm.parseCSVLine("\"a,b\",c")
         #expect(result[0] == "a,b")
         #expect(result[1] == "c")
     }
-    
+
     @Test
     func testParseCSVLineWithSpaces() {
-        let service = ImportService()
-        let result = service.parseCSVLine("a , b , c")
-        #expect(result == ["a", "b", "c"])
+        let vm = BackupViewModel()
+        #expect(vm.parseCSVLine("a , b , c") == ["a", "b", "c"])
     }
-    
+
     @Test
     func testParseCSVLineEmptyValues() {
-        let service = ImportService()
-        let result = service.parseCSVLine("a,,c")
-        #expect(result == ["a", "", "c"])
+        let vm = BackupViewModel()
+        #expect(vm.parseCSVLine("a,,c") == ["a", "", "c"])
     }
-    
+
     // MARK: - Date Parse Tests
-    
+
     @Test
     func testParseDateISO8601() {
-        let service = ImportService()
-        let result = service.parseDate("2026-03-12T10:30:00Z")
-        let calendar = Calendar.current
-        #expect(calendar.component(.year, from: result.date) == 2026)
+        let vm = BackupViewModel()
+        let result = vm.parseDate("2026-03-12T10:30:00Z")
+        #expect(Calendar.current.component(.year, from: result.date) == 2026)
     }
 
     @Test
     func testParseDateWithTime() {
-        let service = ImportService()
-        let result = service.parseDate("2026-03-12T10:30:00Z", "2026-03-12T14:45:00.000Z")
+        let vm = BackupViewModel()
+        let result = vm.parseDate("2026-03-12T10:30:00Z", "2026-03-12T14:45:00.000Z")
         #expect(result.time != nil)
     }
-    
+
     @Test
     func testParseDateMediumFormat() {
-        let service = ImportService()
-        let result = service.parseDate("Mar 12, 2026 at 10:30 AM")
-        let calendar = Calendar.current
-        #expect(calendar.component(.year, from: result.date) == 2026)
+        let vm = BackupViewModel()
+        let result = vm.parseDate("Mar 12, 2026 at 10:30 AM")
+        #expect(Calendar.current.component(.year, from: result.date) == 2026)
     }
-    
+
     @Test
     func testParseDateSlashFormat() {
-        let service = ImportService()
-        let result = service.parseDate("03/12/2026")
-        let calendar = Calendar.current
-        #expect(calendar.component(.year, from: result.date) == 2026)
-        #expect(calendar.component(.month, from: result.date) == 3)
-        #expect(calendar.component(.day, from: result.date) == 12)
+        let vm = BackupViewModel()
+        let result = vm.parseDate("03/12/2026")
+        let cal = Calendar.current
+        #expect(cal.component(.year, from: result.date) == 2026)
+        #expect(cal.component(.month, from: result.date) == 3)
+        #expect(cal.component(.day, from: result.date) == 12)
     }
-    
+
     @Test
     func testParseDateEmptyString() {
-        let service = ImportService()
-        let result = service.parseDate("")
+        let vm = BackupViewModel()
+        let result = vm.parseDate("")
         #expect(result.date.timeIntervalSince1970 > 0)
     }
-    
-    // MARK: - Expense CSV Row Parse Tests
-    
+
+    // MARK: - Transaction CSV Row Parse Tests
+
     @Test
     func testParseTransactionCSVRow() {
-        let service = ImportService()
+        let vm = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group id", "group name"]
         let values = ["uuid-123", "100.50", "Food", "2026-03-12T10:30:00Z", "", "Lunch", "", "", "", ""]
-        
-        let result = service.parseTransactionCSVRow(values, headers: headers)
-        
+        let result = vm.parseTransactionCSVRow(values, headers: headers)
         #expect(result != nil)
         #expect(result?.id == "uuid-123")
         #expect(result?.amount == 100.50)
         #expect(result?.category == "Food")
         #expect(result?.transactionDescription == "Lunch")
     }
-    
+
     @Test
     func testParseTransactionCSVRowWithMissingValues() {
-        let service = ImportService()
-        let headers = ["id", "amount", "category", "date"]
-        let values = ["uuid-123", "100", "Food"]
-        
-        let result = service.parseTransactionCSVRow(values, headers: headers)
+        let vm = BackupViewModel()
+        let result = vm.parseTransactionCSVRow(["uuid-123", "100", "Food"], headers: ["id", "amount", "category", "date"])
         #expect(result == nil)
     }
-    
+
     // MARK: - Budget CSV Row Parse Tests
-    
+
     @Test
     func testParseBudgetCSVRow() {
-        let service = ImportService()
+        let vm = BackupViewModel()
         let headers = ["id", "year", "month", "limit"]
-        let values = ["budget-1", "2026", "3", "5000"]
-        
-        let result = service.parseBudgetCSVRow(values, headers: headers)
-        
+        let result = vm.parseBudgetCSVRow(["budget-1", "2026", "3", "5000"], headers: headers)
         #expect(result != nil)
         #expect(result?.id == "budget-1")
         #expect(result?.year == 2026)
         #expect(result?.month == 3)
         #expect(result?.limit == 5000)
     }
-    
+
     @Test
     func testParseBudgetCSVRowWithDefaults() {
-        let service = ImportService()
-        let headers = ["id", "year", "month", "limit"]
-        let values = ["budget-1"]
-        
-        let result = service.parseBudgetCSVRow(values, headers: headers)
+        let vm = BackupViewModel()
+        let result = vm.parseBudgetCSVRow(["budget-1"], headers: ["id", "year", "month", "limit"])
         #expect(result == nil)
     }
-    
+
     // MARK: - Category CSV Row Parse Tests
-    
+
     @Test
     func testParseCategoryCSVRow() {
-        let service = ImportService()
+        let vm = BackupViewModel()
         let headers = ["id", "name", "icon", "color", "is hidden", "is predefined", "predefined key"]
-        let values = ["cat-1", "Groceries", "cart.fill", "#FF0000", "false", "true", "food"]
-        
-        let result = service.parseCategoryCSVRow(values, headers: headers)
-        
+        let result = vm.parseCategoryCSVRow(["cat-1", "Groceries", "cart.fill", "#FF0000", "false", "true", "food"], headers: headers)
         #expect(result != nil)
         #expect(result?.id == "cat-1")
         #expect(result?.name == "Groceries")
@@ -406,49 +377,37 @@ struct BackupViewModelTests {
         #expect(result?.isPredefined == true)
         #expect(result?.predefinedKey == "food")
     }
-    
+
     @Test
     func testParseCategoryCSVRowWithDefaults() {
-        let service = ImportService()
-        let headers = ["id", "name", "icon", "color"]
-        let values = ["cat-1", "Test", "star.fill", "#000000"]
-        
-        let result = service.parseCategoryCSVRow(values, headers: headers)
-        
+        let vm = BackupViewModel()
+        let result = vm.parseCategoryCSVRow(["cat-1", "Test", "star.fill", "#000000"], headers: ["id", "name", "icon", "color"])
         #expect(result != nil)
         #expect(result?.name == "Test")
         #expect(result?.isHidden == false)
         #expect(result?.isPredefined == false)
     }
-    
+
     @Test
     func testParseCategoryCSVRowMismatchedCount() {
-        let service = ImportService()
-        let headers = ["id", "name", "icon", "color", "is hidden"]
-        let values = ["cat-1", "Test"]
-        
-        let result = service.parseCategoryCSVRow(values, headers: headers)
+        let vm = BackupViewModel()
+        let result = vm.parseCategoryCSVRow(["cat-1", "Test"], headers: ["id", "name", "icon", "color", "is hidden"])
         #expect(result == nil)
     }
-    
+
     @Test
     func testParseBudgetCSVRowMismatchedCount() {
-        let service = ImportService()
-        let headers = ["id", "year", "month", "limit"]
-        let values = ["budget-1", "2026"]
-        
-        let result = service.parseBudgetCSVRow(values, headers: headers)
+        let vm = BackupViewModel()
+        let result = vm.parseBudgetCSVRow(["budget-1", "2026"], headers: ["id", "year", "month", "limit"])
         #expect(result == nil)
     }
-    
+
     @Test
     func testParseTransactionCSVRowWithAllFields() {
-        let service = ImportService()
+        let vm = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
         let values = ["uuid-1", "250.75", "Transport", "2026-03-12T10:30:00Z", "2026-03-12T14:00:00Z", "Uber ride", "To airport", "rec-uuid", "grp-uuid"]
-
-        let result = service.parseTransactionCSVRow(values, headers: headers)
-
+        let result = vm.parseTransactionCSVRow(values, headers: headers)
         #expect(result != nil)
         #expect(result?.amount == 250.75)
         #expect(result?.category == "Transport")
@@ -457,63 +416,60 @@ struct BackupViewModelTests {
         #expect(result?.recurringExpenseId == "rec-uuid")
         #expect(result?.groupTransactionId == "grp-uuid")
     }
-    
+
     @Test
     func testParseTransactionCSVRowWithEmptyOptionalFields() {
-        let service = ImportService()
+        let vm = BackupViewModel()
         let headers = ["id", "amount", "category", "date", "time", "description", "notes", "recurring expense id", "group transaction id"]
         let values = ["uuid-1", "50", "Food", "2026-03-12T10:30:00Z", "", "", "", "", ""]
-
-        let result = service.parseTransactionCSVRow(values, headers: headers)
-
+        let result = vm.parseTransactionCSVRow(values, headers: headers)
         #expect(result != nil)
         #expect(result?.transactionDescription == nil)
         #expect(result?.notes == nil)
         #expect(result?.recurringExpenseId == nil)
         #expect(result?.groupTransactionId == nil)
     }
-    
+
     // MARK: - Date Parsing Edge Cases
-    
+
     @Test
     func testParseDateYYYYMMDDFormat() {
-        let service = ImportService()
-        let result = service.parseDate("2026-03-15")
-        let calendar = Calendar.current
-        #expect(calendar.component(.year, from: result.date) == 2026)
-        #expect(calendar.component(.month, from: result.date) == 3)
-        #expect(calendar.component(.day, from: result.date) == 15)
+        let vm = BackupViewModel()
+        let result = vm.parseDate("2026-03-15")
+        let cal = Calendar.current
+        #expect(cal.component(.year, from: result.date) == 2026)
+        #expect(cal.component(.month, from: result.date) == 3)
+        #expect(cal.component(.day, from: result.date) == 15)
     }
-    
+
     @Test
     func testParseDateISO8601WithFractionalSeconds() {
-        let service = ImportService()
-        let result = service.parseDate("2026-03-12T10:30:00.123Z")
-        let calendar = Calendar.current
-        #expect(calendar.component(.year, from: result.date) == 2026)
+        let vm = BackupViewModel()
+        let result = vm.parseDate("2026-03-12T10:30:00.123Z")
+        #expect(Calendar.current.component(.year, from: result.date) == 2026)
     }
-    
+
     @Test
     func testParseDateWithEmptyTimeString() {
-        let service = ImportService()
-        let result = service.parseDate("2026-03-12T10:30:00Z", "")
+        let vm = BackupViewModel()
+        let result = vm.parseDate("2026-03-12T10:30:00Z", "")
         #expect(result.time == nil)
     }
-    
+
     @Test
     func testParseDateWithInvalidDateReturnsCurrentDate() {
-        let service = ImportService()
+        let vm = BackupViewModel()
         let before = Date()
-        let result = service.parseDate("completely-invalid-date")
+        let result = vm.parseDate("completely-invalid-date")
         let after = Date()
         #expect(result.date >= before)
         #expect(result.date <= after)
     }
-    
+
     @Test
     func testParseDateTimeWithNonISOFormat() {
-        let service = ImportService()
-        let result = service.parseDate("03/12/2026", "03/12/2026")
+        let vm = BackupViewModel()
+        let result = vm.parseDate("03/12/2026", "03/12/2026")
         #expect(result.time != nil)
     }
 }

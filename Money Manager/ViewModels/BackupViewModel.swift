@@ -3,6 +3,10 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+struct ImportResult {
+    let message: String
+}
+
 enum ExportFormat: String, CaseIterable, Identifiable {
     case csv = "CSV"
     case json = "JSON"
