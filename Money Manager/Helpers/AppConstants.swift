@@ -60,10 +60,9 @@ enum AppConstants {
     
     /// Formatting
     enum Format {
-        static let currency = "₹"
         static let decimalPlaces = 2
     }
-    
+
     /// Date formats
     enum DateFormat {
         static let monthYear = "MMMM yyyy"

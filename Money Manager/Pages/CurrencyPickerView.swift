@@ -16,7 +16,7 @@ struct CurrencyPickerView: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
-    private var filteredCurrencies: [(code: String, name: String, symbol: String)] {
+    private var filteredCurrencies: [Currency] {
         if searchText.isEmpty {
             return CurrencyFormatter.supportedCurrencies
         }
