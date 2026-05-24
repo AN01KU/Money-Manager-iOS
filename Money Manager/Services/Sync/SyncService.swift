@@ -118,27 +118,11 @@ final class SyncService: SyncServiceProtocol {
     }
 
     func clearGroupData() {
-        let context = ModelContext(modelContainer)
-        try? context.delete(model: SplitGroupModel.self)
-        try? context.delete(model: GroupMemberModel.self)
-        try? context.delete(model: GroupTransactionModel.self)
-        try? context.delete(model: GroupBalanceModel.self)
-        try? context.save()
+        LocalDataWiper.groupData.wipe(context: ModelContext(modelContainer))
     }
 
     func clearAllUserData() {
-        let context = ModelContext(modelContainer)
-        try? context.delete(model: Transaction.self)
-        try? context.delete(model: RecurringTransaction.self)
-        try? context.delete(model: UserBudget.self)
-        try? context.delete(model: Category.self)
-        try? context.delete(model: PendingChange.self)
-        try? context.delete(model: OrphanedChange.self)
-        try? context.delete(model: SplitGroupModel.self)
-        try? context.delete(model: GroupMemberModel.self)
-        try? context.delete(model: GroupTransactionModel.self)
-        try? context.delete(model: GroupBalanceModel.self)
-        try? context.save()
+        LocalDataWiper.allUserData.wipe(context: ModelContext(modelContainer))
         for key: UserDefaults.Keys in [.lastSyncAt, .selectedCurrency, .defaultBudgetLimit, .userTimezone] {
             UserDefaults.standard.removeObject(forKey: key.rawValue)
         }
