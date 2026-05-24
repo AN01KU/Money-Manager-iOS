@@ -37,24 +37,14 @@ import SwiftData
     }
 
     func recalculate() {
-        let calendar = Calendar.current
-        guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
-            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-        else {
-            filteredTransactions = []
-            return
-        }
+        let interval = Calendar.current.monthInterval(for: selectedDate)
+        let spending = Spending.from(
+            transactions: allTransactions,
+            in: interval,
+            search: searchText.isEmpty ? nil : searchText
+        )
 
-        var result = allTransactions.filter { transaction in
-            !transaction.isSoftDeleted &&
-            transaction.date >= startOfMonth &&
-            transaction.date < firstDayNextMonth
-        }
-
-        if !searchText.isEmpty {
-            result = result.filter { $0.matches(searchText: searchText) }
-        }
+        var result = spending.filtered
 
         if let categoryFilter = selectedCategoryFilter {
             result = result.filter { $0.category == categoryFilter }
