@@ -129,79 +129,25 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                     continue
                 }
 
-                switch apiError {
-                case .unauthorized:
+                AppLogger.sync.warning("[ReplayDebug] \(apiError) for \(change.entityType)=\(change.entityID) action=\(change.action)")
+                switch ReplayErrorPolicy.decide(action: change.action, entityType: change.entityType, error: apiError) {
+                case .sessionExpired:
                     NotificationCenter.default.post(name: .authSessionExpired, object: nil)
                     return
-
-                case .syncSessionInvalid:
-                    // Entire session is invalid — orphan the queue and stop.
+                case .orphanAll:
                     orphanAll(context: context)
                     NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
                     return
-
-                case .transientError:
-                    // 502 server blip — leave the change queued, retry on next sync trigger.
-                    AppLogger.sync.warning("[ReplayDebug] 502 transient error for \(change.entityType)=\(change.entityID) — backing off, will retry")
+                case .stop:
                     return
-
-                case .staleWrite:
-                    // Server has a newer version — discard our pending write; next pull wins.
-                    AppLogger.sync.warning("[ReplayDebug] STALE_WRITE for \(change.entityType)=\(change.entityID) — discarding stale pending change, server version wins")
+                case .discardChange:
                     discardChange(change, context: context)
-
-                case .notFound where change.action == "delete":
-                    // 404 on a delete — entity never reached the server, clean up locally.
-                    AppLogger.sync.warning("[ReplayDebug] 404 on delete for \(change.entityType)=\(change.entityID) — entity never on server, cleaning up locally")
+                case .discardChangeAndEntity:
                     discardChangeAndEntity(change, context: context)
-
-                case .notFound where change.action == "update":
-                    // 404 on an update — entity was deleted on another device; purge local row.
-                    AppLogger.sync.warning("[ReplayDebug] 404 on update for \(change.entityType)=\(change.entityID) — entity gone from server, purging local row")
-                    discardChangeAndEntity(change, context: context)
-
-                case .overrideAlreadyExists where change.action == "create" && change.entityType == "category":
-                    // Server already has this predefined override — drop stale local row;
-                    // next pullCategories will bring down the canonical server version.
-                    AppLogger.sync.warning("[ReplayDebug] OVERRIDE_ALREADY_EXISTS for category=\(change.entityID) — deleting stale local row; pullCategories will sync the server override")
-                    discardChangeAndEntity(change, context: context)
-
-                case .predefinedNotFound where change.action == "create" && change.entityType == "category":
-                    // Predefined category removed by admin — discard local override entirely.
-                    AppLogger.sync.warning("[ReplayDebug] PREDEFINED_NOT_FOUND for category=\(change.entityID) — predefined removed by admin, discarding local override")
-                    discardChangeAndEntity(change, context: context)
-
-                case .invalidField(let field):
-                    // Permanent client-side validation error — dead-letter immediately, no retry.
-                    AppLogger.sync.error("[ReplayDebug] invalid \(field) for \(change.entityType)=\(change.entityID) — dead-lettering immediately")
-                    moveToDeadLetter(change, lastError: "Invalid \(field)", context: context)
-
-                case .mixedCurrencySettlement, .mixedCurrencyGroupTx, .addMemberFailed:
-                    // Permanent client-side validation failure — retrying cannot help.
-                    // Dead-letter immediately without incrementing retry count.
-                    AppLogger.sync.error("[ReplayDebug] \(apiError) for \(change.entityType)=\(change.entityID) action=\(change.action) — permanent 400, dead-lettering immediately")
-                    moveToDeadLetter(change, lastError: apiError.errorDescription ?? "Permanent 400", context: context)
-
-                case .idOwnedByAnotherUser, .idOwnedByAnotherGroup:
-                    // UUID collision — this entity belongs to another user/group and is
-                    // unrecoverable from the client's perspective. Purge the local row
-                    // and drop the pending change regardless of action.
-                    AppLogger.sync.error("[ReplayDebug] \(apiError) for \(change.entityType)=\(change.entityID) action=\(change.action) — purging local entity and discarding change")
-                    discardChangeAndEntity(change, context: context)
-
-                case .conflict where change.action == "create":
-                    // 409 on a create — entity already exists on server, treat as success.
-                    AppLogger.sync.warning("[ReplayDebug] 409 on create for \(change.entityType)=\(change.entityID) — entity already on server, discarding pending change")
-                    discardChange(change, context: context)
-
-                default:
-                    let detail: String
-                    if case .httpError(let code, let msg) = apiError {
-                        detail = "HTTP \(code): \(msg ?? "(no body)")"
-                    } else {
-                        detail = apiError.localizedDescription
-                    }
-                    retryOrDeadLetter(change, error: detail, context: context)
+                case .deadLetter(let reason):
+                    moveToDeadLetter(change, lastError: reason, context: context)
+                case .retryLater(let reason):
+                    retryOrDeadLetter(change, error: reason, context: context)
                 }
             }
         }
