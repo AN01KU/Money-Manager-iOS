@@ -85,7 +85,7 @@ struct TransactionCategory: Identifiable {
                     key: predefined.serverKey,
                     name: ov?.name ?? predefined.rawValue,
                     icon: ov?.icon ?? predefined.icon,
-                    colorHex: ov?.color ?? predefined.defaultColorHex,
+                    colorHex: ov?.color ?? predefined.paletteHex,
                     isHidden: ov?.isHidden ?? false,
                     isPredefined: true,
                     isDeletable: predefined != .other,

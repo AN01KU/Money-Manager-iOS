@@ -37,7 +37,7 @@ enum CategoryResolver {
             return (custom.icon, Color(hex: custom.color))
         }
         if let predefined = predefinedLookup[categoryKey] {
-            return (predefined.icon, predefined.color)
+            return (predefined.icon, Color(hex: predefined.paletteHex))
         }
         return (AppIcons.Category.other, .gray)
     }
@@ -48,7 +48,7 @@ enum CategoryResolver {
             return (custom.name, custom.icon, Color(hex: custom.color))
         }
         if let predefined = predefinedLookup[categoryKey] {
-            return (predefined.rawValue, predefined.icon, predefined.color)
+            return (predefined.rawValue, predefined.icon, Color(hex: predefined.paletteHex))
         }
         return (categoryKey, AppIcons.Category.other, .gray)
     }

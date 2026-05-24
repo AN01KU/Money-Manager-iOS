@@ -370,6 +370,79 @@ struct SyncServiceUpsertTests {
         #expect(local.isEmpty)
     }
 
+    // MARK: - bootstrapPredefinedCategories: palette color migration
+
+    private func apiPredefinedCategory(
+        key: String,
+        serverColor: String = "#ABCDEF",
+        updatedAt: Date = Date()
+    ) -> APIPredefinedCategory {
+        APIPredefinedCategory(
+            id: UUID(), key: key,
+            name: key, icon: "star",
+            color: serverColor,
+            isHidden: false,
+            createdAt: nil,
+            updatedAt: updatedAt
+        )
+    }
+
+    @Test func testBootstrapInsertsNewRowWithPaletteColor() async throws {
+        let container = try makeContainer()
+        let predefined = PredefinedCategory.foodDining
+        let mock = MockAPIClient()
+        mock.getHandler = { _ in APIListResponse(data: [self.apiPredefinedCategory(key: predefined.serverKey, serverColor: "#FFFFFF")]) }
+        let svc = makeSyncService(container: container, mock: mock)
+
+        await svc.bootstrapPredefinedCategories()
+
+        let context = ModelContext(container)
+        let rows = try context.fetch(FetchDescriptor<Money_Manager.Category>())
+        #expect(rows.count == 1)
+        #expect(rows[0].color == predefined.paletteHex)
+    }
+
+    @Test func testBootstrapMigratesExistingRowColorToPalette() async throws {
+        let container = try makeContainer()
+        let predefined = PredefinedCategory.transport
+        let context = ModelContext(container)
+        let old = Date(timeIntervalSinceNow: -3600)
+        let newer = Date(timeIntervalSinceNow: -10)
+
+        // Pre-seed with an old non-palette color
+        let existing = Category(key: predefined.serverKey, name: predefined.rawValue, icon: predefined.icon, color: "#007AFF", isPredefined: true, isServerPredefined: true)
+        existing.updatedAt = old
+        context.insert(existing)
+        try context.save()
+
+        let mock = MockAPIClient()
+        mock.getHandler = { _ in APIListResponse(data: [self.apiPredefinedCategory(key: predefined.serverKey, serverColor: "#007AFF", updatedAt: old)]) }
+        let svc = makeSyncService(container: container, mock: mock)
+
+        await svc.bootstrapPredefinedCategories()
+
+        let rows = try context.fetch(FetchDescriptor<Money_Manager.Category>())
+        #expect(rows.count == 1)
+        // Color must be updated to palette hex regardless of updatedAt comparison
+        #expect(rows[0].color == predefined.paletteHex)
+    }
+
+    @Test func testBootstrapUsesServerColorForUnknownPredefinedKey() async throws {
+        let container = try makeContainer()
+        let serverColor = "#ABCDEF"
+        let mock = MockAPIClient()
+        mock.getHandler = { _ in APIListResponse(data: [self.apiPredefinedCategory(key: "unknown-future-key", serverColor: serverColor)]) }
+        let svc = makeSyncService(container: container, mock: mock)
+
+        await svc.bootstrapPredefinedCategories()
+
+        let context = ModelContext(container)
+        let rows = try context.fetch(FetchDescriptor<Money_Manager.Category>())
+        #expect(rows.count == 1)
+        // Falls back to server color when no palette entry exists
+        #expect(rows[0].color == serverColor)
+    }
+
     // MARK: - clearAllUserData removes all local data
 
     @Test func testClearAllUserDataRemovesEverything() throws {

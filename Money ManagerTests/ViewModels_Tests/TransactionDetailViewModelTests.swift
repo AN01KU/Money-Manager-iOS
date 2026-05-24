@@ -114,7 +114,7 @@ struct TransactionDetailViewModelTests {
         let transaction = Transaction(amount: 100, category: "food-dining", date: Date())
         let viewModel = TransactionDetailViewModel(transaction: transaction)
 
-        #expect(viewModel.categoryColor == PredefinedCategory.foodDining.color)
+        #expect(viewModel.categoryColor == Color(hex: PredefinedCategory.foodDining.paletteHex))
     }
 
     @Test

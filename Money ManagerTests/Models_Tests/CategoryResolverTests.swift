@@ -12,7 +12,7 @@ struct CategoryResolverTests {
     func testResolveKnownPredefinedCategoryReturnsCorrectIconAndColor() {
         let result = CategoryResolver.resolve("food-dining", customCategories: [])
         #expect(result.icon == PredefinedCategory.foodDining.icon)
-        #expect(result.color == PredefinedCategory.foodDining.color)
+        #expect(result.color == Color(hex: PredefinedCategory.foodDining.paletteHex))
     }
 
     @Test
@@ -56,7 +56,7 @@ struct CategoryResolverTests {
         hidden.isHidden = true
         let result = CategoryResolver.resolve("food-dining", customCategories: [hidden])
         #expect(result.icon == PredefinedCategory.foodDining.icon)
-        #expect(result.color == PredefinedCategory.foodDining.color)
+        #expect(result.color == Color(hex: PredefinedCategory.foodDining.paletteHex))
     }
 
     @Test

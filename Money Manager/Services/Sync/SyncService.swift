@@ -363,16 +363,18 @@ final class SyncService: SyncServiceProtocol {
         let serverKeys = Set(categories.map { $0.key })
 
         for remote in categories {
+            let paletteHex = PredefinedCategory.allCases
+                .first { $0.serverKey == remote.key }?.paletteHex ?? remote.color
             if let local = localServerPredefinedByKey[remote.key] {
-                // Update if server has a newer version
                 let remoteUpdatedAt = remote.updatedAt ?? local.updatedAt
                 if remoteUpdatedAt > local.updatedAt {
                     local.name = remote.name
                     local.icon = remote.icon
-                    local.color = remote.color
                     local.isHidden = remote.isHidden ?? false
                     local.updatedAt = remoteUpdatedAt
                 }
+                // Always migrate color to palette hex
+                local.color = paletteHex
             } else {
                 // Insert new server-predefined row
                 let category = Category(
@@ -380,7 +382,7 @@ final class SyncService: SyncServiceProtocol {
                     key: remote.key,
                     name: remote.name,
                     icon: remote.icon,
-                    color: remote.color,
+                    color: paletteHex,
                     isPredefined: true,
                     isServerPredefined: true
                 )

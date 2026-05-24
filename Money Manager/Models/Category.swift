@@ -64,7 +64,7 @@ final class Category {
             serverKey = predefined.serverKey
             name = predefined.rawValue
             icon = predefined.icon
-            color = predefined.defaultColorHex
+            color = predefined.paletteHex
         } else {
             // Server-predefined row not in the local enum — extract key from id.
             serverKey = String(category.id.dropFirst("predefined:".count))
