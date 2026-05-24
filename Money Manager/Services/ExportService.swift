@@ -2,7 +2,6 @@ import Foundation
 import SwiftData
 
 protocol ExportServiceProtocol {
-    func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL
     func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL
 }
 
@@ -16,66 +15,12 @@ struct ExportService: ExportServiceProtocol {
 
     // MARK: - Public API
 
-    func exportCategories(format: ExportFormat, categories: [Category]) throws -> URL {
-        switch format {
-        case .csv: return try exportCategoriesToCSV(categories: categories)
-        case .json: return try exportCategoriesToJSON(categories: categories)
-        }
-    }
-
     func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Category]) throws -> URL {
         let activeTransactions = transactions.filter { !$0.isSoftDeleted }
         switch format {
         case .csv: return try exportAllToCSV(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         case .json: return try exportAllToJSON(transactions: activeTransactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
         }
-    }
-
-    // MARK: - Categories
-
-    private func exportCategoriesToCSV(categories: [Category]) throws -> URL {
-        var csv = "ID,Name,Icon,Color,Is Hidden,Is Predefined,Predefined Key\n"
-
-        for category in categories {
-            let row = [
-                category.id.uuidString,
-                escapeCSV(category.name),
-                category.icon,
-                category.color,
-                String(category.isHidden),
-                String(category.isPredefined),
-                category.predefinedKey ?? ""
-            ].joined(separator: ",")
-            csv += row + "\n"
-        }
-
-        let fileName = "categories_\(dateString()).csv"
-        return try saveToTempFile(csv, fileName: fileName)
-    }
-
-    private func exportCategoriesToJSON(categories: [Category]) throws -> URL {
-        let categoryData = categories.map { category in
-            ExportData.CategoryData(
-                id: category.id.uuidString,
-                name: category.name,
-                icon: category.icon,
-                color: category.color,
-                isHidden: category.isHidden,
-                isPredefined: category.isPredefined,
-                predefinedKey: category.predefinedKey
-            )
-        }
-
-        let exportData = ExportData(
-            exportDate: Date(),
-            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            transactions: nil,
-            recurringTransactions: nil,
-            budgets: nil,
-            categories: categoryData
-        )
-
-        return try saveToJSON(exportData, fileName: "categories_\(dateString()).json")
     }
 
     // MARK: - Export All

@@ -27,24 +27,6 @@ struct ExportServiceTests {
         #expect(service.escapeCSV("line1\nline2") == "\"line1\nline2\"")
     }
 
-    // MARK: CSV export — categories
-
-    @Test func exportCategoriesCSV_producesCorrectHeaders() throws {
-        let cat = Category(name: "Travel", icon: "airplane", color: "#FF0000")
-        let url = try service.exportCategories(format: .csv, categories: [cat])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        #expect(content.hasPrefix("ID,Name,Icon,Color,Is Hidden,Is Predefined,Predefined Key"))
-    }
-
-    @Test func exportCategoriesCSV_oneRow_correctValues() throws {
-        let cat = Category(name: "Health", icon: "heart.fill", color: "#00FF00")
-        let url = try service.exportCategories(format: .csv, categories: [cat])
-        let content = try String(contentsOf: url, encoding: .utf8)
-        #expect(content.contains("Health"))
-        #expect(content.contains("heart.fill"))
-        #expect(content.contains("#00FF00"))
-    }
-
     // MARK: JSON export — exportAll round-trip structure
 
     @Test func exportAllJSON_containsAllSections() throws {
@@ -156,24 +138,6 @@ struct ImportServiceTests {
         #expect(decoded[0].amount == 300)
         #expect(decoded[0].category == "Transport")
         #expect(decoded[0].transactionDescription == "Cab")
-    }
-
-    @Test func importJSON_roundTrip_categories() throws {
-        let container = try makeTestContainer()
-        let context = ModelContext(container)
-
-        let cat = Category(name: "Health", icon: "heart.fill", color: "#FF0000")
-        let exportService = ExportService()
-        let url = try exportService.exportCategories(format: .json, categories: [cat])
-
-        let result = try service.importJSON(from: url, context: context)
-        #expect(result.message.contains("1 categories"))
-
-        let descriptor = FetchDescriptor<Money_Manager.Category>()
-        let imported = try context.fetch(descriptor)
-        #expect(imported.count == 1)
-        #expect(imported[0].name == "Health")
-        #expect(imported[0].icon == "heart.fill")
     }
 
     @Test func importJSON_roundTrip_allData() throws {

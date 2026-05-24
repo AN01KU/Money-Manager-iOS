@@ -142,6 +142,7 @@ struct ExportData: Codable {
     var transactionCodec = TransactionCodec()
     var recurringCodec = RecurringTransactionCodec()
     var budgetCodec = BudgetCodec()
+    var categoryCodec = CategoryCodec()
     
     var exportDescription: String {
         switch selectedExportFormat {
@@ -227,7 +228,20 @@ struct ExportData: Codable {
                     url = tmpURL
                 }
             case .categories:
-                url = try exportService.exportCategories(format: selectedExportFormat, categories: categories)
+                let stamp = exportDateStamp()
+                switch selectedExportFormat {
+                case .csv:
+                    url = try BackupService.saveCSV(
+                        BackupService.csvSection(categoryCodec, models: categories),
+                        filename: "categories_\(stamp)"
+                    )
+                case .json:
+                    let jsonData = try categoryCodec.encodeJSON(categories)
+                    let tmpURL = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("categories_\(stamp).json")
+                    try jsonData.write(to: tmpURL)
+                    url = tmpURL
+                }
             case .all:
                 url = try exportService.exportAll(format: selectedExportFormat, transactions: transactions, recurringTransactions: recurringTransactions, budgets: budgets, categories: categories)
             }

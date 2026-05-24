@@ -17,12 +17,6 @@ final class MockExportService: ExportServiceProtocol {
     var shouldThrow = false
     private let stubbedURL = FileManager.default.temporaryDirectory.appendingPathComponent("mock_export_result")
 
-    func exportCategories(format: ExportFormat, categories: [Money_Manager.Category]) throws -> URL {
-        if shouldThrow { throw NSError(domain: "mock", code: 1) }
-        callLog.append(CallRecord(format: format, dataType: .categories))
-        return stubbedURL
-    }
-
     func exportAll(format: ExportFormat, transactions: [Transaction], recurringTransactions: [RecurringTransaction], budgets: [MonthlyBudget], categories: [Money_Manager.Category]) throws -> URL {
         if shouldThrow { throw NSError(domain: "mock", code: 1) }
         callLog.append(CallRecord(format: format, dataType: .all))
@@ -97,7 +91,7 @@ struct BackupViewModelBehaviorTests {
         mockExport.shouldThrow = true
         let viewModel = BackupViewModel()
         viewModel.selectedExportFormat = .csv
-        viewModel.selectedDataType = .categories
+        viewModel.selectedDataType = .all
         viewModel.exportService = mockExport
 
         await viewModel.exportData(transactions: [], recurringTransactions: [], budgets: [], categories: [])
