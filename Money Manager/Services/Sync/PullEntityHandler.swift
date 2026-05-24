@@ -44,6 +44,112 @@ protocol CollectionPullHandler: PullEntityHandler {}
 /// Marker for singleton-entity handlers (e.g. UserBudget) — no purge step.
 protocol SingletonPullHandler: PullEntityHandler {}
 
+// MARK: - RecurringTransactionPullHandler
+
+/// Pulls recurring transactions from the server and upserts them locally.
+///
+/// Replaces `SyncService.upsertRecurring`. Purges local rows absent from the server
+/// response unless they have a pending/failed change queued.
+final class RecurringTransactionPullHandler: CollectionPullHandler {
+    let entityLabel = "recurring"
+
+    private(set) var lastServerCount = 0
+    private(set) var lastLocalCount = 0
+
+    func pull(
+        api: any APIClientProtocol,
+        changeQueue: any ChangeQueueManagerProtocol,
+        context: ModelContext
+    ) async throws {
+        let response: APIListResponse<APIRecurringTransaction> = try await api.get(.syncRecurring)
+        let remote = response.data
+        lastServerCount = remote.count
+
+        let locals = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
+        lastLocalCount = locals.count
+
+        let serverWonIDs = upsert(remote, locals: locals, context: context)
+        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .recurring, context: context)
+        purge(remote, locals: locals, context: context)
+
+        try? context.save()
+    }
+
+    // MARK: - Private
+
+    private func isValid(_ api: APIRecurringTransaction) -> Bool {
+        guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
+            AppLogger.sync.error("Validation failed: recurring \(api.id) has empty category")
+            return false
+        }
+        return true
+    }
+
+    private func upsert(
+        _ remoteItems: [APIRecurringTransaction],
+        locals: [RecurringTransaction],
+        context: ModelContext
+    ) -> Set<UUID> {
+        let localByID = Dictionary(uniqueKeysWithValues: locals.map { ($0.id, $0) })
+        var serverWonIDs = Set<UUID>()
+
+        for remote in remoteItems {
+            guard isValid(remote) else { continue }
+            if let local = localByID[remote.id] {
+                if local.isSoftDeleted { continue }
+                if remote.updatedAt > local.updatedAt {
+                    serverWonIDs.insert(remote.id)
+                    local.applyRemote(remote)
+                }
+            } else {
+                let item = RecurringTransaction(
+                    id: remote.id,
+                    name: remote.name,
+                    amount: remote.amount,
+                    category: remote.category,
+                    frequency: RecurringFrequency(rawValue: remote.frequency) ?? .monthly,
+                    dayOfMonth: remote.dayOfMonth,
+                    daysOfWeek: remote.daysOfWeek,
+                    startDate: remote.startDate,
+                    endDate: remote.endDate,
+                    isActive: remote.isActive,
+                    lastAddedDate: remote.lastAddedDate,
+                    notes: remote.notes,
+                    type: remote.type ?? .expense
+                )
+                context.insert(item)
+            }
+        }
+        return serverWonIDs
+    }
+
+    private func purge(
+        _ remoteItems: [APIRecurringTransaction],
+        locals: [RecurringTransaction],
+        context: ModelContext
+    ) {
+        let failedIDs = Set(
+            (try? context.fetch(FetchDescriptor<FailedChange>(
+                predicate: #Predicate { $0.entityType == "recurring" }
+            )))?.map { $0.entityID } ?? []
+        )
+        let pendingIDs = Set(
+            (try? context.fetch(FetchDescriptor<PendingChange>(
+                predicate: #Predicate { $0.entityType == "recurring" }
+            )))?.map { $0.entityID } ?? []
+        )
+        let serverIDs = Set(remoteItems.map { $0.id })
+
+        for local in locals {
+            guard !serverIDs.contains(local.id) else { continue }
+            guard !pendingIDs.contains(local.id) else { continue }
+            guard !failedIDs.contains(local.id) else { continue }
+            AppLogger.sync.info("Purging recurring not on server: id=\(local.id) name=\(local.name)")
+            context.delete(local)
+        }
+    }
+}
+
 // MARK: - TransactionPullHandler
 
 /// Pulls personal transactions from the server and upserts them locally.

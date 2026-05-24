@@ -301,6 +301,7 @@ final class SyncService: SyncServiceProtocol {
     // MARK: - Pull Pipeline
 
     private let pullHandlers: [any PullEntityHandler] = [
+        RecurringTransactionPullHandler(),
         TransactionPullHandler()
     ]
 
@@ -327,7 +328,6 @@ final class SyncService: SyncServiceProtocol {
         await pullPredefinedCategories(context: context)
         await pullCategories(context: context)
         await pullBudgets(context: context)
-        await pullRecurring(context: context)
         await runPullPipeline(context: context)
 
         updateLastSyncTime()
@@ -431,90 +431,6 @@ final class SyncService: SyncServiceProtocol {
             AppLogger.sync.error("Failed to pull budget: \(error)")
             recordSyncError()
         }
-    }
-
-    private func pullRecurring(context: ModelContext) async {
-        do {
-            let response: APIListResponse<APIRecurringTransaction> = try await apiClient.get(.syncRecurring)
-            upsertRecurring(response.data, context: context)
-        } catch {
-            AppLogger.sync.error("Failed to pull recurring: \(error)")
-            recordSyncError()
-        }
-    }
-
-    private func upsertRecurring(_ apiExpenses: [APIRecurringTransaction], context: ModelContext) {
-        let failedDescriptor = FetchDescriptor<FailedChange>(
-            predicate: #Predicate { $0.entityType == "recurring" }
-        )
-        let failedIDs = Set((try? context.fetch(failedDescriptor))?.map { $0.entityID } ?? [])
-
-        let pendingDescriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityType == "recurring" }
-        )
-        let pendingIDs = Set((try? context.fetch(pendingDescriptor))?.map { $0.entityID } ?? [])
-
-        let descriptor = FetchDescriptor<RecurringTransaction>()
-        let localRecurring = (try? context.fetch(descriptor)) ?? []
-        let localByID = Dictionary(uniqueKeysWithValues: localRecurring.map { ($0.id, $0) })
-
-        var serverWonIDs = Set<UUID>()
-
-        for remote in apiExpenses {
-            guard isValid(remote) else { continue }
-            if let local = localByID[remote.id] {
-                if local.isSoftDeleted { continue }
-                if remote.updatedAt > local.updatedAt {
-                    serverWonIDs.insert(remote.id)
-                    local.name = remote.name
-                    local.amount = remote.amount
-                    local.category = remote.category
-                    local.frequency = RecurringFrequency(rawValue: remote.frequency) ?? local.frequency
-                    local.dayOfMonth = remote.dayOfMonth
-                    local.daysOfWeek = remote.daysOfWeek
-                    local.startDate = remote.startDate
-                    local.endDate = remote.endDate
-                    local.isActive = remote.isActive
-                    local.lastAddedDate = remote.lastAddedDate
-                    local.notes = remote.notes
-                    if let kind = remote.type { local.type = kind }
-                    local.updatedAt = remote.updatedAt
-                }
-            } else {
-                let item = RecurringTransaction(
-                    id: remote.id,
-                    name: remote.name,
-                    amount: remote.amount,
-                    category: remote.category,
-                    frequency: RecurringFrequency(rawValue: remote.frequency) ?? .monthly,
-                    dayOfMonth: remote.dayOfMonth,
-                    daysOfWeek: remote.daysOfWeek,
-                    startDate: remote.startDate,
-                    endDate: remote.endDate,
-                    isActive: remote.isActive,
-                    lastAddedDate: remote.lastAddedDate,
-                    notes: remote.notes,
-                    type: remote.type ?? .expense
-                )
-                context.insert(item)
-            }
-        }
-
-        changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .recurring, context: context)
-
-        // Purge local recurring transactions the server no longer returns and have no pending upload.
-        // Also protect entities stuck in the dead-letter queue — their create may have failed transiently.
-        let serverRecurringIDs = Set(apiExpenses.map { $0.id })
-        for local in localRecurring {
-            guard !serverRecurringIDs.contains(local.id) else { continue }
-            guard !pendingIDs.contains(local.id) else { continue }
-            guard !failedIDs.contains(local.id) else { continue }
-            AppLogger.sync.info("Purging recurring not on server: id=\(local.id) name=\(local.name)")
-            context.delete(local)
-        }
-
-        try? context.save()
-        syncCheckpoint(entityType: "recurring", serverCount: apiExpenses.count, localCount: localRecurring.count)
     }
 
     private func upsertUserBudget(_ remote: APIUserBudget, context: ModelContext) {
@@ -746,14 +662,6 @@ final class SyncService: SyncServiceProtocol {
     }
 
     // MARK: - Validation
-
-    private func isValid(_ api: APIRecurringTransaction) -> Bool {
-        guard !api.category.trimmingCharacters(in: .whitespaces).isEmpty else {
-            AppLogger.sync.error("Validation failed: recurring \(api.id) has empty category")
-            return false
-        }
-        return true
-    }
 
     private func isValid(_ api: APICategory) -> Bool {
         guard !api.name.trimmingCharacters(in: .whitespaces).isEmpty else {
