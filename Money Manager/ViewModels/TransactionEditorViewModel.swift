@@ -38,6 +38,25 @@ enum EditorMode {
     var selectedTime = Date()
     var hasTime = true
 
+    // MARK: - Recurring fields
+
+    var isRecurring = false
+    var recurringFrequency: RecurringFrequency = .monthly
+    var recurringDayOfMonth: Int = 1
+    var recurringHasEndDate = false
+    var recurringEndDate: Date = Date()
+    private(set) var editingRecurringExpenseId: UUID?
+
+    // MARK: - UI state
+
+    var showCategoryPicker = false
+    var showRecurringAmountAlert = false
+    var showDeleteAlert = false
+    var customCategories: [Category] = [] {
+        didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
+    }
+    private var categoryLookup: [String: Category] = [:]
+
     // MARK: - State
 
     var isSaving = false
@@ -47,6 +66,13 @@ enum EditorMode {
 
     let mode: EditorMode
     @ObservationIgnored var persistence: PersistenceService
+
+    // MARK: - Pending recurring alert
+
+    private var pendingAmountValue: Double?
+    private var originalAmount: Double?
+    private var originalCategory: String?
+    private var originalType: TransactionType?
 
     // MARK: - Init
 
@@ -63,11 +89,65 @@ enum EditorMode {
     var canSave: Bool {
         guard !mode.isReadOnly else { return false }
         guard let money = parsedMoney, money.amount > 0 else { return false }
+        if isRecurring && description.trimmingCharacters(in: .whitespaces).isEmpty { return false }
         return true
     }
 
     var typeLabel: String {
         transactionType == .income ? "Income" : "Expense"
+    }
+
+    var navigationTitle: String {
+        switch mode {
+        case .create:
+            return transactionType == .income ? "Add Income" : "Add Transaction"
+        case .edit(let tx):
+            return tx.type == .income ? "Edit Income" : "Edit Expense"
+        case .view:
+            return "Details"
+        }
+    }
+
+    var navigationTitleIdentifier: String {
+        switch mode {
+        case .create:
+            return transactionType == .income ? "add-income" : "add-transaction"
+        case .edit(let tx):
+            return tx.type == .income ? "edit-income" : "edit-expense"
+        case .view:
+            return "transaction-detail"
+        }
+    }
+
+    // MARK: - View mode (read-only display)
+
+    var categoryName: String { resolvedCategory.name }
+    var categoryIcon: String { resolvedCategory.icon }
+    var categoryColor: Color { resolvedCategory.color }
+
+    var isGroupTransaction: Bool { mode.transaction?.groupTransactionId != nil }
+    var isSettlementTransaction: Bool { mode.transaction?.settlementId != nil }
+
+    private var resolvedCategory: (name: String, icon: String, color: Color) {
+        let key = mode.transaction.map(\.category) ?? selectedCategory
+        return CategoryResolver.resolveAll(key, lookup: categoryLookup)
+    }
+
+    func formatDateAndTime(_ date: Date, time: Date?) -> String {
+        if let time {
+            let calendar = Calendar.current
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+            let combined = calendar.date(bySettingHour: timeComponents.hour ?? 0,
+                                         minute: timeComponents.minute ?? 0,
+                                         second: 0, of: date) ?? date
+            return combined.formatted(date: .abbreviated, time: .shortened)
+        } else {
+            return date.formatted(date: .abbreviated, time: .omitted)
+        }
+    }
+
+    func formatFullDate(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 
     var dateLabel: String {
@@ -94,47 +174,45 @@ enum EditorMode {
             return
         }
 
-        isSaving = true
-
-        let resolvedDate = buildDate()
-
-        do {
-            switch mode {
-            case .create:
-                let tx = Transaction(
-                    type: transactionType.kind,
-                    amount: amountValue,
-                    category: selectedCategory,
-                    date: resolvedDate,
-                    time: hasTime ? selectedTime : nil,
-                    transactionDescription: description.isEmpty ? nil : description,
-                    notes: notes.isEmpty ? nil : notes
-                )
-                persistence.modelContext.insert(tx)
-                try persistence.save(tx, action: .create)
-
-            case .edit(let tx):
-                tx.amount = amountValue
-                tx.type = transactionType.kind
-                tx.category = selectedCategory
-                tx.date = resolvedDate
-                tx.time = hasTime ? selectedTime : nil
-                tx.transactionDescription = description.isEmpty ? nil : description
-                tx.notes = notes.isEmpty ? nil : notes
-                tx.updatedAt = Date()
-                try persistence.save(tx, action: .update)
-
-            case .view:
-                isSaving = false
+        if editingRecurringExpenseId != nil {
+            let amountChanged = originalAmount.map { amountValue != $0 } ?? false
+            let categoryChanged = originalCategory.map { selectedCategory != $0 } ?? false
+            let typeChanged = originalType.map { transactionType != $0 } ?? false
+            if amountChanged || categoryChanged || typeChanged {
+                pendingAmountValue = amountValue
+                showRecurringAmountAlert = true
                 return
             }
-
-            isSaving = false
-            completion()
-        } catch {
-            errorMessage = "Failed to save transaction"
-            isSaving = false
         }
+
+        isSaving = true
+        savePersonal(amountValue: amountValue, completion: completion)
+    }
+
+    func saveThisTransactionOnly(completion: @escaping () -> Void) {
+        let amountValue = pendingAmountValue ?? 0
+        pendingAmountValue = nil
+        isSaving = true
+        savePersonal(amountValue: amountValue, completion: completion)
+    }
+
+    func saveAlsoUpdatingRecurring(completion: @escaping () -> Void) {
+        let amountValue = pendingAmountValue ?? 0
+        pendingAmountValue = nil
+        if let recurringId = editingRecurringExpenseId {
+            let descriptor = FetchDescriptor<RecurringTransaction>(
+                predicate: #Predicate { $0.id == recurringId && !$0.isSoftDeleted }
+            )
+            if let recurring = try? persistence.modelContext.fetch(descriptor).first {
+                recurring.amount = amountValue
+                recurring.category = selectedCategory
+                recurring.type = transactionType.kind
+                recurring.updatedAt = Date()
+                try? persistence.save(recurring, action: .update)
+            }
+        }
+        isSaving = true
+        savePersonal(amountValue: amountValue, completion: completion)
     }
 
     func delete(completion: @escaping () -> Void) {
@@ -167,6 +245,89 @@ enum EditorMode {
         return calendar.startOfDay(for: selectedDate)
     }
 
+    private func savePersonal(amountValue: Double, completion: @escaping () -> Void) {
+        let resolvedDate = buildDate()
+        let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
+
+        var recurringExpenseId: UUID? = editingRecurringExpenseId
+        if isRecurring && editingRecurringExpenseId == nil {
+            let trimmedName = description.trimmingCharacters(in: .whitespaces)
+            let recurring = RecurringTransaction(
+                name: trimmedName,
+                amount: amountValue,
+                category: selectedCategory,
+                frequency: recurringFrequency,
+                dayOfMonth: recurringFrequency == .monthly ? recurringDayOfMonth : nil,
+                startDate: selectedDate,
+                endDate: recurringHasEndDate ? recurringEndDate : nil,
+                categoryId: resolvedCategoryId,
+                type: transactionType.kind
+            )
+            persistence.modelContext.insert(recurring)
+            do {
+                try persistence.save(recurring, action: .create)
+                AppLogger.data.info("Recurring transaction saved: \(recurring.id)")
+                recurringExpenseId = recurring.id
+            } catch {
+                AppLogger.data.error("Failed to save recurring: \(error)")
+                errorMessage = "Failed to save recurring template"
+                isSaving = false
+                return
+            }
+        }
+
+        do {
+            switch mode {
+            case .create:
+                let resolvedDescription = isRecurring
+                    ? description.trimmingCharacters(in: .whitespaces)
+                    : (description.isEmpty ? nil : description)
+                let tx = Transaction(
+                    type: transactionType.kind,
+                    amount: amountValue,
+                    category: selectedCategory,
+                    date: resolvedDate,
+                    time: hasTime ? selectedTime : nil,
+                    transactionDescription: resolvedDescription,
+                    notes: notes.isEmpty ? nil : notes,
+                    recurringExpenseId: recurringExpenseId,
+                    categoryId: resolvedCategoryId
+                )
+                persistence.modelContext.insert(tx)
+                try persistence.save(tx, action: .create)
+                AppLogger.data.info("Transaction saved: \(tx.id) action=create")
+
+            case .edit(let tx):
+                tx.amount = amountValue
+                tx.type = transactionType.kind
+                tx.category = selectedCategory
+                tx.categoryId = resolvedCategoryId
+                tx.date = resolvedDate
+                tx.time = hasTime ? selectedTime : nil
+                if isRecurring {
+                    tx.transactionDescription = description.trimmingCharacters(in: .whitespaces)
+                    tx.recurringExpenseId = recurringExpenseId
+                } else {
+                    tx.transactionDescription = description.isEmpty ? nil : description
+                }
+                tx.notes = notes.isEmpty ? nil : notes
+                tx.updatedAt = Date()
+                try persistence.save(tx, action: .update)
+                AppLogger.data.info("Transaction saved: \(tx.id) action=update")
+
+            case .view:
+                isSaving = false
+                return
+            }
+
+            isSaving = false
+            completion()
+        } catch {
+            errorMessage = "Failed to save transaction"
+            isSaving = false
+        }
+    }
+
     private func populate(from tx: Transaction) {
         amountText = tx.amount.editableString
         selectedCategory = tx.category
@@ -176,5 +337,10 @@ enum EditorMode {
         selectedDate = tx.date
         selectedTime = tx.time ?? tx.date
         hasTime = tx.time != nil
+        editingRecurringExpenseId = tx.recurringExpenseId
+        isRecurring = tx.recurringExpenseId != nil
+        originalAmount = tx.amount
+        originalCategory = tx.category
+        originalType = TransactionType(kind: tx.type)
     }
 }

@@ -16,7 +16,6 @@ struct TransactionList: View {
     let transactions: [Transaction]
     @Query(sort: \Category.name) private var customCategories: [Category]
     @State private var selectedTransaction: Transaction?
-    @State private var editingTransaction: Transaction?
     @State private var swipedTransactionID: PersistentIdentifier?
     @State private var rowTapped = 0
     @State private var deleteTriggered = false  // Used as binding for swipe UI
@@ -92,13 +91,7 @@ struct TransactionList: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: rowTapped)
         .sheet(item: $selectedTransaction) { transaction in
-            TransactionDetailView(transaction: transaction, onEdit: { txn in
-                selectedTransaction = nil
-                editingTransaction = txn
-            })
-        }
-        .sheet(item: $editingTransaction) { txn in
-            TransactionEditorView(mode: .edit(txn))
+            TransactionEditorView(mode: .view(transaction))
         }
         .onChange(of: transactions.map(\.persistentModelID)) { _, _ in
             swipedTransactionID = nil
