@@ -87,14 +87,13 @@ struct GroupDetailView: View {
             }
         }
         .sheet(isPresented: $viewModel.showAddTransaction) {
-            AddTransactionView(
-                mode: .shared(
+            GroupTransactionEditorView(
+                mode: .create(
                     group: viewModel.group,
                     members: viewModel.members,
-                    currentUserId: viewModel.currentUserId
-                ) { newExpense in
-                    viewModel.transactionAdded(newExpense)
-                },
+                    currentUserId: viewModel.currentUserId,
+                    onAdd: { newExpense in viewModel.transactionAdded(newExpense) }
+                ),
                 groupService: viewModel.groupService
             )
         }
@@ -137,15 +136,13 @@ struct GroupDetailView: View {
             )
         }
         .sheet(item: $transactionToEdit) { transaction in
-            AddTransactionView(
-                mode: .shared(
+            GroupTransactionEditorView(
+                mode: .edit(
                     group: viewModel.group,
                     members: viewModel.members,
-                    currentUserId: viewModel.currentUserId,
-                    editing: transaction
-                ) { updated in
-                    viewModel.transactionEdited(replacing: transaction, with: updated)
-                },
+                    transaction: transaction,
+                    onSaved: { updated in viewModel.transactionEdited(replacing: transaction, with: updated) }
+                ),
                 groupService: viewModel.groupService
             )
         }
