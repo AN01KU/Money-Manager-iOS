@@ -757,6 +757,119 @@ struct BackupViewModelExportTests {
         }
     }
     
+    // MARK: - Predefined Category Exclusion (issue #119)
+
+    @Test
+    func testExportCategoriesAsJSONExcludesPredefined() async throws {
+        let viewModel = BackupViewModel()
+        viewModel.selectedExportFormat = .json
+        viewModel.selectedDataType = .categories
+
+        let predefined = Category(
+            name: "Food & Dining",
+            icon: "fork.knife",
+            color: "#FF6B6B",
+            isPredefined: true,
+            predefinedKey: "food"
+        )
+        let custom = Category(name: "My Custom", icon: "star.fill", color: "#0000FF")
+
+        await viewModel.exportData(
+            transactions: [],
+            recurringTransactions: [],
+            categories: [predefined, custom]
+        )
+
+        let url = try #require(viewModel.exportedFileURL)
+        let data = try Data(contentsOf: url)
+        let json = try #require(try JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+        let names = json.compactMap { $0["name"] as? String }
+        #expect(names == ["My Custom"])
+    }
+
+    @Test
+    func testExportCategoriesAsCSVExcludesPredefined() async throws {
+        let viewModel = BackupViewModel()
+        viewModel.selectedExportFormat = .csv
+        viewModel.selectedDataType = .categories
+
+        let predefined = Category(
+            name: "PredefFood",
+            icon: "fork.knife",
+            color: "#FF6B6B",
+            isPredefined: true,
+            predefinedKey: "food"
+        )
+        let custom = Category(name: "MyCustomCat", icon: "star.fill", color: "#0000FF")
+
+        await viewModel.exportData(
+            transactions: [],
+            recurringTransactions: [],
+            categories: [predefined, custom]
+        )
+
+        let url = try #require(viewModel.exportedFileURL)
+        let content = try String(contentsOf: url, encoding: .utf8)
+        #expect(content.contains("MyCustomCat"))
+        #expect(!content.contains("PredefFood"))
+    }
+
+    @Test
+    func testExportAllAsJSONExcludesPredefinedCategories() async throws {
+        let viewModel = BackupViewModel()
+        viewModel.selectedExportFormat = .json
+        viewModel.selectedDataType = .all
+
+        let predefined = Category(
+            name: "PredefFood",
+            icon: "fork.knife",
+            color: "#FF6B6B",
+            isPredefined: true,
+            predefinedKey: "food"
+        )
+        let custom = Category(name: "MyCustomCat", icon: "star.fill", color: "#0000FF")
+
+        await viewModel.exportData(
+            transactions: [],
+            recurringTransactions: [],
+            categories: [predefined, custom]
+        )
+
+        let url = try #require(viewModel.exportedFileURL)
+        let data = try Data(contentsOf: url)
+        let dict = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let cats = try #require(dict["categories"] as? [[String: Any]])
+        let names = cats.compactMap { $0["name"] as? String }
+        #expect(names == ["MyCustomCat"])
+    }
+
+    @Test
+    func testExportAllAsCSVExcludesPredefinedCategories() async throws {
+        let viewModel = BackupViewModel()
+        viewModel.selectedExportFormat = .csv
+        viewModel.selectedDataType = .all
+
+        let predefined = Category(
+            name: "PredefFood",
+            icon: "fork.knife",
+            color: "#FF6B6B",
+            isPredefined: true,
+            predefinedKey: "food"
+        )
+        let custom = Category(name: "MyCustomCat", icon: "star.fill", color: "#0000FF")
+
+        await viewModel.exportData(
+            transactions: [],
+            recurringTransactions: [],
+            categories: [predefined, custom]
+        )
+
+        let url = try #require(viewModel.exportedFileURL)
+        let content = try String(contentsOf: url, encoding: .utf8)
+        #expect(content.contains("MyCustomCat"))
+        #expect(!content.contains("PredefFood"))
+    }
+
     @Test
     func testExportRecurringWithDaysOfWeek() async {
         let viewModel = BackupViewModel()
