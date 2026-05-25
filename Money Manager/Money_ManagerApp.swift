@@ -30,7 +30,6 @@ struct Money_ManagerApp: App {
             Transaction.self,
             RecurringTransaction.self,
             Category.self,
-            MonthlyBudget.self,
             UserBudget.self,
             PendingChange.self,
             FailedChange.self,
@@ -64,8 +63,6 @@ struct Money_ManagerApp: App {
         services = AppServices.live(container: resolvedContainer)
         #endif
 
-        Self.migrateMonthlyBudgetToScalar(context: resolvedContainer.mainContext)
-
         // Only generate recurring transactions locally when not logged in.
         // When authenticated, the backend generates them on GET /transactions.
         if !SessionStore.shared.isLoggedIn {
@@ -77,26 +74,6 @@ struct Money_ManagerApp: App {
             Self.injectTestData(context: container.mainContext)
         }
         #endif
-    }
-
-    /// One-shot migration: carry the most-recent MonthlyBudget.limit into UserBudget, then purge all old rows.
-    private static func migrateMonthlyBudgetToScalar(context: ModelContext) {
-        let migrationKey = UserDefaults.Keys.budgetMigratedToScalar.rawValue
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-        defer { UserDefaults.standard.set(true, forKey: migrationKey) }
-
-        let oldBudgets = (try? context.fetch(FetchDescriptor<MonthlyBudget>(
-            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
-        ))) ?? []
-
-        if let mostRecent = oldBudgets.first {
-            AppLogger.sync.info("budget migration: carrying limit=\(mostRecent.limit) from \(mostRecent.year)-\(mostRecent.month)")
-            let scalar = UserBudget(limit: mostRecent.limit)
-            context.insert(scalar)
-        }
-
-        for old in oldBudgets { context.delete(old) }
-        try? context.save()
     }
 
     /// Attempts to create the ModelContainer, recovering by deleting the on-disk store on failure.
@@ -129,15 +106,11 @@ struct Money_ManagerApp: App {
     #if DEBUG
     private static func injectTestData(context: ModelContext) {
         try? context.delete(model: Transaction.self)
-        try? context.delete(model: MonthlyBudget.self)
         try? context.delete(model: RecurringTransaction.self)
         try? context.delete(model: Category.self)
 
         for transaction in TestData.generatePersonalTransactions() {
             context.insert(transaction)
-        }
-        for budget in TestData.generateBudgets() {
-            context.insert(budget)
         }
         for recurring in TestData.generateRecurringTransactions() {
             context.insert(recurring)

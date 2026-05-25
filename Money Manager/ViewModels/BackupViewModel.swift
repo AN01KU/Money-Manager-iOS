@@ -31,7 +31,6 @@ enum ExportFormat: String, CaseIterable, Identifiable {
 enum ExportDataType: String, CaseIterable, Identifiable {
     case transactions = "Transactions"
     case recurring = "Recurring"
-    case budgets = "Budgets"
     case categories = "Categories"
     case all = "All Data"
 
@@ -41,7 +40,6 @@ enum ExportDataType: String, CaseIterable, Identifiable {
         switch self {
         case .transactions: return "creditcard.fill"
         case .recurring: return "arrow.clockwise.circle.fill"
-        case .budgets: return "chart.bar.fill"
         case .categories: return "folder.fill"
         case .all: return "archivebox.fill"
         }
@@ -53,7 +51,6 @@ struct ExportData: Codable {
     let appVersion: String
     var transactions: [TransactionData]?
     var recurringTransactions: [RecurringTransactionData]?
-    var budgets: [MonthlyBudgetData]?
     var categories: [CategoryData]?
 
     struct TransactionData: Codable {
@@ -108,13 +105,6 @@ struct ExportData: Codable {
         }
     }
 
-    struct MonthlyBudgetData: Codable {
-        let id: String
-        let year: Int
-        let month: Int
-        let limit: Double
-    }
-
     struct CategoryData: Codable {
         let id: String
         let name: String
@@ -143,7 +133,6 @@ struct ExportData: Codable {
 
     private var transactionCodec = TransactionCodec()
     private var recurringCodec = RecurringTransactionCodec()
-    private var budgetCodec = BudgetCodec()
     private var categoryCodec = CategoryCodec()
 
     var exportDescription: String {
@@ -154,7 +143,7 @@ struct ExportData: Codable {
             switch selectedDataType {
             case .all:
                 return "JSON backup includes all your data. Use this for complete backup and restore."
-            case .transactions, .recurring, .budgets, .categories:
+            case .transactions, .recurring, .categories:
                 return "JSON preserves all data details and is suitable for backup or transfer."
             }
         }
@@ -172,12 +161,14 @@ struct ExportData: Codable {
     func exportData(
         transactions: [Transaction],
         recurringTransactions: [RecurringTransaction],
-        budgets: [MonthlyBudget],
         categories: [Category],
         groups: [SplitGroupModel] = []
     ) async {
         isExporting = true
         defer { isExporting = false }
+
+        // Predefined categories are server-seeded and excluded from backups (issue #119).
+        let categories = categories.filter { !$0.isPredefined }
 
         do {
             let url: URL
@@ -213,20 +204,6 @@ struct ExportData: Codable {
                     try jsonData.write(to: tmpURL)
                     url = tmpURL
                 }
-            case .budgets:
-                switch selectedExportFormat {
-                case .csv:
-                    url = try BackupService.saveCSV(
-                        BackupService.csvSection(budgetCodec, models: budgets),
-                        filename: "budgets_\(stamp)"
-                    )
-                case .json:
-                    let jsonData = try budgetCodec.encodeJSON(budgets)
-                    let tmpURL = FileManager.default.temporaryDirectory
-                        .appendingPathComponent("budgets_\(stamp).json")
-                    try jsonData.write(to: tmpURL)
-                    url = tmpURL
-                }
             case .categories:
                 switch selectedExportFormat {
                 case .csv:
@@ -247,14 +224,12 @@ struct ExportData: Codable {
                 case .csv:
                     let csv = BackupService.csvSection(transactionCodec, models: active)
                         + BackupService.csvSection(recurringCodec, models: recurringTransactions)
-                        + BackupService.csvSection(budgetCodec, models: budgets)
                         + BackupService.csvSection(categoryCodec, models: categories)
                     url = try BackupService.saveCSV(csv, filename: "money_manager_backup_\(stamp)")
                 case .json:
                     let dict: [String: Data] = [
                         transactionCodec.entityName: try transactionCodec.encodeJSON(active),
                         recurringCodec.entityName: try recurringCodec.encodeJSON(recurringTransactions),
-                        budgetCodec.entityName: try budgetCodec.encodeJSON(budgets),
                         categoryCodec.entityName: try categoryCodec.encodeJSON(categories)
                     ]
                     let encoder = JSONEncoder()
@@ -321,7 +296,7 @@ struct ExportData: Codable {
     private func importCSV(from url: URL, context: ModelContext) throws -> ImportResult {
         let content = try String(contentsOf: url, encoding: .utf8)
 
-        if content.contains("# TRANSACTIONS") || content.contains("# BUDGETS") || content.contains("# CATEGORIES") {
+        if content.contains("# TRANSACTIONS") || content.contains("# CATEGORIES") {
             return try importSectionBasedCSV(content: content, context: context)
         }
 
@@ -330,7 +305,6 @@ struct ExportData: Codable {
 
         let headers = parseCSVLine(lines[0])
         var transactions: [ExportData.TransactionData] = []
-        var budgets: [ExportData.MonthlyBudgetData] = []
         var categories: [ExportData.CategoryData] = []
         let lowercaseHeaders = headers.map { $0.lowercased() }
         let firstHeader = lowercaseHeaders.first ?? ""
@@ -339,12 +313,6 @@ struct ExportData: Codable {
             for i in 1..<lines.count {
                 if let tx = parseTransactionCSVRow(parseCSVLine(lines[i]), headers: lowercaseHeaders) {
                     transactions.append(tx)
-                }
-            }
-        } else if firstHeader == "id" && lowercaseHeaders.contains("limit") && lowercaseHeaders.contains("year") {
-            for i in 1..<lines.count {
-                if let b = parseBudgetCSVRow(parseCSVLine(lines[i]), headers: lowercaseHeaders) {
-                    budgets.append(b)
                 }
             }
         } else if firstHeader == "id" && lowercaseHeaders.contains("name") && lowercaseHeaders.contains("icon") {
@@ -359,7 +327,6 @@ struct ExportData: Codable {
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             transactions: transactions.isEmpty ? nil : transactions,
-            budgets: budgets.isEmpty ? nil : budgets,
             categories: categories.isEmpty ? nil : categories
         )
         return try processImportedData(exportData, context: context)
@@ -367,7 +334,6 @@ struct ExportData: Codable {
 
     private func importSectionBasedCSV(content: String, context: ModelContext) throws -> ImportResult {
         var transactions: [ExportData.TransactionData] = []
-        var budgets: [ExportData.MonthlyBudgetData] = []
         var categories: [ExportData.CategoryData] = []
 
         for section in content.components(separatedBy: "\n# ") {
@@ -383,12 +349,6 @@ struct ExportData: Codable {
                         transactions.append(tx)
                     }
                 }
-            } else if sectionHeader.contains("BUDGETS") {
-                for i in 2..<lines.count {
-                    if let b = parseBudgetCSVRow(parseCSVLine(lines[i]), headers: headers) {
-                        budgets.append(b)
-                    }
-                }
             } else if sectionHeader.contains("CATEGORIES") {
                 for i in 2..<lines.count {
                     if let c = parseCategoryCSVRow(parseCSVLine(lines[i]), headers: headers) {
@@ -402,7 +362,6 @@ struct ExportData: Codable {
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             transactions: transactions.isEmpty ? nil : transactions,
-            budgets: budgets.isEmpty ? nil : budgets,
             categories: categories.isEmpty ? nil : categories
         )
         return try processImportedData(exportData, context: context)
@@ -411,7 +370,6 @@ struct ExportData: Codable {
     private func processImportedData(_ exportData: ExportData, context: ModelContext) throws -> ImportResult {
         var transactionsImported = 0
         var recurringImported = 0
-        var budgetsImported = 0
         var categoriesImported = 0
         var recurringIdMap: [String: UUID] = [:]
 
@@ -465,19 +423,6 @@ struct ExportData: Codable {
             }
         }
 
-        if let budgets = exportData.budgets {
-            for budgetData in budgets {
-                let budget = MonthlyBudget(
-                    id: UUID(uuidString: budgetData.id) ?? UUID(),
-                    year: budgetData.year,
-                    month: budgetData.month,
-                    limit: budgetData.limit
-                )
-                context.insert(budget)
-                budgetsImported += 1
-            }
-        }
-
         if let categories = exportData.categories {
             for categoryData in categories {
                 let isPredefined = categoryData.isPredefined ?? false
@@ -516,7 +461,6 @@ struct ExportData: Codable {
         var parts: [String] = []
         if recurringImported > 0 { parts.append("\(recurringImported) recurring transactions") }
         if transactionsImported > 0 { parts.append("\(transactionsImported) transactions") }
-        if budgetsImported > 0 { parts.append("\(budgetsImported) budgets") }
         if categoriesImported > 0 { parts.append("\(categoriesImported) categories") }
 
         let message = parts.isEmpty ? "No data found to import" : parts.joined(separator: ", ")
@@ -566,17 +510,6 @@ struct ExportData: Codable {
             notes: nonEmpty(dict["notes"]),
             recurringExpenseId: nonEmpty(dict["recurring expense id"]),
             groupTransactionId: nonEmpty(dict["group transaction id"])
-        )
-    }
-
-    func parseBudgetCSVRow(_ values: [String], headers: [String]) -> ExportData.MonthlyBudgetData? {
-        guard values.count == headers.count else { return nil }
-        let dict = Dictionary(uniqueKeysWithValues: zip(headers, values))
-        return ExportData.MonthlyBudgetData(
-            id: dict["id"] ?? UUID().uuidString,
-            year: Int(dict["year"] ?? "2026") ?? 2026,
-            month: Int(dict["month"] ?? "1") ?? 1,
-            limit: Double(dict["limit"] ?? "0") ?? 0
         )
     }
 

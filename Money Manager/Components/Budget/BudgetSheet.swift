@@ -122,5 +122,5 @@ struct BudgetSheet: View {
 
 #Preview {
     BudgetSheet()
-        .modelContainer(for: [MonthlyBudget.self, UserBudget.self])
+        .modelContainer(for: [UserBudget.self])
 }

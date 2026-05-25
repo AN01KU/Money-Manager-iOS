@@ -6,7 +6,6 @@ struct ExportDataView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var transactions: [Transaction]
     @Query(filter: #Predicate<RecurringTransaction> { !$0.isSoftDeleted }) private var recurringTransactions: [RecurringTransaction]
-    @Query private var budgets: [MonthlyBudget]
     @Query private var categories: [Category]
     @Query private var groups: [SplitGroupModel]
     
@@ -84,7 +83,6 @@ struct ExportDataView: View {
                         await viewModel.exportData(
                             transactions: transactions,
                             recurringTransactions: recurringTransactions,
-                            budgets: budgets,
                             categories: categories,
                             groups: groups
                         )
@@ -105,7 +103,7 @@ struct ExportDataView: View {
                     .padding(AppConstants.UI.padding)
                 }
                 .buttonStyle(.plain)
-                .disabled(transactions.isEmpty && recurringTransactions.isEmpty && budgets.isEmpty && categories.isEmpty)
+                .disabled(transactions.isEmpty && recurringTransactions.isEmpty && categories.isEmpty)
             }
             .background(AppColors.surface)
             .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
@@ -165,8 +163,6 @@ struct ExportDataView: View {
 
             VStack(spacing: 0) {
                 SummaryRow(icon: AppIcons.UI.transactions, label: "Transactions", count: transactions.count)
-                Divider().padding(.leading, AppConstants.UI.iconBadgeSize + AppConstants.UI.padding + AppConstants.UI.spacing12)
-                SummaryRow(icon: AppIcons.UI.budget, label: "Budgets", count: budgets.count)
                 Divider().padding(.leading, AppConstants.UI.iconBadgeSize + AppConstants.UI.padding + AppConstants.UI.spacing12)
                 SummaryRow(icon: AppIcons.UI.categories, label: "Categories", count: categories.count)
             }
@@ -280,5 +276,5 @@ struct ShareSheet: UIViewControllerRepresentable {
     NavigationStack {
         ExportDataView()
     }
-    .modelContainer(for: [Transaction.self, MonthlyBudget.self, Category.self], inMemory: true)
+    .modelContainer(for: [Transaction.self, Category.self], inMemory: true)
 }

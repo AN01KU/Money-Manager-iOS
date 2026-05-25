@@ -98,33 +98,6 @@ struct TestData {
         return expenses.sorted { $0.date > $1.date }
     }
 
-    static func generateBudgets() -> [MonthlyBudget] {
-        var budgets: [MonthlyBudget] = []
-        let today = Date()
-        let calendar = Calendar.current
-
-        let currentYear = calendar.component(.year, from: today)
-        let currentMonth = calendar.component(.month, from: today)
-
-        budgets.append(MonthlyBudget(year: currentYear, month: currentMonth, limit: 50000))
-
-        if currentMonth > 1 {
-            budgets.append(MonthlyBudget(year: currentYear, month: currentMonth - 1, limit: 45000))
-        } else {
-            budgets.append(MonthlyBudget(year: currentYear - 1, month: 12, limit: 45000))
-        }
-
-        if currentMonth > 2 {
-            budgets.append(MonthlyBudget(year: currentYear, month: currentMonth - 2, limit: 50000))
-        } else if currentMonth == 2 {
-            budgets.append(MonthlyBudget(year: currentYear - 1, month: 12, limit: 50000))
-        } else {
-            budgets.append(MonthlyBudget(year: currentYear - 1, month: 11, limit: 50000))
-        }
-
-        return budgets
-    }
-
     static func generateRecurringTransactions() -> [RecurringTransaction] {
         let calendar = Calendar.current
         let today = Date()

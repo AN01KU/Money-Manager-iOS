@@ -169,47 +169,6 @@ struct ModelMapperTests {
         #expect(req.isActive == false)
     }
 
-    // MARK: - MonthlyBudget mappers
-
-    @Test
-    func testMonthlyBudgetToCreateRequestIncludesFields() {
-        let budget = MonthlyBudget(year: 2024, month: 6, limit: 5000)
-        let req = budget.toCreateRequest()
-        #expect(req.year == 2024)
-        #expect(req.month == 6)
-        #expect(req.limit == 5000)
-        #expect(req.id == budget.id)
-    }
-
-    @Test
-    func testMonthlyBudgetToUpdateRequestIncludesFields() {
-        let budget = MonthlyBudget(year: 2024, month: 6, limit: 8000)
-        let req = budget.toUpdateRequest()
-        #expect(req.year == 2024)
-        #expect(req.month == 6)
-        #expect(req.limit == 8000)
-    }
-
-    @Test
-    func testMonthlyBudgetApplyRemoteUpdatesFields() throws {
-        let budget = MonthlyBudget(year: 2024, month: 1, limit: 1000)
-        let json = """
-        {
-            "id": "\(UUID().uuidString)",
-            "user_id": "\(UUID().uuidString)",
-            "year": 2024,
-            "month": 6,
-            "limit": 9000,
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-06-01T00:00:00Z"
-        }
-        """.data(using: .utf8)!
-        let api = try Self.decoder.decode(APIMonthlyBudget.self, from: json)
-        budget.applyRemote(api)
-        #expect(budget.month == 6)
-        #expect(budget.limit == 9000)
-    }
-
     // MARK: - Category mappers
 
     @Test

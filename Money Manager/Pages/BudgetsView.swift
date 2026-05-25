@@ -89,5 +89,5 @@ private struct BudgetsQuerySnapshot: Equatable {
 
 #Preview {
     BudgetsView()
-        .modelContainer(for: [Transaction.self, MonthlyBudget.self, UserBudget.self])
+        .modelContainer(for: [Transaction.self, UserBudget.self])
 }

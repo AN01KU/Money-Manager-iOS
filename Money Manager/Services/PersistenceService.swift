@@ -123,7 +123,7 @@ extension PersistenceService {
     /// and VM default-argument values. Never used in production builds.
     @MainActor static let testing: PersistenceService = {
         let schema = Schema([
-            Transaction.self, RecurringTransaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
             PendingChange.self, FailedChange.self, OrphanedChange.self,
             SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
         ])

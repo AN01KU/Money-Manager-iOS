@@ -11,7 +11,7 @@ struct ManageCategoriesViewModelTests {
     private func makeContext() throws -> ModelContext {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema([Transaction.self, RecurringTransaction.self, MonthlyBudget.self, Category.self]),
+            for: Schema([Transaction.self, RecurringTransaction.self, Category.self]),
             configurations: config
         )
         return ModelContext(container)

@@ -150,32 +150,6 @@ extension RecurringTransaction {
     }
 }
 
-extension MonthlyBudget {
-    func toCreateRequest() -> APICreateBudgetRequest {
-        APICreateBudgetRequest(
-            id: id,
-            year: year,
-            month: month,
-            limit: limit
-        )
-    }
-
-    func toUpdateRequest() -> APIUpdateBudgetRequest {
-        APIUpdateBudgetRequest(
-            year: year,
-            month: month,
-            limit: limit
-        )
-    }
-
-    func applyRemote(_ api: APIMonthlyBudget) {
-        self.year = api.year
-        self.month = api.month
-        self.limit = api.limit
-        self.updatedAt = api.updatedAt
-    }
-}
-
 extension Category {
     func toCreateRequest() -> APICreateCategoryRequest {
         if isPredefined, let key = predefinedKey {

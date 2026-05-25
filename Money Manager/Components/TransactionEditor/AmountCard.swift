@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct AmountCard: View {
-    @Bindable var viewModel: AddTransactionViewModel
-    let customCategories: [Category]
+    @Bindable var viewModel: TransactionEditorViewModel
 
     var body: some View {
         TxnCard {
@@ -11,11 +10,10 @@ struct AmountCard: View {
                     .font(AppTypography.subhead)
                     .foregroundStyle(AppColors.label2)
 
-                TextField("0.00", text: $viewModel.amount)
+                TextField("0.00", text: $viewModel.amountText)
                     .keyboardType(.decimalPad)
                     .font(.system(size: 40, weight: .light))
-                    .foregroundStyle(viewModel.amount.isEmpty ? AppColors.label3 : AppColors.label)
-                    .disabled(viewModel.isEditingShared)
+                    .foregroundStyle(viewModel.amountText.isEmpty ? AppColors.label3 : AppColors.label)
                     .accessibilityIdentifier("amount-field")
 
                 HStack(spacing: AppConstants.UI.spacingSM) {
@@ -31,15 +29,15 @@ struct AmountCard: View {
 
                 Divider()
 
-                EditorCategoryRow(viewModel: viewModel, customCategories: customCategories)
+                EditorCategoryRow(viewModel: viewModel)
             }
         }
     }
 
     private func adjustAmount(by delta: Int) {
-        let current = Double(viewModel.amount) ?? 0
+        let current = Double(viewModel.amountText) ?? 0
         let result = max(0, current + Double(delta))
-        viewModel.amount = result.truncatingRemainder(dividingBy: 1) == 0
+        viewModel.amountText = result.truncatingRemainder(dividingBy: 1) == 0
             ? String(Int(result))
             : String(result)
     }

@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct EditorCategoryRow: View {
-    @Bindable var viewModel: AddTransactionViewModel
-    let customCategories: [Category]
+    @Bindable var viewModel: TransactionEditorViewModel
 
     private var categoryByKey: [String: TransactionCategory] {
         Dictionary(
-            uniqueKeysWithValues: TransactionCategory.merge(overrides: customCategories)
+            uniqueKeysWithValues: TransactionCategory.merge(overrides: viewModel.customCategories)
                 .filter { !$0.isHidden }
                 .map { ($0.key, $0) }
         )
