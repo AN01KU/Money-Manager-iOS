@@ -13,7 +13,7 @@ struct AppServicesTests {
         #expect(services.authService is MockAuthService)
         #expect(services.syncService is MockSyncService)
         #expect(services.changeQueueManager is MockChangeQueueManager)
-        #expect(services.groupService is MockGroupService)
+        #expect(services.groupService is GroupService)
     }
 
     @Test func testUITestMocksReturnsFreshInstanceEachCall() {
@@ -30,14 +30,14 @@ struct AppServicesTests {
         #expect(services.authService is MockAuthService)
         #expect(services.syncService is MockSyncService)
         #expect(services.changeQueueManager is MockChangeQueueManager)
-        #expect(services.groupService is MockGroupService)
+        #expect(services.groupService is GroupService)
     }
 
     // MARK: - live smoke test
 
     @Test func testLiveConstructsWithoutCrashing() throws {
         let schema = Schema([
-            Transaction.self, RecurringTransaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
             PendingChange.self, FailedChange.self, OrphanedChange.self,
             SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
         ])

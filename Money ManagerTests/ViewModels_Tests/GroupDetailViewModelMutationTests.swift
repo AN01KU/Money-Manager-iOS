@@ -31,6 +31,91 @@ struct GroupDetailViewModelMutationTests {
         Settlement(from: APISettlement(id: id, groupId: groupId, fromUser: UUID(), toUser: UUID(), amount: 20, notes: nil, createdAt: Date()))
     }
 
+    /// Builds a GroupService + MockAPIClient for mutation tests.
+    private func makeService(
+        groupId: UUID = UUID(),
+        stubbedMembers: [GroupMember] = [],
+        stubbedTransactions: [GroupTransaction] = [],
+        renameGroupError: Error? = nil,
+        deleteGroupError: Error? = nil,
+        removeMemberError: Error? = nil,
+        leaveGroupError: Error? = nil,
+        deleteError: Error? = nil,
+        deleteSettlementError: Error? = nil
+    ) -> (GroupService, MockAPIClient, deleteCallCount: () -> Int) {
+        let client = MockAPIClient()
+        var deleteCount = 0
+
+        let memberDTOs = stubbedMembers.map { m in
+            APIGroupMember(id: m.id, email: m.email, username: m.username, joinedAt: Date())
+        }
+        let txDTOs = stubbedTransactions.map { tx in
+            APIGroupTransaction(
+                id: tx.id, groupId: groupId, paidByUserId: tx.paidByUserId,
+                totalAmount: tx.totalAmount, category: tx.category, date: tx.date,
+                description: tx.description, notes: tx.notes, isDeleted: false,
+                createdAt: tx.date, updatedAt: tx.date, splits: []
+            )
+        }
+
+        client.getHandler = { endpoint in
+            switch endpoint {
+            case .group(let id):
+                let body = APIGroupDetailsBody(
+                    id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(),
+                    members: memberDTOs, balances: [], settlements: nil
+                )
+                return APIGroupDetails(group: body, isMember: true)
+            case .groupTransactions:
+                return APIListResponse(data: txDTOs)
+            case .groupMembers:
+                return APIListResponse(data: memberDTOs)
+            default:
+                throw MockAPIClient.MockError.notConfigured
+            }
+        }
+        client.patchHandler = { endpoint, _ in
+            if case .group = endpoint {
+                if let err = renameGroupError { throw err }
+                return APIGroup(id: groupId, name: "New Name", createdBy: UUID(), createdAt: Date())
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+        client.deleteHandler = { endpoint in
+            if case .group = endpoint {
+                if let err = deleteGroupError { throw err }
+            }
+        }
+        client.deleteMessageHandler = { endpoint in
+            switch endpoint {
+            case .groupMember:
+                if let err = removeMemberError { throw err }
+                return APIMessageResponse(message: "ok")
+            case .groupTransaction:
+                deleteCount += 1
+                if let err = deleteError { throw err }
+                return APIMessageResponse(message: "ok")
+            case .settlement:
+                if let err = deleteSettlementError { throw err }
+                return APIMessageResponse(message: "ok")
+            case .groupLeave:
+                if let err = leaveGroupError { throw err }
+                return APIMessageResponse(message: "ok")
+            default:
+                throw MockAPIClient.MockError.notConfigured
+            }
+        }
+        client.postHandler = { endpoint, _ in
+            if case .groupLeave = endpoint {
+                if let err = leaveGroupError { throw err }
+                return APIMessageResponse(message: "ok")
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+
+        return (GroupService(apiClient: client), client, { deleteCount })
+    }
+
     // MARK: - filteredTransactions
 
     @Test func testFilteredTransactionsReturnsAllWhenSearchEmpty() {
@@ -85,25 +170,25 @@ struct GroupDetailViewModelMutationTests {
     // MARK: - renameGroup
 
     @Test func testRenameGroupIgnoresBlankName() {
-        let mock = MockGroupService.fresh()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let originalName = vm.group.name
         vm.renameGroup(to: "   ")
         #expect(vm.group.name == originalName)
     }
 
     @Test func testRenameGroupIgnoresWhitespaceOnlyName() {
-        let mock = MockGroupService.fresh()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let originalName = vm.group.name
         vm.renameGroup(to: "\t\n")
         #expect(vm.group.name == originalName)
     }
 
     @Test func testRenameGroupSuccessUpdatesGroupAndSetsIsRenamed() async {
-        let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        let (service, _, _) = makeService(groupId: groupId)
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         vm.renameGroup(to: "New Name")
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.group.name == "New Name")
@@ -111,20 +196,26 @@ struct GroupDetailViewModelMutationTests {
     }
 
     @Test func testRenameGroupTrimsWhitespace() async {
-        let mock = MockGroupService.fresh()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let groupId = UUID()
+        // Return trimmed name from mock
+        let client = MockAPIClient()
+        client.patchHandler = { _, _ in
+            APIGroup(id: groupId, name: "Trimmed Name", createdBy: UUID(), createdAt: Date())
+        }
+        client.getHandler = { _ in throw MockAPIClient.MockError.notConfigured }
+        let service = GroupService(apiClient: client)
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         vm.renameGroup(to: "  Trimmed Name  ")
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.group.name == "Trimmed Name")
     }
 
     @Test func testRenameGroupFailureSetsErrorMessage() async {
-        let mock = MockGroupService.fresh()
         struct RenameError: Error, LocalizedError {
             var errorDescription: String? { "rename failed" }
         }
-        mock.renameGroupError = RenameError()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService(renameGroupError: RenameError())
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.renameGroup(to: "New Name")
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.errorMessage != nil)
@@ -134,20 +225,19 @@ struct GroupDetailViewModelMutationTests {
     // MARK: - deleteGroup
 
     @Test func testDeleteGroupSuccessSetsDidDeleteOrLeave() async {
-        let mock = MockGroupService.fresh()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.deleteGroup()
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.didDeleteOrLeave == true)
     }
 
     @Test func testDeleteGroupFailureSetsErrorMessage() async {
-        let mock = MockGroupService.fresh()
         struct DeleteGroupError: Error, LocalizedError {
             var errorDescription: String? { "cannot delete" }
         }
-        mock.deleteGroupError = DeleteGroupError()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService(deleteGroupError: DeleteGroupError())
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.deleteGroup()
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.errorMessage != nil)
@@ -191,20 +281,20 @@ struct GroupDetailViewModelMutationTests {
     // MARK: - removeMember
 
     @Test func testRemoveMemberOptimisticallyRemovesMemberFromList() {
-        let mock = MockGroupService.fresh()
+        let (service, _, _) = makeService()
         let alice = makeMember(email: "alice@example.com")
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.members = [alice]
         vm.removeMember(alice)
         #expect(vm.members.isEmpty)
     }
 
     @Test func testRemoveMemberSuccessRefreshesMembers() async {
-        let mock = MockGroupService.fresh()
-        let alice = makeMember(email: "alice@example.com")
         let bob = makeMember(email: "bob@example.com")
-        mock.stubbedMembers = [bob] // after removal, only bob remains
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let alice = makeMember(email: "alice@example.com")
+        // After removal, only bob remains
+        let (service, _, _) = makeService(stubbedMembers: [bob])
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.members = [alice, bob]
         vm.removeMember(alice)
         try? await Task.sleep(nanoseconds: 100_000_000)
@@ -213,13 +303,12 @@ struct GroupDetailViewModelMutationTests {
     }
 
     @Test func testRemoveMemberFailureRestoresMembersAndSetsError() async {
-        let mock = MockGroupService.fresh()
         struct RemoveError: Error, LocalizedError {
             var errorDescription: String? { "remove failed" }
         }
-        mock.removeMemberError = RemoveError()
         let alice = makeMember(email: "alice@example.com")
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService(removeMemberError: RemoveError())
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.members = [alice]
         vm.removeMember(alice)
         try? await Task.sleep(nanoseconds: 100_000_000)
@@ -231,20 +320,19 @@ struct GroupDetailViewModelMutationTests {
     // MARK: - leaveGroup
 
     @Test func testLeaveGroupSuccessSetsDidDeleteOrLeave() async {
-        let mock = MockGroupService.fresh()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.leaveGroup()
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.didDeleteOrLeave == true)
     }
 
     @Test func testLeaveGroupFailureSetsErrorMessage() async {
-        let mock = MockGroupService.fresh()
         struct LeaveError: Error, LocalizedError {
             var errorDescription: String? { "cannot leave" }
         }
-        mock.leaveGroupError = LeaveError()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService(leaveGroupError: LeaveError())
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.leaveGroup()
         try? await Task.sleep(nanoseconds: 100_000_000)
         #expect(vm.errorMessage != nil)
@@ -254,8 +342,8 @@ struct GroupDetailViewModelMutationTests {
     // MARK: - deleteSettlement
 
     @Test func testDeleteSettlementOptimisticallyRemovesFromList() {
-        let mock = MockGroupService.fresh()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let settlement = makeSettlement()
         vm.settlements = [settlement]
         vm.deleteSettlement(settlement)
@@ -263,12 +351,11 @@ struct GroupDetailViewModelMutationTests {
     }
 
     @Test func testDeleteSettlementFailureRestoresSettlementAndSetsError() async {
-        let mock = MockGroupService.fresh()
         struct SettlementDeleteError: Error, LocalizedError {
             var errorDescription: String? { "delete failed" }
         }
-        mock.deleteSettlementError = SettlementDeleteError()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService(deleteSettlementError: SettlementDeleteError())
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let settlement = makeSettlement()
         vm.settlements = [settlement]
         vm.deleteSettlement(settlement)
@@ -278,15 +365,10 @@ struct GroupDetailViewModelMutationTests {
     }
 
     @Test func testDeleteSettlementSuccessReloadsData() async {
-        let mock = MockGroupService.fresh()
         let groupId = UUID()
         let alice = makeMember()
-        mock.stubbedGroupDetails = SplitGroup(
-            id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(),
-            members: [alice], balances: [], settlements: []
-        )
-        mock.stubbedTransactions = []
-        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        let (service, _, _) = makeService(groupId: groupId, stubbedMembers: [alice])
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         let settlement = makeSettlement(groupId: groupId)
         vm.settlements = [settlement]
         vm.deleteSettlement(settlement)
@@ -298,9 +380,8 @@ struct GroupDetailViewModelMutationTests {
     // MARK: - transactionEdited
 
     @Test func testTransactionEditedOptimisticallyReplacesOld() async {
-        let mock = MockGroupService.fresh()
-        mock.stubbedTransactions = []
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let txId = UUID()
         let old = makeTransaction(id: txId, totalAmount: 100)
         let updated = makeTransaction(id: txId, totalAmount: 200)
@@ -313,22 +394,20 @@ struct GroupDetailViewModelMutationTests {
     @Test func testTransactionEditedDoesNotCallDelete() async {
         // Regression: transactionEdited must NOT call deleteGroupTransaction.
         // The PATCH already ran in AddTransactionViewModel; calling DELETE here would destroy the transaction.
-        let mock = MockGroupService.fresh()
-        mock.stubbedTransactions = []
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, getDeleteCallCount) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let txId = UUID()
         let old = makeTransaction(id: txId, totalAmount: 100)
         let updated = makeTransaction(id: txId, totalAmount: 200)
         vm.transactions = [old]
         vm.transactionEdited(replacing: old, with: updated)
         try? await Task.sleep(nanoseconds: 100_000_000)
-        #expect(mock.deleteCallCount == 0)
+        #expect(getDeleteCallCount() == 0)
     }
 
     @Test func testTransactionEditedWithDifferentIdUpdatesCorrectSlot() async {
-        let mock = MockGroupService.fresh()
-        mock.stubbedTransactions = []
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let txId = UUID()
         let other = makeTransaction(totalAmount: 50)
         let old = makeTransaction(id: txId, totalAmount: 100)

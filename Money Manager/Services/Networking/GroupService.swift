@@ -7,9 +7,13 @@ import Foundation
 
 final class GroupService: GroupServiceProtocol {
     static let shared = GroupService()
-    private let apiClient = AppAPIClient.shared
+    private let apiClient: any APIClientProtocol
 
-    private init() {}
+    private init() { self.apiClient = AppAPIClient.shared }
+
+    #if DEBUG
+    init(apiClient: any APIClientProtocol) { self.apiClient = apiClient }
+    #endif
 
     func fetchGroups() async throws -> [SplitGroup] {
         let response: APIGroupsListResponse = try await apiClient.get(.groups)

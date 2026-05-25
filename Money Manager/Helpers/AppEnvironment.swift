@@ -63,7 +63,7 @@ extension EnvironmentValues {
 private struct GroupServiceKey: EnvironmentKey {
     static let defaultValue: any GroupServiceProtocol = {
         #if DEBUG
-        return MockGroupService.shared
+        return GroupService(apiClient: MockAPIClient())
         #else
         fatalError("GroupService must be injected via .environment(\\.groupService, ...) before use")
         #endif

@@ -290,18 +290,34 @@ struct AddTransactionViewModelSharedTests {
 
     // MARK: - saveShared: equal split
 
+    private func makeCreateService(groupId: UUID) -> GroupService {
+        let client = MockAPIClient()
+        client.postHandler = { endpoint, _ in
+            if case .groupTransactions = endpoint {
+                return APIGroupTransaction(
+                    id: UUID(), groupId: groupId, paidByUserId: UUID(),
+                    totalAmount: 100, category: "Food", date: Date(),
+                    description: "Dinner", notes: nil, isDeleted: false,
+                    createdAt: Date(), updatedAt: Date(), splits: []
+                )
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+        return GroupService(apiClient: client)
+    }
+
     @Test func testSaveSharedWithEqualSplitCallsGroupService() async {
         let alice = makeMember()
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice, bob])
+        let service = makeCreateService(groupId: group.id)
         var addedTransaction: GroupTransaction?
         let mode = AddTransactionMode.shared(
             group: group, members: [alice, bob],
             currentUserId: alice.id, editing: nil,
             onAdd: { addedTransaction = $0 }
         )
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.amount = "100"
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
@@ -319,10 +335,10 @@ struct AddTransactionViewModelSharedTests {
 
     @Test func testSaveSharedFailsWhenNoPaidBy() {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let service = makeCreateService(groupId: group.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: nil, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.amount = "100"
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
@@ -339,10 +355,10 @@ struct AddTransactionViewModelSharedTests {
     @Test func testSaveSharedWithCustomSplitBuildsCorrectRequest() async {
         let alice = makeMember()
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice, bob])
+        let service = makeCreateService(groupId: group.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice, bob], currentUserId: alice.id, editing: nil, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.amount = "100"
         vm.selectedCategory = "Food"
         vm.description = "Dinner"

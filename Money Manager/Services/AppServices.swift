@@ -77,7 +77,7 @@ extension AppServices {
             changeQueueManager: changeQueue,
             persistence: persistence,
             budgetRepository: budgetRepository,
-            groupService: MockGroupService.shared,
+            groupService: GroupService(apiClient: MockAPIClient()),
             networkMonitor: networkMonitor
         )
     }
@@ -95,14 +95,14 @@ extension AppServices {
             changeQueueManager: changeQueue,
             persistence: persistence,
             budgetRepository: budgetRepository,
-            groupService: MockGroupService.shared,
+            groupService: GroupService(apiClient: MockAPIClient()),
             networkMonitor: networkMonitor
         )
     }
 
     private static func makeInMemoryContainer() throws -> ModelContainer {
         let schema = Schema([
-            Transaction.self, RecurringTransaction.self, MonthlyBudget.self, UserBudget.self, Category.self,
+            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
             PendingChange.self, FailedChange.self, OrphanedChange.self,
             SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
         ])

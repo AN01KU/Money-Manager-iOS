@@ -36,12 +36,42 @@ struct AddTransactionViewModelEditSharedTests {
         return try! GroupTransaction(from: dto)
     }
 
+    /// Returns a GroupService backed by a MockAPIClient configured for edit (PATCH) saves.
+    private func makeEditService(groupId: UUID = UUID(), patchError: Error? = nil) -> (GroupService, MockAPIClient) {
+        let client = MockAPIClient()
+        client.patchHandler = { endpoint, _ in
+            if case .groupTransaction = endpoint {
+                if let err = patchError { throw err }
+                return APIGroupTransaction(
+                    id: UUID(), groupId: groupId, paidByUserId: UUID(),
+                    totalAmount: 100, category: "Food", date: Date(),
+                    description: "Updated", notes: nil, isDeleted: false,
+                    createdAt: Date(), updatedAt: Date(), splits: []
+                )
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+        return (GroupService(apiClient: client), client)
+    }
+
+    /// Decodes the last PATCH body from a MockAPIClient into an APIUpdateGroupTransactionRequest.
+    private func lastUpdateRequest(from client: MockAPIClient) -> APIUpdateGroupTransactionRequest? {
+        guard let data = client.patchCalls.last?.body else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { dec in
+            let container = try dec.singleValueContainer()
+            let ms = try container.decode(Int64.self)
+            return Date(timeIntervalSince1970: Double(ms) / 1000.0)
+        }
+        return try? decoder.decode(APIUpdateGroupTransactionRequest.self, from: data)
+    }
+
     // MARK: - saveSharedEdit success
 
     @Test func testSaveSharedEditCallsUpdateAndInvokesOnAdd() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let (service, _) = makeEditService(groupId: group.id)
         let existingTx = makeGroupTransaction(paidBy: alice.id)
         var addedTx: GroupTransaction?
         let mode = AddTransactionMode.shared(
@@ -49,7 +79,7 @@ struct AddTransactionViewModelEditSharedTests {
             currentUserId: alice.id, editing: existingTx,
             onAdd: { addedTx = $0 }
         )
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.selectedCategory = "Transport"
         vm.description = "Uber"
 
@@ -62,11 +92,11 @@ struct AddTransactionViewModelEditSharedTests {
 
     @Test func testSaveSharedEditSetsIsSavingFalseOnCompletion() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let (service, _) = makeEditService(groupId: group.id)
         let existingTx = makeGroupTransaction(paidBy: alice.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.selectedCategory = "Transport"
         vm.description = "Uber"
 
@@ -78,15 +108,14 @@ struct AddTransactionViewModelEditSharedTests {
 
     @Test func testSaveSharedEditFailureSetsShowError() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         struct UpdateError: Error, LocalizedError {
             var errorDescription: String? { "update failed" }
         }
-        mock.updateGroupTransactionError = UpdateError()
         let group = makeGroup(members: [alice])
+        let (service, _) = makeEditService(groupId: group.id, patchError: UpdateError())
         let existingTx = makeGroupTransaction(paidBy: alice.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.selectedCategory = "Transport"
         vm.description = "Uber"
 
@@ -100,31 +129,32 @@ struct AddTransactionViewModelEditSharedTests {
 
     @Test func testSaveSharedEditPassesOnlyChangedFieldsToRequest() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let (service, client) = makeEditService(groupId: group.id)
         // Existing tx has category "Food" — we only change the description
         let existingTx = makeGroupTransaction(paidBy: alice.id, category: "Food", description: "Old Description")
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
-        vm.selectedCategory = "Food"     // unchanged
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
+        vm.selectedCategory = "Food"       // unchanged
         vm.description = "New Description" // changed
 
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.category == nil) // unchanged category not sent
-        #expect(mock.lastUpdateRequest?.description == "New Description")
+        let req = lastUpdateRequest(from: client)
+        #expect(req?.category == nil) // unchanged category not sent
+        #expect(req?.description == "New Description")
     }
 
     @Test func testSaveSharedEditIncludesUpdatedAtInPayload() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let (service, client) = makeEditService(groupId: group.id)
         let knownDate = Date(timeIntervalSince1970: 1_700_000_000)
         let existingTx = makeGroupTransaction(paidBy: alice.id, updatedAt: knownDate)
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.selectedCategory = "Transport"
         vm.description = "Taxi"
 
@@ -132,17 +162,21 @@ struct AddTransactionViewModelEditSharedTests {
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.updatedAt == knownDate)
+        let req = lastUpdateRequest(from: client)
+        // updatedAt is encoded as ms epoch and decoded back — within 1ms tolerance
+        let reqUpdatedAt = req?.updatedAt
+        #expect(reqUpdatedAt != nil)
+        #expect(abs((reqUpdatedAt?.timeIntervalSince1970 ?? 0) - knownDate.timeIntervalSince1970) < 1)
     }
 
     @Test func testSaveSharedEditIncludesPaidByUserIdWhenChanged() async {
         let alice = makeMember(username: "alice")
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice, bob])
+        let (service, client) = makeEditService(groupId: group.id)
         let existingTx = makeGroupTransaction(paidBy: alice.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice, bob], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
         vm.paidByUserId = bob.id   // changed from alice → bob
@@ -151,16 +185,17 @@ struct AddTransactionViewModelEditSharedTests {
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.paidByUserId == bob.id)
+        let req = lastUpdateRequest(from: client)
+        #expect(req?.paidByUserId == bob.id)
     }
 
     @Test func testSaveSharedEditOmitsPaidByUserIdWhenUnchanged() async {
         let alice = makeMember(username: "alice")
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let (service, client) = makeEditService(groupId: group.id)
         let existingTx = makeGroupTransaction(paidBy: alice.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: existingTx, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
         // paidByUserId remains alice.id (unchanged)
@@ -169,7 +204,8 @@ struct AddTransactionViewModelEditSharedTests {
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.paidByUserId == nil)
+        let req = lastUpdateRequest(from: client)
+        #expect(req?.paidByUserId == nil)
     }
 
     // MARK: - isValid edge cases

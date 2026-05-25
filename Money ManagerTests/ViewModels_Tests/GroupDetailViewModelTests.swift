@@ -29,12 +29,66 @@ struct GroupDetailViewModelTests {
         GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
-    private func makeDetails(
-        groupId: UUID,
-        members: [GroupMember] = [],
-        balances: [GroupBalance] = []
-    ) -> SplitGroup {
-        SplitGroup(id: groupId, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: balances, settlements: [])
+    /// Builds a GroupService + MockAPIClient pre-configured with group detail and transaction stubs.
+    private func makeService(
+        groupId: UUID = UUID(),
+        detailsMembers: [GroupMember] = [],
+        detailsBalances: [GroupBalance] = [],
+        detailsSettlements: [Settlement] = [],
+        transactions: [GroupTransaction] = [],
+        addMemberError: Error? = nil
+    ) -> (GroupService, MockAPIClient, () -> [(groupId: UUID, email: String)]) {
+        let client = MockAPIClient()
+
+        let memberDTOs = detailsMembers.map { m in
+            APIGroupMember(id: m.id, email: m.email, username: m.username, joinedAt: Date())
+        }
+        let balanceDTOs = detailsBalances.map { b in
+            APIGroupBalance(userId: b.userId, amount: b.amount)
+        }
+        let settlementDTOs = detailsSettlements.map { s in
+            APISettlement(id: s.id, groupId: nil, fromUser: s.fromUser, toUser: s.toUser, amount: s.amount, notes: nil, createdAt: Date())
+        }
+        let txDTOs = transactions.map { tx in
+            APIGroupTransaction(
+                id: tx.id, groupId: groupId, paidByUserId: tx.paidByUserId,
+                totalAmount: tx.totalAmount, category: tx.category, date: tx.date,
+                description: tx.description, notes: tx.notes, isDeleted: false,
+                createdAt: tx.date, updatedAt: tx.date, splits: []
+            )
+        }
+
+        var addMemberCallLog: [(groupId: UUID, email: String)] = []
+
+        client.getHandler = { endpoint in
+            switch endpoint {
+            case .group(let id):
+                let body = APIGroupDetailsBody(
+                    id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(),
+                    members: memberDTOs, balances: balanceDTOs,
+                    settlements: settlementDTOs
+                )
+                return APIGroupDetails(group: body, isMember: true)
+            case .groupTransactions:
+                return APIListResponse(data: txDTOs)
+            case .groupMembers:
+                return APIListResponse(data: memberDTOs)
+            default:
+                throw MockAPIClient.MockError.notConfigured
+            }
+        }
+        client.postHandler = { endpoint, data in
+            if case .groupAddMember(let gId) = endpoint {
+                let decoder = JSONDecoder()
+                let req = try? decoder.decode(APIAddMemberRequest.self, from: data ?? Data())
+                addMemberCallLog.append((groupId: gId, email: req?.email ?? ""))
+                if let error = addMemberError { throw error }
+                return APIMessageResponse(message: "ok")
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+
+        return (GroupService(apiClient: client), client, { addMemberCallLog })
     }
 
     // MARK: - Initial state
@@ -59,15 +113,15 @@ struct GroupDetailViewModelTests {
     @Test
     func testLoadDataPopulatesTransactionsMembersBalances() async {
         let groupId = UUID()
-        let mock = MockGroupService.fresh()
         let alice = makeMember(email: "alice@example.com")
-        mock.stubbedGroupDetails = makeDetails(
+        let tx = makeTransaction(totalAmount: 60.00)
+        let (service, _, _) = makeService(
             groupId: groupId,
-            members: [alice],
-            balances: [makeBalance(userId: alice.id, amount: 30.00)]
+            detailsMembers: [alice],
+            detailsBalances: [makeBalance(userId: alice.id, amount: 30.00)],
+            transactions: [tx]
         )
-        mock.stubbedTransactions = [makeTransaction(totalAmount: 60.00)]
-        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         await vm.loadData()
         #expect(vm.transactions.count == 1)
         #expect(vm.members.count == 1)
@@ -77,13 +131,14 @@ struct GroupDetailViewModelTests {
 
     @Test
     func testLoadDataKeepsInitialMembersWhenDetailsReturnEmpty() async {
-        let mock = MockGroupService.fresh()
+        let groupId = UUID()
         let alice = makeMember(email: "alice@example.com")
         let group = SplitGroup(
-            id: UUID(), name: "Trip", createdBy: alice.id, createdAt: Date(),
+            id: groupId, name: "Trip", createdBy: alice.id, createdAt: Date(),
             members: [alice], balances: [], settlements: []
         )
-        let vm = GroupDetailViewModel(group: group, groupService: mock)
+        let (service, _, _) = makeService(groupId: groupId)
+        let vm = GroupDetailViewModel(group: group, groupService: service)
         await vm.loadData()
         #expect(vm.isLoading == false)
     }
@@ -152,28 +207,32 @@ struct GroupDetailViewModelTests {
 
     @Test
     func testAddMemberAddsToPendingEmailsImmediately() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.addMember(email: "bob@example.com")
         #expect(vm.pendingMemberEmails.contains("bob@example.com"))
     }
 
     @Test
     func testAddMemberTrimsAndLowercasesEmail() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.addMember(email: "  BOB@EXAMPLE.COM  ")
         #expect(vm.pendingMemberEmails.contains("bob@example.com"))
     }
 
     @Test
     func testAddMemberDoesNothingWhenEmailIsBlank() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.addMember(email: "   ")
         #expect(vm.pendingMemberEmails.isEmpty)
     }
 
     @Test
     func testAddMemberDoesNothingWhenAlreadyAMember() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let alice = makeMember(email: "alice@example.com")
         vm.members = [alice]
         vm.addMember(email: "alice@example.com")
@@ -182,21 +241,22 @@ struct GroupDetailViewModelTests {
 
     @Test
     func testAddMemberDismissesSheetImmediately() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.showAddMember = true
         vm.addMember(email: "bob@example.com")
         #expect(vm.showAddMember == false)
     }
 
-    // MARK: - Invite flow (async, via mock)
+    // MARK: - Invite flow (async, via real service + mock client)
 
     @Test
     func testAddMemberSuccessClearsPendingAndRefreshesMembers() async {
-        let mock = MockGroupService.fresh()
+        let groupId = UUID()
         let bob = makeMember(email: "bob@example.com")
-        mock.stubbedMembers = [bob]
+        let (service, _, getAddMemberCalls) = makeService(groupId: groupId, detailsMembers: [bob])
 
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         vm.addMember(email: "bob@example.com")
 
         #expect(vm.pendingMemberEmails.contains("bob@example.com"))
@@ -205,8 +265,8 @@ struct GroupDetailViewModelTests {
 
         #expect(vm.pendingMemberEmails.isEmpty)
         #expect(vm.members.contains(where: { $0.email == "bob@example.com" }))
-        #expect(mock.addMemberCalls.count == 1)
-        #expect(mock.addMemberCalls.first?.email == "bob@example.com")
+        #expect(getAddMemberCalls().count == 1)
+        #expect(getAddMemberCalls().first?.email == "bob@example.com")
     }
 
     @Test
@@ -214,10 +274,9 @@ struct GroupDetailViewModelTests {
         struct InviteError: Error, LocalizedError {
             var errorDescription: String? { "user not found with this email" }
         }
-        let mock = MockGroupService.fresh()
-        mock.addMemberError = InviteError()
+        let (service, _, _) = makeService(addMemberError: InviteError())
 
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: mock)
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.addMember(email: "ghost@example.com")
 
         #expect(vm.pendingMemberEmails.contains("ghost@example.com"))
@@ -230,14 +289,14 @@ struct GroupDetailViewModelTests {
 
     @Test
     func testAddMemberCallsServiceWithCorrectGroupId() async {
-        let mock = MockGroupService.fresh()
         let groupId = UUID()
-        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        let (service, _, getAddMemberCalls) = makeService(groupId: groupId)
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         vm.addMember(email: "sam@example.com")
 
         try? await Task.sleep(nanoseconds: 100_000_000)
 
-        #expect(mock.addMemberCalls.first?.groupId == groupId)
+        #expect(getAddMemberCalls().first?.groupId == groupId)
     }
 
     // MARK: - isPending
@@ -263,7 +322,8 @@ struct GroupDetailViewModelTests {
     func testSettlementRecordedInsertsSettlement() {
         let alice = makeMember(email: "alice@example.com")
         let bob   = makeMember(email: "bob@example.com")
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         vm.members = [alice, bob]
         let settlement = Settlement(from: APISettlement(
             id: UUID(), groupId: vm.group.id,

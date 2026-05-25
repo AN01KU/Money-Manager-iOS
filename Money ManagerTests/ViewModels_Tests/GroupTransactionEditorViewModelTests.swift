@@ -35,6 +35,53 @@ struct GroupTransactionEditorViewModelTests {
         return try! GroupTransaction(from: dto)
     }
 
+    /// Returns a GroupService backed by a fresh MockAPIClient configured for group transaction mutations.
+    /// - Returns: (service, client) — inspect client.patchCalls to decode the request
+    private func makeSaveService(
+        groupId: UUID = UUID(),
+        patchError: Error? = nil
+    ) -> (GroupService, MockAPIClient) {
+        let client = MockAPIClient()
+        client.postHandler = { endpoint, _ in
+            if case .groupTransactions = endpoint {
+                let dto = APIGroupTransaction(
+                    id: UUID(), groupId: groupId, paidByUserId: UUID(),
+                    totalAmount: 100, category: "food-dining", date: Date(),
+                    description: "Dinner", notes: nil, isDeleted: false,
+                    createdAt: Date(), updatedAt: Date(), splits: []
+                )
+                return dto
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+        client.patchHandler = { endpoint, _ in
+            if case .groupTransaction = endpoint {
+                if let err = patchError { throw err }
+                let dto = APIGroupTransaction(
+                    id: UUID(), groupId: groupId, paidByUserId: UUID(),
+                    totalAmount: 100, category: "food-dining", date: Date(),
+                    description: "Updated", notes: nil, isDeleted: false,
+                    createdAt: Date(), updatedAt: Date(), splits: []
+                )
+                return dto
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+        return (GroupService(apiClient: client), client)
+    }
+
+    /// Decodes the last PATCH body recorded by a MockAPIClient into an APIUpdateGroupTransactionRequest.
+    private func lastUpdateRequest(from client: MockAPIClient) -> APIUpdateGroupTransactionRequest? {
+        guard let data = client.patchCalls.last?.body else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { dec in
+            let container = try dec.singleValueContainer()
+            let ms = try container.decode(Int64.self)
+            return Date(timeIntervalSince1970: Double(ms) / 1000.0)
+        }
+        return try? decoder.decode(APIUpdateGroupTransactionRequest.self, from: data)
+    }
+
     // MARK: - Init: create mode
 
     @Test func testCreateModePreselectsCurrentUserAsPaidBy() {
@@ -285,16 +332,17 @@ struct GroupTransactionEditorViewModelTests {
     @Test func testSaveCreateCallsGroupServiceAndInvokesOnAdd() async {
         let alice = makeMember()
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice, bob])
+        let (service, _) = makeSaveService(groupId: group.id)
         var addedTransaction: GroupTransaction?
         let vm = GroupTransactionEditorViewModel(
             mode: .create(
-                group: makeGroup(members: [alice, bob]),
+                group: group,
                 members: [alice, bob],
                 currentUserId: alice.id,
                 onAdd: { addedTransaction = $0 }
             ),
-            groupService: mock
+            groupService: service
         )
         vm.amount = "100"
         vm.selectedCategory = "food-dining"
@@ -313,10 +361,11 @@ struct GroupTransactionEditorViewModelTests {
 
     @Test func testSaveCreateFailsWhenNoPaidBy() {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let (service, _) = makeSaveService(groupId: group.id)
         let vm = GroupTransactionEditorViewModel(
-            mode: .create(group: makeGroup(members: [alice]), members: [alice], currentUserId: nil, onAdd: { _ in }),
-            groupService: mock
+            mode: .create(group: group, members: [alice], currentUserId: nil, onAdd: { _ in }),
+            groupService: service
         )
         vm.amount = "100"
         vm.selectedCategory = "food-dining"
@@ -335,12 +384,13 @@ struct GroupTransactionEditorViewModelTests {
 
     @Test func testSaveEditCallsUpdateAndInvokesOnSaved() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let (service, _) = makeSaveService(groupId: group.id)
         let tx = makeGroupTransaction(paidBy: alice.id)
         var savedTx: GroupTransaction?
         let vm = GroupTransactionEditorViewModel(
-            mode: .edit(group: makeGroup(members: [alice]), members: [alice], transaction: tx, onSaved: { savedTx = $0 }),
-            groupService: mock
+            mode: .edit(group: group, members: [alice], transaction: tx, onSaved: { savedTx = $0 }),
+            groupService: service
         )
         vm.selectedCategory = "transport"
         vm.description = "Uber"
@@ -354,11 +404,12 @@ struct GroupTransactionEditorViewModelTests {
 
     @Test func testSaveEditPassesOnlyChangedFieldsToRequest() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let (service, client) = makeSaveService(groupId: group.id)
         let tx = makeGroupTransaction(paidBy: alice.id, category: "food-dining", description: "Old")
         let vm = GroupTransactionEditorViewModel(
-            mode: .edit(group: makeGroup(members: [alice]), members: [alice], transaction: tx, onSaved: { _ in }),
-            groupService: mock
+            mode: .edit(group: group, members: [alice], transaction: tx, onSaved: { _ in }),
+            groupService: service
         )
         vm.selectedCategory = "food-dining"  // unchanged
         vm.description = "New"               // changed
@@ -367,18 +418,20 @@ struct GroupTransactionEditorViewModelTests {
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.category == nil)
-        #expect(mock.lastUpdateRequest?.description == "New")
+        let req = lastUpdateRequest(from: client)
+        #expect(req?.category == nil)
+        #expect(req?.description == "New")
     }
 
     @Test func testSaveEditIncludesPaidByUserIdWhenChanged() async {
         let alice = makeMember(username: "alice")
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice, bob])
+        let (service, client) = makeSaveService(groupId: group.id)
         let tx = makeGroupTransaction(paidBy: alice.id)
         let vm = GroupTransactionEditorViewModel(
-            mode: .edit(group: makeGroup(members: [alice, bob]), members: [alice, bob], transaction: tx, onSaved: { _ in }),
-            groupService: mock
+            mode: .edit(group: group, members: [alice, bob], transaction: tx, onSaved: { _ in }),
+            groupService: service
         )
         vm.selectedCategory = "food-dining"
         vm.description = "Dinner"
@@ -388,16 +441,18 @@ struct GroupTransactionEditorViewModelTests {
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.paidByUserId == bob.id)
+        let req = lastUpdateRequest(from: client)
+        #expect(req?.paidByUserId == bob.id)
     }
 
     @Test func testSaveEditOmitsPaidByUserIdWhenUnchanged() async {
         let alice = makeMember(username: "alice")
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let (service, client) = makeSaveService(groupId: group.id)
         let tx = makeGroupTransaction(paidBy: alice.id)
         let vm = GroupTransactionEditorViewModel(
-            mode: .edit(group: makeGroup(members: [alice]), members: [alice], transaction: tx, onSaved: { _ in }),
-            groupService: mock
+            mode: .edit(group: group, members: [alice], transaction: tx, onSaved: { _ in }),
+            groupService: service
         )
         vm.selectedCategory = "food-dining"
         vm.description = "Dinner"
@@ -407,16 +462,18 @@ struct GroupTransactionEditorViewModelTests {
             vm.save { cont.resume() }
         }
 
-        #expect(mock.lastUpdateRequest?.paidByUserId == nil)
+        let req = lastUpdateRequest(from: client)
+        #expect(req?.paidByUserId == nil)
     }
 
     @Test func testSaveEditSetsIsSavingFalseOnCompletion() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
+        let (service, _) = makeSaveService(groupId: group.id)
         let tx = makeGroupTransaction(paidBy: alice.id)
         let vm = GroupTransactionEditorViewModel(
-            mode: .edit(group: makeGroup(members: [alice]), members: [alice], transaction: tx, onSaved: { _ in }),
-            groupService: mock
+            mode: .edit(group: group, members: [alice], transaction: tx, onSaved: { _ in }),
+            groupService: service
         )
         vm.selectedCategory = "food-dining"
         vm.description = "Dinner"
@@ -429,15 +486,15 @@ struct GroupTransactionEditorViewModelTests {
 
     @Test func testSaveEditFailureSetsErrorMessage() async {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
+        let group = makeGroup(members: [alice])
         struct UpdateError: Error, LocalizedError {
             var errorDescription: String? { "update failed" }
         }
-        mock.updateGroupTransactionError = UpdateError()
+        let (service, _) = makeSaveService(groupId: group.id, patchError: UpdateError())
         let tx = makeGroupTransaction(paidBy: alice.id)
         let vm = GroupTransactionEditorViewModel(
-            mode: .edit(group: makeGroup(members: [alice]), members: [alice], transaction: tx, onSaved: { _ in }),
-            groupService: mock
+            mode: .edit(group: group, members: [alice], transaction: tx, onSaved: { _ in }),
+            groupService: service
         )
         vm.selectedCategory = "food-dining"
         vm.description = "Dinner"
