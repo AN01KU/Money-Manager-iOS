@@ -560,7 +560,7 @@ struct BackupViewModelExportTests {
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
-            #expect(content.contains("ID,Name,Icon,Color"))
+            #expect(content.contains("ID,Key,Name,Icon,Color"))
             #expect(content.contains("Groceries"))
             #expect(content.contains("cart.fill"))
         }
@@ -680,9 +680,9 @@ struct BackupViewModelExportTests {
         #expect(viewModel.exportedFileURL != nil)
         if let url = viewModel.exportedFileURL {
             let content = try! String(contentsOf: url, encoding: .utf8)
-            #expect(content.contains("# TRANSACTIONS"))
-            #expect(content.contains("# RECURRING EXPENSES"))
-            #expect(content.contains("# CATEGORIES"))
+            #expect(content.contains("# transactions"))
+            #expect(content.contains("# recurring transactions"))
+            #expect(content.contains("# categories"))
         }
     }
     
