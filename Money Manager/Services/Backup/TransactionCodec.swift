@@ -8,10 +8,10 @@ struct TransactionCodec: EntityCodec {
     nonisolated let entityName = "transactions"
 
     nonisolated let csvHeader = [
-        "ID", "Type", "Amount", "Category", "Date", "Time",
+        "ID", "Type", "Amount", "Category ID", "Date", "Time",
         "Description", "Notes", "Recurring Expense ID",
         "Group Transaction ID", "Group Name", "Group ID",
-        "Settlement ID", "Category ID"
+        "Settlement ID"
     ]
 
     nonisolated func csvRow(_ model: Transaction) -> [String] {
@@ -19,7 +19,7 @@ struct TransactionCodec: EntityCodec {
             model.id.uuidString,
             model.type.rawValue,
             String(model.amount),
-            model.category,
+            model.categoryId.uuidString,
             BackupService.iso8601.string(from: model.date),
             model.time.map { BackupService.iso8601.string(from: $0) } ?? "",
             model.transactionDescription ?? "",
@@ -28,8 +28,7 @@ struct TransactionCodec: EntityCodec {
             model.groupTransactionId?.uuidString ?? "",
             model.groupName ?? "",
             model.groupId?.uuidString ?? "",
-            model.settlementId?.uuidString ?? "",
-            model.categoryId?.uuidString ?? ""
+            model.settlementId?.uuidString ?? ""
         ]
     }
 
@@ -43,7 +42,9 @@ struct TransactionCodec: EntityCodec {
         }
         let type = TransactionKind(rawValue: values[1]) ?? .expense
         let amount = Double(values[2]) ?? 0
-        let category = values[3]
+        guard let categoryId = UUID(uuidString: values[3]) else {
+            throw EntityCodecError.missingField("categoryId")
+        }
         guard let date = BackupService.parseDate(values[4]) else {
             throw EntityCodecError.missingField("date")
         }
@@ -55,21 +56,19 @@ struct TransactionCodec: EntityCodec {
         let groupName: String? = values[10].isEmpty ? nil : values[10]
         let groupId = UUID(uuidString: values[11])
         let settlementId = UUID(uuidString: values[12])
-        let categoryId = UUID(uuidString: values[13])
 
         let tx = Transaction(
             id: id,
             type: type,
             amount: amount,
-            category: category,
+            categoryId: categoryId,
             date: date,
             time: time,
             transactionDescription: description,
             notes: notes,
             recurringExpenseId: recurringExpenseId,
             groupTransactionId: groupTransactionId,
-            settlementId: settlementId,
-            categoryId: categoryId
+            settlementId: settlementId
         )
         tx.groupName = groupName
         tx.groupId = groupId
@@ -101,7 +100,7 @@ private struct TransactionRecord: Codable {
     let id: UUID
     let type: String
     let amount: Double
-    let category: String
+    let categoryId: UUID
     let date: Date
     let time: Date?
     let transactionDescription: String?
@@ -111,13 +110,12 @@ private struct TransactionRecord: Codable {
     let groupName: String?
     let groupId: UUID?
     let settlementId: UUID?
-    let categoryId: UUID?
 
     nonisolated init(_ tx: Transaction) {
         id = tx.id
         type = tx.type.rawValue
         amount = tx.amount
-        category = tx.category
+        categoryId = tx.categoryId
         date = tx.date
         time = tx.time
         transactionDescription = tx.transactionDescription
@@ -127,7 +125,6 @@ private struct TransactionRecord: Codable {
         groupName = tx.groupName
         groupId = tx.groupId
         settlementId = tx.settlementId
-        categoryId = tx.categoryId
     }
 
     nonisolated func toTransaction() -> Transaction {
@@ -135,15 +132,14 @@ private struct TransactionRecord: Codable {
             id: id,
             type: TransactionKind(rawValue: type) ?? .expense,
             amount: amount,
-            category: category,
+            categoryId: categoryId,
             date: date,
             time: time,
             transactionDescription: transactionDescription,
             notes: notes,
             recurringExpenseId: recurringExpenseId,
             groupTransactionId: groupTransactionId,
-            settlementId: settlementId,
-            categoryId: categoryId
+            settlementId: settlementId
         )
         tx.groupName = groupName
         tx.groupId = groupId

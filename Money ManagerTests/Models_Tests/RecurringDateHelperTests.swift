@@ -11,7 +11,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             isActive: false
         )
@@ -26,7 +26,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Daily Coffee",
             amount: 50,
-            category: "Food",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday
         )
@@ -45,7 +45,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Weekly Gym",
             amount: 500,
-            category: "Health",
+            categoryId: UUID(),
             frequency: .weekly,
             startDate: pastDate
         )
@@ -73,7 +73,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Rent",
             amount: 15000,
-            category: "Housing",
+            categoryId: UUID(),
             frequency: .monthly,
             dayOfMonth: 15,
             startDate: startDate
@@ -96,7 +96,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Subscription",
             amount: 100,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: lastMonth
         )
@@ -114,7 +114,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Insurance",
             amount: 12000,
-            category: "Insurance",
+            categoryId: UUID(),
             frequency: .yearly,
             startDate: lastYear
         )
@@ -132,7 +132,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Active Subscription",
             amount: 100,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: startDate,
             endDate: endDate,
@@ -149,7 +149,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Weekly Yoga",
             amount: 200,
-            category: "Health",
+            categoryId: UUID(),
             frequency: .weekly,
             daysOfWeek: [1, 3, 5],
             startDate: pastDate
@@ -166,7 +166,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: startDate
         )
@@ -182,7 +182,7 @@ struct RecurringDateHelperTests {
         let expense = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: startDate,
             lastAddedDate: lastAdded
@@ -284,7 +284,7 @@ struct DateExtensionTests {
         let recurring = RecurringTransaction(
             name: "Old Subscription",
             amount: 100,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: twoDaysAgo,
             endDate: yesterday,  // endDate is in the past
@@ -305,7 +305,7 @@ struct DateExtensionTests {
         let recurring = RecurringTransaction(
             name: "Weekly",
             amount: 200,
-            category: "Food",
+            categoryId: UUID(),
             frequency: .weekly,
             daysOfWeek: [], // empty → falls back to weekly interval
             startDate: lastWeek,

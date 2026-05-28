@@ -1,10 +1,3 @@
-//
-//  RecurringTransaction.swift
-//  Money Manager
-//
-//  Created by Ankush Ganesh on 13/01/26.
-//
-
 import Foundation
 import SwiftData
 
@@ -21,7 +14,7 @@ final class RecurringTransaction {
 
     var name: String
     var amount: Double
-    var category: String
+    var categoryId: UUID
 
     var frequency: RecurringFrequency
     var dayOfMonth: Int?
@@ -34,9 +27,6 @@ final class RecurringTransaction {
 
     var notes: String?
 
-    /// UUID of the linked Category.
-    var categoryId: UUID?
-
     var type: TransactionKind
 
     @Attribute(originalName: "isDeleted") var isSoftDeleted: Bool
@@ -48,7 +38,7 @@ final class RecurringTransaction {
         id: UUID = UUID(),
         name: String,
         amount: Double,
-        category: String,
+        categoryId: UUID,
         frequency: RecurringFrequency,
         dayOfMonth: Int? = nil,
         daysOfWeek: [Int]? = nil,
@@ -57,14 +47,13 @@ final class RecurringTransaction {
         isActive: Bool = true,
         lastAddedDate: Date? = nil,
         notes: String? = nil,
-        categoryId: UUID? = nil,
         type: TransactionKind = .expense,
         isSoftDeleted: Bool = false
     ) {
         self.id = id
         self.name = name
         self.amount = amount
-        self.category = category
+        self.categoryId = categoryId
         self.frequency = frequency
         self.dayOfMonth = dayOfMonth
         self.daysOfWeek = daysOfWeek
@@ -73,7 +62,6 @@ final class RecurringTransaction {
         self.isActive = isActive
         self.lastAddedDate = lastAddedDate
         self.notes = notes
-        self.categoryId = categoryId
         self.type = type
         self.isSoftDeleted = isSoftDeleted
         self.createdAt = Date()

@@ -276,7 +276,7 @@ struct TransactionEditorView: View {
         .accessibilityIdentifier(viewModel.navigationTitleIdentifier)
         .toolbar { personalToolbar }
         .navigationDestination(isPresented: $viewModel.showCategoryPicker) {
-            CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
+            CategoryPickerView(selectedCategoryId: $viewModel.selectedCategoryId)
         }
         .task { viewModel.customCategories = customCategories }
         .onChange(of: customCategories) { _, newValue in viewModel.customCategories = newValue }
@@ -423,14 +423,14 @@ struct DetailRow: View {
 }
 
 #Preview("Edit Transaction") {
-    let transaction = Transaction(amount: 450, category: "food-dining", date: Date(),
+    let transaction = Transaction(amount: 450, categoryId: UUID(), date: Date(),
                                   transactionDescription: "Lunch at cafe", notes: "With colleagues")
     TransactionEditorView(mode: .edit(transaction))
         .modelContainer(for: [Transaction.self, Category.self], inMemory: true)
 }
 
 #Preview("View Transaction") {
-    let transaction = Transaction(amount: 450, category: "food-dining", date: Date(),
+    let transaction = Transaction(amount: 450, categoryId: UUID(), date: Date(),
                                   transactionDescription: "Lunch at cafe", notes: "With colleagues")
     TransactionEditorView(mode: .view(transaction))
         .modelContainer(for: [Transaction.self, Category.self, RecurringTransaction.self], inMemory: true)

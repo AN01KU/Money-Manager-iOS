@@ -11,9 +11,9 @@ struct Overview: View {
     @State private var viewModel = OverviewViewModel()
     @State private var navigationPath: [AppRoute] = []
     var pendingRoute: Binding<AppRoute?>?
-    var onCategoryTapped: ((String) -> Void)?
+    var onCategoryTapped: ((UUID) -> Void)?
 
-    init(pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((String) -> Void)? = nil) {
+    init(pendingRoute: Binding<AppRoute?>? = nil, onCategoryTapped: ((UUID) -> Void)? = nil) {
         self.pendingRoute = pendingRoute
         self.onCategoryTapped = onCategoryTapped
     }
@@ -48,7 +48,7 @@ struct Overview: View {
 
 private struct OverviewBody: View {
     @Bindable var viewModel: OverviewViewModel
-    let onCategoryTapped: ((String) -> Void)?
+    let onCategoryTapped: ((UUID) -> Void)?
     @Environment(\.authService) private var authService
 
     var body: some View {
@@ -82,7 +82,7 @@ private struct OverviewBody: View {
 
 private struct OverviewScrollContent: View {
     @Bindable var viewModel: OverviewViewModel
-    let onCategoryTapped: ((String) -> Void)?
+    let onCategoryTapped: ((UUID) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppConstants.UI.spacing20) {
@@ -91,8 +91,8 @@ private struct OverviewScrollContent: View {
                 .padding(.top, AppConstants.UI.spacingSM)
 
             if !viewModel.categorySpending.isEmpty {
-                CategoryChart(categorySpending: viewModel.categorySpending) { categoryName in
-                    onCategoryTapped?(categoryName)
+                CategoryChart(categorySpending: viewModel.categorySpending) { categoryId in
+                    onCategoryTapped?(categoryId)
                 }
                 .padding(.horizontal, AppConstants.UI.padding)
             } else {
@@ -371,7 +371,7 @@ private struct OverviewRecentTransactions: View {
     let onGroupTapped: ((UUID) -> Void)?
     @Query(sort: \Category.name) private var customCategories: [Category]
 
-    private var categoryLookup: [String: Category] {
+    private var categoryLookup: [UUID: Category] {
         CategoryResolver.makeLookup(from: customCategories)
     }
 
@@ -447,52 +447,13 @@ private func previewContainer(
     return container
 }
 
-#Preview("With Transactions & Budget") {
-    let calendar = Calendar.current
-    let today = Date()
-
-    let transactions = [
-        Transaction(amount: 450, category: "Food & Dining", date: today, transactionDescription: "Lunch at cafe"),
-        Transaction(amount: 120, category: "Food & Dining", date: today, transactionDescription: "Morning coffee"),
-        Transaction(type: .income, amount: 85000, category: "Salary", date: today, transactionDescription: "Monthly salary"),
-        Transaction(amount: 2000, category: "Transport", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Fuel"),
-        Transaction(amount: 1200, category: "Shopping", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "New shirt"),
-        Transaction(amount: 999, category: "Utilities", date: calendar.date(byAdding: .day, value: -5, to: today)!, transactionDescription: "Phone bill"),
-        Transaction(amount: 649, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, transactionDescription: "Netflix"),
-    ]
-
-    Overview()
-        .modelContainer(previewContainer(transactions: transactions, budgetLimit: 50000))
-}
-
 #Preview("Empty State") {
     Overview()
         .modelContainer(previewContainer())
 }
 
-#Preview("Over Budget") {
-    let calendar = Calendar.current
-    let today = Date()
-
-    let transactions = [
-        Transaction(amount: 15000, category: "Travel", date: today, transactionDescription: "Flight tickets"),
-        Transaction(amount: 8000, category: "Shopping", date: calendar.date(byAdding: .day, value: -1, to: today)!, transactionDescription: "Electronics"),
-        Transaction(amount: 5000, category: "Food & Dining", date: calendar.date(byAdding: .day, value: -2, to: today)!, transactionDescription: "Party dinner"),
-        Transaction(amount: 3000, category: "Entertainment", date: calendar.date(byAdding: .day, value: -3, to: today)!, transactionDescription: "Concert tickets"),
-    ]
-
-    Overview()
-        .modelContainer(previewContainer(transactions: transactions, budgetLimit: 10000))
-}
-
 #Preview("No Budget Set") {
-    let today = Date()
-    let transactions = [
-        Transaction(amount: 350, category: "Food & Dining", date: today, transactionDescription: "Dinner"),
-        Transaction(amount: 80, category: "Transport", date: today, transactionDescription: "Auto ride"),
-    ]
-
     Overview()
-        .modelContainer(previewContainer(transactions: transactions))
+        .modelContainer(previewContainer())
 }
 

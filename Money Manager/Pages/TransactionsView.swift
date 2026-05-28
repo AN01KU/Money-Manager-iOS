@@ -8,10 +8,10 @@ struct TransactionsView: View {
     @Query(sort: \Category.name) private var customCategories: [Category]
 
     @State private var viewModel = TransactionsViewModel()
-    var categoryFilter: Binding<String?>?
+    var categoryFilter: Binding<UUID?>?
     var onGroupTapped: ((UUID) -> Void)?
 
-    init(categoryFilter: Binding<String?>? = nil, onGroupTapped: ((UUID) -> Void)? = nil) {
+    init(categoryFilter: Binding<UUID?>? = nil, onGroupTapped: ((UUID) -> Void)? = nil) {
         self.categoryFilter = categoryFilter
         self.onGroupTapped = onGroupTapped
     }
@@ -26,9 +26,9 @@ struct TransactionsView: View {
             viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
         .onChange(of: categoryFilter?.wrappedValue) { _, newValue in
-            guard let category = newValue else { return }
+            guard let categoryId = newValue else { return }
             withAnimation {
-                viewModel.selectedCategoryFilter = category
+                viewModel.selectedCategoryFilter = categoryId
                 viewModel.transactionTypeFilter = .expenses
             }
             categoryFilter?.wrappedValue = nil
@@ -110,7 +110,7 @@ private struct TransactionsBody: View {
             Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }
         } message: {
             if let transaction = viewModel.transactionToDelete {
-                Text("Are you sure you want to delete \"\(transaction.transactionDescription ?? transaction.category)\"? This action cannot be undone.")
+                Text("Are you sure you want to delete \"\(transaction.transactionDescription ?? "this transaction")\"? This action cannot be undone.")
             }
         }
     }

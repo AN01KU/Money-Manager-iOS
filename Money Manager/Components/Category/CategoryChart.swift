@@ -10,7 +10,7 @@ import Charts
 
 struct CategoryChart: View {
     let categorySpending: [CategorySpending]
-    var onCategoryTapped: ((String) -> Void)?
+    var onCategoryTapped: ((UUID) -> Void)?
     
     private var pieData: [CategorySpending] {
         let sorted = categorySpending.sorted { $0.amount > $1.amount }
@@ -21,6 +21,7 @@ struct CategoryChart: View {
         let othersAmount = rest.reduce(0) { $0 + $1.amount }
         let othersPercentage = rest.reduce(0) { $0 + $1.percentage }
         let others = CategorySpending(
+            categoryId: UUID(),
             categoryName: "Other",
             icon: "ellipsis.circle.fill",
             color: Color(hex: "#95A5A6"),
@@ -61,7 +62,7 @@ struct CategoryChart: View {
                 VStack(spacing: 0) {
                     ForEach(categorySpending) { spending in
                         Button {
-                            onCategoryTapped?(spending.categoryKey)
+                            onCategoryTapped?(spending.categoryId)
                         } label: {
                             CategoryDetailRow(spending: spending, maxAmount: categorySpending.first?.amount ?? 1)
                         }
@@ -159,13 +160,9 @@ struct CategoryDetailRow: View {
 #Preview {
     ScrollView {
         CategoryChart(categorySpending: [
-            CategorySpending(categoryName: "Food & Dining", icon: "fork.knife.circle.fill", color: Color(hex: "#FF6B6B"), amount: 11308, percentage: 35),
-            CategorySpending(categoryName: "Transport", icon: "car.circle.fill", color: Color(hex: "#4ECDC4"), amount: 6490, percentage: 20),
-            CategorySpending(categoryName: "Shopping", icon: "bag.circle.fill", color: Color(hex: "#FFEAA7"), amount: 4200, percentage: 13),
-            CategorySpending(categoryName: "Entertainment", icon: "gamecontroller.circle.fill", color: Color(hex: "#BC6C25"), amount: 3500, percentage: 11),
-            CategorySpending(categoryName: "Utilities", icon: "bolt.square.fill", color: Color(hex: "#DDA15E"), amount: 2800, percentage: 9),
-            CategorySpending(categoryName: "Housing", icon: "house.circle.fill", color: Color(hex: "#45B7D1"), amount: 2100, percentage: 6),
-            CategorySpending(categoryName: "Other", icon: "ellipsis.circle.fill", color: Color(hex: "#95A5A6"), amount: 1952, percentage: 6)
+            CategorySpending(categoryId: UUID(), categoryName: "Food & Dining", icon: "fork.knife.circle.fill", color: Color(hex: "#FF6B6B"), amount: 11308, percentage: 35),
+            CategorySpending(categoryId: UUID(), categoryName: "Transport", icon: "car.circle.fill", color: Color(hex: "#4ECDC4"), amount: 6490, percentage: 20),
+            CategorySpending(categoryId: UUID(), categoryName: "Shopping", icon: "bag.circle.fill", color: Color(hex: "#FFEAA7"), amount: 4200, percentage: 13),
         ])
         .padding()
     }

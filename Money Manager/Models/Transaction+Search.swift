@@ -1,16 +1,11 @@
-//
-//  Transaction+Search.swift
-//  Money Manager
-//
-
 import Foundation
 
 extension Transaction {
     /// Returns true if the transaction matches the given search text.
-    /// An empty search text always returns true.
-    func matches(searchText: String) -> Bool {
+    /// Category name matching requires a pre-built lookup passed in.
+    func matches(searchText: String, categoryName: String = "") -> Bool {
         guard !searchText.isEmpty else { return true }
-        return category.localizedStandardContains(searchText) ||
+        return categoryName.localizedStandardContains(searchText) ||
             (transactionDescription?.localizedStandardContains(searchText) ?? false) ||
             (notes?.localizedStandardContains(searchText) ?? false)
     }

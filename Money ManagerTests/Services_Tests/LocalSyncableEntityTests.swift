@@ -19,7 +19,7 @@ struct LocalSyncableEntityTests {
     @Test func testTransaction_createRequestPayload_decodesCorrectFields() throws {
         let id = UUID()
         let date = Date(timeIntervalSince1970: 1_700_000_000)
-        let tx = Transaction(id: id, type: .expense, amount: 150.0, category: "Food", date: date)
+        let tx = Transaction(id: id, type: .expense, amount: 150.0, categoryId: UUID(), date: date)
 
         let data = try tx.createRequestPayload()
         let decoded = try JSONDecoder.apiDecoder.decode(APICreateTransactionRequest.self, from: data)
@@ -27,18 +27,16 @@ struct LocalSyncableEntityTests {
         #expect(decoded.id == id)
         #expect(decoded.type == .expense)
         #expect(decoded.amount == 150.0)
-        #expect(decoded.category == "Food")
     }
 
     @Test func testTransaction_updateRequestPayload_decodesCorrectFields() throws {
-        let tx = Transaction(type: .income, amount: 200.0, category: "Salary", date: Date())
+        let tx = Transaction(type: .income, amount: 200.0, categoryId: UUID(), date: Date())
 
         let data = try tx.updateRequestPayload()
         let decoded = try JSONDecoder.apiDecoder.decode(APIUpdateTransactionRequest.self, from: data)
 
         #expect(decoded.type == .income)
         #expect(decoded.amount == 200.0)
-        #expect(decoded.category == "Salary")
     }
 
     // MARK: - RecurringTransaction
@@ -53,7 +51,7 @@ struct LocalSyncableEntityTests {
 
     @Test func testRecurringTransaction_createRequestPayload_decodesCorrectFields() throws {
         let id = UUID()
-        let r = RecurringTransaction(id: id, name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let r = RecurringTransaction(id: id, name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
 
         let data = try r.createRequestPayload()
         let decoded = try JSONDecoder.apiDecoder.decode(APICreateRecurringTransactionRequest.self, from: data)
@@ -65,7 +63,7 @@ struct LocalSyncableEntityTests {
     }
 
     @Test func testRecurringTransaction_updateRequestPayload_decodesCorrectFields() throws {
-        let r = RecurringTransaction(name: "Spotify", amount: 199, category: "Music", frequency: .weekly)
+        let r = RecurringTransaction(name: "Spotify", amount: 199, categoryId: UUID(), frequency: .weekly)
 
         let data = try r.updateRequestPayload()
         let decoded = try JSONDecoder.apiDecoder.decode(APIUpdateRecurringTransactionRequest.self, from: data)

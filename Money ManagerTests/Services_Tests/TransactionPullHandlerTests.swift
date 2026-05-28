@@ -72,7 +72,7 @@ struct TransactionPullHandlerTests {
         let old = Date(timeIntervalSinceNow: -3600)
         let newer = Date(timeIntervalSinceNow: -10)
 
-        let local = Transaction(id: txId, amount: 10, category: "Food", date: Date())
+        let local = Transaction(id: txId, amount: 10, categoryId: UUID(), date: Date())
         local.updatedAt = old
         context.insert(local)
         try context.save()
@@ -95,7 +95,7 @@ struct TransactionPullHandlerTests {
         let newer = Date(timeIntervalSinceNow: -10)
         let older = Date(timeIntervalSinceNow: -3600)
 
-        let local = Transaction(id: txId, amount: 42, category: "Food", date: Date())
+        let local = Transaction(id: txId, amount: 42, categoryId: UUID(), date: Date())
         local.updatedAt = newer
         context.insert(local)
         try context.save()
@@ -128,7 +128,7 @@ struct TransactionPullHandlerTests {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        let tx = Transaction(id: UUID(), amount: 5, category: "Sub", date: Date())
+        let tx = Transaction(id: UUID(), amount: 5, categoryId: UUID(), date: Date())
         tx.recurringExpenseId = UUID()  // marks as server-owned
         context.insert(tx)
         try context.save()
@@ -147,7 +147,7 @@ struct TransactionPullHandlerTests {
         let context = ModelContext(container)
 
         // No recurringExpenseId / groupTransactionId / settlementId — plain personal txn
-        let tx = Transaction(id: UUID(), amount: 20, category: "Coffee", date: Date())
+        let tx = Transaction(id: UUID(), amount: 20, categoryId: UUID(), date: Date())
         context.insert(tx)
         try context.save()
 
@@ -164,8 +164,8 @@ struct TransactionPullHandlerTests {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        context.insert(Transaction(id: UUID(), amount: 1, category: "A", date: Date()))
-        context.insert(Transaction(id: UUID(), amount: 2, category: "B", date: Date()))
+        context.insert(Transaction(id: UUID(), amount: 1, categoryId: UUID(), date: Date()))
+        context.insert(Transaction(id: UUID(), amount: 2, categoryId: UUID(), date: Date()))
         try context.save()
 
         let remote = [apiTransaction(amount: 10), apiTransaction(amount: 20), apiTransaction(amount: 30)]

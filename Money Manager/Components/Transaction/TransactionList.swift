@@ -22,7 +22,7 @@ struct TransactionList: View {
     var onDelete: ((Transaction) -> Void)?
     var onGroupTapped: ((UUID) -> Void)?
 
-    private var categoryLookup: [String: Category] {
+    private var categoryLookup: [UUID: Category] {
         CategoryResolver.makeLookup(from: customCategories)
     }
 
@@ -101,9 +101,6 @@ struct TransactionList: View {
 
 
 #Preview {
-    TransactionList(transactions: [
-        Transaction(amount: 450, category: "Food & Dining", date: Date(), transactionDescription: "Lunch"),
-        Transaction(amount: 250, category: "Transport", date: Date(), transactionDescription: "Uber")
-    ]) { _ in }
-    .padding()
+    TransactionList(transactions: []) { _ in }
+        .padding()
 }

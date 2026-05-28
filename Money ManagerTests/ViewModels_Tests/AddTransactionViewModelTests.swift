@@ -50,7 +50,7 @@ struct AddTransactionViewModelTests {
         let addVM = AddTransactionViewModel(mode: .personal())
         #expect(addVM.navigationTitleIdentifier == "add-transaction")
 
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let editVM = AddTransactionViewModel(mode: .personal(editing: expense))
         #expect(editVM.navigationTitleIdentifier == "edit-expense")
     }
@@ -61,7 +61,7 @@ struct AddTransactionViewModelTests {
         vm.transactionType = .income
         #expect(vm.navigationTitleIdentifier == "add-income")
 
-        let income = Transaction(type: .income, amount: 100, category: "Work & Professional", date: Date())
+        let income = Transaction(type: .income, amount: 100, categoryId: UUID(), date: Date())
         let editVM = AddTransactionViewModel(mode: .personal(editing: income))
         #expect(editVM.navigationTitleIdentifier == "edit-income")
     }
@@ -70,9 +70,10 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSetupPopulatesFieldsFromTransaction() {
+        let categoryId = UUID()
         let expense = Transaction(
             amount: 250.50,
-            category: "Transport",
+            categoryId: categoryId,
             date: Date(),
             time: Date(),
             transactionDescription: "Taxi",
@@ -82,7 +83,7 @@ struct AddTransactionViewModelTests {
         vm.setup()
 
         #expect(vm.amount == "250.50")
-        #expect(vm.selectedCategory == "Transport")
+        #expect(vm.selectedCategoryId == categoryId)
         #expect(vm.description == "Taxi")
         #expect(vm.notes == "Airport trip")
         #expect(vm.hasTime == true)
@@ -94,7 +95,7 @@ struct AddTransactionViewModelTests {
         let income = Transaction(
             type: .income,
             amount: 5000,
-            category: "Work & Professional",
+            categoryId: UUID(),
             date: Date()
         )
         let vm = AddTransactionViewModel(mode: .personal(editing: income))
@@ -105,7 +106,7 @@ struct AddTransactionViewModelTests {
 
     @Test
     func testSetupWithNoTimeTransaction() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let vm = AddTransactionViewModel(mode: .personal(editing: expense))
         vm.setup()
 
@@ -160,7 +161,6 @@ struct AddTransactionViewModelTests {
         let expenses = try context.fetch(FetchDescriptor<Transaction>())
         #expect(expenses.count == 1)
         #expect(expenses.first?.amount == 150.75)
-        #expect(expenses.first?.category == "Food & Dining")
         #expect(expenses.first?.transactionDescription == "Lunch")
         #expect(expenses.first?.notes == "With team")
         #expect(expenses.first?.time != nil)
@@ -220,7 +220,7 @@ struct AddTransactionViewModelTests {
         let context = try makeContext()
         let existing = Transaction(
             amount: 100,
-            category: "Food",
+            categoryId: UUID(),
             date: Date(),
             time: Date(),
             transactionDescription: "Old",
@@ -242,7 +242,6 @@ struct AddTransactionViewModelTests {
 
         #expect(completed == true)
         #expect(existing.amount == 200)
-        #expect(existing.category == "Transport")
         #expect(existing.transactionDescription == "Updated")
         #expect(existing.notes == nil)
         #expect(existing.time == nil)
@@ -451,12 +450,12 @@ struct AddTransactionViewModelTests {
     func testSaveShowsRecurringAlertWhenEditingRecurringLinkedWithChangedAmount() throws {
         let context = try makeContext()
         // Create a recurring transaction and a linked expense
-        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, categoryId: UUID(), frequency: .monthly)
         context.insert(recurring)
 
         let existing = Transaction(
             amount: 1000,
-            category: "Housing",
+            categoryId: UUID(),
             date: Date(),
             recurringExpenseId: recurring.id
         )
@@ -480,12 +479,12 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveDoesNotShowAlertWhenAmountUnchanged() throws {
         let context = try makeContext()
-        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, categoryId: UUID(), frequency: .monthly)
         context.insert(recurring)
 
         let existing = Transaction(
             amount: 1000,
-            category: "Housing",
+            categoryId: UUID(),
             date: Date(),
             recurringExpenseId: recurring.id
         )
@@ -509,12 +508,12 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveAlsoUpdatingRecurringUpdatesRecurringAmount() throws {
         let context = try makeContext()
-        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, categoryId: UUID(), frequency: .monthly)
         context.insert(recurring)
 
         let existing = Transaction(
             amount: 1000,
-            category: "Housing",
+            categoryId: UUID(),
             date: Date(),
             recurringExpenseId: recurring.id
         )
@@ -544,12 +543,12 @@ struct AddTransactionViewModelTests {
     @Test
     func testSaveThisTransactionOnlyDoesNotUpdateRecurringTemplate() throws {
         let context = try makeContext()
-        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, categoryId: UUID(), frequency: .monthly)
         context.insert(recurring)
 
         let existing = Transaction(
             amount: 1000,
-            category: "Housing",
+            categoryId: UUID(),
             date: Date(),
             recurringExpenseId: recurring.id
         )

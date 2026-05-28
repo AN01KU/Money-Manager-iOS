@@ -19,7 +19,6 @@ import SwiftData
         recurring
     }
 
-    /// Active recurring transactions with a next occurrence falling within the current calendar month.
     var upcomingThisMonth: [RecurringTransaction] {
         let interval = Calendar.current.monthInterval(for: Date())
         return activeRecurring
@@ -30,7 +29,6 @@ import SwiftData
             .sorted { ($0.nextOccurrence ?? .distantFuture) < ($1.nextOccurrence ?? .distantFuture) }
     }
 
-    /// Net amount for upcoming transactions this month (income - expense).
     var upcomingTotalThisMonth: Double {
         upcomingThisMonth.reduce(0) { total, item in
             item.type == .income ? total + item.amount : total - item.amount
@@ -62,8 +60,6 @@ import SwiftData
     func deleteItem(_ item: RecurringTransaction) {
         let recurringId = item.id
 
-        // Remove from the in-memory array first so computed properties (upcomingThisMonth, etc.)
-        // never access the item's attributes after SwiftData detaches its backing store.
         recurring.removeAll { $0.id == recurringId }
 
         item.isSoftDeleted = true
@@ -97,10 +93,9 @@ import SwiftData
 @Observable class EditRecurringTransactionViewModel {
     var name: String = ""
     var amount: String = ""
-    var selectedCategory: String = ""
+    var selectedCategoryId: UUID = UUID()
     var selectedCategoryName: String {
-        let lookup = CategoryResolver.makeLookup(from: customCategories)
-        return CategoryResolver.resolveAll(selectedCategory, lookup: lookup).name
+        categoryLookup[selectedCategoryId]?.name ?? ""
     }
     var transactionType: TransactionKind = .expense
     var frequency: RecurringFrequency = .monthly
@@ -115,7 +110,10 @@ import SwiftData
     var errorMessage = ""
     var frequencyError: String? = nil
 
-    var customCategories: [Category] = []
+    var customCategories: [Category] = [] {
+        didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
+    }
+    private var categoryLookup: [UUID: Category] = [:]
 
     private var originalFrequency: RecurringFrequency = .monthly
 
@@ -124,7 +122,6 @@ import SwiftData
     var isValid: Bool {
         guard let amountValue = Double(amount), amountValue > 0 else { return false }
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        guard !selectedCategory.isEmpty else { return false }
         return frequencyValidationError == nil
     }
 
@@ -143,7 +140,7 @@ import SwiftData
     func load(from recurring: RecurringTransaction, categories: [Category] = []) {
         name = recurring.name
         amount = recurring.amount.editableString
-        selectedCategory = recurring.category
+        selectedCategoryId = recurring.categoryId
         transactionType = recurring.type
         frequency = recurring.frequency
         originalFrequency = recurring.frequency
@@ -173,11 +170,6 @@ import SwiftData
             showError = true
             return false
         }
-        guard !selectedCategory.isEmpty else {
-            errorMessage = "Please select a category"
-            showError = true
-            return false
-        }
         if let freqErr = frequencyValidationError {
             errorMessage = freqErr
             showError = true
@@ -186,8 +178,7 @@ import SwiftData
 
         recurring.name = trimmed
         recurring.amount = amountValue
-        recurring.category = selectedCategory
-        recurring.categoryId = categories.first(where: { $0.key == selectedCategory })?.id
+        recurring.categoryId = selectedCategoryId
         recurring.type = transactionType
         recurring.frequency = frequency
         recurring.startDate = startDate
@@ -204,10 +195,9 @@ import SwiftData
 @Observable class AddRecurringTransactionViewModel {
     var name: String = ""
     var amount: String = ""
-    var selectedCategory: String = ""
+    var selectedCategoryId: UUID = UUID()
     var selectedCategoryName: String {
-        let lookup = CategoryResolver.makeLookup(from: customCategories)
-        return CategoryResolver.resolveAll(selectedCategory, lookup: lookup).name
+        categoryLookup[selectedCategoryId]?.name ?? ""
     }
     var transactionType: TransactionKind = .expense
     var frequency: RecurringFrequency = .monthly
@@ -222,7 +212,10 @@ import SwiftData
 
     let frequencies = RecurringFrequency.allCases
 
-    var customCategories: [Category] = []
+    var customCategories: [Category] = [] {
+        didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
+    }
+    private var categoryLookup: [UUID: Category] = [:]
     @ObservationIgnored var persistence: PersistenceService
 
     init(persistence: PersistenceService = .testing) {
@@ -232,16 +225,14 @@ import SwiftData
     var modelContext: ModelContext { persistence.modelContext }
 
     var isValid: Bool {
-        guard let amountValue = Double(amount), amountValue > 0 else {
-            return false
-        }
-        return !name.trimmingCharacters(in: .whitespaces).isEmpty && !selectedCategory.isEmpty
+        guard let amountValue = Double(amount), amountValue > 0 else { return false }
+        return !name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    func prefill(amount: String, category: String, type: TransactionKind = .expense) {
-        self.amount = amount
-        self.selectedCategory = category
+    func prefill(categoryId: UUID, type: TransactionKind = .expense, amountString: String = "") {
+        self.selectedCategoryId = categoryId
         self.transactionType = type
+        self.amount = amountString
     }
 
     func save() -> Bool {
@@ -257,27 +248,19 @@ import SwiftData
             return false
         }
 
-        guard !selectedCategory.isEmpty else {
-            errorMessage = "Please select a category"
-            showError = true
-            return false
-        }
-
         let modelContext = modelContext
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
 
         let recurringTransaction = RecurringTransaction(
             name: trimmedName,
             amount: amountValue,
-            category: selectedCategory,
+            categoryId: selectedCategoryId,
             frequency: frequency,
             dayOfMonth: frequency == .monthly ? dayOfMonth : nil,
             startDate: startDate,
             endDate: hasEndDate ? endDate : nil,
             notes: notes.isEmpty ? nil : notes,
-            categoryId: resolvedCategoryId,
             type: transactionType
         )
 

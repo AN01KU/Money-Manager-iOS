@@ -3,15 +3,16 @@ import Foundation
 struct Spending {
     let income: Decimal
     let expense: Decimal
-    /// Expense totals grouped by category name.
-    let byCategory: [String: Decimal]
+    /// Expense totals grouped by category UUID.
+    let byCategory: [UUID: Decimal]
     /// Transactions matching the date interval and optional search term, excluding soft-deleted rows.
     let filtered: [Transaction]
 
     @MainActor static func from(
         transactions: [Transaction],
         in interval: DateInterval,
-        search: String? = nil
+        search: String? = nil,
+        categoryLookup: [UUID: Category] = [:]
     ) -> Spending {
         let active = transactions.filter {
             !$0.isSoftDeleted &&
@@ -22,9 +23,10 @@ struct Spending {
         let matched: [Transaction]
         if let search, !search.isEmpty {
             matched = active.filter {
-                $0.category.localizedStandardContains(search) ||
-                ($0.transactionDescription?.localizedStandardContains(search) ?? false) ||
-                ($0.notes?.localizedStandardContains(search) ?? false)
+                let catName = categoryLookup[$0.categoryId]?.name ?? ""
+                return catName.localizedStandardContains(search) ||
+                    ($0.transactionDescription?.localizedStandardContains(search) ?? false) ||
+                    ($0.notes?.localizedStandardContains(search) ?? false)
             }
         } else {
             matched = active
@@ -32,7 +34,7 @@ struct Spending {
 
         var income: Decimal = 0
         var expense: Decimal = 0
-        var byCategory: [String: Decimal] = [:]
+        var byCategory: [UUID: Decimal] = [:]
 
         for t in active {
             let amount = Decimal(t.amount)
@@ -40,7 +42,7 @@ struct Spending {
                 income += amount
             } else {
                 expense += amount
-                byCategory[t.category, default: 0] += amount
+                byCategory[t.categoryId, default: 0] += amount
             }
         }
 

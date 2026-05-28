@@ -30,7 +30,7 @@ struct BudgetsViewModelInsightTests {
 
     @Test func testInsightIconIsExclamationWhenOverBudget() {
         let vm = makeVM()
-        let tx = Transaction(amount: 600, category: "Food", date: Self.fixedRef)
+        let tx = Transaction(amount: 600, categoryId: UUID(), date: Self.fixedRef)
         vm.configure(allTransactions: [tx], userBudget: budget(limit: 500))
         #expect(vm.insightIcon == "exclamationmark.triangle.fill")
     }
@@ -51,7 +51,7 @@ struct BudgetsViewModelInsightTests {
 
     @Test func testInsightColorIsExpenseWhenOverBudget() {
         let vm = makeVM()
-        let tx = Transaction(amount: 300, category: "Food", date: Self.fixedRef)
+        let tx = Transaction(amount: 300, categoryId: UUID(), date: Self.fixedRef)
         vm.configure(allTransactions: [tx], userBudget: budget(limit: 200))
         #expect(vm.insightColor == AppColors.expense)
     }

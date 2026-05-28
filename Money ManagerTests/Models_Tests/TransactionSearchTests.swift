@@ -1,8 +1,3 @@
-//
-//  TransactionSearchTests.swift
-//  Money ManagerTests
-//
-
 import Foundation
 import Testing
 @testable import Money_Manager
@@ -11,14 +6,14 @@ import Testing
 struct TransactionSearchTests {
 
     private func makeTx(
-        category: String = "Food & Dining",
+        categoryId: UUID = UUID(),
         description: String? = nil,
         notes: String? = nil
     ) -> Transaction {
         Transaction(
             type: .expense,
             amount: 10,
-            category: category,
+            categoryId: categoryId,
             date: Date(),
             transactionDescription: description,
             notes: notes
@@ -28,25 +23,25 @@ struct TransactionSearchTests {
     // MARK: - Empty search
 
     @Test func emptySearch_returnsTrue() {
-        let tx = makeTx(category: "Food", description: "Lunch", notes: "With Alice")
+        let tx = makeTx(description: "Lunch", notes: "With Alice")
         #expect(tx.matches(searchText: "") == true)
     }
 
-    // MARK: - Category matching
+    // MARK: - Category matching (via categoryName param)
 
     @Test func matchesCategory_exactMatch() {
-        let tx = makeTx(category: "Transport")
-        #expect(tx.matches(searchText: "Transport") == true)
+        let tx = makeTx()
+        #expect(tx.matches(searchText: "Transport", categoryName: "Transport") == true)
     }
 
     @Test func matchesCategory_caseInsensitive() {
-        let tx = makeTx(category: "Food & Dining")
-        #expect(tx.matches(searchText: "food") == true)
+        let tx = makeTx()
+        #expect(tx.matches(searchText: "food", categoryName: "Food & Dining") == true)
     }
 
     @Test func matchesCategory_partialMatch() {
-        let tx = makeTx(category: "Entertainment")
-        #expect(tx.matches(searchText: "entertain") == true)
+        let tx = makeTx()
+        #expect(tx.matches(searchText: "entertain", categoryName: "Entertainment") == true)
     }
 
     // MARK: - Description matching
@@ -62,7 +57,7 @@ struct TransactionSearchTests {
     }
 
     @Test func nilDescription_doesNotMatch() {
-        let tx = makeTx(category: "Food", description: nil)
+        let tx = makeTx(description: nil)
         #expect(tx.matches(searchText: "lunch") == false)
     }
 
@@ -74,22 +69,14 @@ struct TransactionSearchTests {
     }
 
     @Test func nilNotes_doesNotMatch() {
-        let tx = makeTx(category: "Shopping", notes: nil)
+        let tx = makeTx(notes: nil)
         #expect(tx.matches(searchText: "receipt") == false)
-    }
-
-    // MARK: - Unicode / normalization
-
-    @Test func matchesUnicode_accentInsensitive() {
-        let tx = makeTx(category: "Café")
-        // localizedStandardContains handles accent folding
-        #expect(tx.matches(searchText: "cafe") == true)
     }
 
     // MARK: - No match
 
     @Test func noMatch_returnsFalse() {
-        let tx = makeTx(category: "Housing", description: "Rent", notes: "Monthly")
+        let tx = makeTx(description: "Rent", notes: "Monthly")
         #expect(tx.matches(searchText: "coffee") == false)
     }
 }

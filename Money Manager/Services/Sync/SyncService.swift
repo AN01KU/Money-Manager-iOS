@@ -236,9 +236,11 @@ final class SyncService: SyncServiceProtocol {
     }
 
     private func enqueueLocalData(context: ModelContext) {
+        let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
+
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for tx in transactions where !tx.isSoftDeleted {
-            guard let payload = try? AppAPIClient.apiEncoder.encode(tx.toCreateRequest()) else { continue }
+            guard let payload = try? AppAPIClient.apiEncoder.encode(tx.toCreateRequest(categories: categories)) else { continue }
             changeQueue.enqueue(
                 PendingChangeDraft(entityType: .transaction, entityID: tx.id, action: .create,
                                    endpoint: "/transactions", httpMethod: .post, payload: payload),
@@ -246,7 +248,6 @@ final class SyncService: SyncServiceProtocol {
             )
         }
 
-        let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
         let customOnly = categories.filter { !$0.isPredefined }
         AppLogger.sync.debug("[EnqueueLocalData] total Category rows=\(categories.count) uploading custom-only=\(customOnly.count)")
         for cat in customOnly {
@@ -270,7 +271,7 @@ final class SyncService: SyncServiceProtocol {
 
         let recurringItems = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         for item in recurringItems where !item.isSoftDeleted {
-            guard let payload = try? AppAPIClient.apiEncoder.encode(item.toCreateRequest()) else { continue }
+            guard let payload = try? AppAPIClient.apiEncoder.encode(item.toCreateRequest(categories: categories)) else { continue }
             changeQueue.enqueue(
                 PendingChangeDraft(entityType: .recurring, entityID: item.id, action: .create,
                                    endpoint: "/recurring-transactions", httpMethod: .post, payload: payload),

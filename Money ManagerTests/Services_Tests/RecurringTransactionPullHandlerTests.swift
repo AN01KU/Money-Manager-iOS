@@ -64,7 +64,7 @@ struct RecurringTransactionPullHandlerTests {
         let old = Date(timeIntervalSinceNow: -3600)
         let newer = Date(timeIntervalSinceNow: -10)
 
-        let local = RecurringTransaction(id: rid, name: "Spotify", amount: 10, category: "Music",
+        let local = RecurringTransaction(id: rid, name: "Spotify", amount: 10, categoryId: UUID(),
                                          frequency: .monthly, startDate: Date())
         local.updatedAt = old
         context.insert(local)
@@ -90,7 +90,7 @@ struct RecurringTransactionPullHandlerTests {
         let newer = Date(timeIntervalSinceNow: -10)
         let older = Date(timeIntervalSinceNow: -3600)
 
-        let local = RecurringTransaction(id: rid, name: "Gym", amount: 50, category: "Health",
+        let local = RecurringTransaction(id: rid, name: "Gym", amount: 50, categoryId: UUID(),
                                          frequency: .monthly, startDate: Date())
         local.updatedAt = newer
         context.insert(local)
@@ -112,7 +112,7 @@ struct RecurringTransactionPullHandlerTests {
         let container = try makeContainer()
         let context = ModelContext(container)
         let handler = RecurringTransactionPullHandler()
-        let invalid = apiRecurring(category: "   ")
+        let invalid = apiRecurring(category: "")
 
         try await handler.pull(api: makeAPIClient(recurring: [invalid]),
                                changeQueue: makeChangeQueue(), context: context)
@@ -130,7 +130,7 @@ struct RecurringTransactionPullHandlerTests {
         let old = Date(timeIntervalSinceNow: -3600)
         let newer = Date(timeIntervalSinceNow: -10)
 
-        let local = RecurringTransaction(id: rid, name: "Old Sub", amount: 5, category: "Other",
+        let local = RecurringTransaction(id: rid, name: "Old Sub", amount: 5, categoryId: UUID(),
                                          frequency: .monthly, startDate: Date(), isSoftDeleted: true)
         local.updatedAt = old
         context.insert(local)
@@ -152,7 +152,7 @@ struct RecurringTransactionPullHandlerTests {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        let local = RecurringTransaction(id: UUID(), name: "Stale", amount: 5, category: "Food",
+        let local = RecurringTransaction(id: UUID(), name: "Stale", amount: 5, categoryId: UUID(),
                                          frequency: .monthly, startDate: Date())
         context.insert(local)
         try context.save()
@@ -172,7 +172,7 @@ struct RecurringTransactionPullHandlerTests {
         let context = ModelContext(container)
         let rid = UUID()
 
-        let local = RecurringTransaction(id: rid, name: "Pending Sub", amount: 8, category: "Food",
+        let local = RecurringTransaction(id: rid, name: "Pending Sub", amount: 8, categoryId: UUID(),
                                          frequency: .monthly, startDate: Date())
         context.insert(local)
 
@@ -195,7 +195,7 @@ struct RecurringTransactionPullHandlerTests {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        context.insert(RecurringTransaction(id: UUID(), name: "A", amount: 1, category: "A",
+        context.insert(RecurringTransaction(id: UUID(), name: "A", amount: 1, categoryId: UUID(),
                                              frequency: .monthly, startDate: Date()))
         try context.save()
 

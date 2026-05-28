@@ -22,18 +22,18 @@ struct TransactionEditorViewModelTests {
     func testCreateModeStartsEmpty() {
         let vm = TransactionEditorViewModel(mode: .create)
         #expect(vm.amountText.isEmpty)
-        #expect(vm.selectedCategory == "other")
         #expect(vm.description.isEmpty)
         #expect(vm.transactionType == .expense)
     }
 
     @Test
     func testViewModePopulatesFromTransaction() {
-        let tx = Transaction(type: .income, amount: 1234.50, category: "food-dining", date: Date(),
+        let catId = UUID()
+        let tx = Transaction(type: .income, amount: 1234.50, categoryId: catId, date: Date(),
                              transactionDescription: "Lunch", notes: "With team")
         let vm = TransactionEditorViewModel(mode: .view(tx))
         #expect(vm.amountText == "1234.50")
-        #expect(vm.selectedCategory == "food-dining")
+        #expect(vm.selectedCategoryId == catId)
         #expect(vm.description == "Lunch")
         #expect(vm.notes == "With team")
         #expect(vm.transactionType == .income)
@@ -41,10 +41,11 @@ struct TransactionEditorViewModelTests {
 
     @Test
     func testEditModePopulatesFromTransaction() {
-        let tx = Transaction(amount: 99, category: "transport", date: Date())
+        let catId = UUID()
+        let tx = Transaction(amount: 99, categoryId: catId, date: Date())
         let vm = TransactionEditorViewModel(mode: .edit(tx))
         #expect(vm.amountText == "99")
-        #expect(vm.selectedCategory == "transport")
+        #expect(vm.selectedCategoryId == catId)
     }
 
     // MARK: - canSave
@@ -72,7 +73,7 @@ struct TransactionEditorViewModelTests {
 
     @Test
     func testCanSaveFalseInViewMode() {
-        let tx = Transaction(amount: 50, category: "other", date: Date())
+        let tx = Transaction(amount: 50, categoryId: UUID(), date: Date())
         let vm = TransactionEditorViewModel(mode: .view(tx))
         vm.amountText = "100"
         #expect(vm.canSave == false)
@@ -108,7 +109,6 @@ struct TransactionEditorViewModelTests {
     func testDateLabelWithTime() {
         let vm = TransactionEditorViewModel(mode: .create)
         vm.hasTime = true
-        // dateLabel should contain both date and time parts
         let datePart = vm.selectedDate.formatted(date: .abbreviated, time: .omitted)
         let timePart = vm.selectedTime.formatted(date: .omitted, time: .shortened)
         #expect(vm.dateLabel.contains(datePart))
@@ -147,7 +147,7 @@ struct TransactionEditorViewModelTests {
         let persistence = try makePersistence()
         let vm = TransactionEditorViewModel(mode: .create, persistence: persistence)
         vm.amountText = "150"
-        vm.selectedCategory = "food-dining"
+        vm.selectedCategoryId = UUID()
         vm.description = "Dinner"
         vm.hasTime = false
 
@@ -161,7 +161,6 @@ struct TransactionEditorViewModelTests {
         let all = try ctx.fetch(FetchDescriptor<Transaction>())
         #expect(all.count == 1)
         #expect(all[0].amount == 150)
-        #expect(all[0].category == "food-dining")
     }
 
     @Test
@@ -181,19 +180,18 @@ struct TransactionEditorViewModelTests {
     @Test
     func testSaveEditUpdatesTransaction() throws {
         let persistence = try makePersistence()
-        let tx = Transaction(amount: 50, category: "transport", date: Date())
+        let tx = Transaction(amount: 50, categoryId: UUID(), date: Date())
         persistence.modelContext.insert(tx)
 
         let vm = TransactionEditorViewModel(mode: .edit(tx), persistence: persistence)
         vm.amountText = "200"
-        vm.selectedCategory = "food-dining"
+        vm.selectedCategoryId = UUID()
 
         var didComplete = false
         vm.save { didComplete = true }
 
         #expect(didComplete)
         #expect(tx.amount == 200)
-        #expect(tx.category == "food-dining")
     }
 
     // MARK: - save (view mode — no-op)
@@ -201,7 +199,7 @@ struct TransactionEditorViewModelTests {
     @Test
     func testSaveInViewModeDoesNothing() throws {
         let persistence = try makePersistence()
-        let tx = Transaction(amount: 50, category: "other", date: Date())
+        let tx = Transaction(amount: 50, categoryId: UUID(), date: Date())
         persistence.modelContext.insert(tx)
 
         let vm = TransactionEditorViewModel(mode: .view(tx), persistence: persistence)
@@ -219,7 +217,7 @@ struct TransactionEditorViewModelTests {
     @Test
     func testDeleteSoftDeletesTransaction() throws {
         let persistence = try makePersistence()
-        let tx = Transaction(amount: 50, category: "other", date: Date())
+        let tx = Transaction(amount: 50, categoryId: UUID(), date: Date())
         persistence.modelContext.insert(tx)
 
         let vm = TransactionEditorViewModel(mode: .edit(tx), persistence: persistence)

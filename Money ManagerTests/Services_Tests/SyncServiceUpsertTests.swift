@@ -136,7 +136,6 @@ struct SyncServiceUpsertTests {
         let local = try context.fetch(FetchDescriptor<Transaction>())
         #expect(local.count == 1)
         #expect(local.first?.amount == 42)
-        #expect(local.first?.category == "Food")
     }
 
     // MARK: - upsertTransactions: updates existing transaction when server is newer
@@ -149,7 +148,7 @@ struct SyncServiceUpsertTests {
         let newer = Date(timeIntervalSinceNow: -10)
 
         // Insert an older local version
-        let localTx = Transaction(id: txId, amount: 10, category: "Food", date: Date())
+        let localTx = Transaction(id: txId, amount: 10, categoryId: UUID(), date: Date())
         localTx.updatedAt = old
         context.insert(localTx)
         try context.save()
@@ -187,7 +186,7 @@ struct SyncServiceUpsertTests {
         let context = ModelContext(container)
 
         // Local recurring-linked transaction not in server response
-        let tx = Transaction(id: UUID(), amount: 5, category: "Sub", date: Date())
+        let tx = Transaction(id: UUID(), amount: 5, categoryId: UUID(), date: Date())
         tx.recurringExpenseId = UUID() // makes it server-owned
         context.insert(tx)
         try context.save()
@@ -215,7 +214,6 @@ struct SyncServiceUpsertTests {
         let context = ModelContext(container)
         let local = try context.fetch(FetchDescriptor<RecurringTransaction>())
         #expect(local.count == 1)
-        #expect(local.first?.category == "Bills")
     }
 
     // MARK: - upsertRecurring: updates existing recurring when server is newer
@@ -228,7 +226,7 @@ struct SyncServiceUpsertTests {
         let newer = Date(timeIntervalSinceNow: -10)
 
         let localRec = RecurringTransaction(
-            id: recId, name: "OldName", amount: 5, category: "Bills",
+            id: recId, name: "OldName", amount: 5, categoryId: UUID(),
             frequency: .monthly, startDate: Date()
         )
         localRec.updatedAt = old
@@ -451,8 +449,8 @@ struct SyncServiceUpsertTests {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        context.insert(Transaction(amount: 5, category: "Food", date: Date()))
-        context.insert(RecurringTransaction(name: "Sub", amount: 10, category: "Bills", frequency: .monthly, startDate: Date()))
+        context.insert(Transaction(amount: 5, categoryId: UUID(), date: Date()))
+        context.insert(RecurringTransaction(name: "Sub", amount: 10, categoryId: UUID(), frequency: .monthly, startDate: Date()))
         context.insert(UserBudget(limit: 5000))
         context.insert(Category(name: "Travel", icon: "star", color: "#000"))
         try context.save()

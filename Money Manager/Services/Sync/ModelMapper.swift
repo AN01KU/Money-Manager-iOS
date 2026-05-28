@@ -16,11 +16,13 @@ extension Transaction: LocalSyncableEntity {
     static var endpoint: String { "/transactions" }
 
     func createRequestPayload() throws -> Data {
-        try AppAPIClient.apiEncoder.encode(toCreateRequest())
+        let categories = (try? modelContext?.fetch(FetchDescriptor<Category>())) ?? []
+        return try AppAPIClient.apiEncoder.encode(toCreateRequest(categories: categories))
     }
 
     func updateRequestPayload() throws -> Data {
-        try AppAPIClient.apiEncoder.encode(toUpdateRequest())
+        let categories = (try? modelContext?.fetch(FetchDescriptor<Category>())) ?? []
+        return try AppAPIClient.apiEncoder.encode(toUpdateRequest(categories: categories))
     }
 }
 
@@ -29,11 +31,13 @@ extension RecurringTransaction: LocalSyncableEntity {
     static var endpoint: String { "/recurring-transactions" }
 
     func createRequestPayload() throws -> Data {
-        try AppAPIClient.apiEncoder.encode(toCreateRequest())
+        let categories = (try? modelContext?.fetch(FetchDescriptor<Category>())) ?? []
+        return try AppAPIClient.apiEncoder.encode(toCreateRequest(categories: categories))
     }
 
     func updateRequestPayload() throws -> Data {
-        try AppAPIClient.apiEncoder.encode(toUpdateRequest())
+        let categories = (try? modelContext?.fetch(FetchDescriptor<Category>())) ?? []
+        return try AppAPIClient.apiEncoder.encode(toUpdateRequest(categories: categories))
     }
 }
 
@@ -53,12 +57,12 @@ extension Category: LocalSyncableEntity {
 // MARK: - Request factories
 
 extension Transaction {
-    func toCreateRequest() -> APICreateTransactionRequest {
+    @MainActor func toCreateRequest(categories: [Category]) -> APICreateTransactionRequest {
         APICreateTransactionRequest(
             id: id,
             type: type,
             amount: amount,
-            category: category,
+            category: CategorySyncHelpers.serverKey(for: categoryId, in: categories),
             date: date,
             time: time,
             description: transactionDescription,
@@ -68,11 +72,11 @@ extension Transaction {
         )
     }
 
-    func toUpdateRequest() -> APIUpdateTransactionRequest {
+    @MainActor func toUpdateRequest(categories: [Category]) -> APIUpdateTransactionRequest {
         APIUpdateTransactionRequest(
             type: type,
             amount: amount,
-            category: category,
+            category: CategorySyncHelpers.serverKey(for: categoryId, in: categories),
             date: date,
             time: time,
             description: transactionDescription,
@@ -80,10 +84,10 @@ extension Transaction {
         )
     }
 
-    func applyRemote(_ api: APITransaction) {
+    @MainActor func applyRemote(_ api: APITransaction, keyToUUID: [String: UUID], otherUUID: UUID) {
         self.type = api.type
         self.amount = api.amount
-        self.category = api.category
+        self.categoryId = CategorySyncHelpers.resolveKey(api.category, keyToUUID: keyToUUID, otherUUID: otherUUID)
         self.date = api.date
         self.time = api.time
         self.transactionDescription = api.description
@@ -99,12 +103,12 @@ extension Transaction {
 }
 
 extension RecurringTransaction {
-    func toCreateRequest() -> APICreateRecurringTransactionRequest {
+    @MainActor func toCreateRequest(categories: [Category]) -> APICreateRecurringTransactionRequest {
         APICreateRecurringTransactionRequest(
             id: id,
             name: name,
             amount: amount,
-            category: category,
+            category: CategorySyncHelpers.serverKey(for: categoryId, in: categories),
             frequency: frequency.rawValue,
             dayOfMonth: dayOfMonth,
             daysOfWeek: daysOfWeek,
@@ -117,11 +121,11 @@ extension RecurringTransaction {
         )
     }
 
-    func toUpdateRequest() -> APIUpdateRecurringTransactionRequest {
+    @MainActor func toUpdateRequest(categories: [Category]) -> APIUpdateRecurringTransactionRequest {
         APIUpdateRecurringTransactionRequest(
             name: name,
             amount: amount,
-            category: category,
+            category: CategorySyncHelpers.serverKey(for: categoryId, in: categories),
             frequency: frequency.rawValue,
             dayOfMonth: dayOfMonth,
             daysOfWeek: daysOfWeek,
@@ -133,10 +137,10 @@ extension RecurringTransaction {
         )
     }
 
-    func applyRemote(_ api: APIRecurringTransaction) {
+    @MainActor func applyRemote(_ api: APIRecurringTransaction, keyToUUID: [String: UUID], otherUUID: UUID) {
         self.name = api.name
         self.amount = api.amount
-        self.category = api.category
+        self.categoryId = CategorySyncHelpers.resolveKey(api.category, keyToUUID: keyToUUID, otherUUID: otherUUID)
         self.frequency = RecurringFrequency(rawValue: api.frequency) ?? self.frequency
         self.dayOfMonth = api.dayOfMonth
         self.daysOfWeek = api.daysOfWeek

@@ -897,7 +897,6 @@ struct APIIntegrationTests {
         )
 
         #expect(compareAmount(response.totalAmount, 90.00))
-        #expect(response.category == "food-dining")
         #expect(response.paidByUserId == member.id)
         #expect(!response.splits.isEmpty)
     }

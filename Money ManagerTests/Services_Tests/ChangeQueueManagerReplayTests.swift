@@ -106,7 +106,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let txId = UUID()
-        let tx = Transaction(id: txId, amount: 10, category: "Food", date: Date())
+        let tx = Transaction(id: txId, amount: 10, categoryId: UUID(), date: Date())
         context.insert(tx)
 
         let change = PendingChange(
@@ -137,7 +137,7 @@ struct ChangeQueueManagerReplayTests {
 
         let recId = UUID()
         let rec = RecurringTransaction(
-            id: recId, name: "Sub", amount: 9, category: "Bills",
+            id: recId, name: "Sub", amount: 9, categoryId: UUID(),
             frequency: .monthly, startDate: Date()
         )
         context.insert(rec)
@@ -195,7 +195,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let txId = UUID()
-        let tx = Transaction(id: txId, amount: 5, category: "Misc", date: Date())
+        let tx = Transaction(id: txId, amount: 5, categoryId: UUID(), date: Date())
         context.insert(tx)
 
         let change = PendingChange(
@@ -350,7 +350,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let txId = UUID()
-        let tx = Transaction(id: txId, amount: 20, category: "Food", date: Date())
+        let tx = Transaction(id: txId, amount: 20, categoryId: UUID(), date: Date())
         context.insert(tx)
 
         let change = PendingChange(
@@ -381,7 +381,7 @@ struct ChangeQueueManagerReplayTests {
 
         let recId = UUID()
         let rec = RecurringTransaction(
-            id: recId, name: "Netflix", amount: 15, category: "Entertainment",
+            id: recId, name: "Netflix", amount: 15, categoryId: UUID(),
             frequency: .monthly, startDate: Date()
         )
         context.insert(rec)
@@ -471,7 +471,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let txId = UUID()
-        let tx = Transaction(id: txId, amount: 50, category: "Food", date: Date())
+        let tx = Transaction(id: txId, amount: 50, categoryId: UUID(), date: Date())
         context.insert(tx)
 
         let change = PendingChange(
@@ -501,7 +501,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let txId = UUID()
-        let tx = Transaction(id: txId, amount: 50, category: "Food", date: Date())
+        let tx = Transaction(id: txId, amount: 50, categoryId: UUID(), date: Date())
         context.insert(tx)
 
         let change = PendingChange(
@@ -532,7 +532,7 @@ struct ChangeQueueManagerReplayTests {
 
         let recId = UUID()
         let rec = RecurringTransaction(
-            id: recId, name: "Sub", amount: 9, category: "Bills",
+            id: recId, name: "Sub", amount: 9, categoryId: UUID(),
             frequency: .monthly, startDate: Date()
         )
         context.insert(rec)
@@ -565,7 +565,7 @@ struct ChangeQueueManagerReplayTests {
 
         let recId = UUID()
         let rec = RecurringTransaction(
-            id: recId, name: "Sub", amount: 9, category: "Bills",
+            id: recId, name: "Sub", amount: 9, categoryId: UUID(),
             frequency: .monthly, startDate: Date()
         )
         context.insert(rec)
@@ -599,7 +599,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let txId = UUID()
-        let tx = Transaction(id: txId, amount: 50, category: "Food", date: Date())
+        let tx = Transaction(id: txId, amount: 50, categoryId: UUID(), date: Date())
         context.insert(tx)
 
         let change = PendingChange(

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CategoryRow: View {
-    let category: TransactionCategory
+    let category: Category
     var usageCount: Int = 0
     let onTap: () -> Void
 
@@ -10,11 +10,11 @@ struct CategoryRow: View {
             HStack(spacing: AppConstants.UI.spacing12) {
                 ZStack {
                     Circle()
-                        .fill(category.color.opacity(0.15))
+                        .fill(Color(hex: category.color).opacity(0.15))
                         .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
                     AppIcon(name: category.icon,
                             size: AppConstants.UI.iconBadgeSize * 0.52,
-                            color: category.color)
+                            color: Color(hex: category.color))
                 }
 
                 Text(category.name)

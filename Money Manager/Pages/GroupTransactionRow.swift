@@ -16,7 +16,11 @@ struct GroupTransactionRow: View {
     }
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, customCategories: [])
+        let predefined = PredefinedCategory.allCases.first { $0.serverKey == transaction.category }
+        if let p = predefined {
+            return (p.icon, Color(hex: p.paletteHex))
+        }
+        return (AppIcons.Category.other, .gray)
     }
 
     private var currentUserShare: Double? {

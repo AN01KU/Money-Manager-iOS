@@ -57,7 +57,7 @@ struct ExportData: Codable {
         let id: String
         let type: String
         let amount: Double
-        let category: String
+        let categoryId: UUID?
         let date: Date
         let time: Date?
         let transactionDescription: String?
@@ -65,11 +65,11 @@ struct ExportData: Codable {
         let recurringExpenseId: String?
         let groupTransactionId: String?
 
-        init(id: String, type: String = "transaction", amount: Double, category: String, date: Date, time: Date?, transactionDescription: String?, notes: String?, recurringExpenseId: String?, groupTransactionId: String?) {
+        init(id: String, type: String = "transaction", amount: Double, categoryId: UUID?, date: Date, time: Date?, transactionDescription: String?, notes: String?, recurringExpenseId: String?, groupTransactionId: String?) {
             self.id = id
             self.type = type
             self.amount = amount
-            self.category = category
+            self.categoryId = categoryId
             self.date = date
             self.time = time
             self.transactionDescription = transactionDescription
@@ -83,7 +83,7 @@ struct ExportData: Codable {
         let id: String
         let name: String
         let amount: Double
-        let category: String
+        let categoryId: UUID?
         let frequency: String
         let dayOfMonth: Int?
         let daysOfWeek: [Int]?
@@ -96,8 +96,8 @@ struct ExportData: Codable {
         let updatedAt: Date
         let type: String
 
-        init(id: String, name: String, amount: Double, category: String, frequency: String, dayOfMonth: Int?, daysOfWeek: [Int]?, startDate: Date, endDate: Date?, isActive: Bool, lastAddedDate: Date?, notes: String?, createdAt: Date, updatedAt: Date, type: String = "expense") {
-            self.id = id; self.name = name; self.amount = amount; self.category = category
+        init(id: String, name: String, amount: Double, categoryId: UUID?, frequency: String, dayOfMonth: Int?, daysOfWeek: [Int]?, startDate: Date, endDate: Date?, isActive: Bool, lastAddedDate: Date?, notes: String?, createdAt: Date, updatedAt: Date, type: String = "expense") {
+            self.id = id; self.name = name; self.amount = amount; self.categoryId = categoryId
             self.frequency = frequency; self.dayOfMonth = dayOfMonth; self.daysOfWeek = daysOfWeek
             self.startDate = startDate; self.endDate = endDate; self.isActive = isActive
             self.lastAddedDate = lastAddedDate; self.notes = notes
@@ -379,7 +379,7 @@ struct ExportData: Codable {
                     id: UUID(uuidString: recurringData.id) ?? UUID(),
                     name: recurringData.name,
                     amount: recurringData.amount,
-                    category: recurringData.category,
+                    categoryId: recurringData.categoryId ?? UUID(),
                     frequency: RecurringFrequency(rawValue: recurringData.frequency) ?? .monthly,
                     dayOfMonth: recurringData.dayOfMonth,
                     daysOfWeek: recurringData.daysOfWeek,
@@ -410,7 +410,7 @@ struct ExportData: Codable {
                     id: UUID(uuidString: transactionData.id) ?? UUID(),
                     type: TransactionKind(rawValue: transactionData.type) ?? .expense,
                     amount: transactionData.amount,
-                    category: transactionData.category,
+                    categoryId: transactionData.categoryId ?? UUID(),
                     date: transactionData.date,
                     time: transactionData.time,
                     transactionDescription: transactionData.transactionDescription,
@@ -499,11 +499,12 @@ struct ExportData: Codable {
         let date = isoFormatter.date(from: dateStr) ?? Date()
         let time = timeStr.isEmpty ? nil : isoFormatter.date(from: timeStr)
 
+        let categoryIdStr = dict["category id"] ?? ""
         return ExportData.TransactionData(
             id: dict["id"] ?? UUID().uuidString,
             type: dict["type"] ?? "transaction",
             amount: Double(dict["amount"] ?? "0") ?? 0,
-            category: dict["category"] ?? "Other",
+            categoryId: UUID(uuidString: categoryIdStr),
             date: date,
             time: time,
             transactionDescription: nonEmpty(dict["description"]),

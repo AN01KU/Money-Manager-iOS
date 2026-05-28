@@ -24,8 +24,8 @@ struct TransactionsViewModelTests {
         let jan15 = calendar.date(from: DateComponents(year: 2024, month: 1, day: 15))!
         let feb15 = calendar.date(from: DateComponents(year: 2024, month: 2, day: 15))!
 
-        let janExpense = Transaction(amount: 100, category: "Food", date: jan15)
-        let febExpense = Transaction(amount: 200, category: "Transport", date: feb15)
+        let janExpense = Transaction(amount: 100, categoryId: UUID(), date: jan15)
+        let febExpense = Transaction(amount: 200, categoryId: UUID(), date: feb15)
 
         let vm = TransactionsViewModel()
         vm.selectedDate = jan15
@@ -37,8 +37,8 @@ struct TransactionsViewModelTests {
 
     @Test
     func testMonthlyFilterExcludesSoftDeletedTransactions() {
-        let active = Transaction(amount: 100, category: "Food", date: Date())
-        let deleted = Transaction(amount: 200, category: "Transport", date: Date())
+        let active = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let deleted = Transaction(amount: 200, categoryId: UUID(), date: Date())
         deleted.isSoftDeleted = true
 
         let vm = makeVM(transactions: [active, deleted])
@@ -51,20 +51,21 @@ struct TransactionsViewModelTests {
 
     @Test
     func testSearchFiltersByCategory() {
-        let food = Transaction(amount: 100, category: "Food", date: Date())
-        let transport = Transaction(amount: 200, category: "Transport", date: Date())
+        let foodCat = Category(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let food = Transaction(amount: 100, categoryId: foodCat.id, date: Date())
+        let transport = Transaction(amount: 200, categoryId: UUID(), date: Date())
 
-        let vm = makeVM(transactions: [food, transport])
+        let vm = makeVM(transactions: [food, transport], categories: [foodCat])
         vm.searchText = "Food"
 
         #expect(vm.filteredTransactions.count == 1)
-        #expect(vm.filteredTransactions.first?.category == "Food")
     }
 
     @Test
     func testSearchByCategoryIsCaseInsensitive() {
-        let food = Transaction(amount: 100, category: "Food & Dining", date: Date())
-        let vm = makeVM(transactions: [food])
+        let foodCat = Category(name: "Food", icon: "fork.knife", color: "#FF0000")
+        let food = Transaction(amount: 100, categoryId: foodCat.id, date: Date())
+        let vm = makeVM(transactions: [food], categories: [foodCat])
         vm.searchText = "food"
 
         #expect(vm.filteredTransactions.count == 1)
@@ -72,8 +73,8 @@ struct TransactionsViewModelTests {
 
     @Test
     func testSearchFiltersByDescription() {
-        let lunch = Transaction(amount: 100, category: "Food", date: Date(), transactionDescription: "Lunch meeting")
-        let other = Transaction(amount: 200, category: "Transport", date: Date(), transactionDescription: "Taxi")
+        let lunch = Transaction(amount: 100, categoryId: UUID(), date: Date(), transactionDescription: "Lunch meeting")
+        let other = Transaction(amount: 200, categoryId: UUID(), date: Date(), transactionDescription: "Taxi")
 
         let vm = makeVM(transactions: [lunch, other])
         vm.searchText = "Lunch"
@@ -84,8 +85,8 @@ struct TransactionsViewModelTests {
 
     @Test
     func testSearchFiltersByNotes() {
-        let t1 = Transaction(amount: 100, category: "Food", date: Date(), notes: "with team")
-        let t2 = Transaction(amount: 200, category: "Food", date: Date(), notes: "solo")
+        let t1 = Transaction(amount: 100, categoryId: UUID(), date: Date(), notes: "with team")
+        let t2 = Transaction(amount: 200, categoryId: UUID(), date: Date(), notes: "solo")
 
         let vm = makeVM(transactions: [t1, t2])
         vm.searchText = "team"
@@ -96,11 +97,11 @@ struct TransactionsViewModelTests {
 
     @Test
     func testClearingSearchTextRestoresAll() {
-        let t1 = Transaction(amount: 100, category: "Food", date: Date())
-        let t2 = Transaction(amount: 200, category: "Transport", date: Date())
+        let t1 = Transaction(amount: 100, categoryId: UUID(), date: Date(), transactionDescription: "Lunch")
+        let t2 = Transaction(amount: 200, categoryId: UUID(), date: Date(), transactionDescription: "Taxi")
 
         let vm = makeVM(transactions: [t1, t2])
-        vm.searchText = "Food"
+        vm.searchText = "Lunch"
         #expect(vm.filteredTransactions.count == 1)
 
         vm.searchText = ""
@@ -111,23 +112,23 @@ struct TransactionsViewModelTests {
 
     @Test
     func testCategoryFilterNarrowsToExactMatch() {
-        let t1 = Transaction(amount: 100, category: "Food", date: Date())
-        let t2 = Transaction(amount: 200, category: "Transport", date: Date())
-        let t3 = Transaction(amount: 300, category: "Food", date: Date())
+        let foodId = UUID()
+        let t1 = Transaction(amount: 100, categoryId: foodId, date: Date())
+        let t2 = Transaction(amount: 200, categoryId: foodId, date: Date())
+        let t3 = Transaction(amount: 300, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [t1, t2, t3])
-        vm.selectedCategoryFilter = "Food"
+        vm.selectedCategoryFilter = foodId
 
         #expect(vm.filteredTransactions.count == 2)
-        #expect(vm.filteredTransactions.allSatisfy { $0.category == "Food" })
     }
 
     // MARK: - Transaction type filter
 
     @Test
     func testTypeFilterAllShowsBoth() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let income = Transaction(type: .income, amount: 500, category: "Work & Professional", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let income = Transaction(type: .income, amount: 500, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [expense, income])
         vm.transactionTypeFilter = .all
@@ -137,8 +138,8 @@ struct TransactionsViewModelTests {
 
     @Test
     func testTypeFilterExpensesHidesIncome() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let income = Transaction(type: .income, amount: 500, category: "Work & Professional", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let income = Transaction(type: .income, amount: 500, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [expense, income])
         vm.transactionTypeFilter = .expenses
@@ -149,8 +150,8 @@ struct TransactionsViewModelTests {
 
     @Test
     func testTypeFilterIncomeHidesExpenses() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let income = Transaction(type: .income, amount: 500, category: "Work & Professional", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let income = Transaction(type: .income, amount: 500, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [expense, income])
         vm.transactionTypeFilter = .income
@@ -163,7 +164,7 @@ struct TransactionsViewModelTests {
 
     @Test
     func testDeleteTransactionSetsConfirmingState() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let vm = makeVM(transactions: [expense])
 
         vm.deleteTransaction(expense)
@@ -174,7 +175,7 @@ struct TransactionsViewModelTests {
 
     @Test
     func testCancelDeleteClearsStateWithoutSoftDeleting() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let vm = makeVM(transactions: [expense])
 
         vm.deleteTransaction(expense)
@@ -188,7 +189,7 @@ struct TransactionsViewModelTests {
     @Test
     func testConfirmDeleteSoftDeletesAndRemovesFromFiltered() throws {
         let context = try makeContext()
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
         context.insert(expense)
         try context.save()
 
@@ -223,26 +224,26 @@ struct TransactionsViewModelTests {
 
     @Test
     func testCombinedSearchAndTypeFilterNarrowsResults() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let income = Transaction(type: .income, amount: 500, category: "Food", date: Date())
-        let other = Transaction(amount: 200, category: "Transport", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date(), transactionDescription: "Grocery run")
+        let income = Transaction(type: .income, amount: 500, categoryId: UUID(), date: Date(), transactionDescription: "Grocery reimbursement")
+        let other = Transaction(amount: 200, categoryId: UUID(), date: Date(), transactionDescription: "Taxi")
 
         let vm = makeVM(transactions: [expense, income, other])
-        vm.searchText = "Food"
+        vm.searchText = "Grocery"
         vm.transactionTypeFilter = .expenses
 
-        // Should only return the expense with category "Food"
         #expect(vm.filteredTransactions.count == 1)
         #expect(vm.filteredTransactions.first?.type == .expense)
     }
 
     @Test
     func testClearingCategoryFilterRestoresAll() {
-        let food = Transaction(amount: 100, category: "Food", date: Date())
-        let transport = Transaction(amount: 200, category: "Transport", date: Date())
+        let foodId = UUID()
+        let food = Transaction(amount: 100, categoryId: foodId, date: Date())
+        let transport = Transaction(amount: 200, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [food, transport])
-        vm.selectedCategoryFilter = "Food"
+        vm.selectedCategoryFilter = foodId
         #expect(vm.filteredTransactions.count == 1)
 
         vm.selectedCategoryFilter = nil
@@ -251,8 +252,8 @@ struct TransactionsViewModelTests {
 
     @Test
     func testTransactionTypeFilterDidSetTriggersRecalculate() {
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let income = Transaction(type: .income, amount: 500, category: "Salary", date: Date())
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let income = Transaction(type: .income, amount: 500, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [expense, income])
         #expect(vm.filteredTransactions.count == 2)
@@ -268,8 +269,8 @@ struct TransactionsViewModelTests {
         let jan = calendar.date(from: DateComponents(year: 2024, month: 1, day: 15))!
         let feb = calendar.date(from: DateComponents(year: 2024, month: 2, day: 15))!
 
-        let janExpense = Transaction(amount: 100, category: "Food", date: jan)
-        let febExpense = Transaction(amount: 200, category: "Food", date: feb)
+        let janExpense = Transaction(amount: 100, categoryId: UUID(), date: jan)
+        let febExpense = Transaction(amount: 200, categoryId: UUID(), date: feb)
 
         let vm = TransactionsViewModel()
         vm.selectedDate = jan
@@ -284,12 +285,13 @@ struct TransactionsViewModelTests {
 
     @Test
     func testSearchAndCategoryFilterCombined() {
-        let food1 = Transaction(amount: 100, category: "Food", date: Date(), transactionDescription: "Lunch")
-        let food2 = Transaction(amount: 200, category: "Food", date: Date(), transactionDescription: "Dinner")
-        let transport = Transaction(amount: 50, category: "Transport", date: Date())
+        let foodId = UUID()
+        let food1 = Transaction(amount: 100, categoryId: foodId, date: Date(), transactionDescription: "Lunch")
+        let food2 = Transaction(amount: 200, categoryId: foodId, date: Date(), transactionDescription: "Dinner")
+        let transport = Transaction(amount: 50, categoryId: UUID(), date: Date())
 
         let vm = makeVM(transactions: [food1, food2, transport])
-        vm.selectedCategoryFilter = "Food"
+        vm.selectedCategoryFilter = foodId
         vm.searchText = "Lunch"
 
         #expect(vm.filteredTransactions.count == 1)

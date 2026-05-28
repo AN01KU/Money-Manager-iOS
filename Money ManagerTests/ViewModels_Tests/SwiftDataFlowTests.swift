@@ -27,7 +27,7 @@ struct AddRecurringTransactionSwiftDataTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: persistence)
         viewModel.name = "Netflix"
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
+        viewModel.selectedCategoryId = UUID()
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
         viewModel.notes = "Streaming subscription"
@@ -42,7 +42,6 @@ struct AddRecurringTransactionSwiftDataTests {
         #expect(saved.count == 1)
         #expect(saved.first?.name == "Netflix")
         #expect(saved.first?.amount == 649)
-        #expect(saved.first?.category == "Entertainment")
         #expect(saved.first?.frequency == .monthly)
         #expect(saved.first?.dayOfMonth == 15)
         #expect(saved.first?.notes == "Streaming subscription")
@@ -57,7 +56,7 @@ struct AddRecurringTransactionSwiftDataTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: persistence)
         viewModel.name = "Gym"
         viewModel.amount = "500"
-        viewModel.selectedCategory = "Health"
+        viewModel.selectedCategoryId = UUID()
         viewModel.frequency = .monthly
         viewModel.hasEndDate = false
 
@@ -80,7 +79,7 @@ struct AddRecurringTransactionSwiftDataTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: persistence)
         viewModel.name = "Trial Sub"
         viewModel.amount = "99"
-        viewModel.selectedCategory = "Entertainment"
+        viewModel.selectedCategoryId = UUID()
         viewModel.frequency = .monthly
         viewModel.hasEndDate = true
         viewModel.endDate = endDate
@@ -175,11 +174,10 @@ struct AddCategorySwiftDataTests {
 @MainActor
 struct AddRecurringTransactionValidationTests {
 
-    private func makeVM(name: String = "Netflix", amount: String = "649", category: String = "Entertainment") -> AddRecurringTransactionViewModel {
+    private func makeVM(name: String = "Netflix", amount: String = "649") -> AddRecurringTransactionViewModel {
         let vm = AddRecurringTransactionViewModel()
         vm.name = name
         vm.amount = amount
-        vm.selectedCategory = category
         return vm
     }
 
@@ -243,11 +241,6 @@ struct AddRecurringTransactionValidationTests {
         #expect(vm.isValid == false)
     }
 
-    @Test func testIsValidFalseWhenCategoryEmpty() {
-        let vm = makeVM(category: "")
-        #expect(vm.isValid == false)
-    }
-
     @Test func testIsValidTrueWithValidInputs() {
         let vm = makeVM()
         #expect(vm.isValid == true)
@@ -267,20 +260,8 @@ struct ManageCategoriesSwiftDataTests {
         context.insert(row)
         try context.save()
 
-        let category = TransactionCategory(
-            id: "custom:\(row.id.uuidString)",
-            key: "test-key",
-            name: row.name,
-            icon: row.icon,
-            colorHex: row.color,
-            isHidden: row.isHidden,
-            isPredefined: false,
-            isDeletable: true,
-            overrideRow: row
-        )
-
         let viewModel = ManageCategoriesViewModel(persistence: persistence)
-        viewModel.hideCategory(category)
+        viewModel.hideCategory(row)
 
         let descriptor = FetchDescriptor<Money_Manager.Category>()
         let fetched = try context.fetch(descriptor)
@@ -297,20 +278,8 @@ struct ManageCategoriesSwiftDataTests {
         context.insert(row)
         try context.save()
 
-        let category = TransactionCategory(
-            id: "custom:\(row.id.uuidString)",
-            key: "test-key",
-            name: row.name,
-            icon: row.icon,
-            colorHex: row.color,
-            isHidden: row.isHidden,
-            isPredefined: false,
-            isDeletable: true,
-            overrideRow: row
-        )
-
         let viewModel = ManageCategoriesViewModel(persistence: persistence)
-        viewModel.restoreCategory(category)
+        viewModel.restoreCategory(row)
 
         let descriptor = FetchDescriptor<Money_Manager.Category>()
         let fetched = try context.fetch(descriptor)
@@ -328,22 +297,10 @@ struct ManageCategoriesSwiftDataTests {
 
         let viewModel = ManageCategoriesViewModel(persistence: persistence)
 
-        let category = TransactionCategory(
-            id: "custom:\(row.id.uuidString)",
-            key: "test-key",
-            name: row.name,
-            icon: row.icon,
-            colorHex: row.color,
-            isHidden: row.isHidden,
-            isPredefined: false,
-            isDeletable: true,
-            overrideRow: row
-        )
-
-        viewModel.hideCategory(category)
+        viewModel.hideCategory(row)
         #expect(row.isHidden == true)
 
-        viewModel.restoreCategory(category)
+        viewModel.restoreCategory(row)
         #expect(row.isHidden == false)
 
         let descriptor = FetchDescriptor<Money_Manager.Category>()

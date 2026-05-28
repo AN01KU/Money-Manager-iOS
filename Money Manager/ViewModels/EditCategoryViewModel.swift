@@ -8,7 +8,7 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     var showError = false
     var errorMessage = ""
 
-    private let category: TransactionCategory
+    private let category: Category
     @ObservationIgnored var persistence: PersistenceService
 
     var modelContext: ModelContext { persistence.modelContext }
@@ -16,25 +16,25 @@ class EditCategoryViewModel: CategoryEditorViewModel {
     override var colorConflictCategory: String? {
         allCategories.first(where: {
             !$0.isServerPredefined &&
-            $0.id != category.overrideRow?.id &&
+            $0.id != category.id &&
             $0.color.lowercased() == selectedColor.lowercased() &&
             !$0.isHidden
         })?.name
     }
 
-    init(category: TransactionCategory, allCategories: [Category] = [], persistence: PersistenceService = .testing) {
+    init(category: Category, allCategories: [Category] = [], persistence: PersistenceService = .testing) {
         self.category = category
         self.name = category.name
         self.persistence = persistence
-        super.init(icon: category.icon, color: category.colorHex)
+        super.init(icon: category.icon, color: category.color)
         self.allCategories = allCategories
         if category.isPredefined {
-            self.editingPredefinedKey = category.predefinedCase?.serverKey
+            self.editingPredefinedKey = category.predefinedKey
         }
     }
 
     func save() -> Bool {
-        let (trimmedName, validationError) = validateName(name, excludingId: category.overrideRow?.id)
+        let (trimmedName, validationError) = validateName(name, excludingId: category.id)
         if let validationError {
             errorMessage = validationError
             showError = true
@@ -42,43 +42,25 @@ class EditCategoryViewModel: CategoryEditorViewModel {
         }
 
         guard checkColorConflict() else { return false }
-        let context = modelContext
 
         isSaving = true
         resetColorWarning()
-        if let row = category.overrideRow {
-            row.name = trimmedName
-            row.icon = selectedIcon
-            row.color = selectedColor
-            row.updatedAt = Date()
 
-            do {
-                try persistence.save(row, action: .update)
-            } catch {
-                errorMessage = "Failed to save changes"
-                showError = true
-                isSaving = false
-                return false
-            }
-        } else if category.isPredefined {
-            let row = Category.makeOverride(for: category)
-            row.name = trimmedName
-            row.icon = selectedIcon
-            row.color = selectedColor
-            context.insert(row)
+        category.name = trimmedName
+        category.icon = selectedIcon
+        category.color = selectedColor
+        category.updatedAt = Date()
 
-            do {
-                try persistence.save(row, action: .create)
-            } catch {
-                errorMessage = "Failed to save changes"
-                showError = true
-                isSaving = false
-                return false
-            }
+        do {
+            try persistence.save(category, action: .update)
+        } catch {
+            errorMessage = "Failed to save changes"
+            showError = true
+            isSaving = false
+            return false
         }
 
         isSaving = false
         return true
     }
-
 }

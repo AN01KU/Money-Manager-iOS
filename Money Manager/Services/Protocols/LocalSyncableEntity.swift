@@ -20,10 +20,10 @@ protocol LocalSyncableEntity {
     static var endpoint: String { get }
 
     /// JSON-encoded body for a POST (create) request.
-    func createRequestPayload() throws -> Data
+    @MainActor func createRequestPayload() throws -> Data
 
     /// JSON-encoded body for a PATCH (update) request.
-    func updateRequestPayload() throws -> Data
+    @MainActor func updateRequestPayload() throws -> Data
 }
 
 /// A local entity that uses soft-delete (tombstone) semantics rather than hard delete.

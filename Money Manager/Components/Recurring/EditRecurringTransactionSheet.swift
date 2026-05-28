@@ -54,7 +54,7 @@ struct EditRecurringTransactionSheet: View {
                             viewModel.showCategoryPicker = true
                         }) {
                             HStack {
-                                if !viewModel.selectedCategory.isEmpty {
+                                if !viewModel.selectedCategoryName.isEmpty {
                                     Text(viewModel.selectedCategoryName)
                                 } else {
                                     Text("Select Category")
@@ -185,7 +185,7 @@ struct EditRecurringTransactionSheet: View {
                 }
             }
             .sheet(isPresented: $viewModel.showCategoryPicker) {
-                CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
+                CategoryPickerView(selectedCategoryId: $viewModel.selectedCategoryId)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
@@ -207,7 +207,7 @@ struct EditRecurringTransactionSheet: View {
         do {
             try modelContext.save()
 
-            let payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
+            let payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest(categories: customCategories))
             changeQueueManager.enqueue(
                 PendingChangeDraft(
                     entityType: .recurring,

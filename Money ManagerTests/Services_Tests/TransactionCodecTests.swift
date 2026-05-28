@@ -9,7 +9,7 @@ private func makeTransaction(
     id: UUID = UUID(),
     type: TransactionKind = .expense,
     amount: Double = 42.50,
-    category: String = "Food",
+    categoryId: UUID = UUID(),
     date: Date = Date(timeIntervalSince1970: 1_700_000_000),
     time: Date? = nil,
     description: String? = nil,
@@ -18,22 +18,20 @@ private func makeTransaction(
     groupTransactionId: UUID? = nil,
     groupName: String? = nil,
     groupId: UUID? = nil,
-    settlementId: UUID? = nil,
-    categoryId: UUID? = nil
+    settlementId: UUID? = nil
 ) -> Transaction {
     let tx = Transaction(
         id: id,
         type: type,
         amount: amount,
-        category: category,
+        categoryId: categoryId,
         date: date,
         time: time,
         transactionDescription: description,
         notes: notes,
         recurringExpenseId: recurringExpenseId,
         groupTransactionId: groupTransactionId,
-        settlementId: settlementId,
-        categoryId: categoryId
+        settlementId: settlementId
     )
     tx.groupName = groupName
     tx.groupId = groupId
@@ -53,9 +51,10 @@ struct TransactionCodecCSVTests {
     }
 
     @Test func parseCSVRow_roundTrip_basicTransaction() throws {
+        let cid = UUID()
         let original = makeTransaction(
             amount: 12.99,
-            category: "Transport",
+            categoryId: cid,
             date: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let row = codec.csvRow(original)
@@ -63,7 +62,7 @@ struct TransactionCodecCSVTests {
         #expect(parsed.id == original.id)
         #expect(parsed.type == original.type)
         #expect(parsed.amount == original.amount)
-        #expect(parsed.category == original.category)
+        #expect(parsed.categoryId == cid)
         #expect(abs(parsed.date.timeIntervalSince1970 - original.date.timeIntervalSince1970) < 1)
     }
 
@@ -76,14 +75,14 @@ struct TransactionCodecCSVTests {
         let original = makeTransaction(
             type: .income,
             amount: 500,
+            categoryId: cid,
             description: "Salary",
             notes: "Monthly",
             recurringExpenseId: rid,
             groupTransactionId: gtid,
             groupName: "Family",
             groupId: gid,
-            settlementId: sid,
-            categoryId: cid
+            settlementId: sid
         )
         let row = codec.csvRow(original)
         let parsed = try codec.parseCSVRow(row)
@@ -110,7 +109,6 @@ struct TransactionCodecCSVTests {
         #expect(parsed.groupName == nil)
         #expect(parsed.groupId == nil)
         #expect(parsed.settlementId == nil)
-        #expect(parsed.categoryId == nil)
     }
 
     @Test func parseCSVRow_wrongColumnCount_throwsMalformedRow() {
@@ -146,18 +144,6 @@ struct TransactionCodecCSVTests {
         let row = codec.csvRow(tx)
         #expect(row[1] == "income")
     }
-
-    @Test func csvRow_categoryContainingComma_handledByEscaping() throws {
-        let tx = makeTransaction(category: "Food, Drink")
-        let row = codec.csvRow(tx)
-        // The raw field in the row array should be unescaped; BackupService.escapeCSVRow handles quoting
-        #expect(row[3] == "Food, Drink")
-        // Round-trip via section
-        let section = BackupService.csvSection(codec, models: [tx])
-        let parsed = BackupService.parseCSVSections(section)
-        let parsedRows = try parsed["transactions"]?.map { try codec.parseCSVRow($0) } ?? []
-        #expect(parsedRows.first?.category == "Food, Drink")
-    }
 }
 
 // MARK: - JSON Round-Trip
@@ -167,13 +153,14 @@ struct TransactionCodecJSONTests {
     private let codec = TransactionCodec()
 
     @Test func encodeDecodeJSON_roundTrip_basicTransaction() throws {
-        let original = makeTransaction(amount: 99.99, category: "Entertainment")
+        let cid = UUID()
+        let original = makeTransaction(amount: 99.99, categoryId: cid)
         let data = try codec.encodeJSON([original])
         let decoded = try codec.decodeJSON(data)
         #expect(decoded.count == 1)
         #expect(decoded[0].id == original.id)
         #expect(decoded[0].amount == original.amount)
-        #expect(decoded[0].category == original.category)
+        #expect(decoded[0].categoryId == cid)
     }
 
     @Test func encodeDecodeJSON_roundTrip_multipleTransactions() throws {

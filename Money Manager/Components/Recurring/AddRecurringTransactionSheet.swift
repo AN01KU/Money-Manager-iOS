@@ -6,17 +6,9 @@ struct AddRecurringTransactionSheet: View {
     @Environment(\.persistence) private var persistence
     @Query(sort: \Category.name) private var customCategories: [Category]
 
-    private let prefillAmount: String
-    private let prefillCategory: String
-    private let prefillType: TransactionKind
-
     @State private var viewModel = AddRecurringTransactionViewModel()
 
-    init(prefillAmount: String = "", prefillCategory: String = "", prefillType: TransactionKind = .expense) {
-        self.prefillAmount = prefillAmount
-        self.prefillCategory = prefillCategory
-        self.prefillType = prefillType
-    }
+    init() { }
     @State private var amount100Tapped = 0
     @State private var amount500Tapped = 0
     @State private var amount1000Tapped = 0
@@ -81,7 +73,7 @@ struct AddRecurringTransactionSheet: View {
                             viewModel.showCategoryPicker = true
                         }) {
                             HStack {
-                                if !viewModel.selectedCategory.isEmpty {
+                                if !viewModel.selectedCategoryName.isEmpty {
                                     Text(viewModel.selectedCategoryName)
                                 } else {
                                     Text("Select Category")
@@ -173,7 +165,7 @@ struct AddRecurringTransactionSheet: View {
                 }
             }
             .sheet(isPresented: $viewModel.showCategoryPicker) {
-                CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
+                CategoryPickerView(selectedCategoryId: $viewModel.selectedCategoryId)
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
@@ -184,7 +176,6 @@ struct AddRecurringTransactionSheet: View {
             .task {
                 viewModel.persistence = persistence
                 viewModel.customCategories = customCategories
-                viewModel.prefill(amount: prefillAmount, category: prefillCategory, type: prefillType)
             }
             .onChange(of: customCategories) { _, newValue in
                 viewModel.customCategories = newValue

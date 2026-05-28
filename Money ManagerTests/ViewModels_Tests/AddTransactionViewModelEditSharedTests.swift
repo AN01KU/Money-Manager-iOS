@@ -251,7 +251,7 @@ struct AddTransactionViewModelEditSharedTests {
     // MARK: - navigationTitle edge case
 
     @Test func testNavigationTitleForEditingIncomePersonal() {
-        let income = Transaction(type: .income, amount: 500, category: "Salary", date: Date())
+        let income = Transaction(type: .income, amount: 500, categoryId: UUID(), date: Date())
         let vm = AddTransactionViewModel(mode: .personal(editing: income))
         #expect(vm.navigationTitle == "Edit Income")
     }

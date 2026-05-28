@@ -12,7 +12,7 @@ struct MainTabView: View {
     @State private var selectedTab: TabItem = .overview
     @State private var tabChanged = 0
     @State private var pendingRoute: AppRoute?
-    @State private var pendingCategoryFilter: String?
+    @State private var pendingCategoryFilter: UUID?
 
     var body: some View {
         TabView(selection: $selectedTab) {

@@ -8,7 +8,6 @@ private func makeRecurring(
     id: UUID = UUID(),
     name: String = "Netflix",
     amount: Double = 649,
-    category: String = "Entertainment",
     frequency: RecurringFrequency = .monthly,
     dayOfMonth: Int? = 1,
     daysOfWeek: [Int]? = nil,
@@ -17,14 +16,14 @@ private func makeRecurring(
     isActive: Bool = true,
     lastAddedDate: Date? = nil,
     notes: String? = nil,
-    categoryId: UUID? = nil,
+    categoryId: UUID = UUID(),
     type: TransactionKind = .expense
 ) -> RecurringTransaction {
     RecurringTransaction(
         id: id,
         name: name,
         amount: amount,
-        category: category,
+        categoryId: categoryId,
         frequency: frequency,
         dayOfMonth: dayOfMonth,
         daysOfWeek: daysOfWeek,
@@ -33,7 +32,6 @@ private func makeRecurring(
         isActive: isActive,
         lastAddedDate: lastAddedDate,
         notes: notes,
-        categoryId: categoryId,
         type: type
     )
 }
@@ -54,17 +52,17 @@ struct RecurringTransactionCodecCSVTests {
         let original = makeRecurring(
             name: "Gym",
             amount: 500,
-            category: "Health",
             frequency: .monthly,
             dayOfMonth: 15,
-            startDate: Date(timeIntervalSince1970: 1_700_000_000)
+            startDate: Date(timeIntervalSince1970: 1_700_000_000),
+            categoryId: UUID()
         )
         let row = codec.csvRow(original)
         let parsed = try codec.parseCSVRow(row)
         #expect(parsed.id == original.id)
         #expect(parsed.name == original.name)
         #expect(parsed.amount == original.amount)
-        #expect(parsed.category == original.category)
+        #expect(parsed.categoryId == original.categoryId)
         #expect(parsed.frequency == original.frequency)
         #expect(parsed.dayOfMonth == original.dayOfMonth)
         #expect(abs(parsed.startDate.timeIntervalSince1970 - original.startDate.timeIntervalSince1970) < 1)
@@ -102,8 +100,7 @@ struct RecurringTransactionCodecCSVTests {
             daysOfWeek: nil,
             endDate: nil,
             lastAddedDate: nil,
-            notes: nil,
-            categoryId: nil
+            notes: nil
         )
         let row = codec.csvRow(original)
         let parsed = try codec.parseCSVRow(row)
@@ -112,7 +109,6 @@ struct RecurringTransactionCodecCSVTests {
         #expect(parsed.endDate == nil)
         #expect(parsed.lastAddedDate == nil)
         #expect(parsed.notes == nil)
-        #expect(parsed.categoryId == nil)
     }
 
     @Test func parseCSVRow_wrongColumnCount_throwsMalformedRow() {
@@ -169,14 +165,14 @@ struct RecurringTransactionCodecJSONTests {
     private let codec = RecurringTransactionCodec()
 
     @Test func encodeDecodeJSON_roundTrip_basicFields() throws {
-        let original = makeRecurring(name: "Gym", amount: 500, category: "Health")
+        let original = makeRecurring(name: "Gym", amount: 500, categoryId: UUID())
         let data = try codec.encodeJSON([original])
         let decoded = try codec.decodeJSON(data)
         #expect(decoded.count == 1)
         #expect(decoded[0].id == original.id)
         #expect(decoded[0].name == original.name)
         #expect(decoded[0].amount == original.amount)
-        #expect(decoded[0].category == original.category)
+        #expect(decoded[0].categoryId == original.categoryId)
     }
 
     @Test func encodeDecodeJSON_roundTrip_multipleModels() throws {

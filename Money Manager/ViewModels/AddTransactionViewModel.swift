@@ -49,8 +49,6 @@ struct SplitCalculator {
             .reduce(0, +)
     }
 
-    /// `false` when `totalAmount` is zero but custom amounts are also zero — only valid when the
-    /// original amount string was a parseable number (callers must check that separately).
     var splitMatchesTotal: Bool {
         totalAmount > 0 && abs(customSplitTotal - totalAmount) < 0.01
     }
@@ -72,7 +70,9 @@ struct SplitCalculator {
 @MainActor
 @Observable class AddTransactionViewModel {
     var amount = ""
-    var selectedCategory = "other"
+    // Personal path: UUID-based; shared path: string key sent to API
+    var selectedCategoryId: UUID = UUID()
+    var selectedCategory = "other" // used by shared (group) path only
     var description = ""
     var notes = ""
     var transactionType: TransactionType = .expense
@@ -99,7 +99,7 @@ struct SplitCalculator {
     var customAmounts: [UUID: String] = [:]
 
     private var originalAmount: Double?
-    private var originalCategory: String?
+    private var originalCategoryId: UUID?
     private var originalType: TransactionType?
     private var pendingAmountValue: Double?
     private(set) var editingRecurringExpenseId: UUID?
@@ -134,8 +134,6 @@ struct SplitCalculator {
         }
     }
 
-    /// Stable identifier for the current screen mode — use in tests and accessibility.
-    /// Unaffected by display copy changes.
     var navigationTitleIdentifier: String {
         switch mode {
         case .personal(let editing):
@@ -167,8 +165,6 @@ struct SplitCalculator {
         return true
     }
 
-    /// User-entered amount parsed via locale-aware `Money.parse`. `nil` when the field is empty
-    /// or unparseable — callers decide how to react (validation vs. zero fallback).
     private var parsedAmountValue: Double? {
         Money.parse(amount, currencyCode: CurrencyFormatter.currentCode)?.doubleValue
     }
@@ -209,12 +205,12 @@ struct SplitCalculator {
     private func setupPersonal(editing: Transaction?) {
         guard let expense = editing else { return }
         originalAmount = expense.amount
-        originalCategory = expense.category
+        originalCategoryId = expense.categoryId
         originalType = TransactionType(kind: expense.type)
         editingRecurringExpenseId = expense.recurringExpenseId
         isRecurring = expense.recurringExpenseId != nil
         amount = expense.amount.editableString
-        selectedCategory = expense.category
+        selectedCategoryId = expense.categoryId
         selectedDate = expense.date
         selectedTime = expense.time ?? Date()
         hasTime = expense.time != nil
@@ -275,10 +271,9 @@ struct SplitCalculator {
             return
         }
 
-        // If editing a recurring-linked transaction and anything synced to the template changed, ask the user.
         if case .personal = mode, editingRecurringExpenseId != nil {
             let amountChanged = originalAmount.map { amountValue != $0 } ?? false
-            let categoryChanged = originalCategory.map { selectedCategory != $0 } ?? false
+            let categoryChanged = originalCategoryId.map { selectedCategoryId != $0 } ?? false
             let typeChanged = originalType.map { transactionType != $0 } ?? false
             if amountChanged || categoryChanged || typeChanged {
                 pendingAmountValue = amountValue
@@ -297,10 +292,9 @@ struct SplitCalculator {
         }
     }
 
-    // MARK: - Private: personal save (unchanged logic)
+    // MARK: - Private: personal save
 
     private func savePersonal(amountValue: Double, completion: @escaping () -> Void) {
-
         let calendar = Calendar.current
         let baseDate = selectedDate
         var expenseDate = calendar.startOfDay(for: baseDate)
@@ -312,26 +306,20 @@ struct SplitCalculator {
                                         of: baseDate) ?? baseDate
         }
 
-        let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
-
         let transaction: Transaction
         let action: ChangeAction
 
-        // If recurring is toggled on for a NEW transaction, create the template first so we can link it atomically.
-        // Skip if editing an existing recurring-linked transaction — template was already updated in saveAlsoUpdatingRecurring.
         var recurringExpenseId: UUID? = editingRecurringExpenseId
         if isRecurring && editingRecurringExpenseId == nil {
             let trimmedName = description.trimmingCharacters(in: .whitespaces)
-            let resolvedCategoryIdForRecurring = customCategories.first(where: { $0.key == selectedCategory })?.id
             let recurring = RecurringTransaction(
                 name: trimmedName,
                 amount: amountValue,
-                category: selectedCategory,
+                categoryId: selectedCategoryId,
                 frequency: recurringFrequency,
                 dayOfMonth: recurringFrequency == .monthly ? recurringDayOfMonth : nil,
                 startDate: baseDate,
                 endDate: recurringHasEndDate ? recurringEndDate : nil,
-                categoryId: resolvedCategoryIdForRecurring,
                 type: transactionType.kind
             )
             persistence.modelContext.insert(recurring)
@@ -342,7 +330,6 @@ struct SplitCalculator {
             } catch {
                 AppLogger.data.error("Failed to save recurring: \(error)")
                 errorMessage = "Failed to save recurring template"
-
                 isSaving = false
                 return
             }
@@ -351,8 +338,7 @@ struct SplitCalculator {
         if case .personal(let existing) = mode, let existingExpense = existing {
             existingExpense.amount = amountValue
             existingExpense.type = transactionType.kind
-            existingExpense.category = selectedCategory
-            existingExpense.categoryId = resolvedCategoryId
+            existingExpense.categoryId = selectedCategoryId
             existingExpense.date = expenseDate
             existingExpense.time = hasTime ? selectedTime : nil
             if isRecurring {
@@ -372,14 +358,12 @@ struct SplitCalculator {
             let expense = Transaction(
                 type: transactionType.kind,
                 amount: amountValue,
-                category: selectedCategory,
+                categoryId: selectedCategoryId,
                 date: expenseDate,
                 time: hasTime ? selectedTime : nil,
                 transactionDescription: resolvedDescription,
                 notes: notes.isEmpty ? nil : notes,
-                recurringExpenseId: recurringExpenseId,
-                
-                categoryId: resolvedCategoryId
+                recurringExpenseId: recurringExpenseId
             )
             persistence.modelContext.insert(expense)
             transaction = expense
@@ -419,7 +403,7 @@ struct SplitCalculator {
             )
             if let recurring = try? ctx.fetch(descriptor).first {
                 recurring.amount = amountValue
-                recurring.category = selectedCategory
+                recurring.categoryId = selectedCategoryId
                 recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
                 try? persistence.save(recurring, action: .update)
@@ -477,7 +461,6 @@ struct SplitCalculator {
                 completion()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
-
                 isSaving = false
             }
         }
@@ -509,7 +492,6 @@ struct SplitCalculator {
                 completion()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
-
                 isSaving = false
             }
         }

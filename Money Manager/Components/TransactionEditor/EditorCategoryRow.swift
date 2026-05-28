@@ -3,12 +3,8 @@ import SwiftUI
 struct EditorCategoryRow: View {
     @Bindable var viewModel: TransactionEditorViewModel
 
-    private var categoryByKey: [String: TransactionCategory] {
-        Dictionary(
-            uniqueKeysWithValues: TransactionCategory.merge(overrides: viewModel.customCategories)
-                .filter { !$0.isHidden }
-                .map { ($0.key, $0) }
-        )
+    private var selectedCategory: Category? {
+        viewModel.customCategories.first { $0.id == viewModel.selectedCategoryId }
     }
 
     var body: some View {
@@ -21,8 +17,8 @@ struct EditorCategoryRow: View {
                 viewModel.showCategoryPicker = true
             } label: {
                 HStack(spacing: AppConstants.UI.spacingSM) {
-                    if let cat = categoryByKey[viewModel.selectedCategory] {
-                        AppIcon(name: cat.icon, size: 20, color: cat.color)
+                    if let cat = selectedCategory {
+                        AppIcon(name: cat.icon, size: 20, color: Color(hex: cat.color))
                         Text(cat.name)
                             .font(AppTypography.body)
                             .foregroundStyle(AppColors.label)

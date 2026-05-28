@@ -11,22 +11,19 @@ struct ManageCategoriesView: View {
     @State private var rowTapped = 0
     @State private var addTriggered = 0
     @State private var showResetMenu = 0
-    @State private var swipedItemID: String?
+    @State private var swipedItemID: UUID?
 
-    private var allCategories: [TransactionCategory] {
-        TransactionCategory.merge(overrides: overrides)
+    private var predefinedCategories: [Category] {
+        overrides.filter { $0.isPredefined && !$0.isHidden }
     }
-    private var predefinedCategories: [TransactionCategory] {
-        allCategories.filter { $0.isPredefined && !$0.isHidden }
+    private var userCategories: [Category] {
+        overrides.filter { !$0.isPredefined && !$0.isHidden }
     }
-    private var userCategories: [TransactionCategory] {
-        allCategories.filter { !$0.isPredefined && !$0.isHidden }
+    private var hiddenCategories: [Category] {
+        overrides.filter { $0.isHidden }
     }
-    private var hiddenCategories: [TransactionCategory] {
-        allCategories.filter { $0.isHidden }
-    }
-    private var usageCounts: [String: Int] {
-        Dictionary(grouping: allTransactions, by: \.category).mapValues(\.count)
+    private var usageCounts: [UUID: Int] {
+        Dictionary(grouping: allTransactions, by: \.categoryId).mapValues(\.count)
     }
 
     var body: some View {
@@ -47,7 +44,7 @@ struct ManageCategoriesView: View {
                             ) {
                                 CategoryRow(
                                     category: category,
-                                    usageCount: usageCounts[category.name, default: 0],
+                                    usageCount: usageCounts[category.id, default: 0],
                                     onTap: {}
                                 )
                             }
@@ -75,7 +72,7 @@ struct ManageCategoriesView: View {
                             ) {
                                 CategoryRow(
                                     category: category,
-                                    usageCount: usageCounts[category.name, default: 0],
+                                    usageCount: usageCounts[category.id, default: 0],
                                     onTap: {}
                                 )
                             }
@@ -163,7 +160,7 @@ struct ManageCategoriesView: View {
             Button("Cancel", role: .cancel) { viewModel.categoryToDelete = nil }
             Button("Delete", role: .destructive) { viewModel.confirmDelete() }
         } message: {
-            Text("This will permanently remove \"\(viewModel.categoryToDelete?.name ?? "")\". Existing transactions will keep their category name.")
+            Text("This will permanently remove \"\(viewModel.categoryToDelete?.name ?? "")\". Existing transactions will keep their category.")
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.deleteConfirmedTrigger)
         .sensoryFeedback(.success, trigger: viewModel.resetTrigger)
@@ -205,18 +202,18 @@ private struct CategoryCardSection<Content: View>: View {
 // MARK: - Hidden category row
 
 struct HiddenCategoryRow: View {
-    let category: TransactionCategory
+    let category: Category
     let onRestore: () -> Void
 
     var body: some View {
         HStack(spacing: AppConstants.UI.spacing12) {
             ZStack {
                 RoundedRectangle(cornerRadius: AppConstants.UI.radius10)
-                    .fill(category.color.opacity(0.3))
+                    .fill(Color(hex: category.color).opacity(0.3))
                     .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
                 AppIcon(name: category.icon,
                         size: AppConstants.UI.iconBadgeSize * 0.50,
-                        color: category.color.opacity(0.6))
+                        color: Color(hex: category.color).opacity(0.6))
             }
 
             Text(category.name)

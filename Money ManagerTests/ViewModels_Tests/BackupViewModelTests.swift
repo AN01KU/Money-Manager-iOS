@@ -68,7 +68,7 @@ struct ExportDataStructTests {
         let expenseData = ExportData.TransactionData(
             id: "exp-1",
             amount: 100,
-            category: "Food",
+            categoryId: UUID(),
             date: Date(),
             time: nil,
             transactionDescription: "Test",
@@ -88,13 +88,13 @@ struct ExportDataStructTests {
         #expect(exportData.transactions?.count == 1)
         #expect(exportData.appVersion == "1.0")
     }
-    
+
     @Test
     func testExportDataCodable() throws {
         let expenseData = ExportData.TransactionData(
             id: "exp-1",
             amount: 100,
-            category: "Food",
+            categoryId: UUID(),
             date: Date(),
             time: nil,
             transactionDescription: "Test",
@@ -102,7 +102,7 @@ struct ExportDataStructTests {
             recurringExpenseId: nil,
             groupTransactionId: nil
         )
-        
+
         let exportData = ExportData(
             exportDate: Date(),
             appVersion: "1.0",
@@ -124,7 +124,7 @@ struct ExportDataStructTests {
             id: "rec-1",
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: RecurringFrequency.monthly.rawValue,
             dayOfMonth: 1,
             daysOfWeek: [1, 3, 5],
@@ -136,11 +136,11 @@ struct ExportDataStructTests {
             createdAt: Date(),
             updatedAt: Date()
         )
-        
+
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let jsonData = try encoder.encode(recurringData)
-        
+
         #expect(jsonData.count > 0)
     }
 }
@@ -318,7 +318,6 @@ struct BackupViewModelTests {
         #expect(result != nil)
         #expect(result?.id == "uuid-123")
         #expect(result?.amount == 100.50)
-        #expect(result?.category == "Food")
         #expect(result?.transactionDescription == "Lunch")
     }
 
@@ -371,7 +370,6 @@ struct BackupViewModelTests {
         let result = vm.parseTransactionCSVRow(values, headers: headers)
         #expect(result != nil)
         #expect(result?.amount == 250.75)
-        #expect(result?.category == "Transport")
         #expect(result?.transactionDescription == "Uber ride")
         #expect(result?.notes == "To airport")
         #expect(result?.recurringExpenseId == "rec-uuid")
@@ -454,7 +452,7 @@ struct BackupViewModelExportTests {
 
         let expense = Transaction(
             amount: 100.50,
-            category: "Food & Dining",
+            categoryId: UUID(),
             date: Date(),
             transactionDescription: "Lunch"
         )
@@ -474,9 +472,8 @@ struct BackupViewModelExportTests {
             let content = try! String(contentsOf: url, encoding: .utf8)
             // TransactionCodec section-based format
             #expect(content.contains("# transactions"))
-            #expect(content.contains("ID,Type,Amount,Category"))
+            #expect(content.contains("ID,Type,Amount,Category ID"))
             #expect(content.contains("100.5"))
-            #expect(content.contains("Food & Dining"))
         }
     }
 
@@ -488,7 +485,7 @@ struct BackupViewModelExportTests {
 
         let expense = Transaction(
             amount: 200.0,
-            category: "Transport",
+            categoryId: UUID(),
             date: Date(),
             transactionDescription: "Uber"
         )
@@ -508,7 +505,10 @@ struct BackupViewModelExportTests {
             let json = try! JSONSerialization.jsonObject(with: data) as! [[String: Any]]
             #expect(json.count == 1)
             #expect(json[0]["amount"] as? Double == 200.0)
-            #expect(json[0]["category"] as? String == "Transport")
+            // categoryId is exported as a UUID string (category names are not in the backup)
+            let categoryIdStr = json[0]["categoryId"] as? String
+            #expect(categoryIdStr != nil)
+            #expect(UUID(uuidString: categoryIdStr ?? "") != nil)
         }
     }
 
@@ -518,8 +518,8 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .transactions
 
-        let active = Transaction(amount: 100, category: "Food", date: Date())
-        let deleted = Transaction(amount: 200, category: "Food", date: Date())
+        let active = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let deleted = Transaction(amount: 200, categoryId: UUID(), date: Date())
         deleted.isSoftDeleted = true
 
         await viewModel.exportData(
@@ -602,7 +602,7 @@ struct BackupViewModelExportTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             dayOfMonth: 1,
             startDate: Date(),
@@ -635,7 +635,7 @@ struct BackupViewModelExportTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             dayOfMonth: 1,
             startDate: Date(),
@@ -667,8 +667,8 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .csv
         viewModel.selectedDataType = .all
 
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .monthly, startDate: Date(), isActive: true)
         let category = Category(name: "Custom", icon: "star.fill", color: "#0000FF")
 
         await viewModel.exportData(
@@ -692,8 +692,8 @@ struct BackupViewModelExportTests {
         viewModel.selectedExportFormat = .json
         viewModel.selectedDataType = .all
 
-        let expense = Transaction(amount: 100, category: "Food", date: Date())
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, startDate: Date(), isActive: true)
+        let expense = Transaction(amount: 100, categoryId: UUID(), date: Date())
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .monthly, startDate: Date(), isActive: true)
         let category = Category(name: "Custom", icon: "star.fill", color: "#0000FF")
 
         await viewModel.exportData(
@@ -734,7 +734,7 @@ struct BackupViewModelExportTests {
         
         let expense = Transaction(
             amount: 500,
-            category: "Travel",
+            categoryId: UUID(),
             date: Date(),
             time: Date(),
             transactionDescription: "Flight, to NYC",
@@ -879,7 +879,7 @@ struct BackupViewModelExportTests {
         let recurring = RecurringTransaction(
             name: "Gym",
             amount: 500,
-            category: "Health",
+            categoryId: UUID(),
             frequency: .weekly,
             daysOfWeek: [1, 3, 5],
             startDate: Date(),
@@ -925,7 +925,7 @@ struct BackupViewModelImportTests {
                 ExportData.TransactionData(
                     id: UUID().uuidString,
                     amount: 100.50,
-                    category: "Food",
+                    categoryId: UUID(),
                     date: Date(),
                     time: nil,
                     transactionDescription: "Lunch",
@@ -957,7 +957,6 @@ struct BackupViewModelImportTests {
         let imported = try context.fetch(descriptor)
         #expect(imported.count == 1)
         #expect(imported.first?.amount == 100.50)
-        #expect(imported.first?.category == "Food")
     }
     
     @Test
@@ -1017,7 +1016,7 @@ struct BackupViewModelImportTests {
                     id: UUID().uuidString,
                     name: "Netflix",
                     amount: 649,
-                    category: "Entertainment",
+                    categoryId: UUID(),
                     frequency: RecurringFrequency.monthly.rawValue,
                     dayOfMonth: 1,
                     daysOfWeek: nil,
@@ -1064,14 +1063,14 @@ struct BackupViewModelImportTests {
             appVersion: "1.0",
             transactions: [
                 ExportData.TransactionData(
-                    id: UUID().uuidString, amount: 100, category: "Food", date: Date(),
+                    id: UUID().uuidString, amount: 100, categoryId: UUID(), date: Date(),
                     time: nil, transactionDescription: nil, notes: nil,
                     recurringExpenseId: recId, groupTransactionId: nil
                 )
             ],
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
-                    id: recId, name: "Lunch", amount: 100, category: "Food",
+                    id: recId, name: "Lunch", amount: 100, categoryId: UUID(),
                     frequency: RecurringFrequency.daily.rawValue, dayOfMonth: nil, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
@@ -1328,14 +1327,14 @@ struct BackupViewModelImportTests {
             appVersion: "1.0",
             transactions: [
                 ExportData.TransactionData(
-                    id: UUID().uuidString, amount: 649, category: "Entertainment",
+                    id: UUID().uuidString, amount: 649, categoryId: UUID(),
                     date: Date(), time: nil, transactionDescription: "Netflix",
                     notes: nil, recurringExpenseId: recId, groupTransactionId: nil
                 )
             ],
             recurringTransactions: [
                 ExportData.RecurringTransactionData(
-                    id: recId, name: "Netflix", amount: 649, category: "Entertainment",
+                    id: recId, name: "Netflix", amount: 649, categoryId: UUID(),
                     frequency: RecurringFrequency.monthly.rawValue, dayOfMonth: 1, daysOfWeek: nil,
                     startDate: Date(), endDate: nil, isActive: true,
                     lastAddedDate: nil, notes: nil, createdAt: Date(), updatedAt: Date()
@@ -1377,7 +1376,7 @@ struct BackupViewModelImportTests {
             appVersion: "1.0",
             transactions: [
                 ExportData.TransactionData(
-                    id: UUID().uuidString, amount: 500, category: "Travel",
+                    id: UUID().uuidString, amount: 500, categoryId: UUID(),
                     date: Date(), time: Date(), transactionDescription: "Hotel",
                     notes: "Business", recurringExpenseId: nil,
                     groupTransactionId: groupTransactionId

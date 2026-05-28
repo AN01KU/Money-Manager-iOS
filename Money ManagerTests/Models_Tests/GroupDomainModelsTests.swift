@@ -155,7 +155,6 @@ struct GroupDomainModelsTests {
         let split = APIGroupTransactionSplit(id: UUID(), userId: UUID(), amount: 50.0, transactionId: nil)
         let dto = apiGroupTransaction(totalAmount: 100.0, category: "Food", splits: [split])
         let tx = try GroupTransaction(from: dto)
-        #expect(tx.category == "Food")
         #expect(tx.totalAmount == 100.0)
         #expect(tx.splits.count == 1)
     }

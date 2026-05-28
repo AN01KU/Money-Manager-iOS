@@ -30,7 +30,7 @@ enum EditorMode {
     // MARK: - Input fields (editable in create/edit modes)
 
     var amountText = ""
-    var selectedCategory = "other"
+    var selectedCategoryId: UUID = UUID() // set to a valid UUID via customCategories lookup
     var description = ""
     var notes = ""
     var transactionType: TransactionType = .expense
@@ -55,7 +55,7 @@ enum EditorMode {
     var customCategories: [Category] = [] {
         didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
     }
-    private var categoryLookup: [String: Category] = [:]
+    private var categoryLookup: [UUID: Category] = [:]
 
     // MARK: - State
 
@@ -71,7 +71,7 @@ enum EditorMode {
 
     private var pendingAmountValue: Double?
     private var originalAmount: Double?
-    private var originalCategory: String?
+    private var originalCategoryId: UUID?
     private var originalType: TransactionType?
 
     // MARK: - Init
@@ -129,8 +129,8 @@ enum EditorMode {
     var isSettlementTransaction: Bool { mode.transaction?.settlementId != nil }
 
     private var resolvedCategory: (name: String, icon: String, color: Color) {
-        let key = mode.transaction.map(\.category) ?? selectedCategory
-        return CategoryResolver.resolveAll(key, lookup: categoryLookup)
+        let id = mode.transaction?.categoryId ?? selectedCategoryId
+        return CategoryResolver.resolveAll(id, lookup: categoryLookup)
     }
 
     func formatDateAndTime(_ date: Date, time: Date?) -> String {
@@ -176,7 +176,7 @@ enum EditorMode {
 
         if editingRecurringExpenseId != nil {
             let amountChanged = originalAmount.map { amountValue != $0 } ?? false
-            let categoryChanged = originalCategory.map { selectedCategory != $0 } ?? false
+            let categoryChanged = originalCategoryId.map { selectedCategoryId != $0 } ?? false
             let typeChanged = originalType.map { transactionType != $0 } ?? false
             if amountChanged || categoryChanged || typeChanged {
                 pendingAmountValue = amountValue
@@ -205,7 +205,7 @@ enum EditorMode {
             )
             if let recurring = try? persistence.modelContext.fetch(descriptor).first {
                 recurring.amount = amountValue
-                recurring.category = selectedCategory
+                recurring.categoryId = selectedCategoryId
                 recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
                 try? persistence.save(recurring, action: .update)
@@ -245,9 +245,12 @@ enum EditorMode {
         return calendar.startOfDay(for: selectedDate)
     }
 
+    private func otherCategoryId() -> UUID {
+        customCategories.first { $0.key == PredefinedCategory.other.serverKey }?.id ?? UUID()
+    }
+
     private func savePersonal(amountValue: Double, completion: @escaping () -> Void) {
         let resolvedDate = buildDate()
-        let resolvedCategoryId = customCategories.first(where: { $0.key == selectedCategory })?.id
 
         var recurringExpenseId: UUID? = editingRecurringExpenseId
         if isRecurring && editingRecurringExpenseId == nil {
@@ -255,12 +258,11 @@ enum EditorMode {
             let recurring = RecurringTransaction(
                 name: trimmedName,
                 amount: amountValue,
-                category: selectedCategory,
+                categoryId: selectedCategoryId,
                 frequency: recurringFrequency,
                 dayOfMonth: recurringFrequency == .monthly ? recurringDayOfMonth : nil,
                 startDate: selectedDate,
                 endDate: recurringHasEndDate ? recurringEndDate : nil,
-                categoryId: resolvedCategoryId,
                 type: transactionType.kind
             )
             persistence.modelContext.insert(recurring)
@@ -285,13 +287,12 @@ enum EditorMode {
                 let tx = Transaction(
                     type: transactionType.kind,
                     amount: amountValue,
-                    category: selectedCategory,
+                    categoryId: selectedCategoryId,
                     date: resolvedDate,
                     time: hasTime ? selectedTime : nil,
                     transactionDescription: resolvedDescription,
                     notes: notes.isEmpty ? nil : notes,
-                    recurringExpenseId: recurringExpenseId,
-                    categoryId: resolvedCategoryId
+                    recurringExpenseId: recurringExpenseId
                 )
                 persistence.modelContext.insert(tx)
                 try persistence.save(tx, action: .create)
@@ -300,8 +301,7 @@ enum EditorMode {
             case .edit(let tx):
                 tx.amount = amountValue
                 tx.type = transactionType.kind
-                tx.category = selectedCategory
-                tx.categoryId = resolvedCategoryId
+                tx.categoryId = selectedCategoryId
                 tx.date = resolvedDate
                 tx.time = hasTime ? selectedTime : nil
                 if isRecurring {
@@ -330,7 +330,7 @@ enum EditorMode {
 
     private func populate(from tx: Transaction) {
         amountText = tx.amount.editableString
-        selectedCategory = tx.category
+        selectedCategoryId = tx.categoryId
         description = tx.transactionDescription ?? ""
         notes = tx.notes ?? ""
         transactionType = TransactionType(kind: tx.type)
@@ -340,7 +340,7 @@ enum EditorMode {
         editingRecurringExpenseId = tx.recurringExpenseId
         isRecurring = tx.recurringExpenseId != nil
         originalAmount = tx.amount
-        originalCategory = tx.category
+        originalCategoryId = tx.categoryId
         originalType = TransactionType(kind: tx.type)
     }
 }

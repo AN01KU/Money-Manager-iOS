@@ -26,22 +26,10 @@ struct Money_ManagerApp: App {
         }
         #endif
 
-        let schema = Schema([
-            Transaction.self,
-            RecurringTransaction.self,
-            Category.self,
-            UserBudget.self,
-            PendingChange.self,
-            FailedChange.self,
-            OrphanedChange.self,
-            SplitGroupModel.self,
-            GroupMemberModel.self,
-            GroupTransactionModel.self,
-            GroupBalanceModel.self
-        ])
+        let schema = Schema(SchemaV2.models)
 
         let resolvedContainer: ModelContainer
-        if let recovered = Self.makeContainer(schema: schema) {
+        if let recovered = Self.makeContainer(schema: schema, migrationPlan: AppMigrationPlan.self) {
             resolvedContainer = recovered
             storeRecoveryFailed = false
         } else {
@@ -78,10 +66,17 @@ struct Money_ManagerApp: App {
 
     /// Attempts to create the ModelContainer, recovering by deleting the on-disk store on failure.
     /// Returns nil only if both attempts fail.
-    private static func makeContainer(schema: Schema) -> ModelContainer? {
+    private static func makeContainer(
+        schema: Schema,
+        migrationPlan: (any SchemaMigrationPlan.Type)? = nil
+    ) -> ModelContainer? {
         let config = ModelConfiguration(schema: schema)
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            if let plan = migrationPlan {
+                return try ModelContainer(for: schema, migrationPlan: plan, configurations: [config])
+            } else {
+                return try ModelContainer(for: schema, configurations: [config])
+            }
         } catch {
             AppLogger.sync.error("ModelContainer init failed: \(error) — attempting store recovery")
         }
@@ -96,7 +91,11 @@ struct Money_ManagerApp: App {
         }
 
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            if let plan = migrationPlan {
+                return try ModelContainer(for: schema, migrationPlan: plan, configurations: [config])
+            } else {
+                return try ModelContainer(for: schema, configurations: [config])
+            }
         } catch {
             AppLogger.sync.error("ModelContainer recovery also failed: \(error)")
             return nil

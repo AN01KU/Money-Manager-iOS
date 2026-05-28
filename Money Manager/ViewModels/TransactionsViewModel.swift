@@ -5,7 +5,7 @@ import SwiftData
 @Observable class TransactionsViewModel {
     var selectedDate: Date = Date() { didSet { recalculate() } }
     var searchText: String = "" { didSet { recalculate() } }
-    var selectedCategoryFilter: String? { didSet { recalculate() } }
+    var selectedCategoryFilter: UUID? { didSet { recalculate() } }
     var transactionTypeFilter: TransactionTypeFilter = .all { didSet { recalculate() } }
     var showAddTransaction = false
     var isConfirmingDelete = false
@@ -14,17 +14,15 @@ import SwiftData
     var transactionToDelete: Transaction?
 
     var selectedCategoryFilterName: String? {
-        guard let key = selectedCategoryFilter else { return nil }
-        let lookup = CategoryResolver.makeLookup(from: customCategories)
-        let (name, _, _) = CategoryResolver.resolveAll(key, lookup: lookup)
-        return name
+        guard let id = selectedCategoryFilter else { return nil }
+        return categoryLookup[id]?.name
     }
 
     var modelContext: ModelContext { persistence.modelContext }
     @ObservationIgnored var persistence: PersistenceService
 
     private var allTransactions: [Transaction] = []
-    private var customCategories: [Category] = []
+    private var categoryLookup: [UUID: Category] = [:]
 
     init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
@@ -32,7 +30,7 @@ import SwiftData
 
     func update(allTransactions: [Transaction], customCategories: [Category]) {
         self.allTransactions = allTransactions
-        self.customCategories = customCategories
+        self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
     }
 
@@ -41,13 +39,14 @@ import SwiftData
         let spending = Spending.from(
             transactions: allTransactions,
             in: interval,
-            search: searchText.isEmpty ? nil : searchText
+            search: searchText.isEmpty ? nil : searchText,
+            categoryLookup: categoryLookup
         )
 
         var result = spending.filtered
 
         if let categoryFilter = selectedCategoryFilter {
-            result = result.filter { $0.category == categoryFilter }
+            result = result.filter { $0.categoryId == categoryFilter }
         }
 
         switch transactionTypeFilter {

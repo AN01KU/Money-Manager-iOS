@@ -12,7 +12,7 @@ struct RecurringTransactionRow: View {
             EmptyView()
         } else {
             let lookup = CategoryResolver.makeLookup(from: customCategories)
-            let (categoryIcon, categoryColor) = CategoryResolver.resolve(recurring.category, lookup: lookup)
+            let (categoryIcon, categoryColor) = CategoryResolver.resolve(recurring.categoryId, lookup: lookup)
             HStack(spacing: AppConstants.UI.spacing12) {
                 Button(action: onTap) {
                     HStack(spacing: AppConstants.UI.spacing12) {

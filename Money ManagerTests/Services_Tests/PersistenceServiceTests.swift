@@ -25,7 +25,7 @@ struct PersistenceServiceTests {
     @Test func testSaveTransaction_create_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 100, category: "Food", date: Date())
+        let tx = Transaction(amount: 100, categoryId: UUID(), date: Date())
         context.insert(tx)
         try svc.save(tx, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -40,7 +40,7 @@ struct PersistenceServiceTests {
     @Test func testSaveTransaction_update_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 100, category: "Food", date: Date())
+        let tx = Transaction(amount: 100, categoryId: UUID(), date: Date())
         context.insert(tx)
         try svc.save(tx, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -54,7 +54,7 @@ struct PersistenceServiceTests {
     @Test func testSaveTransaction_delete_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 100, category: "Food", date: Date())
+        let tx = Transaction(amount: 100, categoryId: UUID(), date: Date())
         context.insert(tx)
         try svc.save(tx, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -71,7 +71,7 @@ struct PersistenceServiceTests {
     @Test func testSaveRecurring_create_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let r = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
         context.insert(r)
         try svc.save(r, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -86,7 +86,7 @@ struct PersistenceServiceTests {
     @Test func testSaveRecurring_update_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let r = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
         context.insert(r)
         try svc.save(r, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -100,7 +100,7 @@ struct PersistenceServiceTests {
     @Test func testSaveRecurring_delete_enqueuesWithCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let r = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
         context.insert(r)
         try svc.save(r, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -163,7 +163,7 @@ struct PersistenceServiceTests {
     @Test func testSaveGeneric_transaction_create_enqueuesCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 150, category: "Transport", date: Date())
+        let tx = Transaction(amount: 150, categoryId: UUID(), date: Date())
         context.insert(tx)
         try svc.save(tx, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -179,7 +179,7 @@ struct PersistenceServiceTests {
     @Test func testSaveGeneric_transaction_update_enqueuesCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 150, category: "Transport", date: Date())
+        let tx = Transaction(amount: 150, categoryId: UUID(), date: Date())
         context.insert(tx)
         try svc.save(tx, action: .update)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -193,7 +193,7 @@ struct PersistenceServiceTests {
     @Test func testSaveGeneric_transaction_delete_enqueuesNoPayload() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 150, category: "Transport", date: Date())
+        let tx = Transaction(amount: 150, categoryId: UUID(), date: Date())
         context.insert(tx)
         try svc.save(tx, action: .delete)
         let log = MockChangeQueueManager.shared.enqueueCallLog
@@ -209,7 +209,7 @@ struct PersistenceServiceTests {
     @Test func testSaveTransaction_delete_marksSoftDeletedAndBumpsUpdatedAt() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let tx = Transaction(amount: 100, category: "Food", date: Date())
+        let tx = Transaction(amount: 100, categoryId: UUID(), date: Date())
         context.insert(tx)
         // Backdate updatedAt so we can assert it advances.
         let oldUpdatedAt = Date(timeIntervalSinceNow: -3600)
@@ -225,7 +225,7 @@ struct PersistenceServiceTests {
     @Test func testSaveRecurring_delete_marksSoftDeletedAndBumpsUpdatedAt() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let r = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
+        let r = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
         context.insert(r)
         let oldUpdatedAt = Date(timeIntervalSinceNow: -3600)
         r.updatedAt = oldUpdatedAt
@@ -240,7 +240,7 @@ struct PersistenceServiceTests {
     @Test func testSaveGeneric_recurringTransaction_create_enqueuesCorrectContract() throws {
         let context = try makeContext()
         let svc = makeService(context: context)
-        let r = RecurringTransaction(name: "Gym", amount: 999, category: "Health", frequency: .monthly)
+        let r = RecurringTransaction(name: "Gym", amount: 999, categoryId: UUID(), frequency: .monthly)
         context.insert(r)
         try svc.save(r, action: .create)
         let log = MockChangeQueueManager.shared.enqueueCallLog

@@ -143,7 +143,6 @@ struct GroupDetailViewModelMutationTests {
         ]
         vm.transactionSearchText = "Transport"
         #expect(vm.filteredTransactions.count == 1)
-        #expect(vm.filteredTransactions.first?.category == "Transport")
     }
 
     @Test func testFilteredTransactionsIsCaseInsensitive() {

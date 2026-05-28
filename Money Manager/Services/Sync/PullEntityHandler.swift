@@ -68,7 +68,11 @@ final class RecurringTransactionPullHandler: CollectionPullHandler {
         let locals = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
         lastLocalCount = locals.count
 
-        let serverWonIDs = upsert(remote, locals: locals, context: context)
+        let allCategories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
+        let (keyToUUID, otherUUID) = CategorySyncHelpers.makeKeyToUUID(from: allCategories)
+        let resolvedOtherUUID = otherUUID ?? UUID()
+
+        let serverWonIDs = upsert(remote, locals: locals, keyToUUID: keyToUUID, otherUUID: resolvedOtherUUID, context: context)
         changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .recurring, context: context)
         purge(remote, locals: locals, context: context)
 
@@ -88,6 +92,8 @@ final class RecurringTransactionPullHandler: CollectionPullHandler {
     private func upsert(
         _ remoteItems: [APIRecurringTransaction],
         locals: [RecurringTransaction],
+        keyToUUID: [String: UUID],
+        otherUUID: UUID,
         context: ModelContext
     ) -> Set<UUID> {
         let localByID = Dictionary(uniqueKeysWithValues: locals.map { ($0.id, $0) })
@@ -95,18 +101,19 @@ final class RecurringTransactionPullHandler: CollectionPullHandler {
 
         for remote in remoteItems {
             guard isValid(remote) else { continue }
+            let categoryId = CategorySyncHelpers.resolveKey(remote.category, keyToUUID: keyToUUID, otherUUID: otherUUID)
             if let local = localByID[remote.id] {
                 if local.isSoftDeleted { continue }
                 if remote.updatedAt > local.updatedAt {
                     serverWonIDs.insert(remote.id)
-                    local.applyRemote(remote)
+                    local.applyRemote(remote, keyToUUID: keyToUUID, otherUUID: otherUUID)
                 }
             } else {
                 let item = RecurringTransaction(
                     id: remote.id,
                     name: remote.name,
                     amount: remote.amount,
-                    category: remote.category,
+                    categoryId: categoryId,
                     frequency: RecurringFrequency(rawValue: remote.frequency) ?? .monthly,
                     dayOfMonth: remote.dayOfMonth,
                     daysOfWeek: remote.daysOfWeek,
@@ -175,7 +182,11 @@ final class TransactionPullHandler: CollectionPullHandler {
         let locals = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         lastLocalCount = locals.count
 
-        let serverWonIDs = upsert(fetched, locals: locals, context: context)
+        let allCategories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
+        let (keyToUUID, otherUUID) = CategorySyncHelpers.makeKeyToUUID(from: allCategories)
+        let resolvedOtherUUID = otherUUID ?? UUID()
+
+        let serverWonIDs = upsert(fetched, locals: locals, keyToUUID: keyToUUID, otherUUID: resolvedOtherUUID, context: context)
         changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .transaction, context: context)
         purge(fetched, locals: locals, context: context)
 
@@ -210,6 +221,8 @@ final class TransactionPullHandler: CollectionPullHandler {
     private func upsert(
         _ remoteItems: [APITransaction],
         locals: [Transaction],
+        keyToUUID: [String: UUID],
+        otherUUID: UUID,
         context: ModelContext
     ) -> Set<UUID> {
         let localByID = Dictionary(uniqueKeysWithValues: locals.map { ($0.id, $0) })
@@ -217,19 +230,20 @@ final class TransactionPullHandler: CollectionPullHandler {
 
         for remote in remoteItems {
             guard isValid(remote) else { continue }
+            let categoryId = CategorySyncHelpers.resolveKey(remote.category, keyToUUID: keyToUUID, otherUUID: otherUUID)
             if let local = localByID[remote.id] {
                 if local.groupName == nil, let name = remote.groupName { local.groupName = name }
                 if local.groupId == nil, let id = remote.groupId { local.groupId = id }
                 if remote.updatedAt > local.updatedAt {
                     serverWonIDs.insert(remote.id)
-                    local.applyRemote(remote)
+                    local.applyRemote(remote, keyToUUID: keyToUUID, otherUUID: otherUUID)
                 }
             } else {
                 let tx = Transaction(
                     id: remote.id,
                     type: remote.type,
                     amount: remote.amount,
-                    category: remote.category,
+                    categoryId: categoryId,
                     date: remote.date,
                     time: remote.time,
                     transactionDescription: remote.description,
@@ -271,7 +285,7 @@ final class TransactionPullHandler: CollectionPullHandler {
                 || local.groupTransactionId != nil
                 || local.recurringExpenseId != nil
             guard isServerOwned else { continue }
-            AppLogger.sync.info("Purging server-owned transaction not returned by server: id=\(local.id) amount=\(local.amount) category=\(local.category) date=\(local.date) recurringId=\(local.recurringExpenseId?.uuidString ?? "nil") settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
+            AppLogger.sync.info("Purging server-owned transaction not returned by server: id=\(local.id) amount=\(local.amount) date=\(local.date) recurringId=\(local.recurringExpenseId?.uuidString ?? "nil") settlementId=\(local.settlementId?.uuidString ?? "nil") groupTxId=\(local.groupTransactionId?.uuidString ?? "nil")")
             context.delete(local)
         }
     }

@@ -9,11 +9,11 @@ private let timeFormatter: DateFormatter = {
 
 struct TransactionRow: View {
     let transaction: Transaction
-    let categoryLookup: [String: Category]
+    let categoryLookup: [UUID: Category]
     var onGroupTapped: ((UUID) -> Void)?
 
     private var resolved: (name: String, icon: String, color: Color) {
-        CategoryResolver.resolveAll(transaction.category, lookup: categoryLookup)
+        CategoryResolver.resolveAll(transaction.categoryId, lookup: categoryLookup)
     }
 
     private var resolvedIcon: String { resolved.icon }
@@ -134,18 +134,4 @@ private struct GroupBadge: View {
         }
         .buttonStyle(.plain)
     }
-}
-
-#Preview {
-    TransactionRow(
-        transaction: Transaction(
-            amount: 450,
-            category: "Food & Dining",
-            date: Date(),
-            time: Date(),
-            transactionDescription: "Lunch at cafe"
-        ),
-        categoryLookup: [:]
-    )
-    .padding()
 }

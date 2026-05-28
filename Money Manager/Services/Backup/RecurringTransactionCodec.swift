@@ -7,9 +7,9 @@ struct RecurringTransactionCodec: EntityCodec {
     nonisolated let entityName = "recurring transactions"
 
     nonisolated let csvHeader = [
-        "ID", "Name", "Amount", "Category", "Frequency",
+        "ID", "Name", "Amount", "Category ID", "Frequency",
         "Day of Month", "Days of Week", "Start Date", "End Date",
-        "Is Active", "Last Added Date", "Notes", "Type", "Category ID",
+        "Is Active", "Last Added Date", "Notes", "Type",
         "Created At", "Updated At"
     ]
 
@@ -18,7 +18,7 @@ struct RecurringTransactionCodec: EntityCodec {
             model.id.uuidString,
             model.name,
             String(model.amount),
-            model.category,
+            model.categoryId.uuidString,
             model.frequency.rawValue,
             model.dayOfMonth.map { String($0) } ?? "",
             model.daysOfWeek.map { $0.map { String($0) }.joined(separator: ";") } ?? "",
@@ -28,7 +28,6 @@ struct RecurringTransactionCodec: EntityCodec {
             model.lastAddedDate.map { BackupService.iso8601.string(from: $0) } ?? "",
             model.notes ?? "",
             model.type.rawValue,
-            model.categoryId?.uuidString ?? "",
             BackupService.iso8601.string(from: model.createdAt),
             BackupService.iso8601.string(from: model.updatedAt)
         ]
@@ -44,7 +43,9 @@ struct RecurringTransactionCodec: EntityCodec {
         }
         let name = values[1]
         let amount = Double(values[2]) ?? 0
-        let category = values[3]
+        guard let categoryId = UUID(uuidString: values[3]) else {
+            throw EntityCodecError.missingField("categoryId")
+        }
         let frequency = RecurringFrequency(rawValue: values[4]) ?? .monthly
         let dayOfMonth: Int? = values[5].isEmpty ? nil : Int(values[5])
         let daysOfWeek: [Int]? = values[6].isEmpty ? nil : values[6].split(separator: ";").compactMap { Int($0) }
@@ -56,13 +57,12 @@ struct RecurringTransactionCodec: EntityCodec {
         let lastAddedDate: Date? = values[10].isEmpty ? nil : BackupService.parseDate(values[10])
         let notes: String? = values[11].isEmpty ? nil : values[11]
         let type = TransactionKind(rawValue: values[12]) ?? .expense
-        let categoryId = UUID(uuidString: values[13])
 
         return RecurringTransaction(
             id: id,
             name: name,
             amount: amount,
-            category: category,
+            categoryId: categoryId,
             frequency: frequency,
             dayOfMonth: dayOfMonth,
             daysOfWeek: daysOfWeek,
@@ -71,7 +71,6 @@ struct RecurringTransactionCodec: EntityCodec {
             isActive: isActive,
             lastAddedDate: lastAddedDate,
             notes: notes,
-            categoryId: categoryId,
             type: type
         )
     }
@@ -100,7 +99,7 @@ private struct RecurringTransactionRecord: Codable {
     let id: UUID
     let name: String
     let amount: Double
-    let category: String
+    let categoryId: UUID
     let frequency: String
     let dayOfMonth: Int?
     let daysOfWeek: [Int]?
@@ -110,7 +109,6 @@ private struct RecurringTransactionRecord: Codable {
     let lastAddedDate: Date?
     let notes: String?
     let type: String
-    let categoryId: UUID?
     let createdAt: Date
     let updatedAt: Date
 
@@ -118,7 +116,7 @@ private struct RecurringTransactionRecord: Codable {
         id = model.id
         name = model.name
         amount = model.amount
-        category = model.category
+        categoryId = model.categoryId
         frequency = model.frequency.rawValue
         dayOfMonth = model.dayOfMonth
         daysOfWeek = model.daysOfWeek
@@ -128,7 +126,6 @@ private struct RecurringTransactionRecord: Codable {
         lastAddedDate = model.lastAddedDate
         notes = model.notes
         type = model.type.rawValue
-        categoryId = model.categoryId
         createdAt = model.createdAt
         updatedAt = model.updatedAt
     }
@@ -138,7 +135,7 @@ private struct RecurringTransactionRecord: Codable {
             id: id,
             name: name,
             amount: amount,
-            category: category,
+            categoryId: categoryId,
             frequency: RecurringFrequency(rawValue: frequency) ?? .monthly,
             dayOfMonth: dayOfMonth,
             daysOfWeek: daysOfWeek,
@@ -147,7 +144,6 @@ private struct RecurringTransactionRecord: Codable {
             isActive: isActive,
             lastAddedDate: lastAddedDate,
             notes: notes,
-            categoryId: categoryId,
             type: TransactionKind(rawValue: type) ?? .expense
         )
     }

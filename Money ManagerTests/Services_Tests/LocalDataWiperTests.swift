@@ -30,8 +30,8 @@ struct LocalDataWiperTests {
 
     @Test func testGroupDataWiper_preservesPersonalEntities() throws {
         let context = try makeContext()
-        context.insert(Transaction(amount: 10, category: "Food", date: Date()))
-        context.insert(RecurringTransaction(name: "Netflix", amount: 10, category: "Entertainment", frequency: .monthly))
+        context.insert(Transaction(amount: 10, categoryId: UUID(), date: Date()))
+        context.insert(RecurringTransaction(name: "Netflix", amount: 10, categoryId: UUID(), frequency: .monthly))
         try? context.save()
 
         LocalDataWiper.groupData.wipe(context: context)
@@ -44,8 +44,8 @@ struct LocalDataWiperTests {
 
     @Test func testAllUserDataWiper_deletesAllRegisteredEntities() throws {
         let context = try makeContext()
-        context.insert(Transaction(amount: 10, category: "Food", date: Date()))
-        context.insert(RecurringTransaction(name: "Netflix", amount: 10, category: "Entertainment", frequency: .monthly))
+        context.insert(Transaction(amount: 10, categoryId: UUID(), date: Date()))
+        context.insert(RecurringTransaction(name: "Netflix", amount: 10, categoryId: UUID(), frequency: .monthly))
         context.insert(UserBudget(limit: 1000))
         context.insert(Money_Manager.Category(name: "Food", icon: "fork.knife", color: "#FF0000"))
         context.insert(PendingChange(entityType: "transaction", entityID: UUID(), action: "create", endpoint: "/transactions", httpMethod: "POST", payload: nil))
@@ -74,8 +74,8 @@ struct LocalDataWiperTests {
 
     @Test func testCustomWiper_wipesOnlyRegisteredHandlers() throws {
         let context = try makeContext()
-        context.insert(Transaction(amount: 10, category: "Food", date: Date()))
-        context.insert(RecurringTransaction(name: "Netflix", amount: 10, category: "Entertainment", frequency: .monthly))
+        context.insert(Transaction(amount: 10, categoryId: UUID(), date: Date()))
+        context.insert(RecurringTransaction(name: "Netflix", amount: 10, categoryId: UUID(), frequency: .monthly))
         try? context.save()
 
         let wiper = LocalDataWiper(handlers: [TransactionWipeHandler()])

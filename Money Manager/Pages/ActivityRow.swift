@@ -30,7 +30,11 @@ private struct TransactionActivityRow: View {
     let groupName: String
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, customCategories: [])
+        let predefined = PredefinedCategory.allCases.first { $0.serverKey == transaction.category }
+        if let p = predefined {
+            return (p.icon, Color(hex: p.paletteHex))
+        }
+        return (AppIcons.Category.other, .gray)
     }
 
     var body: some View {
