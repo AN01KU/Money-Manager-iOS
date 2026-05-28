@@ -23,9 +23,9 @@ struct RecurringTransactionsViewModelTests {
     func testActiveRecurringFiltersOutInactive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
-        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly)
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
+        let active1 = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
+        let active2 = RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .monthly)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, categoryId: UUID(), frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [active1, active2, inactive])
 
@@ -36,7 +36,7 @@ struct RecurringTransactionsViewModelTests {
     func testActiveRecurringReturnsEmptyWhenAllInactive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, categoryId: UUID(), frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [inactive])
 
@@ -47,9 +47,9 @@ struct RecurringTransactionsViewModelTests {
     func testPausedRecurringReturnsOnlyInactive() {
         let viewModel = RecurringTransactionsViewModel()
 
-        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly)
-        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly)
-        let inactive = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
+        let active1 = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly)
+        let active2 = RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .monthly)
+        let inactive = RecurringTransaction(name: "Old", amount: 100, categoryId: UUID(), frequency: .monthly, isActive: false)
 
         viewModel.update(recurring: [active1, active2, inactive])
 
@@ -59,7 +59,7 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testToggleSwapsActiveState() throws {
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly, isActive: true)
         let (viewModel, _) = try makeService(items: [active])
         viewModel.update(recurring: [active])
 
@@ -70,7 +70,7 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testToggleInactiveBecomesActive() throws {
-        let inactive = RecurringTransaction(name: "Old Gym", amount: 500, category: "Health", frequency: .monthly, isActive: false)
+        let inactive = RecurringTransaction(name: "Old Gym", amount: 500, categoryId: UUID(), frequency: .monthly, isActive: false)
         let (viewModel, _) = try makeService(items: [inactive])
         viewModel.update(recurring: [inactive])
 
@@ -81,7 +81,7 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeactivateSetsIsActiveToFalse() throws {
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly, isActive: true)
         let (viewModel, _) = try makeService(items: [active])
         viewModel.update(recurring: [active])
 
@@ -92,8 +92,8 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeactivateDoesNothingForUnrelatedItem() throws {
-        let active = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
-        let other = RecurringTransaction(name: "Other", amount: 100, category: "Other", frequency: .monthly, isActive: true)
+        let active = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly, isActive: true)
+        let other = RecurringTransaction(name: "Other", amount: 100, categoryId: UUID(), frequency: .monthly, isActive: true)
         let (viewModel, _) = try makeService(items: [active, other])
         viewModel.update(recurring: [active])
 
@@ -103,8 +103,8 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeactivateRemovesFromActiveList() throws {
-        let active1 = RecurringTransaction(name: "Netflix", amount: 649, category: "Entertainment", frequency: .monthly, isActive: true)
-        let active2 = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .monthly, isActive: true)
+        let active1 = RecurringTransaction(name: "Netflix", amount: 649, categoryId: UUID(), frequency: .monthly, isActive: true)
+        let active2 = RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .monthly, isActive: true)
         let (viewModel, _) = try makeService(items: [active1, active2])
         viewModel.update(recurring: [active1, active2])
 
@@ -116,8 +116,8 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeleteDoesNothingForUnrelatedItem() throws {
-        let paused = RecurringTransaction(name: "Old", amount: 100, category: "Other", frequency: .monthly, isActive: false)
-        let other = RecurringTransaction(name: "Other", amount: 50, category: "Other", frequency: .monthly, isActive: false)
+        let paused = RecurringTransaction(name: "Old", amount: 100, categoryId: UUID(), frequency: .monthly, isActive: false)
+        let other = RecurringTransaction(name: "Other", amount: 50, categoryId: UUID(), frequency: .monthly, isActive: false)
         let (viewModel, _) = try makeService(items: [paused, other])
         viewModel.update(recurring: [paused])
 
@@ -128,8 +128,8 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeleteRemovesItemFromAllRecurring() throws {
-        let item = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly)
-        let other = RecurringTransaction(name: "Keeper", amount: 200, category: "Food", frequency: .monthly)
+        let item = RecurringTransaction(name: "ToDelete", amount: 100, categoryId: UUID(), frequency: .monthly)
+        let other = RecurringTransaction(name: "Keeper", amount: 200, categoryId: UUID(), frequency: .monthly)
         let (viewModel, _) = try makeService(items: [item, other])
         viewModel.update(recurring: [item, other])
 
@@ -142,7 +142,7 @@ struct RecurringTransactionsViewModelTests {
 
     @Test
     func testDeleteSoftDeletesRecord() throws {
-        let paused = RecurringTransaction(name: "ToDelete", amount: 100, category: "Other", frequency: .monthly, isActive: false)
+        let paused = RecurringTransaction(name: "ToDelete", amount: 100, categoryId: UUID(), frequency: .monthly, isActive: false)
         let (viewModel, _) = try makeService(items: [paused])
         viewModel.update(recurring: [paused])
 
@@ -155,10 +155,10 @@ struct RecurringTransactionsViewModelTests {
     func testDeleteItemUnlinksLinkedTransactions() throws {
         let context = ModelContext(try makeTestContainer())
 
-        let recurring = RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Rent", amount: 1000, categoryId: UUID(), frequency: .monthly)
         context.insert(recurring)
 
-        let tx = Transaction(amount: 1000, category: "Housing", date: Date(), recurringExpenseId: recurring.id)
+        let tx = Transaction(amount: 1000, categoryId: UUID(), date: Date(), recurringExpenseId: recurring.id)
         context.insert(tx)
         try context.save()
 
@@ -191,7 +191,7 @@ struct RecurringTransactionsViewModelTests {
         let expense = RecurringTransaction(
             name: "Rent",
             amount: 10000,
-            category: "Housing",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday,
             isActive: true,
@@ -211,7 +211,7 @@ struct RecurringTransactionsViewModelTests {
         let income = RecurringTransaction(
             name: "Salary",
             amount: 50000,
-            category: "Income",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday,
             isActive: true,
@@ -231,7 +231,7 @@ struct RecurringTransactionsViewModelTests {
         let income = RecurringTransaction(
             name: "Salary",
             amount: 50000,
-            category: "Income",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday,
             isActive: true,
@@ -240,7 +240,7 @@ struct RecurringTransactionsViewModelTests {
         let expense = RecurringTransaction(
             name: "Rent",
             amount: 20000,
-            category: "Housing",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday,
             isActive: true,
@@ -265,7 +265,7 @@ struct RecurringTransactionsViewModelTests {
         let active = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday,
             isActive: true
@@ -285,7 +285,7 @@ struct RecurringTransactionsViewModelTests {
         let paused = RecurringTransaction(
             name: "Gym",
             amount: 500,
-            category: "Health",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: yesterday,
             isActive: false // paused
@@ -309,7 +309,7 @@ struct RecurringTransactionsViewModelTests {
         let sooner = RecurringTransaction(
             name: "Earlier",
             amount: 100,
-            category: "Food",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: nearFuture,
             isActive: true
@@ -317,7 +317,7 @@ struct RecurringTransactionsViewModelTests {
         let later = RecurringTransaction(
             name: "Later",
             amount: 200,
-            category: "Food",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: farStart,
             isActive: true
@@ -342,7 +342,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
 
         #expect(viewModel.isValid == true)
     }
@@ -352,7 +351,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = ""
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
 
         #expect(viewModel.isValid == false)
     }
@@ -362,7 +360,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "   "
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
 
         #expect(viewModel.isValid == false)
     }
@@ -372,7 +369,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "0"
-        viewModel.selectedCategory = "Entertainment"
 
         #expect(viewModel.isValid == false)
     }
@@ -382,7 +378,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "-100"
-        viewModel.selectedCategory = "Entertainment"
 
         #expect(viewModel.isValid == false)
     }
@@ -392,17 +387,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "abc"
-        viewModel.selectedCategory = "Entertainment"
-
-        #expect(viewModel.isValid == false)
-    }
-
-    @Test
-    func testIsValidFailsWithEmptyCategory() {
-        let viewModel = AddRecurringTransactionViewModel()
-        viewModel.name = "Netflix"
-        viewModel.amount = "649"
-        viewModel.selectedCategory = ""
 
         #expect(viewModel.isValid == false)
     }
@@ -412,7 +396,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = "Netflix"
         viewModel.amount = "abc"
-        viewModel.selectedCategory = "Entertainment"
 
         let result = viewModel.save()
 
@@ -426,7 +409,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel()
         viewModel.name = ""
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
 
         let result = viewModel.save()
 
@@ -436,26 +418,11 @@ struct AddRecurringTransactionViewModelTests {
     }
 
     @Test
-    func testSaveFailsWithEmptyCategory() {
-        let viewModel = AddRecurringTransactionViewModel()
-        viewModel.name = "Netflix"
-        viewModel.amount = "649"
-        viewModel.selectedCategory = ""
-
-        let result = viewModel.save()
-
-        #expect(result == false)
-        #expect(viewModel.showError == true)
-        #expect(viewModel.errorMessage.contains("category"))
-    }
-
-    @Test
     func testSaveTrimsWhitespaceFromName() throws {
         let (svc, _) = try makeService()
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "  Netflix  "
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
 
@@ -491,7 +458,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Netflix"
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 1
 
@@ -512,7 +478,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
-        viewModel.selectedCategory = "Food"
         viewModel.frequency = .monthly
         viewModel.dayOfMonth = 15
 
@@ -530,7 +495,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
-        viewModel.selectedCategory = "Food"
         viewModel.frequency = .weekly
 
         _ = viewModel.save()
@@ -547,7 +511,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Subscription"
         viewModel.amount = "100"
-        viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = true
         viewModel.endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
 
@@ -565,7 +528,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Subscription"
         viewModel.amount = "100"
-        viewModel.selectedCategory = "Entertainment"
         viewModel.hasEndDate = false
 
         _ = viewModel.save()
@@ -582,7 +544,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
-        viewModel.selectedCategory = "Food"
         viewModel.notes = "Test notes"
 
         _ = viewModel.save()
@@ -599,7 +560,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Test"
         viewModel.amount = "100"
-        viewModel.selectedCategory = "Food"
         viewModel.notes = ""
 
         _ = viewModel.save()
@@ -621,14 +581,14 @@ struct AddRecurringTransactionViewModelTests {
     @Test
     func testPrefillSetsTransactionType() {
         let viewModel = AddRecurringTransactionViewModel()
-        viewModel.prefill(amount: "5000", category: "Salary", type: .income)
+        viewModel.prefill(categoryId: UUID(), type: .income, amountString: "5000")
         #expect(viewModel.transactionType == .income)
     }
 
     @Test
     func testPrefillDefaultsToExpenseWhenTypeOmitted() {
         let viewModel = AddRecurringTransactionViewModel()
-        viewModel.prefill(amount: "500", category: "Food")
+        viewModel.prefill(categoryId: UUID(), amountString: "500")
         #expect(viewModel.transactionType == .expense)
     }
 
@@ -638,7 +598,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Salary"
         viewModel.amount = "50000"
-        viewModel.selectedCategory = "Income"
         viewModel.transactionType = .income
 
         _ = viewModel.save()
@@ -653,7 +612,6 @@ struct AddRecurringTransactionViewModelTests {
         let viewModel = AddRecurringTransactionViewModel(persistence: svc)
         viewModel.name = "Netflix"
         viewModel.amount = "649"
-        viewModel.selectedCategory = "Entertainment"
         viewModel.transactionType = .expense
 
         _ = viewModel.save()
@@ -667,11 +625,11 @@ struct AddRecurringTransactionViewModelTests {
 struct EditRecurringTransactionViewModelTests {
 
     private func makeMonthly() -> RecurringTransaction {
-        RecurringTransaction(name: "Rent", amount: 1000, category: "Housing", frequency: .monthly, dayOfMonth: 5)
+        RecurringTransaction(name: "Rent", amount: 1000, categoryId: UUID(), frequency: .monthly, dayOfMonth: 5)
     }
 
     private func makeWeekly() -> RecurringTransaction {
-        RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .weekly, daysOfWeek: [1, 3])
+        RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .weekly, daysOfWeek: [1, 3])
     }
 
     // MARK: - load
@@ -684,7 +642,7 @@ struct EditRecurringTransactionViewModelTests {
 
         #expect(vm.name == "Rent")
         #expect(Double(vm.amount) == 1000)
-        #expect(vm.selectedCategory == "Housing")
+        #expect(vm.selectedCategoryId == recurring.categoryId)
         #expect(vm.frequency == .monthly)
         #expect(vm.dayOfMonth == 5)
         #expect(vm.frequencyError == nil)
