@@ -269,6 +269,48 @@ struct PersistenceServiceTests {
         #expect(log[0].payload != nil)
     }
 
+    // MARK: - encode failure surfaces as thrown error
+
+    @Test func testSave_create_encodeFailureSurfacesAsThrow() throws {
+        let schema = Schema([FailingEntity.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        MockChangeQueueManager.shared.reset()
+        let svc = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+        let entity = FailingEntity()
+        context.insert(entity)
+        #expect(throws: (any Error).self) {
+            try svc.save(entity, action: .create)
+        }
+        #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
+    }
+
+    @Test func testSave_update_encodeFailureSurfacesAsThrow() throws {
+        let schema = Schema([FailingEntity.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        MockChangeQueueManager.shared.reset()
+        let svc = PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+        let entity = FailingEntity()
+        context.insert(entity)
+        #expect(throws: (any Error).self) {
+            try svc.save(entity, action: .update)
+        }
+        #expect(MockChangeQueueManager.shared.enqueueCallLog.isEmpty)
+    }
+
     // MARK: - deleteCategory (id-only helper)
 
     @Test func testDeleteCategory_enqueuesDeleteWithCorrectContract() throws {
@@ -300,4 +342,21 @@ struct PersistenceServiceTests {
         #expect(log[0].endpoint == "/me/budget")
         #expect(log[0].httpMethod == .put)
     }
+}
+
+// MARK: - Test helper: entity whose encode always throws
+
+private enum EncodeError: Error { case always }
+
+@Model
+private final class FailingEntity: LocalSyncableEntity {
+    @Attribute(.unique) var id: UUID
+
+    @MainActor init() { self.id = UUID() }
+
+    static var entityType: EntityType { .transaction }
+    static var endpoint: String { "/fake" }
+
+    @MainActor func createRequestPayload() throws -> Data { throw EncodeError.always }
+    @MainActor func updateRequestPayload() throws -> Data { throw EncodeError.always }
 }

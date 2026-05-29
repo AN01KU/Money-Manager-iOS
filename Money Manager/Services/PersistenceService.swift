@@ -68,10 +68,10 @@ final class PersistenceService {
         switch action {
         case .create:
             httpMethod = .post
-            payload = try? entity.createRequestPayload()
+            payload = try entity.createRequestPayload()
         case .update:
             httpMethod = .patch
-            payload = try? entity.updateRequestPayload()
+            payload = try entity.updateRequestPayload()
         case .delete:
             httpMethod = .delete
             payload = nil
