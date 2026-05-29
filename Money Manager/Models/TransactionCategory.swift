@@ -10,7 +10,9 @@
 import SwiftUI
 
 struct TransactionCategory: Identifiable {
-    let id: String          // "predefined:food-dining" or "custom:<uuid>"
+    /// Stable identifier — server key for predefined and synced custom rows,
+    /// or the backing row's UUID string for unsynced custom rows.
+    let id: String
     /// The stable server key used in API payloads (e.g. "food-dining" or "Ankush-cc-<uuid>").
     let key: String
     let name: String
@@ -25,14 +27,6 @@ struct TransactionCategory: Identifiable {
     let overrideRow: Category?
 
     var color: Color { Color(hex: colorHex) }
-
-    /// The `PredefinedCategory` case backing this category, if any.
-    /// Derived from the `"predefined:<serverKey>"` id format owned by this type.
-    var predefinedCase: PredefinedCategory? {
-        guard id.hasPrefix("predefined:") else { return nil }
-        let key = String(id.dropFirst("predefined:".count))
-        return PredefinedCategory.allCases.first { $0.serverKey == key }
-    }
 
     // MARK: - Factory
 
@@ -65,7 +59,7 @@ struct TransactionCategory: Identifiable {
             predefinedSource = serverPredefined.map { base -> TransactionCategory in
                 let ov = overrideByKey[base.key]
                 return TransactionCategory(
-                    id: "predefined:\(base.key)",
+                    id: base.key,
                     key: base.key,
                     name: ov?.name ?? base.name,
                     icon: ov?.icon ?? base.icon,
@@ -81,7 +75,7 @@ struct TransactionCategory: Identifiable {
             predefinedSource = PredefinedCategory.allCases.map { predefined -> TransactionCategory in
                 let ov = overrideByKey[predefined.serverKey]
                 return TransactionCategory(
-                    id: "predefined:\(predefined.serverKey)",
+                    id: predefined.serverKey,
                     key: predefined.serverKey,
                     name: ov?.name ?? predefined.rawValue,
                     icon: ov?.icon ?? predefined.icon,
@@ -95,9 +89,9 @@ struct TransactionCategory: Identifiable {
         }
 
         let customSource = customRows.map { row -> TransactionCategory in
-            let resolvedKey = row.key.isEmpty ? "local:\(row.id.uuidString)" : row.key
+            let resolvedKey = row.key.isEmpty ? row.id.uuidString : row.key
             return TransactionCategory(
-                id: "custom:\(row.id.uuidString)",
+                id: resolvedKey,
                 key: resolvedKey,
                 name: row.name,
                 icon: row.icon,
