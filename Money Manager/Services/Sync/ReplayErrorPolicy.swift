@@ -42,9 +42,7 @@ enum ReplayAction: Equatable {
 }
 
 enum ReplayErrorPolicy {
-    /// Pure decision function — no side effects. Takes raw string values from
-    /// the PendingChange to avoid @MainActor isolation on the @Model type.
-    nonisolated static func decide(action: String, entityType: String, error apiError: APIError) -> ReplayAction {
+    nonisolated static func decide(action: ChangeAction, entityType: EntityType, error apiError: APIError) -> ReplayAction {
         switch apiError {
         case .unauthorized:
             return .sessionExpired
@@ -60,16 +58,16 @@ enum ReplayErrorPolicy {
             // Server has a newer version; drop our stale pending write.
             return .discardChange
 
-        case .notFound where action == "delete",
-             .notFound where action == "update":
+        case .notFound where action == .delete,
+             .notFound where action == .update:
             // Entity gone from server; purge the local row.
             return .discardChangeAndEntity
 
-        case .overrideAlreadyExists where action == "create" && entityType == "category":
+        case .overrideAlreadyExists where action == .create && entityType == .category:
             // Server already owns this override; next pull will bring the canonical version.
             return .discardChangeAndEntity
 
-        case .predefinedNotFound where action == "create" && entityType == "category":
+        case .predefinedNotFound where action == .create && entityType == .category:
             // Predefined category removed by admin; local override is dead.
             return .discardChangeAndEntity
 
@@ -82,7 +80,7 @@ enum ReplayErrorPolicy {
         case .idOwnedByAnotherUser, .idOwnedByAnotherGroup:
             return .discardChangeAndEntity
 
-        case .conflict where action == "create":
+        case .conflict where action == .create:
             // 409 on create — entity already on server; treat as success.
             return .discardChange
 

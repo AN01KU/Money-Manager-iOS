@@ -14,7 +14,7 @@ struct ReplayErrorPolicyTests {
         entityType: EntityType = .transaction,
         error: APIError
     ) -> ReplayAction {
-        ReplayErrorPolicy.decide(action: action.rawValue, entityType: entityType.rawValue, error: error)
+        ReplayErrorPolicy.decide(action: action, entityType: entityType, error: error)
     }
 
     // MARK: - .unauthorized → .sessionExpired

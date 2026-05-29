@@ -182,7 +182,9 @@ final class ChangeQueueManager: ChangeQueueManagerProtocol {
                 }
 
                 AppLogger.sync.warning("[ReplayDebug] \(apiError) for \(change.entityType)=\(change.entityID) action=\(change.action)")
-                switch ReplayErrorPolicy.decide(action: change.action, entityType: change.entityType, error: apiError) {
+                let action = ChangeAction(rawValue: change.action) ?? .update
+                let entityType = EntityType(rawValue: change.entityType) ?? .transaction
+                switch ReplayErrorPolicy.decide(action: action, entityType: entityType, error: apiError) {
                 case .sessionExpired:
                     NotificationCenter.default.post(name: .authSessionExpired, object: nil)
                     return
