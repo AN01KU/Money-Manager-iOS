@@ -8,8 +8,10 @@ struct SyncDebugView: View {
     @Environment(\.syncService) private var syncService
     @Environment(\.changeQueueManager) private var changeQueueManager
     @Environment(\.networkMonitor) private var networkMonitor
-    @Query(sort: \PendingChange.createdAt) private var pendingChanges: [PendingChange]
-    @Query(sort: \FailedChange.failedAt, order: .reverse) private var failedChanges: [FailedChange]
+    @Query(filter: #Predicate<ChangeRecord> { $0.statusRaw == "pending" }, sort: \ChangeRecord.createdAt)
+    private var pendingChanges: [ChangeRecord]
+    @Query(filter: #Predicate<ChangeRecord> { $0.statusRaw == "failed" }, sort: \ChangeRecord.createdAt, order: .reverse)
+    private var failedChanges: [ChangeRecord]
 
     @State private var isSyncing = false
     @State private var isFullSyncing = false
@@ -142,13 +144,16 @@ struct SyncDebugView: View {
                                     .font(.caption)
                                     .foregroundStyle(.red)
                             }
-                            Text(change.lastError)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("Failed \(change.failedAt.formatted(.relative(presentation: .named)))")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-
+                            if let error = change.lastError {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let failedAt = change.failedAt {
+                                Text("Failed \(failedAt.formatted(.relative(presentation: .named)))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             Button("Retry") {
                                 retryFailed(change)
                             }
@@ -168,7 +173,7 @@ struct SyncDebugView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func retryFailed(_ failed: FailedChange) {
+    private func retryFailed(_ failed: ChangeRecord) {
         guard
             let entityType = EntityType(rawValue: failed.entityType),
             let action = ChangeAction(rawValue: failed.action),
@@ -194,6 +199,6 @@ struct SyncDebugView: View {
     NavigationStack {
         SyncDebugView()
     }
-    .modelContainer(for: [PendingChange.self, FailedChange.self])
+    .modelContainer(for: [ChangeRecord.self])
 }
 #endif

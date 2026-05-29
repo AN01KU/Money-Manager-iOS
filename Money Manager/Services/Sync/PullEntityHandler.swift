@@ -135,22 +135,18 @@ final class RecurringTransactionPullHandler: CollectionPullHandler {
         locals: [RecurringTransaction],
         context: ModelContext
     ) {
-        let failedIDs = Set(
-            (try? context.fetch(FetchDescriptor<FailedChange>(
-                predicate: #Predicate { $0.entityType == "recurring" }
-            )))?.map { $0.entityID } ?? []
-        )
-        let pendingIDs = Set(
-            (try? context.fetch(FetchDescriptor<PendingChange>(
-                predicate: #Predicate { $0.entityType == "recurring" }
+        let pendingRaw = ChangeStatus.pending.rawValue
+        let failedRaw = ChangeStatus.failed.rawValue
+        let protectedIDs = Set(
+            (try? context.fetch(FetchDescriptor<ChangeRecord>(
+                predicate: #Predicate { $0.entityType == "recurring" && ($0.statusRaw == pendingRaw || $0.statusRaw == failedRaw) }
             )))?.map { $0.entityID } ?? []
         )
         let serverIDs = Set(remoteItems.map { $0.id })
 
         for local in locals {
             guard !serverIDs.contains(local.id) else { continue }
-            guard !pendingIDs.contains(local.id) else { continue }
-            guard !failedIDs.contains(local.id) else { continue }
+            guard !protectedIDs.contains(local.id) else { continue }
             AppLogger.sync.info("Purging recurring not on server: id=\(local.id) name=\(local.name)")
             context.delete(local)
         }
@@ -265,22 +261,18 @@ final class TransactionPullHandler: CollectionPullHandler {
         locals: [Transaction],
         context: ModelContext
     ) {
-        let failedIDs = Set(
-            (try? context.fetch(FetchDescriptor<FailedChange>(
-                predicate: #Predicate { $0.entityType == "transaction" }
-            )))?.map { $0.entityID } ?? []
-        )
-        let pendingIDs = Set(
-            (try? context.fetch(FetchDescriptor<PendingChange>(
-                predicate: #Predicate { $0.entityType == "transaction" }
+        let pendingRaw = ChangeStatus.pending.rawValue
+        let failedRaw = ChangeStatus.failed.rawValue
+        let protectedIDs = Set(
+            (try? context.fetch(FetchDescriptor<ChangeRecord>(
+                predicate: #Predicate { $0.entityType == "transaction" && ($0.statusRaw == pendingRaw || $0.statusRaw == failedRaw) }
             )))?.map { $0.entityID } ?? []
         )
         let serverIDs = Set(remoteItems.map { $0.id })
 
         for local in locals {
             guard !serverIDs.contains(local.id) else { continue }
-            guard !pendingIDs.contains(local.id) else { continue }
-            guard !failedIDs.contains(local.id) else { continue }
+            guard !protectedIDs.contains(local.id) else { continue }
             let isServerOwned = local.settlementId != nil
                 || local.groupTransactionId != nil
                 || local.recurringExpenseId != nil
@@ -403,8 +395,9 @@ final class UserBudgetPullHandler: SingletonPullHandler {
         let locals = (try? context.fetch(FetchDescriptor<UserBudget>())) ?? []
         lastLocalCount = locals.count
 
+        let pendingRaw = ChangeStatus.pending.rawValue
         let hasPending = (try? context.fetch(
-            FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityType == "budget" })
+            FetchDescriptor<ChangeRecord>(predicate: #Predicate { $0.entityType == "budget" && $0.statusRaw == pendingRaw })
         ))?.isEmpty == false
 
         if hasPending {
@@ -535,9 +528,11 @@ final class CategoryPullHandler: CollectionPullHandler {
         locals: [Category],
         context: ModelContext
     ) {
-        let pendingIDs = Set(
-            (try? context.fetch(FetchDescriptor<PendingChange>(
-                predicate: #Predicate { $0.entityType == "category" }
+        let pendingRaw = ChangeStatus.pending.rawValue
+        let failedRaw = ChangeStatus.failed.rawValue
+        let protectedIDs = Set(
+            (try? context.fetch(FetchDescriptor<ChangeRecord>(
+                predicate: #Predicate { $0.entityType == "category" && ($0.statusRaw == pendingRaw || $0.statusRaw == failedRaw) }
             )))?.map { $0.entityID } ?? []
         )
         let serverIDs = Set(remoteItems.map { $0.id })
@@ -545,7 +540,7 @@ final class CategoryPullHandler: CollectionPullHandler {
         for local in locals {
             guard !local.isPredefined, !local.isServerPredefined else { continue }
             guard !serverIDs.contains(local.id) else { continue }
-            guard !pendingIDs.contains(local.id) else { continue }
+            guard !protectedIDs.contains(local.id) else { continue }
             AppLogger.sync.debug("Purging custom category not on server: \(local.id) name=\(local.name)")
             context.delete(local)
         }

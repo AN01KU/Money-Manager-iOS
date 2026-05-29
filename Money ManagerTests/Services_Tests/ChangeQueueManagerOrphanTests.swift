@@ -20,7 +20,7 @@ struct ChangeQueueManagerOrphanTests {
         in context: ModelContext,
         entityType: EntityType = .transaction
     ) {
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: entityType, entityID: UUID(),
             action: .create, endpoint: "/\(entityType.rawValue)s",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -41,8 +41,8 @@ struct ChangeQueueManagerOrphanTests {
 
         manager.orphanAll(context: context)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(pending.isEmpty)
         #expect(orphaned.count == 2)
     }
@@ -58,7 +58,7 @@ struct ChangeQueueManagerOrphanTests {
 
         manager.orphanAll(context: context)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(pending.isEmpty)
     }
 
@@ -69,7 +69,7 @@ struct ChangeQueueManagerOrphanTests {
 
         manager.orphanAll(context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.isEmpty)
     }
 
@@ -88,7 +88,7 @@ struct ChangeQueueManagerOrphanTests {
 
         manager.orphanAll(context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.count == 1)
         #expect(orphaned.first?.entityType == EntityType.budget.rawValue)
         #expect(orphaned.first?.entityID == id)
@@ -103,19 +103,19 @@ struct ChangeQueueManagerOrphanTests {
         let context = ModelContext(container)
         let manager = makeManager(container: container)
 
-        let oldOrphan = OrphanedChange(
+        let oldOrphan = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: nil,
-            createdAt: Date(timeIntervalSinceNow: -30 * 86400)
+            status: .orphaned,
+            orphanedAt: Date(timeIntervalSinceNow: -8 * 86400)
         )
-        oldOrphan.orphanedAt = Date(timeIntervalSinceNow: -8 * 86400)
         context.insert(oldOrphan)
         try context.save()
 
         manager.purgeExpiredOrphans(olderThan: 7, context: context)
 
-        let remaining = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(remaining.isEmpty)
     }
 
@@ -124,18 +124,19 @@ struct ChangeQueueManagerOrphanTests {
         let context = ModelContext(container)
         let manager = makeManager(container: container)
 
-        let recentOrphan = OrphanedChange(
+        let recentOrphan = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: nil,
-            createdAt: Date()
+            status: .orphaned,
+            orphanedAt: Date()
         )
         context.insert(recentOrphan)
         try context.save()
 
         manager.purgeExpiredOrphans(olderThan: 7, context: context)
 
-        let remaining = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(remaining.count == 1)
     }
 
@@ -150,7 +151,7 @@ struct ChangeQueueManagerOrphanTests {
         manager.configure(container: container)
 
         for _ in 0..<2 {
-            let change = PendingChange(
+            let change = ChangeRecord(
                 entityType: .transaction, entityID: UUID(),
                 action: .create, endpoint: "/transactions",
                 httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -167,8 +168,8 @@ struct ChangeQueueManagerOrphanTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let orphans = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let orphans = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(pending.isEmpty)
         #expect(orphans.count == 2)
         #expect(notificationFired)

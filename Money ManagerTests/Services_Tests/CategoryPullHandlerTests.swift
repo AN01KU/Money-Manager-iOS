@@ -148,8 +148,8 @@ struct CategoryPullHandlerTests {
         cat.isPredefined = false
         context.insert(cat)
 
-        let pending = PendingChange(entityType: "category", entityID: catId, action: "update",
-                                    endpoint: "/categories/\(catId)", httpMethod: "PATCH", payload: Data())
+        let pending = ChangeRecord.makePending(entityType: "category", entityID: catId, action: "update",
+                                              endpoint: "/categories/\(catId)", httpMethod: "PATCH", payload: Data())
         context.insert(pending)
         try context.save()
 

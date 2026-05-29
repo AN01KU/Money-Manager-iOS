@@ -101,11 +101,7 @@ extension AppServices {
     }
 
     private static func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema([
-            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
-            PendingChange.self, FailedChange.self, OrphanedChange.self,
-            SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
-        ])
+        let schema = Schema(SchemaV3.models)
         return try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }
     #endif

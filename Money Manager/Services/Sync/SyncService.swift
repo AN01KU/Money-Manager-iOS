@@ -40,7 +40,7 @@ final class SyncService: SyncServiceProtocol {
     private convenience init() {
         let schema = Schema([
             Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
-            PendingChange.self, FailedChange.self, OrphanedChange.self,
+            ChangeRecord.self,
             SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
         ])
         let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))

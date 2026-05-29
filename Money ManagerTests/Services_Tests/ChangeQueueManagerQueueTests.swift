@@ -37,7 +37,7 @@ struct ChangeQueueManagerQueueTests {
             context: context
         )
 
-        let all = try context.fetch(FetchDescriptor<PendingChange>())
+        let all = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(all.count == 1)
         #expect(all.first?.action == ChangeAction.create.rawValue)
         let payloadString = all.first?.payload.flatMap { String(data: $0, encoding: .utf8) }
@@ -63,7 +63,7 @@ struct ChangeQueueManagerQueueTests {
             context: context
         )
 
-        let all = try context.fetch(FetchDescriptor<PendingChange>())
+        let all = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(all.count == 0)
     }
 
@@ -86,7 +86,7 @@ struct ChangeQueueManagerQueueTests {
             context: context
         )
 
-        let all = try context.fetch(FetchDescriptor<PendingChange>())
+        let all = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(all.count == 1)
         #expect(all.first?.action == ChangeAction.delete.rawValue)
         #expect(all.first?.payload == nil)
@@ -111,7 +111,7 @@ struct ChangeQueueManagerQueueTests {
             context: context
         )
 
-        let all = try context.fetch(FetchDescriptor<PendingChange>())
+        let all = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(all.count == 1)
         #expect(all.first?.action == ChangeAction.update.rawValue)
         let payloadString = all.first?.payload.flatMap { String(data: $0, encoding: .utf8) }
@@ -138,7 +138,7 @@ struct ChangeQueueManagerQueueTests {
             context: context
         )
 
-        let changes = try context.fetch(FetchDescriptor<PendingChange>())
+        let changes = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(changes.count == 2)
     }
 
@@ -160,7 +160,7 @@ struct ChangeQueueManagerQueueTests {
             context: context
         )
 
-        let all = try context.fetch(FetchDescriptor<PendingChange>())
+        let all = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(all.count == 2)
     }
 
@@ -186,7 +186,7 @@ struct ChangeQueueManagerQueueTests {
 
         manager.clearAll(context: context)
 
-        let all = try context.fetch(FetchDescriptor<PendingChange>())
+        let all = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(all.count == 0)
     }
 
@@ -197,7 +197,7 @@ struct ChangeQueueManagerQueueTests {
 
         manager.clearAll(context: context)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.isEmpty)
     }
 
@@ -244,7 +244,7 @@ struct ChangeQueueManagerQueueTests {
         let context = ModelContext(container)
         let manager = makeManager(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .budget, entityID: UUID(),
             action: .create, endpoint: "/budgets",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -257,7 +257,7 @@ struct ChangeQueueManagerQueueTests {
             group.addTask { await manager.replayAll(context: context, isAuthenticated: true) }
         }
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.count <= 1)
     }
 }

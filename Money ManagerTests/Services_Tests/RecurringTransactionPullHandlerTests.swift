@@ -176,8 +176,8 @@ struct RecurringTransactionPullHandlerTests {
                                          frequency: .monthly, startDate: Date())
         context.insert(local)
 
-        let pending = PendingChange(entityType: "recurring", entityID: rid, action: "create",
-                                    endpoint: "/recurring-transactions", httpMethod: "POST", payload: Data())
+        let pending = ChangeRecord.makePending(entityType: "recurring", entityID: rid, action: "create",
+                                              endpoint: "/recurring-transactions", httpMethod: "POST", payload: Data())
         context.insert(pending)
         try context.save()
 

@@ -31,7 +31,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let payload = "{}".data(using: .utf8)
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: payload
@@ -41,7 +41,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.isEmpty)
         #expect(mock.postCalls.count == 1)
     }
@@ -56,7 +56,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let payload = "{}".data(using: .utf8)
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .update, endpoint: "/transactions",
             httpMethod: .put, payload: payload
@@ -66,7 +66,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.isEmpty)
         #expect(mock.putCalls.count == 1)
     }
@@ -81,7 +81,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         let payload = "{}".data(using: .utf8)
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .update, endpoint: "/transactions",
             httpMethod: .patch, payload: payload
@@ -91,7 +91,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.isEmpty)
         #expect(mock.patchCalls.count == 1)
     }
@@ -109,7 +109,7 @@ struct ChangeQueueManagerReplayTests {
         let tx = Transaction(id: txId, amount: 10, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: txId,
             action: .delete, endpoint: "/transactions",
             httpMethod: .delete, payload: nil
@@ -119,7 +119,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let txns = try context.fetch(FetchDescriptor<Transaction>())
         #expect(remaining.isEmpty)
         #expect(txns.isEmpty)
@@ -142,7 +142,7 @@ struct ChangeQueueManagerReplayTests {
         )
         context.insert(rec)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .recurring, entityID: recId,
             action: .delete, endpoint: "/recurring-transactions",
             httpMethod: .delete, payload: nil
@@ -152,7 +152,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
         #expect(pending.isEmpty)
         #expect(recurring.isEmpty)
@@ -168,7 +168,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -179,7 +179,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.count == 1)
         #expect(remaining.first?.retryCount == 1)
     }
@@ -198,7 +198,7 @@ struct ChangeQueueManagerReplayTests {
         let tx = Transaction(id: txId, amount: 5, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: txId,
             action: .delete, endpoint: "/transactions",
             httpMethod: .delete, payload: nil
@@ -208,7 +208,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let txns = try context.fetch(FetchDescriptor<Transaction>())
         #expect(pending.isEmpty)
         #expect(txns.isEmpty)
@@ -224,7 +224,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -234,7 +234,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.isEmpty)
     }
 
@@ -248,7 +248,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -276,7 +276,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -287,7 +287,7 @@ struct ChangeQueueManagerReplayTests {
         await manager.replayAll(context: context, isAuthenticated: false)
 
         #expect(mock.postCalls.isEmpty)
-        let remaining = try context.fetch(FetchDescriptor<PendingChange>())
+        let remaining = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(remaining.count == 1)
     }
 
@@ -299,7 +299,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager()
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -310,7 +310,7 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(pending.count == 1)
     }
 
@@ -322,7 +322,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager()
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -333,8 +333,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty)
         #expect(failed.count == 1)
     }
@@ -353,7 +353,7 @@ struct ChangeQueueManagerReplayTests {
         let tx = Transaction(id: txId, amount: 20, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: txId,
             action: .update, endpoint: "/transactions",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -363,9 +363,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let txns = try context.fetch(FetchDescriptor<Transaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty, "pending change should be removed")
         #expect(txns.isEmpty, "local transaction should be purged")
         #expect(failed.isEmpty, "should NOT dead-letter a 404 on update")
@@ -386,7 +386,7 @@ struct ChangeQueueManagerReplayTests {
         )
         context.insert(rec)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .recurring, entityID: recId,
             action: .update, endpoint: "/recurring-transactions",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -396,9 +396,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty)
         #expect(recurring.isEmpty)
         #expect(failed.isEmpty)
@@ -416,7 +416,7 @@ struct ChangeQueueManagerReplayTests {
         let cat = Money_Manager.Category(id: catId, name: "Travel", icon: "airplane", color: "#FF0000")
         context.insert(cat)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .category, entityID: catId,
             action: .update, endpoint: "/categories",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -426,9 +426,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let categories = try context.fetch(FetchDescriptor<Money_Manager.Category>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty)
         #expect(categories.isEmpty)
         #expect(failed.isEmpty)
@@ -442,7 +442,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -453,8 +453,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         // After one more failure (hitting max), moves to dead-letter — NOT purged
         #expect(pending.isEmpty)
         #expect(failed.count == 1, "404 on create should dead-letter, not purge entity")
@@ -474,7 +474,7 @@ struct ChangeQueueManagerReplayTests {
         let tx = Transaction(id: txId, amount: 50, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: txId,
             action: .create, endpoint: "/transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -484,9 +484,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let txns = try context.fetch(FetchDescriptor<Transaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty, "pending change should be discarded")
         #expect(txns.isEmpty, "local entity should be purged")
         #expect(failed.isEmpty, "should NOT dead-letter — purge and discard immediately")
@@ -504,7 +504,7 @@ struct ChangeQueueManagerReplayTests {
         let tx = Transaction(id: txId, amount: 50, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: txId,
             action: .update, endpoint: "/transactions",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -514,9 +514,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let txns = try context.fetch(FetchDescriptor<Transaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty)
         #expect(txns.isEmpty)
         #expect(failed.isEmpty)
@@ -537,7 +537,7 @@ struct ChangeQueueManagerReplayTests {
         )
         context.insert(rec)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .recurring, entityID: recId,
             action: .create, endpoint: "/recurring-transactions",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -547,9 +547,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty)
         #expect(recurring.isEmpty)
         #expect(failed.isEmpty)
@@ -570,7 +570,7 @@ struct ChangeQueueManagerReplayTests {
         )
         context.insert(rec)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .recurring, entityID: recId,
             action: .update, endpoint: "/recurring-transactions",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -580,9 +580,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let recurring = try context.fetch(FetchDescriptor<RecurringTransaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty)
         #expect(recurring.isEmpty)
         #expect(failed.isEmpty)
@@ -602,7 +602,7 @@ struct ChangeQueueManagerReplayTests {
         let tx = Transaction(id: txId, amount: 50, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: txId,
             action: .update, endpoint: "/transactions",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -612,9 +612,9 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         let txns = try context.fetch(FetchDescriptor<Transaction>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty, "stale pending change should be discarded")
         #expect(txns.count == 1, "local entity should NOT be purged — server pull will overwrite it")
         #expect(failed.isEmpty, "staleWrite should not dead-letter")
@@ -630,7 +630,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .create, endpoint: "/groups/1/settlements",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -641,8 +641,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty, "pending change should be removed immediately")
         #expect(failed.count == 1, "should dead-letter on first failure")
         #expect(failed.first?.retryCount == 0, "retry count should not be incremented")
@@ -656,7 +656,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .transaction, entityID: UUID(),
             action: .update, endpoint: "/groups/1/transactions",
             httpMethod: .patch, payload: "{}".data(using: .utf8)
@@ -667,8 +667,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty, "pending change should be removed immediately")
         #expect(failed.count == 1, "should dead-letter on first failure")
         #expect(failed.first?.retryCount == 0, "retry count should not be incremented")
@@ -682,7 +682,7 @@ struct ChangeQueueManagerReplayTests {
         let manager = ChangeQueueManager(apiClient: mock)
         manager.configure(container: container)
 
-        let change = PendingChange(
+        let change = ChangeRecord(
             entityType: .group, entityID: UUID(),
             action: .create, endpoint: "/groups/1/members",
             httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -693,8 +693,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let failed = try context.fetch(FetchDescriptor<FailedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let failed = try context.fetch(makeDescriptor(statusRaw: "failed"))
         #expect(pending.isEmpty, "pending change should be removed immediately")
         #expect(failed.count == 1, "should dead-letter on first failure")
         #expect(failed.first?.retryCount == 0, "retry count should not be incremented")
@@ -711,7 +711,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         for _ in 0..<2 {
-            let change = PendingChange(
+            let change = ChangeRecord(
                 entityType: .transaction, entityID: UUID(),
                 action: .create, endpoint: "/transactions",
                 httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -728,8 +728,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let orphans = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let orphans = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(pending.isEmpty)
         #expect(orphans.count == 2)
         #expect(notificationFired)
@@ -746,7 +746,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         for _ in 0..<3 {
-            let change = PendingChange(
+            let change = ChangeRecord(
                 entityType: .transaction, entityID: UUID(),
                 action: .create, endpoint: "/transactions",
                 httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -772,7 +772,7 @@ struct ChangeQueueManagerReplayTests {
         manager.configure(container: container)
 
         for _ in 0..<4 {
-            let change = PendingChange(
+            let change = ChangeRecord(
                 entityType: .transaction, entityID: UUID(),
                 action: .create, endpoint: "/transactions",
                 httpMethod: .post, payload: "{}".data(using: .utf8)
@@ -789,8 +789,8 @@ struct ChangeQueueManagerReplayTests {
 
         await manager.replayAll(context: context, isAuthenticated: true)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let orphans = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let orphans = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(pending.isEmpty, "all pending changes must be orphaned")
         #expect(orphans.count == 4, "all 4 changes must appear in orphaned table")
         #expect(notificationCount == 1, "notification must fire exactly once")

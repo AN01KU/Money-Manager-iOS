@@ -31,12 +31,8 @@ struct CategoryWipeHandler: WipeHandler {
     func wipe(context: ModelContext) { try? context.delete(model: Category.self) }
 }
 
-struct PendingChangeWipeHandler: WipeHandler {
-    func wipe(context: ModelContext) { try? context.delete(model: PendingChange.self) }
-}
-
-struct OrphanedChangeWipeHandler: WipeHandler {
-    func wipe(context: ModelContext) { try? context.delete(model: OrphanedChange.self) }
+struct ChangeRecordWipeHandler: WipeHandler {
+    func wipe(context: ModelContext) { try? context.delete(model: ChangeRecord.self) }
 }
 
 struct SplitGroupWipeHandler: WipeHandler {
@@ -91,8 +87,7 @@ struct LocalDataWiper {
         RecurringTransactionWipeHandler(),
         UserBudgetWipeHandler(),
         CategoryWipeHandler(),
-        PendingChangeWipeHandler(),
-        OrphanedChangeWipeHandler(),
+        ChangeRecordWipeHandler(),
         SplitGroupWipeHandler(),
         GroupMemberWipeHandler(),
         GroupTransactionWipeHandler(),

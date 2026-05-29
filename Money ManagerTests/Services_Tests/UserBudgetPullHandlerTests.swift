@@ -72,7 +72,7 @@ struct UserBudgetPullHandlerTests {
         let context = ModelContext(container)
 
         context.insert(UserBudget(limit: 1234))
-        let pending = PendingChange(
+        let pending = ChangeRecord.makePending(
             entityType: "budget",
             entityID: UserBudget.sentinelID,
             action: "update",

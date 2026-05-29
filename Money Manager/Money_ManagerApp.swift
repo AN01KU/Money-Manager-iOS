@@ -26,7 +26,7 @@ struct Money_ManagerApp: App {
         }
         #endif
 
-        let schema = Schema(SchemaV2.models)
+        let schema = Schema(SchemaV3.models)
 
         let resolvedContainer: ModelContainer
         if let recovered = Self.makeContainer(schema: schema, migrationPlan: AppMigrationPlan.self) {

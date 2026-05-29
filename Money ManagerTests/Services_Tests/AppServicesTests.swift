@@ -36,11 +36,7 @@ struct AppServicesTests {
     // MARK: - live smoke test
 
     @Test func testLiveConstructsWithoutCrashing() throws {
-        let schema = Schema([
-            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
-            PendingChange.self, FailedChange.self, OrphanedChange.self,
-            SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
-        ])
+        let schema = Schema(SchemaV3.models)
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let services = AppServices.live(container: container)
         #expect(services.authService is AuthService)

@@ -122,11 +122,7 @@ extension PersistenceService {
     /// A shared in-memory PersistenceService for use in SwiftUI previews, tests,
     /// and VM default-argument values. Never used in production builds.
     @MainActor static let testing: PersistenceService = {
-        let schema = Schema([
-            Transaction.self, RecurringTransaction.self, UserBudget.self, Category.self,
-            PendingChange.self, FailedChange.self, OrphanedChange.self,
-            SplitGroupModel.self, GroupMemberModel.self, GroupTransactionModel.self, GroupBalanceModel.self
-        ])
+        let schema = Schema(SchemaV3.models)
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: config)
         return PersistenceService(
