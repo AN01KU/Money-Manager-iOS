@@ -36,8 +36,14 @@ final class OverviewTests: XCTestCase {
         app.tabBars.buttons["Overview"].tap()
 
         let emptyState = app.otherElements["overview.empty-state"]
-        if emptyState.waitForExistence(timeout: 2) {
-            XCTAssertTrue(emptyState.exists)
+        let budgetCard = app.buttons["overview.budget-card"]
+        let noBudgetCard = app.buttons["overview.no-budget-card"]
+        let hasData = budgetCard.waitForExistence(timeout: 3) || noBudgetCard.waitForExistence(timeout: 1)
+        if hasData {
+            // Test account has data — empty state should not be visible
+            XCTAssertFalse(emptyState.exists, "Empty state should not appear when transactions exist")
+        } else {
+            XCTAssertTrue(emptyState.waitForExistence(timeout: 3), "Empty state should appear when there are no transactions")
         }
     }
 
@@ -47,8 +53,13 @@ final class OverviewTests: XCTestCase {
         app.tabBars.buttons["Overview"].tap()
 
         let budgetCard = app.buttons["overview.budget-card"]
-        if budgetCard.waitForExistence(timeout: 3) {
-            XCTAssertTrue(budgetCard.exists)
+        let noBudgetCard = app.buttons["overview.no-budget-card"]
+        let hasBudget = budgetCard.waitForExistence(timeout: 3)
+        if hasBudget {
+            XCTAssertTrue(budgetCard.exists, "Budget card should appear when a budget is set")
+            XCTAssertFalse(noBudgetCard.exists, "No-budget card should not appear when a budget is set")
+        } else {
+            XCTAssertTrue(noBudgetCard.waitForExistence(timeout: 3), "No-budget card should appear when no budget is set")
         }
     }
 
@@ -56,8 +67,12 @@ final class OverviewTests: XCTestCase {
         app.tabBars.buttons["Overview"].tap()
 
         let noBudgetCard = app.buttons["overview.no-budget-card"]
-        if noBudgetCard.waitForExistence(timeout: 3) {
-            XCTAssertTrue(noBudgetCard.exists)
+        let budgetCard = app.buttons["overview.budget-card"]
+        if budgetCard.waitForExistence(timeout: 3) {
+            // Test account has a budget — budget card should be shown, no-budget card should not
+            XCTAssertFalse(noBudgetCard.exists, "No-budget card should not appear when a budget is set")
+        } else {
+            XCTAssertTrue(noBudgetCard.waitForExistence(timeout: 3), "No-budget card should appear when no budget is set")
         }
     }
 

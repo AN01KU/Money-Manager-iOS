@@ -62,47 +62,44 @@ struct ModelMapperTests {
 
     @Test
     func testApplyRemoteOverwritesTransactionFields() throws {
-        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let transaction = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let api = try makeAPITransaction(id: transaction.id, type: "income", amount: 500, category: "Transport")
 
-        transaction.applyRemote(api)
+        transaction.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         #expect(transaction.type == .income)
         #expect(transaction.amount == 500)
-        #expect(transaction.category == "Transport")
     }
 
     @Test
     func testApplyRemoteSetsIsSoftDeletedFromIsDeleted() throws {
-        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let transaction = Transaction(amount: 100, categoryId: UUID(), date: Date())
         #expect(transaction.isSoftDeleted == false)
 
         let api = try makeAPITransaction(id: transaction.id, isDeleted: true)
-        transaction.applyRemote(api)
+        transaction.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         #expect(transaction.isSoftDeleted == true)
     }
 
     @Test
     func testApplyRemoteFallsBackToExistingTypeOnUnknownRawValue() throws {
-        let transaction = Transaction(type: .income, amount: 100, category: "Food", date: Date())
-        let api = try makeAPITransaction(id: transaction.id, type: "unknown_type")
-
-        transaction.applyRemote(api)
-
-        // "unknown_type" has no matching TransactionKind case — should keep existing .income
-        #expect(transaction.type == .income)
+        // Unknown type strings now fail at JSON decode time (TransactionKind is Codable enum).
+        // Verify that makeAPITransaction throws when given an invalid type.
+        #expect(throws: (any Error).self) {
+            try makeAPITransaction(id: UUID(), type: "unknown_type")
+        }
     }
 
     // MARK: - RecurringTransaction.applyRemote
 
     @Test
     func testApplyRemoteRecurringHandlesNilType() throws {
-        let recurring = RecurringTransaction(name: "Netflix", amount: 500, category: "Entertainment", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Netflix", amount: 500, categoryId: UUID(), frequency: .monthly)
         recurring.type = .expense
 
         let api = try makeAPIRecurring(id: recurring.id, type: nil)
-        recurring.applyRemote(api)
+        recurring.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         // nil type should not change existing type
         #expect(recurring.type == .expense)
@@ -110,10 +107,10 @@ struct ModelMapperTests {
 
     @Test
     func testApplyRemoteRecurringFallsBackToExistingFrequencyOnUnknownValue() throws {
-        let recurring = RecurringTransaction(name: "Gym", amount: 1000, category: "Health", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Gym", amount: 1000, categoryId: UUID(), frequency: .monthly)
 
         let api = try makeAPIRecurring(id: recurring.id, frequency: "biweekly")
-        recurring.applyRemote(api)
+        recurring.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         // "biweekly" is not a valid RecurringFrequency — should keep .monthly
         #expect(recurring.frequency == .monthly)
@@ -121,11 +118,11 @@ struct ModelMapperTests {
 
     @Test
     func testApplyRemoteRecurringUpdatesTypeWhenValid() throws {
-        let recurring = RecurringTransaction(name: "Salary", amount: 5000, category: "Work & Professional", frequency: .monthly)
+        let recurring = RecurringTransaction(name: "Salary", amount: 5000, categoryId: UUID(), frequency: .monthly)
         recurring.type = .expense
 
         let api = try makeAPIRecurring(id: recurring.id, type: "income")
-        recurring.applyRemote(api)
+        recurring.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         #expect(recurring.type == .income)
     }
@@ -134,15 +131,15 @@ struct ModelMapperTests {
 
     @Test
     func testTransactionToCreateRequestIncludesId() {
-        let transaction = Transaction(amount: 250, category: "Food", date: Date())
-        let request = transaction.toCreateRequest()
+        let transaction = Transaction(amount: 250, categoryId: UUID(), date: Date())
+        let request = transaction.toCreateRequest(categories: [])
         #expect(request.id == transaction.id)
     }
 
     @Test
     func testRecurringTransactionToCreateRequestIncludesIdAndFrequency() {
-        let recurring = RecurringTransaction(name: "Netflix", amount: 500, category: "Entertainment", frequency: .monthly)
-        let request = recurring.toCreateRequest()
+        let recurring = RecurringTransaction(name: "Netflix", amount: 500, categoryId: UUID(), frequency: .monthly)
+        let request = recurring.toCreateRequest(categories: [])
         #expect(request.id == recurring.id)
         #expect(request.frequency == "monthly")
     }
@@ -151,82 +148,39 @@ struct ModelMapperTests {
 
     @Test
     func testTransactionToUpdateRequestIncludesFields() {
-        let tx = Transaction(amount: 250, category: "Transport", date: Date(), transactionDescription: "Bus fare")
-        let req = tx.toUpdateRequest()
+        let tx = Transaction(amount: 250, categoryId: UUID(), date: Date(), transactionDescription: "Bus fare")
+        let req = tx.toUpdateRequest(categories: [])
         #expect(req.amount == 250)
-        #expect(req.category == "Transport")
         #expect(req.description == "Bus fare")
-        #expect(req.type == "expense")
+        #expect(req.type == .expense)
     }
 
     // MARK: - RecurringTransaction.toUpdateRequest
 
     @Test
     func testRecurringTransactionToUpdateRequestIncludesFields() {
-        let recurring = RecurringTransaction(name: "Gym", amount: 500, category: "Health", frequency: .weekly, isActive: false, type: .expense)
-        let req = recurring.toUpdateRequest()
+        let recurring = RecurringTransaction(name: "Gym", amount: 500, categoryId: UUID(), frequency: .weekly, isActive: false, type: .expense)
+        let req = recurring.toUpdateRequest(categories: [])
         #expect(req.name == "Gym")
         #expect(req.amount == 500)
         #expect(req.frequency == "weekly")
         #expect(req.isActive == false)
     }
 
-    // MARK: - MonthlyBudget mappers
+    // MARK: - Category mappers
 
     @Test
-    func testMonthlyBudgetToCreateRequestIncludesFields() {
-        let budget = MonthlyBudget(year: 2024, month: 6, limit: 5000)
-        let req = budget.toCreateRequest()
-        #expect(req.year == 2024)
-        #expect(req.month == 6)
-        #expect(req.limit == 5000)
-        #expect(req.id == budget.id)
-    }
-
-    @Test
-    func testMonthlyBudgetToUpdateRequestIncludesFields() {
-        let budget = MonthlyBudget(year: 2024, month: 6, limit: 8000)
-        let req = budget.toUpdateRequest()
-        #expect(req.year == 2024)
-        #expect(req.month == 6)
-        #expect(req.limit == 8000)
-    }
-
-    @Test
-    func testMonthlyBudgetApplyRemoteUpdatesFields() throws {
-        let budget = MonthlyBudget(year: 2024, month: 1, limit: 1000)
-        let json = """
-        {
-            "id": "\(UUID().uuidString)",
-            "user_id": "\(UUID().uuidString)",
-            "year": 2024,
-            "month": 6,
-            "limit": 9000,
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-06-01T00:00:00Z"
-        }
-        """.data(using: .utf8)!
-        let api = try Self.decoder.decode(APIMonthlyBudget.self, from: json)
-        budget.applyRemote(api)
-        #expect(budget.month == 6)
-        #expect(budget.limit == 9000)
-    }
-
-    // MARK: - CustomCategory mappers
-
-    @Test
-    func testCustomCategoryToCreateRequestIncludesFields() {
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#FF0000", isPredefined: false)
+    func testCategoryToCreateRequestIncludesFields() {
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#FF0000", isPredefined: false)
         let req = cat.toCreateRequest()
         #expect(req.name == "Fitness")
         #expect(req.icon == "🏋️")
         #expect(req.color == "#FF0000")
-        #expect(req.id == cat.id)
     }
 
     @Test
-    func testCustomCategoryToUpdateRequestIncludesFields() {
-        let cat = CustomCategory(name: "Fitness", icon: "🏋️", color: "#00FF00", isPredefined: false)
+    func testCategoryToUpdateRequestIncludesFields() {
+        let cat = Category(name: "Fitness", icon: "🏋️", color: "#00FF00", isPredefined: false)
         cat.isHidden = true
         let req = cat.toUpdateRequest()
         #expect(req.name == "Fitness")
@@ -235,12 +189,13 @@ struct ModelMapperTests {
     }
 
     @Test
-    func testCustomCategoryApplyRemoteUpdatesFields() throws {
-        let cat = CustomCategory(name: "Old", icon: "⬛️", color: "#000000", isPredefined: false)
+    func testCategoryApplyRemoteUpdatesFields() throws {
+        let cat = Category(name: "Old", icon: "⬛️", color: "#000000", isPredefined: false)
         let json = """
         {
             "id": "\(UUID().uuidString)",
             "user_id": "\(UUID().uuidString)",
+            "key": "fitness-custom",
             "name": "Fitness",
             "icon": "🏋️",
             "color": "#FF0000",
@@ -250,7 +205,7 @@ struct ModelMapperTests {
             "updated_at": "2024-06-01T00:00:00Z"
         }
         """.data(using: .utf8)!
-        let api = try Self.decoder.decode(APICustomCategory.self, from: json)
+        let api = try Self.decoder.decode(APICategory.self, from: json)
         cat.applyRemote(api)
         #expect(cat.name == "Fitness")
         #expect(cat.icon == "🏋️")
@@ -261,7 +216,7 @@ struct ModelMapperTests {
 
     @Test
     func testApplyRemoteSetsGroupAndSettlementIds() throws {
-        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let transaction = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let groupTxId = UUID()
         let settlementId = UUID()
         let groupId = UUID()
@@ -283,7 +238,7 @@ struct ModelMapperTests {
         }
         """.data(using: .utf8)!
         let api = try Self.decoder.decode(APITransaction.self, from: json)
-        transaction.applyRemote(api)
+        transaction.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         #expect(transaction.groupTransactionId == groupTxId)
         #expect(transaction.settlementId == settlementId)
@@ -292,7 +247,7 @@ struct ModelMapperTests {
 
     @Test
     func testApplyRemoteSetsRecurringExpenseId() throws {
-        let transaction = Transaction(amount: 100, category: "Food", date: Date())
+        let transaction = Transaction(amount: 100, categoryId: UUID(), date: Date())
         let recurringId = UUID()
 
         let json = """
@@ -310,7 +265,7 @@ struct ModelMapperTests {
         }
         """.data(using: .utf8)!
         let api = try Self.decoder.decode(APITransaction.self, from: json)
-        transaction.applyRemote(api)
+        transaction.applyRemote(api, keyToUUID: [:], otherUUID: UUID())
 
         #expect(transaction.recurringExpenseId == recurringId)
     }

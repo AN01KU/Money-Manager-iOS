@@ -3,26 +3,32 @@ import SwiftData
 
 struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
     @Query(filter: #Predicate<Transaction> { !$0.isSoftDeleted }, sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     @State private var viewModel = TransactionsViewModel()
-    var categoryFilter: Binding<String?>?
+    var categoryFilter: Binding<UUID?>?
     var onGroupTapped: ((UUID) -> Void)?
+
+    init(categoryFilter: Binding<UUID?>? = nil, onGroupTapped: ((UUID) -> Void)? = nil) {
+        self.categoryFilter = categoryFilter
+        self.onGroupTapped = onGroupTapped
+    }
 
     var body: some View {
         NavigationStack {
             TransactionsBody(viewModel: viewModel, onGroupTapped: onGroupTapped)
                 .navigationTitle("Transactions")
         }
+        .task { viewModel.persistence = persistence }
         .onChange(of: TransactionsQuerySnapshot(transactions: allTransactions, categories: customCategories), initial: true) {
-            viewModel.modelContext = modelContext
             viewModel.update(allTransactions: allTransactions, customCategories: customCategories)
         }
         .onChange(of: categoryFilter?.wrappedValue) { _, newValue in
-            guard let category = newValue else { return }
+            guard let categoryId = newValue else { return }
             withAnimation {
-                viewModel.selectedCategoryFilter = category
+                viewModel.selectedCategoryFilter = categoryId
                 viewModel.transactionTypeFilter = .expenses
             }
             categoryFilter?.wrappedValue = nil
@@ -48,17 +54,16 @@ private struct TransactionsBody: View {
                     TransactionsMonthSelector(viewModel: viewModel)
                         .padding(.horizontal)
 
-                    if let categoryFilter = viewModel.selectedCategoryFilter {
+                    if let categoryFilter = viewModel.selectedCategoryFilterName {
                         HStack(spacing: 8) {
-                            Label(categoryFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
+                            Text(categoryFilter)
                                 .font(AppTypography.infoValue)
+                                .foregroundStyle(AppColors.accent)
 
                             Button {
                                 withAnimation { viewModel.selectedCategoryFilter = nil }
                             } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(AppTypography.infoLabel)
-                                    .foregroundStyle(.secondary)
+                                AppIcon(name: AppIcons.UI.close, size: 12, color: AppColors.label2)
                             }
                             .buttonStyle(.plain)
                         }
@@ -90,22 +95,22 @@ private struct TransactionsBody: View {
                 .padding(.bottom, 100)
             }
 
-            FloatingActionButton(icon: "plus") {
+            FloatingActionButton {
                 viewModel.showAddTransaction = true
             }
             .padding(.trailing, 24)
             .padding(.bottom, 24)
             .accessibilityIdentifier("transactions.add-button")
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppColors.background)
         .searchable(text: $viewModel.searchText, prompt: "Search transactions")
-        .sheet(isPresented: $viewModel.showAddTransaction) { AddTransactionView() }
+        .sheet(isPresented: $viewModel.showAddTransaction) { TransactionEditorView() }
         .alert("Delete Transaction?", isPresented: $viewModel.isConfirmingDelete) {
             Button("Cancel", role: .cancel) { viewModel.cancelDeleteTransaction() }
             Button("Delete", role: .destructive) { viewModel.confirmDeleteTransaction() }
         } message: {
             if let transaction = viewModel.transactionToDelete {
-                Text("Are you sure you want to delete \"\(transaction.transactionDescription ?? transaction.category)\"? This action cannot be undone.")
+                Text("Are you sure you want to delete \"\(transaction.transactionDescription ?? "this transaction")\"? This action cannot be undone.")
             }
         }
     }
@@ -126,9 +131,8 @@ private struct TransactionsMonthSelector: View {
                     tapped += 1
                 }
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(AppTypography.cardLabel)
-                    .foregroundStyle(AppColors.accent)
+                AppIcon(name: AppIcons.UI.chevron, size: 14, color: AppColors.accent)
+                    .rotationEffect(.degrees(180))
                     .padding(6)
             }
             .buttonStyle(.borderless)
@@ -138,7 +142,7 @@ private struct TransactionsMonthSelector: View {
             } label: {
                 Text(viewModel.selectedDate, format: .dateTime.month(.wide).year())
                     .font(AppTypography.chipSelected)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(AppColors.accent)
             }
             .buttonStyle(.borderless)
 
@@ -148,9 +152,7 @@ private struct TransactionsMonthSelector: View {
                     tapped += 1
                 }
             } label: {
-                Image(systemName: "chevron.right")
-                    .font(AppTypography.cardLabel)
-                    .foregroundStyle(AppColors.accent)
+                AppIcon(name: AppIcons.UI.chevron, size: 14, color: AppColors.accent)
                     .padding(6)
             }
             .buttonStyle(.borderless)
@@ -192,12 +194,17 @@ private struct TransactionsFilterBar: View {
                     }
                     selectionChanged += 1
                 } label: {
+                    let isSelected = viewModel.transactionTypeFilter == filter
                     Text(filter.rawValue)
-                        .font(viewModel.transactionTypeFilter == filter ? AppTypography.chipSelected : AppTypography.chip)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(viewModel.transactionTypeFilter == filter ? AppColors.accent : Color(.systemGray5))
-                        .foregroundStyle(viewModel.transactionTypeFilter == filter ? .white : .primary)
+                        .font(isSelected ? AppTypography.chipSelected : AppTypography.chip)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(isSelected ? AppColors.accent : Color.clear)
+                        .foregroundStyle(isSelected ? .white : AppColors.label)
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(isSelected ? Color.clear : AppColors.label.opacity(0.25), lineWidth: 1.5)
+                        )
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -212,5 +219,5 @@ private struct TransactionsFilterBar: View {
 
 private struct TransactionsQuerySnapshot: Equatable {
     let transactions: [Transaction]
-    let categories: [CustomCategory]
+    let categories: [Category]
 }

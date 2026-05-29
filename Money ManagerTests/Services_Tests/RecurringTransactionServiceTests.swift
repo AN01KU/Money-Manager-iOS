@@ -11,7 +11,7 @@ struct RecurringTransactionServiceTests {
         let inactive = RecurringTransaction(
             name: "Old",
             amount: 100,
-            category: "Other",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: Date(),
             isActive: false
@@ -38,7 +38,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
@@ -57,7 +57,6 @@ struct RecurringTransactionServiceTests {
         #expect(transactions.count == 1)
         #expect(transactions.first?.transactionDescription == "Netflix")
         #expect(transactions.first?.amount == 649)
-        #expect(transactions.first?.category == "Entertainment")
     }
 
     @Test
@@ -68,7 +67,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
@@ -95,7 +94,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: today,
             isActive: true,
@@ -123,7 +122,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
@@ -152,7 +151,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix Subscription",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
@@ -179,7 +178,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true,
@@ -207,7 +206,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true
@@ -235,7 +234,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Deleted Sub",
             amount: 199,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true,
@@ -261,7 +260,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Expired Sub",
             amount: 99,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: calendar.date(byAdding: .day, value: -5, to: today)!,
             endDate: calendar.date(byAdding: .day, value: -1, to: today)!,
@@ -287,7 +286,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Gym",
             amount: 500,
-            category: "Health",
+            categoryId: UUID(),
             frequency: .daily,
             startDate: calendar.date(byAdding: .day, value: -1, to: today)!,
             isActive: true
@@ -319,7 +318,7 @@ struct RecurringTransactionServiceTests {
             let recurring = RecurringTransaction(
                 name: "Sub \(i)",
                 amount: Double(i * 100),
-                category: "Entertainment",
+                categoryId: UUID(),
                 frequency: .monthly,
                 startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
                 isActive: true
@@ -343,7 +342,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Salary",
             amount: 50000,
-            category: "Income",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true,
@@ -368,7 +367,7 @@ struct RecurringTransactionServiceTests {
         let recurring = RecurringTransaction(
             name: "Netflix",
             amount: 649,
-            category: "Entertainment",
+            categoryId: UUID(),
             frequency: .monthly,
             startDate: calendar.date(byAdding: .month, value: -1, to: today)!,
             isActive: true,

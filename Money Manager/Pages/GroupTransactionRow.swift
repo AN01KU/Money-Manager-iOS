@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct GroupTransactionRow: View {
-    let transaction: APIGroupTransaction
-    let members: [APIGroupMember]
+    let transaction: GroupTransaction
+    let members: [GroupMember]
     var currentUserId: UUID? = nil
 
     private var amount: Double { transaction.totalAmount }
@@ -16,7 +16,11 @@ struct GroupTransactionRow: View {
     }
 
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, customCategories: [])
+        let predefined = PredefinedCategory.allCases.first { $0.serverKey == transaction.category }
+        if let p = predefined {
+            return (p.icon, Color(hex: p.paletteHex))
+        }
+        return (AppIcons.Category.other, .gray)
     }
 
     private var currentUserShare: Double? {
@@ -30,9 +34,7 @@ struct GroupTransactionRow: View {
                 Circle()
                     .fill(resolved.color.opacity(0.15))
                     .frame(width: 36, height: 36)
-                Image(systemName: resolved.icon)
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(resolved.color)
+                AppIcon(name: resolved.icon, size: 36 * 0.52, color: resolved.color)
             }
             .accessibilityHidden(true)
 

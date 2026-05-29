@@ -1,57 +1,35 @@
 import SwiftUI
 import SwiftData
 
-#if DEBUG
-private let processInfo = ProcessInfo.processInfo
-private let useTestData = processInfo.useTestData
-private let skipOnboarding = processInfo.skipOnboarding
-private let resetOnboarding = processInfo.resetOnboarding
-private let isScreenshotMode = processInfo.isScreenshotMode
-private let useMockServices = isScreenshotMode ? false : processInfo.useMockServices
-private var serviceFactory = ServiceFactory(useMockServices)
-#else
-private var serviceFactory = ServiceFactory()
-#endif
-
-// MARK:  GLOBAL Services
-let authService: AuthServiceProtocol = serviceFactory.authService
-let syncService: SyncServiceProtocol = serviceFactory.syncService
-let changeQueueManager = serviceFactory.changeQueueManager
-
 @main
 struct Money_ManagerApp: App {
     let container: ModelContainer
     let storeRecoveryFailed: Bool
+    let services: AppServices
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         #if DEBUG
+        let processInfo = ProcessInfo.processInfo
+        let skipOnboarding = processInfo.skipOnboarding
+        let resetOnboarding = processInfo.resetOnboarding
+        let isScreenshotMode = processInfo.isScreenshotMode
+        let useTestData = processInfo.useTestData
+
         if skipOnboarding || isScreenshotMode {
-            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(true, forKey: "hasSeenLogin")
+            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.hasCompletedOnboarding.rawValue)
+            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.hasSeenLogin.rawValue)
         }
         if resetOnboarding {
-            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.set(false, forKey: "hasSeenLogin")
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.hasCompletedOnboarding.rawValue)
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.hasSeenLogin.rawValue)
         }
         #endif
 
-        let schema = Schema([
-            Transaction.self,
-            RecurringTransaction.self,
-            CustomCategory.self,
-            MonthlyBudget.self,
-            PendingChange.self,
-            FailedChange.self,
-            OrphanedChange.self,
-            SplitGroupModel.self,
-            GroupMemberModel.self,
-            GroupTransactionModel.self,
-            GroupBalanceModel.self
-        ])
+        let schema = Schema(SchemaV3.models)
 
         let resolvedContainer: ModelContainer
-        if let recovered = Self.makeContainer(schema: schema) {
+        if let recovered = Self.makeContainer(schema: schema, migrationPlan: AppMigrationPlan.self) {
             resolvedContainer = recovered
             storeRecoveryFailed = false
         } else {
@@ -62,7 +40,16 @@ struct Money_ManagerApp: App {
         }
         container = resolvedContainer
 
-        SessionStore.shared.configure(container: container)
+        #if DEBUG
+        let isUITestMode = CommandLine.arguments.contains("-uiTestMode")
+        if isUITestMode {
+            services = AppServices.uiTestMocks()
+        } else {
+            services = AppServices.live(container: resolvedContainer)
+        }
+        #else
+        services = AppServices.live(container: resolvedContainer)
+        #endif
 
         // Only generate recurring transactions locally when not logged in.
         // When authenticated, the backend generates them on GET /transactions.
@@ -75,18 +62,21 @@ struct Money_ManagerApp: App {
             Self.injectTestData(context: container.mainContext)
         }
         #endif
-
-        NetworkMonitor.shared.startMonitoring()
-
-        syncService.configure(container: container, authService: authService)
     }
 
     /// Attempts to create the ModelContainer, recovering by deleting the on-disk store on failure.
     /// Returns nil only if both attempts fail.
-    private static func makeContainer(schema: Schema) -> ModelContainer? {
+    private static func makeContainer(
+        schema: Schema,
+        migrationPlan: (any SchemaMigrationPlan.Type)? = nil
+    ) -> ModelContainer? {
         let config = ModelConfiguration(schema: schema)
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            if let plan = migrationPlan {
+                return try ModelContainer(for: schema, migrationPlan: plan, configurations: [config])
+            } else {
+                return try ModelContainer(for: schema, configurations: [config])
+            }
         } catch {
             AppLogger.sync.error("ModelContainer init failed: \(error) — attempting store recovery")
         }
@@ -101,24 +91,25 @@ struct Money_ManagerApp: App {
         }
 
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            if let plan = migrationPlan {
+                return try ModelContainer(for: schema, migrationPlan: plan, configurations: [config])
+            } else {
+                return try ModelContainer(for: schema, configurations: [config])
+            }
         } catch {
             AppLogger.sync.error("ModelContainer recovery also failed: \(error)")
             return nil
         }
     }
-    
+
     #if DEBUG
     private static func injectTestData(context: ModelContext) {
         try? context.delete(model: Transaction.self)
-        try? context.delete(model: MonthlyBudget.self)
         try? context.delete(model: RecurringTransaction.self)
+        try? context.delete(model: Category.self)
 
         for transaction in TestData.generatePersonalTransactions() {
             context.insert(transaction)
-        }
-        for budget in TestData.generateBudgets() {
-            context.insert(budget)
         }
         for recurring in TestData.generateRecurringTransactions() {
             context.insert(recurring)
@@ -131,9 +122,13 @@ struct Money_ManagerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environment(\.authService, authService)
-                .environment(\.syncService, syncService)
-                .environment(\.changeQueueManager, changeQueueManager)
+                .environment(\.authService, services.authService)
+                .environment(\.syncService, services.syncService)
+                .environment(\.changeQueueManager, services.changeQueueManager)
+                .environment(\.persistence, services.persistence)
+                .environment(\.budgetRepository, services.budgetRepository)
+                .environment(\.networkMonitor, services.networkMonitor)
+                .environment(\.groupService, services.groupService)
                 .alert("Storage Error", isPresented: .constant(storeRecoveryFailed)) {
                     Button("OK", role: .cancel) {}
                 } message: {
@@ -142,23 +137,24 @@ struct Money_ManagerApp: App {
                 .onAppear {
                     Task {
                         #if DEBUG
-                        if isScreenshotMode,
+                        if ProcessInfo.processInfo.isScreenshotMode,
                            let token = ProcessInfo.processInfo.environment["SCREENSHOT_TOKEN"],
                            !token.isEmpty {
                             // Store in UserDefaults so APIClient can read it without keychain
                             // (keychain writes fail under CODE_SIGNING_ALLOWED=NO in UI tests).
-                            UserDefaults.standard.set(token, forKey: "screenshot_token_override")
+                            UserDefaults.standard.set(token, forKey: UserDefaults.Keys.screenshotTokenOverride.rawValue)
                             // Each run uses a fresh throwaway user — wipe any leftover local
                             // SwiftData from the previous run so we don't see stale/duplicate data.
-                            SyncService.shared.clearAllUserData()
-                            await authService.checkAuthState()
-                            await syncService.fullSync()
+                            services.syncService.clearAllUserData()
+                            await services.authService.checkAuthState()
+                            await services.syncService.fullSync()
                             return
                         }
                         #endif
-                        await authService.checkAuthState()
-                        if authService.isAuthenticated {
-                            await syncService.syncOnLaunch()
+                        await services.syncService.bootstrapPredefinedCategories()
+                        await services.authService.checkAuthState()
+                        if services.authService.isAuthenticated {
+                            await services.syncService.syncOnLaunch()
                         }
                     }
                 }
@@ -172,13 +168,13 @@ struct Money_ManagerApp: App {
         }
         .modelContainer(container)
     }
-    
+
     private func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .active:
-            if authService.hasCheckedAuth && authService.isAuthenticated {
+            if services.authService.hasCheckedAuth && services.authService.isAuthenticated {
                 Task {
-                    await syncService.syncOnReconnect()
+                    await services.syncService.syncOnReconnect()
                 }
             }
         case .background:

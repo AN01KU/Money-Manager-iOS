@@ -13,11 +13,10 @@ struct ActivityRow: View {
         switch item {
         case .transaction(let tx, let groupName):
             TransactionActivityRow(transaction: tx, groupName: groupName)
-        case .settlement(let settlement, let groupName, let memberMap):
+        case .settlement(let settlement, let groupName):
             SettlementActivityRow(
                 settlement: settlement,
                 groupName: groupName,
-                memberMap: memberMap,
                 currentUserId: currentUserId
             )
         }
@@ -27,13 +26,15 @@ struct ActivityRow: View {
 // MARK: - Transaction row
 
 private struct TransactionActivityRow: View {
-    let transaction: APIGroupTransaction
+    let transaction: ActivityTransaction
     let groupName: String
 
-    private var amount: Double { transaction.totalAmount }
-
     private var resolved: (icon: String, color: Color) {
-        CategoryResolver.resolve(transaction.category, customCategories: [])
+        let predefined = PredefinedCategory.allCases.first { $0.serverKey == transaction.category }
+        if let p = predefined {
+            return (p.icon, Color(hex: p.paletteHex))
+        }
+        return (AppIcons.Category.other, .gray)
     }
 
     var body: some View {
@@ -42,9 +43,7 @@ private struct TransactionActivityRow: View {
                 Circle()
                     .fill(resolved.color.opacity(0.15))
                     .frame(width: 40, height: 40)
-                Image(systemName: resolved.icon)
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(resolved.color)
+                AppIcon(name: resolved.icon, size: 40 * 0.52, color: resolved.color)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -67,7 +66,7 @@ private struct TransactionActivityRow: View {
 
             Spacer()
 
-            Text(CurrencyFormatter.format(amount, showDecimals: true))
+            Text(CurrencyFormatter.format(transaction.totalAmount, showDecimals: true))
                 .font(AppTypography.amount)
                 .foregroundStyle(.primary)
         }
@@ -79,22 +78,18 @@ private struct TransactionActivityRow: View {
 // MARK: - Settlement row
 
 private struct SettlementActivityRow: View {
-    let settlement: APISettlement
+    let settlement: ActivitySettlement
     let groupName: String
-    let memberMap: [UUID: String]
     let currentUserId: UUID?
 
-    private var isCurrentUserPayer: Bool { settlement.fromUser == currentUserId }
-    private var amount: Double { settlement.amount }
+    private var isCurrentUserPayer: Bool { settlement.fromUserId == currentUserId }
 
     private var fromName: String {
-        if settlement.fromUser == currentUserId { return "You" }
-        return memberMap[settlement.fromUser] ?? "Unknown"
+        settlement.fromUserId == currentUserId ? "You" : settlement.fromName
     }
 
     private var toName: String {
-        if settlement.toUser == currentUserId { return "you" }
-        return memberMap[settlement.toUser] ?? "Unknown"
+        settlement.toUserId == currentUserId ? "you" : settlement.toName
     }
 
     private var accentColor: Color {
@@ -107,9 +102,7 @@ private struct SettlementActivityRow: View {
                 Circle()
                     .fill(accentColor.opacity(0.15))
                     .frame(width: 40, height: 40)
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(AppTypography.rowPrimary)
-                    .foregroundStyle(accentColor)
+                AppIcon(name: AppIcons.UI.settle, size: 40 * 0.52, color: accentColor)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -124,7 +117,7 @@ private struct SettlementActivityRow: View {
                     Text("·")
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
-                    Text(settlement.createdAt, style: .date)
+                    Text(settlement.date, style: .date)
                         .font(AppTypography.rowMeta)
                         .foregroundStyle(.secondary)
                 }
@@ -133,7 +126,7 @@ private struct SettlementActivityRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(CurrencyFormatter.format(amount, showDecimals: true))
+                Text(CurrencyFormatter.format(settlement.amount, showDecimals: true))
                     .font(AppTypography.amount)
                     .foregroundStyle(accentColor)
                 Text(isCurrentUserPayer ? "paid" : "received")

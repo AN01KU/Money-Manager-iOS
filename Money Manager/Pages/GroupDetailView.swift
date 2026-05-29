@@ -8,15 +8,16 @@ import SwiftUI
 
 struct GroupDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.groupService) private var groupService
     @State private var viewModel: GroupDetailViewModel
-    @State private var selectedTransaction: APIGroupTransaction?
-    @State private var transactionToEdit: APIGroupTransaction?
+    @State private var selectedTransaction: GroupTransaction?
+    @State private var transactionToEdit: GroupTransaction?
     @State private var showRenameAlert = false
     @State private var renameText = ""
 
     var onGroupDeleted: ((UUID) -> Void)?
 
-    init(group: APIGroupWithDetails, currentUserId: UUID?, onGroupDeleted: ((UUID) -> Void)? = nil) {
+    init(group: SplitGroup, currentUserId: UUID?, onGroupDeleted: ((UUID) -> Void)? = nil) {
         _viewModel = State(wrappedValue: GroupDetailViewModel(group: group, currentUserId: currentUserId))
         self.onGroupDeleted = onGroupDeleted
     }
@@ -29,6 +30,7 @@ struct GroupDetailView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("group-detail.section-picker")
             .padding(.horizontal)
             .padding(.bottom, 8)
 
@@ -45,7 +47,7 @@ struct GroupDetailView: View {
                 }
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppColors.background)
         .navigationTitle(viewModel.group.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -85,14 +87,13 @@ struct GroupDetailView: View {
             }
         }
         .sheet(isPresented: $viewModel.showAddTransaction) {
-            AddTransactionView(
-                mode: .shared(
+            GroupTransactionEditorView(
+                mode: .create(
                     group: viewModel.group,
                     members: viewModel.members,
-                    currentUserId: viewModel.currentUserId
-                ) { newExpense in
-                    viewModel.transactionAdded(newExpense)
-                },
+                    currentUserId: viewModel.currentUserId,
+                    onAdd: { newExpense in viewModel.transactionAdded(newExpense) }
+                ),
                 groupService: viewModel.groupService
             )
         }
@@ -135,15 +136,13 @@ struct GroupDetailView: View {
             )
         }
         .sheet(item: $transactionToEdit) { transaction in
-            AddTransactionView(
-                mode: .shared(
+            GroupTransactionEditorView(
+                mode: .edit(
                     group: viewModel.group,
                     members: viewModel.members,
-                    currentUserId: viewModel.currentUserId,
-                    editing: transaction
-                ) { updated in
-                    viewModel.transactionEdited(replacing: transaction, with: updated)
-                },
+                    transaction: transaction,
+                    onSaved: { updated in viewModel.transactionEdited(replacing: transaction, with: updated) }
+                ),
                 groupService: viewModel.groupService
             )
         }
@@ -153,6 +152,7 @@ struct GroupDetailView: View {
             viewModel.transactionSearchText = ""
         }
         .task {
+            viewModel.groupService = groupService
             await viewModel.loadData()
         }
     }
@@ -170,15 +170,15 @@ struct GroupDetailView: View {
     private var fabView: some View {
         switch viewModel.selectedSection {
         case .transactions:
-            FloatingActionButton(icon: "plus") { viewModel.showAddTransaction = true }
+            FloatingActionButton { viewModel.showAddTransaction = true }
                 .accessibilityIdentifier("group-detail.add-transaction-button")
         case .balances:
             if viewModel.hasUnsettledBalances {
-                FloatingActionButton(icon: "arrow.left.arrow.right") { viewModel.showSettlement = true }
+                FloatingActionButton(icon: AppIcons.UI.settle) { viewModel.showSettlement = true }
                     .accessibilityIdentifier("group-detail.settle-button")
             }
         case .members:
-            FloatingActionButton(icon: "person.badge.plus") { viewModel.showAddMember = true }
+            FloatingActionButton(systemIcon: "person.badge.plus") { viewModel.showAddMember = true }
                 .accessibilityIdentifier("group-detail.add-member-button")
         }
     }
@@ -241,12 +241,12 @@ struct GroupDetailView: View {
     private struct GroupTransactionSection: Identifiable {
         let id: String
         let label: String
-        let transactions: [APIGroupTransaction]
+        let transactions: [GroupTransaction]
     }
 
     private var groupedTransactions: [GroupTransactionSection] {
         let calendar = Calendar.current
-        var grouped: [String: [APIGroupTransaction]] = [:]
+        var grouped: [String: [GroupTransaction]] = [:]
 
         for tx in viewModel.filteredTransactions {
             let key = calendar.dayKey(for: tx.date)
@@ -358,8 +358,7 @@ struct GroupDetailView: View {
                                 balance: viewModel.balances.first(where: { $0.userId == member.id })?.amount
                             )
                             .swipeActions(edge: .trailing) {
-                                if viewModel.currentUserId == viewModel.group.createdBy
-                                    && member.id != viewModel.group.createdBy {
+                                if viewModel.canRemoveMember(member) {
                                     Button(role: .destructive) {
                                         viewModel.removeMember(member)
                                     } label: {
@@ -421,13 +420,14 @@ private struct GroupDetailMenuButton: View {
 // MARK: - Previews
 
 #Preview("Group Detail") {
-    let group = APIGroupWithDetails(
+    let group = SplitGroup(
         id: UUID(),
         name: "Weekend Trip",
         createdBy: UUID(),
         createdAt: Date(),
         members: [],
-        balances: []
+        balances: [],
+        settlements: []
     )
     NavigationStack {
         GroupDetailView(group: group, currentUserId: nil)

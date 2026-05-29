@@ -3,14 +3,14 @@ import SwiftData
 
 struct EditCategorySheet: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistence) private var persistence
 
     @State private var viewModel: EditCategoryViewModel
     @State private var iconTapped = 0
     @State private var colorTapped = 0
     @State private var saveSuccess = 0
 
-    init(category: TransactionCategory, allCategories: [CustomCategory]) {
+    init(category: Category, allCategories: [Category]) {
         _viewModel = State(wrappedValue: EditCategoryViewModel(
             category: category,
             allCategories: allCategories
@@ -63,9 +63,7 @@ struct EditCategorySheet: View {
                 Text(viewModel.colorWarningMessage)
             }
             .sensoryFeedback(.success, trigger: saveSuccess)
-            .task {
-                viewModel.modelContext = modelContext
-            }
+            .task { viewModel.persistence = persistence }
         }
     }
 

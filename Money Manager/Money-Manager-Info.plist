@@ -6,6 +6,8 @@
 	<string>$(API_BASE_SCHEME)</string>
 	<key>API_BASE_HOST</key>
 	<string>$(API_BASE_HOST)</string>
+	<key>TEST_USERNAME</key>
+	<string>$(TEST_USERNAME)</string>
 	<key>TEST_EMAIL</key>
 	<string>$(TEST_EMAIL)</string>
 	<key>TEST_PASSWORD</key>

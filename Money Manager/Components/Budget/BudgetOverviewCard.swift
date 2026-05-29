@@ -8,32 +8,32 @@
 import SwiftUI
 
 struct BudgetOverviewCard: View {
-    let budget: MonthlyBudget
+    let budget: UserBudget
     let spent: Double
     var isDaily: Bool = false
-    
+
     private var percentage: Int {
-        guard budget.limit > 0 else { return 0 }
-        return Int((spent / budget.limit) * 100.0)
+        guard let limit = budget.limit, limit > 0 else { return 0 }
+        return Int((spent / limit) * 100.0)
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(CurrencyFormatter.format(spent))
                     .font(.title2)
                     .fontWeight(.bold)
-                Text("/ \(CurrencyFormatter.format(budget.limit))")
+                Text("/ \(CurrencyFormatter.format(budget.limit ?? 0))")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 Text("Budget")
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
-            
+
             HStack(spacing: 12) {
                 BudgetProgressBar(percentage: percentage)
-                
+
                 Text("\(percentage)%")
                     .font(.body)
                     .fontWeight(.medium)
@@ -41,16 +41,16 @@ struct BudgetOverviewCard: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(AppColors.inputBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(isDaily ? "Daily" : "Monthly") budget, \(CurrencyFormatter.format(spent)) of \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used")
+        .accessibilityLabel("\(isDaily ? "Daily" : "Monthly") budget, \(CurrencyFormatter.format(spent)) of \(CurrencyFormatter.format(budget.limit ?? 0)), \(percentage) percent used")
     }
 }
 
 #Preview {
     BudgetOverviewCard(
-        budget: MonthlyBudget(year: 2025, month: 1, limit: 50000),
+        budget: UserBudget(limit: 50000),
         spent: 32450
     )
     .padding()

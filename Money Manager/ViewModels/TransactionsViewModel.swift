@@ -5,7 +5,7 @@ import SwiftData
 @Observable class TransactionsViewModel {
     var selectedDate: Date = Date() { didSet { recalculate() } }
     var searchText: String = "" { didSet { recalculate() } }
-    var selectedCategoryFilter: String? { didSet { recalculate() } }
+    var selectedCategoryFilter: UUID? { didSet { recalculate() } }
     var transactionTypeFilter: TransactionTypeFilter = .all { didSet { recalculate() } }
     var showAddTransaction = false
     var isConfirmingDelete = false
@@ -13,51 +13,40 @@ import SwiftData
     var filteredTransactions: [Transaction] = []
     var transactionToDelete: Transaction?
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
+    var selectedCategoryFilterName: String? {
+        guard let id = selectedCategoryFilter else { return nil }
+        return categoryLookup[id]?.name
     }
-    let persistence: PersistenceService
+
+    var modelContext: ModelContext { persistence.modelContext }
+    @ObservationIgnored var persistence: PersistenceService
 
     private var allTransactions: [Transaction] = []
-    private var customCategories: [CustomCategory] = []
+    private var categoryLookup: [UUID: Category] = [:]
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
-    func update(allTransactions: [Transaction], customCategories: [CustomCategory]) {
+    func update(allTransactions: [Transaction], customCategories: [Category]) {
         self.allTransactions = allTransactions
-        self.customCategories = customCategories
+        self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
     }
 
     func recalculate() {
-        let calendar = Calendar.current
-        guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
-            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-        else {
-            filteredTransactions = []
-            return
-        }
+        let interval = Calendar.current.monthInterval(for: selectedDate)
+        let spending = Spending.from(
+            transactions: allTransactions,
+            in: interval,
+            search: searchText.isEmpty ? nil : searchText,
+            categoryLookup: categoryLookup
+        )
 
-        var result = allTransactions.filter { transaction in
-            !transaction.isSoftDeleted &&
-            transaction.date >= startOfMonth &&
-            transaction.date < firstDayNextMonth
-        }
-
-        if !searchText.isEmpty {
-            result = result.filter { transaction in
-                transaction.category.localizedStandardContains(searchText) ||
-                (transaction.transactionDescription?.localizedStandardContains(searchText) ?? false) ||
-                (transaction.notes?.localizedStandardContains(searchText) ?? false)
-            }
-        }
+        var result = spending.filtered
 
         if let categoryFilter = selectedCategoryFilter {
-            result = result.filter { $0.category == categoryFilter }
+            result = result.filter { $0.categoryId == categoryFilter }
         }
 
         switch transactionTypeFilter {
@@ -76,12 +65,10 @@ import SwiftData
 
     func confirmDeleteTransaction() {
         guard let transaction = transactionToDelete else { return }
-        transaction.isSoftDeleted = true
-        transaction.updatedAt = Date()
         transactionToDelete = nil
         isConfirmingDelete = false
         do {
-            try persistence.saveTransaction(transaction, action: "delete")
+            try persistence.save(transaction, action: .delete)
         } catch {
             AppLogger.data.error("Error deleting transaction: \(error)")
         }

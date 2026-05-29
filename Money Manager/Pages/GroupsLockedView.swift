@@ -24,7 +24,7 @@ struct GroupsLockedView: View {
                     .padding(.horizontal, 32)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemGroupedBackground))
+            .background(AppColors.background)
             .navigationTitle("Groups")
         }
     }

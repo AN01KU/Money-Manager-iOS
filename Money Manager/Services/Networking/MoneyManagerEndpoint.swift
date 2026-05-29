@@ -1,6 +1,12 @@
 import APIClient
 import Foundation
 
+enum HTTPHeaderName: String {
+    case authorization    = "Authorization"
+    case syncSessionID    = "X-Sync-Session-ID"
+    case syncVersion      = "X-Sync-Version"
+}
+
 enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
 
     // MARK: - Auth
@@ -15,8 +21,11 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
 
     // MARK: - Sync
     case syncPreflight
+    case predefinedCategories
     case syncCategories
     case syncBudgets
+    case getBudget
+    case setBudget
     case syncRecurring
     /// Paginated transaction fetch. `limit` and `offset` are passed as query parameters.
     case syncTransactions(limit: Int, offset: Int)
@@ -54,8 +63,11 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
         case .verifyEmail:                  return "/auth/verify-email"
         case .resendVerification:           return "/auth/resend-verification"
         case .syncPreflight:                return "/sync/preflight"
+        case .predefinedCategories:         return "/predefined-categories"
         case .syncCategories:               return "/categories"
         case .syncBudgets:                  return "/budgets"
+        case .getBudget:                    return "/me/budget"
+        case .setBudget:                    return "/me/budget"
         case .syncRecurring:                return "/recurring-transactions"
         case .syncTransactions:             return "/transactions"
         case .groups:                       return "/groups"
@@ -84,6 +96,28 @@ enum MoneyManagerEndpoint: BaseAPI.APIEndpoint {
             ]
         default:
             return nil
+        }
+    }
+
+    /// Whether this endpoint requires a Bearer token.
+    /// Only the public auth endpoints (login, signup) and health probe are exempt.
+    var requiresAuth: Bool {
+        switch self {
+        case .login, .signup, .health:
+            return false
+        default:
+            return true
+        }
+    }
+
+    /// Whether this endpoint should carry sync-session headers on write requests.
+    /// Auth-management and health endpoints are exempt — they don't mutate sync-tracked entities.
+    var requiresSyncSession: Bool {
+        switch self {
+        case .login, .signup, .logout, .verifyEmail, .resendVerification, .health:
+            return false
+        default:
+            return true
         }
     }
 }

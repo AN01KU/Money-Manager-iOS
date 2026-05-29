@@ -40,7 +40,7 @@ struct DateFilterSelector: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(Color(.systemGray6))
+                .background(AppColors.inputBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .sensoryFeedback(.impact(weight: .light), trigger: datePickerTapped)
@@ -60,7 +60,7 @@ struct DateFilterSelector: View {
                 .foregroundStyle(AppColors.accent)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(Color(.systemGray6))
+                .background(AppColors.inputBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .sensoryFeedback(.selection, trigger: filterToggled)

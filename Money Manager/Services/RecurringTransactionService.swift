@@ -22,14 +22,14 @@ struct RecurringTransactionService {
             let transaction = Transaction(
                 type: recurring.type,
                 amount: recurring.amount,
-                category: recurring.category,
+                categoryId: recurring.categoryId,
                 date: nextDate,
                 transactionDescription: recurring.name,
                 notes: recurring.notes,
                 recurringExpenseId: recurring.id
             )
             context.insert(transaction)
-            AppLogger.data.info("RecurringTransactionService: created txn id=\(transaction.id) name=\(recurring.name) amount=\(recurring.amount) category=\(recurring.category) date=\(nextDate) recurringId=\(recurring.id)")
+            AppLogger.data.info("RecurringTransactionService: created txn id=\(transaction.id) name=\(recurring.name) amount=\(recurring.amount) date=\(nextDate) recurringId=\(recurring.id)")
 
             recurring.lastAddedDate = nextDate
             recurring.updatedAt = Date()

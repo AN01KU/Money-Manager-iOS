@@ -24,18 +24,18 @@ final class ScreenshotGenerator: XCTestCase {
 
     var app: XCUIApplication!
     private let testUser = ScreenshotTestUser()
+    private var screenshotToken: String = ""
 
     // MARK: Setup / Teardown
 
     override func setUpWithError() throws {
         continueAfterFailure = true
 
-        var token: String = ""
         var setupError: Error?
         let setupExpectation = expectation(description: "test user created")
         Task {
             do {
-                token = try await testUser.setUp()
+                screenshotToken = try await testUser.setUp()
             } catch {
                 setupError = error
             }
@@ -47,14 +47,7 @@ final class ScreenshotGenerator: XCTestCase {
             return
         }
 
-        app = XCUIApplication()
-        app.launchArguments = [
-            "--uitesting",
-            "--screenshotMode",
-            "--skipOnboarding",
-        ]
-        app.launchEnvironment["SCREENSHOT_TOKEN"] = token
-        app.launch()
+        launchApp()
 
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.waitForExistence(timeout: 20), "App did not load after login")
@@ -94,7 +87,7 @@ final class ScreenshotGenerator: XCTestCase {
         try captureTransactionDetail()
         try captureTransactionEdit()
 
-        // Settings sub-pages
+        // Settings sub-pages — each requires a fresh launch with SETTINGS_ROUTE
         try captureBudgets()
         try captureRecurringList()
         try captureCategories()
@@ -104,8 +97,12 @@ final class ScreenshotGenerator: XCTestCase {
         try captureExportData()
         try captureEditProfile()
 
-        // Groups (tabs + sheets)
+        // Groups list — relaunch without GROUP_ROUTE so we see the list
+        relaunchAppForGroups()
         try captureGroupsList()
+
+        // Group detail screens — relaunch with GROUP_ROUTE=first to auto-push into detail
+        guard relaunchAppInGroupDetail() else { return }
         try captureGroupDetail()
         try captureGroupMembers()
         try captureGroupBalances()
@@ -188,38 +185,34 @@ final class ScreenshotGenerator: XCTestCase {
     }
 
     // MARK: - Settings Sub-pages
+    //
+    // Each capture relaunches the app with SETTINGS_ROUTE=<route>, which causes
+    // SettingsView.onAppear to pre-push the destination onto the NavigationStack.
+    // This sidesteps the XCUITest / SwiftUI tap-action reliability issue.
 
     private func captureBudgets() throws {
-        navigateToSettings()
-        tapRow("settings.budgets-row")
-        wait(seconds: 1)
+        relaunchApp(settingsRoute: "budgets")
+        navigateToSettingsRoute(navBarTitle: "Budgets")
         save(.budgets)
-        goBack()
     }
 
     private func captureRecurringList() throws {
-        navigateToSettings()
-        tapRow("settings.recurring-row")
-        wait(seconds: 1)
+        relaunchApp(settingsRoute: "recurring")
+        navigateToSettingsRoute(navBarTitle: "Recurring")
         save(.recurringList)
-        goBack()
     }
 
     private func captureCategories() throws {
-        navigateToSettings()
-        tapRow("settings.categories-row")
-        wait(seconds: 1)
+        relaunchApp(settingsRoute: "categories")
+        navigateToSettingsRoute(navBarTitle: "Categories")
         save(.categories)
-        // stay on categories for the next two captures
     }
 
     private func captureAddCategory() throws {
-        // Should still be on categories after captureCategories()
-        // If not, navigate there first
-        if !app.navigationBars["Categories"].waitForExistence(timeout: 1) {
-            navigateToSettings()
-            tapRow("settings.categories-row")
-            wait(seconds: 0.8)
+        // Reuse the categories relaunch — the Categories nav bar should be visible.
+        if !app.navigationBars["Categories"].waitForExistence(timeout: 3) {
+            relaunchApp(settingsRoute: "categories")
+            navigateToSettingsRoute(navBarTitle: "Categories")
         }
         let addButton = app.buttons["categories.add-button"]
         if addButton.waitForExistence(timeout: 3) {
@@ -231,11 +224,9 @@ final class ScreenshotGenerator: XCTestCase {
     }
 
     private func captureCategoryEditor() throws {
-        // Should still be on categories page
-        if !app.navigationBars["Categories"].waitForExistence(timeout: 1) {
-            navigateToSettings()
-            tapRow("settings.categories-row")
-            wait(seconds: 0.8)
+        if !app.navigationBars["Categories"].waitForExistence(timeout: 3) {
+            relaunchApp(settingsRoute: "categories")
+            navigateToSettingsRoute(navBarTitle: "Categories")
         }
         let row = app.buttons.matching(identifier: "category.row").firstMatch
         if row.waitForExistence(timeout: 3) {
@@ -244,29 +235,25 @@ final class ScreenshotGenerator: XCTestCase {
             save(.categoryEditor)
             dismissSheet()
         }
-        goBack()
     }
 
     private func captureCurrencyPicker() throws {
-        navigateToSettings()
-        tapRow("settings.currency-row")
-        wait(seconds: 0.8)
+        relaunchApp(settingsRoute: "currency")
+        navigateToSettingsRoute(navBarTitle: "Currency")
         save(.currencyPicker)
-        goBack()
     }
 
     private func captureExportData() throws {
-        navigateToSettings()
-        tapRow("settings.backup-row")
-        wait(seconds: 0.8)
+        relaunchApp(settingsRoute: "backup")
+        navigateToSettingsRoute(navBarTitle: "Backup")
         save(.exportData)
-        goBack()
     }
 
     private func captureEditProfile() throws {
+        relaunchApp()
         navigateToSettings()
         let profileButton = app.buttons["settings.edit-profile-button"]
-        if profileButton.waitForExistence(timeout: 3) {
+        if profileButton.waitForExistence(timeout: 5) {
             profileButton.tap()
             wait(seconds: 0.8)
             save(.editProfile)
@@ -278,50 +265,46 @@ final class ScreenshotGenerator: XCTestCase {
 
     private func captureGroupsList() throws {
         navigateToTab("Groups")
-        wait(seconds: 1.5)
+        _ = app.buttons.matching(identifier: "groups.group-row").firstMatch.waitForExistence(timeout: 10)
+        wait(seconds: 0.5)
         save(.groupsList)
     }
 
     private func captureGroupDetail() throws {
-        navigateToTab("Groups")
-        let firstGroup = app.buttons.matching(identifier: "groups.group-row").firstMatch
-        if firstGroup.waitForExistence(timeout: 5) {
-            firstGroup.tap()
-            wait(seconds: 1)
-            save(.groupDetail)
-            // stay in group detail for next captures
-        }
+        // Already in group detail from relaunchAppInGroupDetail() — just save.
+        wait(seconds: 0.5)
+        save(.groupDetail)
     }
 
     private func captureGroupMembers() throws {
-        ensureInGroupDetail()
-        let seg = app.segmentedControls.firstMatch
-        if seg.waitForExistence(timeout: 2) {
+        guard ensureInGroupDetail() else { return }
+        let seg = app.segmentedControls.matching(identifier: "group-detail.section-picker").firstMatch
+        if seg.waitForExistence(timeout: 3) {
             seg.buttons["Members"].tap()
-            wait(seconds: 0.8)
+            // Wait for the add-member button to appear — it only shows on the Members tab
+            _ = app.buttons["group-detail.add-member-button"].waitForExistence(timeout: 3)
+            wait(seconds: 0.5)
         }
         save(.groupMembers)
     }
 
     private func captureGroupBalances() throws {
-        ensureInGroupDetail()
-        let seg = app.segmentedControls.firstMatch
-        if seg.waitForExistence(timeout: 2) {
+        guard ensureInGroupDetail() else { return }
+        let seg = app.segmentedControls.matching(identifier: "group-detail.section-picker").firstMatch
+        if seg.waitForExistence(timeout: 3) {
             seg.buttons["Balances"].tap()
             wait(seconds: 0.8)
         }
         save(.groupBalances)
-        // Tap back to Transactions segment — scope to the segmented control to avoid
-        // ambiguity with the tab bar "Transactions" button.
-        let segControl = app.segmentedControls.firstMatch
-        if segControl.waitForExistence(timeout: 2) {
-            segControl.buttons["Transactions"].tap()
-            wait(seconds: 0.5)
+        // Restore Transactions segment
+        if seg.waitForExistence(timeout: 2) {
+            seg.buttons["Transactions"].tap()
+            _ = app.buttons["group-detail.add-transaction-button"].waitForExistence(timeout: 3)
         }
     }
 
     private func captureGroupTransactionDetail() throws {
-        ensureInGroupDetail()
+        guard ensureInGroupDetail() else { return }
         let txRow = app.buttons.matching(identifier: "group-detail.transaction-row").firstMatch
         if txRow.waitForExistence(timeout: 3) {
             txRow.tap()
@@ -332,7 +315,7 @@ final class ScreenshotGenerator: XCTestCase {
     }
 
     private func captureGroupAddTransaction() throws {
-        ensureInGroupDetail()
+        guard ensureInGroupDetail() else { return }
         let addButton = app.buttons["group-detail.add-transaction-button"]
         if addButton.waitForExistence(timeout: 3) {
             addButton.tap()
@@ -343,11 +326,12 @@ final class ScreenshotGenerator: XCTestCase {
     }
 
     private func captureGroupAddMember() throws {
-        ensureInGroupDetail()
-        let seg = app.segmentedControls.firstMatch
-        if seg.waitForExistence(timeout: 2) {
+        guard ensureInGroupDetail() else { return }
+        let seg = app.segmentedControls.matching(identifier: "group-detail.section-picker").firstMatch
+        if seg.waitForExistence(timeout: 3) {
             seg.buttons["Members"].tap()
-            wait(seconds: 0.5)
+            _ = app.buttons["group-detail.add-member-button"].waitForExistence(timeout: 3)
+            wait(seconds: 0.3)
         }
         let addMemberButton = app.buttons["group-detail.add-member-button"]
         if addMemberButton.waitForExistence(timeout: 3) {
@@ -357,24 +341,28 @@ final class ScreenshotGenerator: XCTestCase {
             dismissSheet()
         }
         // Restore Transactions segment
-        if seg.waitForExistence(timeout: 2) { seg.buttons["Transactions"].tap() }
+        if seg.waitForExistence(timeout: 2) {
+            seg.buttons["Transactions"].tap()
+            _ = app.buttons["group-detail.add-transaction-button"].waitForExistence(timeout: 3)
+        }
     }
 
     private func captureRecordSettlement() throws {
-        ensureInGroupDetail()
-        let seg = app.segmentedControls.firstMatch
-        if seg.waitForExistence(timeout: 2) {
+        guard ensureInGroupDetail() else { return }
+        let seg = app.segmentedControls.matching(identifier: "group-detail.section-picker").firstMatch
+        if seg.waitForExistence(timeout: 3) {
             seg.buttons["Balances"].tap()
-            wait(seconds: 0.5)
+            wait(seconds: 0.8)
         }
         let settleButton = app.buttons["group-detail.settle-button"]
         if settleButton.waitForExistence(timeout: 3) {
             settleButton.tap()
-            wait(seconds: 0.8)
+            _ = app.navigationBars["Record Settlement"].waitForExistence(timeout: 5)
+            wait(seconds: 0.5)
             save(.recordSettlement)
             dismissSheet()
         } else {
-            // No unsettled balances — still save a placeholder of the balances screen
+            // No unsettled balances — save balances screen as fallback
             save(.recordSettlement)
         }
         goBack()
@@ -393,38 +381,97 @@ final class ScreenshotGenerator: XCTestCase {
         case .transactionEdit:        try captureTransactionEdit()
         case .budgets:                try captureBudgets()
         case .recurringList:          try captureRecurringList()
-        case .categories:             try captureCategories(); goBack()
-        case .addCategory:            try captureCategories(); try captureAddCategory(); goBack()
+        case .categories:             try captureCategories()
+        case .addCategory:            try captureCategories(); try captureAddCategory()
         case .categoryEditor:         try captureCategories(); try captureCategoryEditor()
         case .currencyPicker:         try captureCurrencyPicker()
         case .exportData:             try captureExportData()
         case .editProfile:            try captureEditProfile()
-        case .groupsList:             try captureGroupsList()
-        case .groupDetail:            try captureGroupDetail(); goBack()
-        case .groupMembers:           try captureGroupDetail(); try captureGroupMembers(); goBack()
-        case .groupBalances:          try captureGroupDetail(); try captureGroupBalances(); goBack()
-        case .groupTransactionDetail: try captureGroupDetail(); try captureGroupTransactionDetail(); goBack()
-        case .groupAddTransaction:    try captureGroupDetail(); try captureGroupAddTransaction(); goBack()
-        case .groupAddMember:         try captureGroupDetail(); try captureGroupAddMember(); goBack()
-        case .recordSettlement:       try captureGroupDetail(); try captureRecordSettlement()
+        case .groupsList:             relaunchAppForGroups(); try captureGroupsList()
+        case .groupDetail:            if relaunchAppInGroupDetail() { try captureGroupDetail() }
+        case .groupMembers:           if relaunchAppInGroupDetail() { try captureGroupMembers() }
+        case .groupBalances:          if relaunchAppInGroupDetail() { try captureGroupBalances() }
+        case .groupTransactionDetail: if relaunchAppInGroupDetail() { try captureGroupTransactionDetail() }
+        case .groupAddTransaction:    if relaunchAppInGroupDetail() { try captureGroupAddTransaction() }
+        case .groupAddMember:         if relaunchAppInGroupDetail() { try captureGroupAddMember() }
+        case .recordSettlement:       if relaunchAppInGroupDetail() { try captureRecordSettlement() }
         }
     }
 
     // MARK: - Helpers
 
-    /// Ensures we are on the group detail screen. If not, navigates there.
-    private func ensureInGroupDetail() {
-        // Check if the segmented control (Transactions/Members/Balances) is visible.
-        // We cannot use app.buttons["Transactions"] because the tab bar always has a
-        // "Transactions" button, causing a false positive even when not in group detail.
-        guard !app.segmentedControls.firstMatch.waitForExistence(timeout: 1) else { return }
-
-        navigateToTab("Groups")
-        let firstGroup = app.buttons.matching(identifier: "groups.group-row").firstMatch
-        if firstGroup.waitForExistence(timeout: 5) {
-            firstGroup.tap()
-            wait(seconds: 1)
+    /// Launches the app fresh. Call once in setUp; call again to relaunch mid-test.
+    private func launchApp(settingsRoute: String? = nil, groupRoute: String? = nil) {
+        app = XCUIApplication()
+        app.launchArguments = [
+            "--uitesting",
+            "--screenshotMode",
+            "--skipOnboarding",
+        ]
+        app.launchEnvironment["SCREENSHOT_TOKEN"] = screenshotToken
+        if let route = settingsRoute {
+            app.launchEnvironment["SETTINGS_ROUTE"] = route
         }
+        if let route = groupRoute {
+            app.launchEnvironment["GROUP_ROUTE"] = route
+        }
+        app.launch()
+    }
+
+    /// Terminates the current app instance and relaunches, waiting for tab bar and sync data.
+    private func relaunchApp(settingsRoute: String? = nil) {
+        app.terminate()
+        launchApp(settingsRoute: settingsRoute)
+
+        _ = app.tabBars.firstMatch.waitForExistence(timeout: 20)
+
+        // Confirm sync data is still present before proceeding.
+        app.tabBars.buttons["Transactions"].tap()
+        _ = app.buttons.matching(identifier: "transaction.row").firstMatch.waitForExistence(timeout: 30)
+        app.tabBars.buttons["Overview"].tap()
+    }
+
+    /// Relaunches showing the groups list. Used only for the groups-list screenshot.
+    private func relaunchAppForGroups() {
+        app.terminate()
+        launchApp()
+
+        _ = app.tabBars.firstMatch.waitForExistence(timeout: 20)
+
+        // Wait for transactions to confirm sync completed.
+        app.tabBars.buttons["Transactions"].tap()
+        _ = app.buttons.matching(identifier: "transaction.row").firstMatch.waitForExistence(timeout: 30)
+
+        // Navigate to Groups and wait for the list to populate.
+        app.tabBars.buttons["Groups"].tap()
+        _ = app.buttons.matching(identifier: "groups.group-row").firstMatch.waitForExistence(timeout: 30)
+        wait(seconds: 0.5)
+    }
+
+    /// Relaunches with GROUP_ROUTE=first so the app auto-pushes into the first group's detail.
+    /// Waits for the section picker, which confirms data is loaded. Returns false if it times out.
+    @discardableResult
+    private func relaunchAppInGroupDetail() -> Bool {
+        app.terminate()
+        launchApp(groupRoute: "first")
+
+        _ = app.tabBars.firstMatch.waitForExistence(timeout: 20)
+
+        // Tap Groups tab to trigger the task that loads groups and auto-pushes to detail.
+        app.tabBars.buttons["Groups"].tap()
+
+        // Picker appears once isLoading = false in GroupDetailViewModel — wait generously.
+        let picker = app.segmentedControls.matching(identifier: "group-detail.section-picker").firstMatch
+        return picker.waitForExistence(timeout: 40)
+    }
+
+    /// Ensures we are on the group detail screen.
+    /// Returns true if we are (or successfully got to) group detail.
+    @discardableResult
+    private func ensureInGroupDetail() -> Bool {
+        let picker = app.segmentedControls.matching(identifier: "group-detail.section-picker").firstMatch
+        if picker.waitForExistence(timeout: 3) { return true }
+        return relaunchAppInGroupDetail()
     }
 
     private func navigateToTab(_ label: String) {
@@ -436,14 +483,16 @@ final class ScreenshotGenerator: XCTestCase {
 
     private func navigateToSettings() {
         navigateToTab("Settings")
-        wait(seconds: 0.4)
+        _ = app.navigationBars["Settings"].waitForExistence(timeout: 5)
+        wait(seconds: 0.5)
     }
 
-    private func tapRow(_ identifier: String) {
-        let row = app.buttons.matching(identifier: identifier).firstMatch
-        if row.waitForExistence(timeout: 3) {
-            row.tap()
-        }
+    /// Navigates to Settings tab and waits for a specific sub-page nav bar pushed via SETTINGS_ROUTE.
+    /// Because onAppear immediately pushes the route, the "Settings" title may never be visible.
+    private func navigateToSettingsRoute(navBarTitle: String) {
+        navigateToTab("Settings")
+        _ = app.navigationBars[navBarTitle].waitForExistence(timeout: 8)
+        wait(seconds: 0.5)
     }
 
     private func goBack() {

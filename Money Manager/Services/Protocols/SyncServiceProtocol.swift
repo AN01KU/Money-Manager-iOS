@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import SwiftData
 
 protocol SyncServiceProtocol: AnyObject {
     var isSyncing: Bool { get }
@@ -12,11 +11,12 @@ protocol SyncServiceProtocol: AnyObject {
     var syncSuccessCount: Int { get }
     var syncFailureCount: Int { get }
 
-    func configure(container: ModelContainer, authService: AuthServiceProtocol)
+    func bootstrapPredefinedCategories() async
     func syncOnLaunch() async
     func syncOnReconnect() async
     func fullSync() async
     func bootstrapAfterSignup() async
     func clearGroupData()
+    func clearAllUserData()
     func recordSyncError()
 }

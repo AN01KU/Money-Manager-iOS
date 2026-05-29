@@ -3,8 +3,8 @@ import SwiftUI
 struct GroupTransactionDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let transaction: APIGroupTransaction
-    let members: [APIGroupMember]
+    let transaction: GroupTransaction
+    let members: [GroupMember]
     let currentUserId: UUID?
     let onDelete: (() -> Void)?
     let onEdit: (() -> Void)?
@@ -62,7 +62,7 @@ struct GroupTransactionDetailSheet: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(AppColors.inputBackground)
                     .clipShape(.rect(cornerRadius: 16))
 
                     // Splits breakdown
@@ -85,7 +85,7 @@ struct GroupTransactionDetailSheet: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(AppColors.inputBackground)
                         .clipShape(.rect(cornerRadius: 16))
                     }
 

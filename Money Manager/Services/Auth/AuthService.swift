@@ -16,8 +16,8 @@ final class AuthService: AuthServiceProtocol {
     var isLoading: Bool = false
     var errorMessage: String?
 
-    private let session = SessionStore.shared
-    private let apiClient = AppAPIClient.shared
+    var session: SessionStore = SessionStore.shared
+    var apiClient: any APIClientProtocol = AppAPIClient.shared
 
     nonisolated(unsafe) private var sessionExpiredObserver: Any?
 
@@ -27,8 +27,9 @@ final class AuthService: AuthServiceProtocol {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self, self.isAuthenticated else { return }
+            guard let self else { return }
             Task { @MainActor in
+                guard self.isAuthenticated else { return }
                 self.authState = .expired
                 self.session.clearSession()
             }
@@ -53,8 +54,8 @@ final class AuthService: AuthServiceProtocol {
             let user: APIUser = try await apiClient.get(.me)
             AppLogger.auth.info("checkAuthState: authenticated as \(user.email, privacy: .private)")
             session.saveLastLoggedInEmail(user.email.lowercased())
-            UserDefaults.standard.set(user.currency, forKey: "selectedCurrency")
-            UserDefaults.standard.set(user.timezone, forKey: "userTimezone")
+            UserDefaults.standard.set(user.currency, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
+            UserDefaults.standard.set(user.timezone, forKey: UserDefaults.Keys.userTimezone.rawValue)
             authState = .authenticated(user)
         } catch let error as APIError where error == .unauthorized {
             AppLogger.auth.warning("checkAuthState: token rejected (401) — clearing session")
@@ -79,20 +80,26 @@ final class AuthService: AuthServiceProtocol {
         errorMessage = nil
         defer { isLoading = false }
 
-        // If a different user was previously logged in, wipe their local data first
         let normalizedEmail = email.lowercased()
-        if let lastEmail = session.getLastLoggedInEmail(), lastEmail != normalizedEmail {
-            SyncService.shared.clearAllUserData()
-        }
+        let isDifferentUser = session.getLastLoggedInEmail().map { $0 != normalizedEmail } ?? false
 
         do {
             let request = APILoginRequest(email: email, password: password)
             let response: APIAuthResponse = try await apiClient.post(.login, body: request)
+
+            // Wipe old user's data only after the new login succeeds,
+            // so a failed login never destroys the current user's data.
+            // clearAllUserData deletes PendingChange records, so no stale
+            // changes can be replayed for the old user after this point.
+            if isDifferentUser {
+                NotificationCenter.default.post(name: .userDidSwitchAccount, object: nil)
+            }
+
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
             session.saveLastLoggedInEmail(normalizedEmail)
-            UserDefaults.standard.set(response.user.currency, forKey: "selectedCurrency")
-            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
+            UserDefaults.standard.set(response.user.currency, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
+            UserDefaults.standard.set(response.user.timezone, forKey: UserDefaults.Keys.userTimezone.rawValue)
             authState = .authenticated(response.user)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -106,13 +113,19 @@ final class AuthService: AuthServiceProtocol {
         errorMessage = nil
         defer { isLoading = false }
 
+        let normalizedEmail = email.lowercased()
+        let isDifferentUser = session.getLastLoggedInEmail().map { $0 != normalizedEmail } ?? false
+
         do {
             let request = APISignupRequest(email: email, username: username, password: password, inviteCode: inviteCode)
             let response: APIAuthResponse = try await apiClient.post(.signup, body: request)
+            if isDifferentUser {
+                NotificationCenter.default.post(name: .userDidSwitchAccount, object: nil)
+            }
             session.saveToken(response.token)
             session.saveSyncSessionID(response.syncSessionId)
-            session.saveLastLoggedInEmail(email.lowercased())
-            UserDefaults.standard.set(response.user.timezone, forKey: "userTimezone")
+            session.saveLastLoggedInEmail(normalizedEmail)
+            UserDefaults.standard.set(response.user.timezone, forKey: UserDefaults.Keys.userTimezone.rawValue)
             authState = .authenticated(response.user)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -160,7 +173,7 @@ final class AuthService: AuthServiceProtocol {
     func updateCurrency(_ code: String) async throws {
         let request = APIUpdateMeRequest(username: nil, email: nil, password: nil, currency: code)
         let updatedUser: APIUser = try await apiClient.patch(.updateMe, body: request)
-        UserDefaults.standard.set(updatedUser.currency, forKey: "selectedCurrency")
+        UserDefaults.standard.set(updatedUser.currency, forKey: UserDefaults.Keys.selectedCurrency.rawValue)
         authState = .authenticated(updatedUser)
     }
 
@@ -168,7 +181,7 @@ final class AuthService: AuthServiceProtocol {
     func logout() {
         let syncSessionID = session.getSyncSessionID()
         session.clearSession()
-        UserDefaults.standard.removeObject(forKey: "last_sync_at")
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.lastSyncAt.rawValue)
         NotificationCenter.default.post(name: .userDidLogout, object: nil)
         authState = .guest
 

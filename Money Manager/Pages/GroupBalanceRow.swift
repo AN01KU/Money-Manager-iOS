@@ -7,7 +7,7 @@ import SwiftUI
 
 struct GroupBalanceRow: View {
     let debt: PairwiseDebt
-    let members: [APIGroupMember]
+    let members: [GroupMember]
     let currentUserId: UUID?
 
     private var isCurrentUserDebtor: Bool { debt.fromUserId == currentUserId }
@@ -86,8 +86,8 @@ private let settlementDateFormatter: DateFormatter = {
 }()
 
 struct SettlementHistoryRow: View {
-    let settlement: APISettlement
-    let members: [APIGroupMember]
+    let settlement: Settlement
+    let members: [GroupMember]
     let currentUserId: UUID?
 
     private var fromName: String {

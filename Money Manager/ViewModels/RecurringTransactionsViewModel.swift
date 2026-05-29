@@ -19,34 +19,26 @@ import SwiftData
         recurring
     }
 
-    /// Active recurring transactions with a next occurrence falling within the current calendar month.
     var upcomingThisMonth: [RecurringTransaction] {
-        let calendar = Calendar.current
-        let now = Date()
-        guard let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now)),
-              let end = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: start) else { return [] }
+        let interval = Calendar.current.monthInterval(for: Date())
         return activeRecurring
             .filter { item in
                 guard let next = item.nextOccurrence else { return false }
-                return next >= start && next <= end
+                return interval.contains(next)
             }
             .sorted { ($0.nextOccurrence ?? .distantFuture) < ($1.nextOccurrence ?? .distantFuture) }
     }
 
-    /// Net amount for upcoming transactions this month (income - expense).
     var upcomingTotalThisMonth: Double {
         upcomingThisMonth.reduce(0) { total, item in
             item.type == .income ? total + item.amount : total - item.amount
         }
     }
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-    let persistence: PersistenceService
+    var modelContext: ModelContext { persistence.modelContext }
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
@@ -58,7 +50,7 @@ import SwiftData
         item.isActive.toggle()
         item.updatedAt = Date()
         do {
-            try persistence.saveRecurring(item, action: "update")
+            try persistence.save(item, action: .update)
             AppLogger.data.info("Recurring transaction toggled: \(item.id) isActive=\(item.isActive)")
         } catch {
             AppLogger.data.error("Error toggling recurring transaction: \(error)")
@@ -68,29 +60,26 @@ import SwiftData
     func deleteItem(_ item: RecurringTransaction) {
         let recurringId = item.id
 
-        // Remove from the in-memory array first so computed properties (upcomingThisMonth, etc.)
-        // never access the item's attributes after SwiftData detaches its backing store.
         recurring.removeAll { $0.id == recurringId }
 
         item.isSoftDeleted = true
         item.updatedAt = Date()
 
-        if let modelContext {
-            let descriptor = FetchDescriptor<Transaction>(
-                predicate: #Predicate { $0.recurringExpenseId == recurringId }
-            )
-            if let linked = try? modelContext.fetch(descriptor) {
-                for tx in linked { tx.recurringExpenseId = nil }
-            }
+        let mctx = modelContext
+        let descriptor = FetchDescriptor<Transaction>(
+            predicate: #Predicate { $0.recurringExpenseId == recurringId }
+        )
+        if let linked = try? mctx.fetch(descriptor) {
+            for tx in linked { tx.recurringExpenseId = nil }
         }
 
         do {
             try persistence.saveAndSync(
-                entityType: "recurring",
+                entityType: .recurring,
                 entityID: recurringId,
-                action: "delete",
+                action: .delete,
                 endpoint: "/recurring-transactions",
-                httpMethod: "DELETE",
+                httpMethod: .delete,
                 payload: nil
             )
             AppLogger.data.info("Recurring transaction deleted: \(recurringId)")
@@ -101,10 +90,115 @@ import SwiftData
 }
 
 @MainActor
+@Observable class EditRecurringTransactionViewModel {
+    var name: String = ""
+    var amount: String = ""
+    var selectedCategoryId: UUID = UUID()
+    var selectedCategoryName: String {
+        categoryLookup[selectedCategoryId]?.name ?? ""
+    }
+    var transactionType: TransactionKind = .expense
+    var frequency: RecurringFrequency = .monthly
+    var startDate: Date = Date()
+    var hasEndDate: Bool = false
+    var endDate: Date = Date()
+    var dayOfMonth: Int = 1
+    var daysOfWeek: [Int] = []
+    var notes: String = ""
+    var showCategoryPicker = false
+    var showError = false
+    var errorMessage = ""
+    var frequencyError: String? = nil
+
+    var customCategories: [Category] = [] {
+        didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
+    }
+    private var categoryLookup: [UUID: Category] = [:]
+
+    private var originalFrequency: RecurringFrequency = .monthly
+
+    let frequencies = RecurringFrequency.allCases
+
+    var isValid: Bool {
+        guard let amountValue = Double(amount), amountValue > 0 else { return false }
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        return frequencyValidationError == nil
+    }
+
+    var frequencyValidationError: String? {
+        guard frequency != originalFrequency else { return nil }
+        switch frequency {
+        case .weekly where daysOfWeek.isEmpty:
+            return "Please select at least one day of the week."
+        case .monthly where dayOfMonth < 1:
+            return "Please select a day of the month."
+        default:
+            return nil
+        }
+    }
+
+    func load(from recurring: RecurringTransaction, categories: [Category] = []) {
+        name = recurring.name
+        amount = recurring.amount.editableString
+        selectedCategoryId = recurring.categoryId
+        transactionType = recurring.type
+        frequency = recurring.frequency
+        originalFrequency = recurring.frequency
+        startDate = recurring.startDate
+        hasEndDate = recurring.endDate != nil
+        endDate = recurring.endDate ?? Date()
+        dayOfMonth = recurring.dayOfMonth ?? 1
+        daysOfWeek = recurring.daysOfWeek ?? []
+        notes = recurring.notes ?? ""
+        customCategories = categories
+        frequencyError = nil
+    }
+
+    func validateFrequency() {
+        frequencyError = frequencyValidationError
+    }
+
+    func apply(to recurring: RecurringTransaction, categories: [Category] = []) -> Bool {
+        guard let amountValue = Double(amount), amountValue > 0 else {
+            errorMessage = "Amount must be greater than 0"
+            showError = true
+            return false
+        }
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Please enter a name"
+            showError = true
+            return false
+        }
+        if let freqErr = frequencyValidationError {
+            errorMessage = freqErr
+            showError = true
+            return false
+        }
+
+        recurring.name = trimmed
+        recurring.amount = amountValue
+        recurring.categoryId = selectedCategoryId
+        recurring.type = transactionType
+        recurring.frequency = frequency
+        recurring.startDate = startDate
+        recurring.dayOfMonth = frequency == .monthly ? dayOfMonth : nil
+        recurring.daysOfWeek = frequency == .weekly ? (daysOfWeek.isEmpty ? nil : daysOfWeek) : nil
+        recurring.endDate = hasEndDate ? endDate : nil
+        recurring.notes = notes.isEmpty ? nil : notes
+        recurring.updatedAt = Date()
+        return true
+    }
+}
+
+@MainActor
 @Observable class AddRecurringTransactionViewModel {
     var name: String = ""
     var amount: String = ""
-    var selectedCategory: String = ""
+    var selectedCategoryId: UUID = UUID()
+    var selectedCategoryName: String {
+        categoryLookup[selectedCategoryId]?.name ?? ""
+    }
     var transactionType: TransactionKind = .expense
     var frequency: RecurringFrequency = .monthly
     var startDate: Date = Date()
@@ -118,29 +212,27 @@ import SwiftData
 
     let frequencies = RecurringFrequency.allCases
 
-    var customCategories: [CustomCategory] = []
-    let persistence: PersistenceService
+    var customCategories: [Category] = [] {
+        didSet { categoryLookup = CategoryResolver.makeLookup(from: customCategories) }
+    }
+    private var categoryLookup: [UUID: Category] = [:]
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
+    var modelContext: ModelContext { persistence.modelContext }
 
     var isValid: Bool {
-        guard let amountValue = Double(amount), amountValue > 0 else {
-            return false
-        }
-        return !name.trimmingCharacters(in: .whitespaces).isEmpty && !selectedCategory.isEmpty
+        guard let amountValue = Double(amount), amountValue > 0 else { return false }
+        return !name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    func prefill(amount: String, category: String, type: TransactionKind = .expense) {
-        self.amount = amount
-        self.selectedCategory = category
+    func prefill(categoryId: UUID, type: TransactionKind = .expense, amountString: String = "") {
+        self.selectedCategoryId = categoryId
         self.transactionType = type
+        self.amount = amountString
     }
 
     func save() -> Bool {
@@ -156,34 +248,26 @@ import SwiftData
             return false
         }
 
-        guard !selectedCategory.isEmpty else {
-            errorMessage = "Please select a category"
-            showError = true
-            return false
-        }
-
-        guard let modelContext = modelContext else { return true }
+        let modelContext = modelContext
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
 
         let recurringTransaction = RecurringTransaction(
             name: trimmedName,
             amount: amountValue,
-            category: selectedCategory,
+            categoryId: selectedCategoryId,
             frequency: frequency,
             dayOfMonth: frequency == .monthly ? dayOfMonth : nil,
             startDate: startDate,
             endDate: hasEndDate ? endDate : nil,
             notes: notes.isEmpty ? nil : notes,
-            categoryId: resolvedCategoryId,
             type: transactionType
         )
 
         modelContext.insert(recurringTransaction)
 
         do {
-            try persistence.saveRecurring(recurringTransaction, action: "create")
+            try persistence.save(recurringTransaction, action: .create)
             AppLogger.data.info("Recurring transaction saved: \(recurringTransaction.id)")
         } catch {
             AppLogger.data.error("Failed to save recurring transaction: \(error)")

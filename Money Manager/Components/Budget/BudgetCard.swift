@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct BudgetCard: View {
-    let budget: MonthlyBudget
+    let budget: UserBudget
     let spent: Double
     let remaining: Double
     let percentage: Int
@@ -25,7 +25,7 @@ struct BudgetCard: View {
                     Text("Monthly Budget")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(CurrencyFormatter.format(budget.limit))
+                    Text(CurrencyFormatter.format(budget.limit ?? 0))
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(.primary)
                 }
@@ -108,11 +108,11 @@ struct BudgetCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Monthly budget \(CurrencyFormatter.format(budget.limit)), \(percentage) percent used, \(CurrencyFormatter.format(remaining)) remaining")
+        .accessibilityLabel("Monthly budget \(CurrencyFormatter.format(budget.limit ?? 0)), \(percentage) percent used, \(CurrencyFormatter.format(remaining)) remaining")
         .accessibilityIdentifier("budget.card")
     }
 }
@@ -124,7 +124,7 @@ struct BudgetProgressBar: View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
+                    .fill(AppColors.chipBackground)
                     .frame(height: 16)
                 
                 RoundedRectangle(cornerRadius: 8)
@@ -145,19 +145,14 @@ struct BudgetProgressBar: View {
     }
     
     private var progressColors: [Color] {
-        if percentage <= 50 {
-            return [AppColors.budgetSafe, AppColors.budgetSafe.opacity(0.7)]
-        } else if percentage <= 80 {
-            return [AppColors.budgetCaution, AppColors.budgetCaution.opacity(0.7)]
-        } else {
-            return [AppColors.budgetDanger, AppColors.budgetDanger.opacity(0.7)]
-        }
+        let color = BudgetStatus(percentage: percentage).color
+        return [color, color.opacity(0.7)]
     }
 }
 
 #Preview {
     BudgetCard(
-        budget: MonthlyBudget(year: 2025, month: 1, limit: 50000),
+        budget: UserBudget(limit: 50000),
         spent: 32450,
         remaining: 17550,
         percentage: 65,

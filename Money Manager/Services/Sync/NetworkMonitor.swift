@@ -7,7 +7,7 @@ import Foundation
 import Network
 
 @Observable
-final class NetworkMonitor {
+final class NetworkMonitor: NetworkMonitorProtocol {
     static let shared = NetworkMonitor()
     
     var isConnected: Bool = false

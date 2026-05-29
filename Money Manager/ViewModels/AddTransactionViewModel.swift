@@ -3,7 +3,7 @@ import SwiftData
 
 enum AddTransactionMode {
     case personal(editing: Transaction? = nil)
-    case shared(group: APIGroupWithDetails, members: [APIGroupMember], currentUserId: UUID? = nil, editing: APIGroupTransaction? = nil, onAdd: (APIGroupTransaction) -> Void)
+    case shared(group: SplitGroup, members: [GroupMember], currentUserId: UUID? = nil, editing: GroupTransaction? = nil, onAdd: (GroupTransaction) -> Void)
 }
 
 enum TransactionType: String, CaseIterable {
@@ -30,17 +30,55 @@ enum SplitType: String, CaseIterable {
     case custom = "Custom"
 }
 
+struct SplitCalculator {
+    let totalAmount: Double
+    let selectedMembers: Set<UUID>
+    let customAmounts: [UUID: String]
+    let splitType: SplitType
+
+    var equalShareText: String {
+        guard totalAmount > 0, !selectedMembers.isEmpty else {
+            return "\(CurrencyFormatter.currentSymbol)0"
+        }
+        return CurrencyFormatter.format(totalAmount / Double(selectedMembers.count), showDecimals: true)
+    }
+
+    var customSplitTotal: Double {
+        selectedMembers
+            .compactMap { Money.parse(customAmounts[$0] ?? "", currencyCode: CurrencyFormatter.currentCode)?.doubleValue }
+            .reduce(0, +)
+    }
+
+    var splitMatchesTotal: Bool {
+        totalAmount > 0 && abs(customSplitTotal - totalAmount) < 0.01
+    }
+
+    func buildSplits() -> [APIGroupTransactionSplitInput] {
+        if splitType == .equal {
+            let share = totalAmount / Double(max(selectedMembers.count, 1))
+            return selectedMembers.map { APIGroupTransactionSplitInput(userId: $0, amount: share) }
+        } else {
+            return selectedMembers.compactMap { id in
+                guard let raw = customAmounts[id],
+                      let money = Money.parse(raw, currencyCode: CurrencyFormatter.currentCode) else { return nil }
+                return APIGroupTransactionSplitInput(userId: id, amount: money.doubleValue)
+            }
+        }
+    }
+}
 
 @MainActor
 @Observable class AddTransactionViewModel {
     var amount = ""
-    var selectedCategory = ""
+    // Personal path: UUID-based; shared path: string key sent to API
+    var selectedCategoryId: UUID = UUID()
+    var selectedCategory = "other" // used by shared (group) path only
     var description = ""
     var notes = ""
     var transactionType: TransactionType = .expense
     var showCategoryPicker = false
+    var errorMessage: String?
     var showRecurringAmountAlert = false
-    var showError = false
 
     // Inline recurring fields
     var isRecurring = false
@@ -48,7 +86,6 @@ enum SplitType: String, CaseIterable {
     var recurringDayOfMonth: Int = 1
     var recurringHasEndDate = false
     var recurringEndDate: Date = Date()
-    var errorMessage = ""
     var isSaving = false
 
     var selectedDate = Date()
@@ -62,16 +99,15 @@ enum SplitType: String, CaseIterable {
     var customAmounts: [UUID: String] = [:]
 
     private var originalAmount: Double?
-    private var pendingSaveCompletion: (() -> Void)?
+    private var originalCategoryId: UUID?
+    private var originalType: TransactionType?
+    private var pendingAmountValue: Double?
     private(set) var editingRecurringExpenseId: UUID?
 
     let mode: AddTransactionMode
-    let persistence: PersistenceService
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-    var customCategories: [CustomCategory] = []
+    @ObservationIgnored var persistence: PersistenceService
+    var modelContext: ModelContext { persistence.modelContext }
+    var customCategories: [Category] = []
     private let groupService: GroupServiceProtocol
 
     // MARK: - Computed
@@ -98,8 +134,6 @@ enum SplitType: String, CaseIterable {
         }
     }
 
-    /// Stable identifier for the current screen mode — use in tests and accessibility.
-    /// Unaffected by display copy changes.
     var navigationTitleIdentifier: String {
         switch mode {
         case .personal(let editing):
@@ -118,8 +152,7 @@ enum SplitType: String, CaseIterable {
                    !description.trimmingCharacters(in: .whitespaces).isEmpty
         }
 
-        guard let amountValue = Double(amount), amountValue > 0,
-              !selectedCategory.isEmpty else { return false }
+        guard let amountValue = parsedAmountValue, amountValue > 0 else { return false }
 
         if isRecurring && description.trimmingCharacters(in: .whitespaces).isEmpty { return false }
 
@@ -132,28 +165,29 @@ enum SplitType: String, CaseIterable {
         return true
     }
 
-    var equalShareText: String {
-        guard let total = Double(amount), total > 0, !selectedMembers.isEmpty else {
-            return "\(CurrencyFormatter.currentSymbol)0"
-        }
-        return CurrencyFormatter.format(total / Double(selectedMembers.count), showDecimals: true)
+    private var parsedAmountValue: Double? {
+        Money.parse(amount, currencyCode: CurrencyFormatter.currentCode)?.doubleValue
     }
 
-    var customSplitTotal: Double {
-        selectedMembers.compactMap { Double(customAmounts[$0] ?? "") }.reduce(0, +)
+    private var splitCalculator: SplitCalculator {
+        SplitCalculator(
+            totalAmount: parsedAmountValue ?? 0,
+            selectedMembers: selectedMembers,
+            customAmounts: customAmounts,
+            splitType: splitType
+        )
     }
 
-    var splitMatchesTotal: Bool {
-        guard let total = Double(amount) else { return false }
-        return abs(customSplitTotal - total) < 0.01
-    }
+    var equalShareText: String { splitCalculator.equalShareText }
+    var customSplitTotal: Double { splitCalculator.customSplitTotal }
+    var splitMatchesTotal: Bool { splitCalculator.splitMatchesTotal }
 
     // MARK: - Init
 
     init(
         mode: AddTransactionMode = .personal(),
         groupService: GroupServiceProtocol = GroupService.shared,
-        persistence: PersistenceService = PersistenceService()
+        persistence: PersistenceService = .testing
     ) {
         self.mode = mode
         self.groupService = groupService
@@ -163,31 +197,39 @@ enum SplitType: String, CaseIterable {
 
     func setup() {
         switch mode {
-        case .personal(let editing):
-            guard let expense = editing else { return }
-            originalAmount = expense.amount
-            editingRecurringExpenseId = expense.recurringExpenseId
-            amount = expense.amount.editableString
-            selectedCategory = expense.category
-            selectedDate = expense.date
-            selectedTime = expense.time ?? Date()
-            hasTime = expense.time != nil
-            description = expense.transactionDescription ?? ""
-            notes = expense.notes ?? ""
-            transactionType = TransactionType(kind: expense.type)
+        case .personal(let editing): setupPersonal(editing: editing)
+        case .shared(_, let members, let currentUserId, let editing, _): setupShared(members: members, currentUserId: currentUserId, editing: editing)
+        }
+    }
 
-        case .shared(_, let members, let currentUserId, let editing, _):
-            if let tx = editing {
-                let txAmount = Double(tx.totalAmount) ?? 0
-                amount = txAmount.editableString
-                selectedCategory = tx.category
-                description = tx.description ?? ""
-                paidByUserId = tx.paidByUserId
-                selectedMembers = Set(tx.splits.map(\.userId))
-            } else {
-                paidByUserId = currentUserId
-                selectedMembers = Set(members.map(\.id))
-            }
+    private func setupPersonal(editing: Transaction?) {
+        guard let expense = editing else { return }
+        originalAmount = expense.amount
+        originalCategoryId = expense.categoryId
+        originalType = TransactionType(kind: expense.type)
+        editingRecurringExpenseId = expense.recurringExpenseId
+        isRecurring = expense.recurringExpenseId != nil
+        amount = expense.amount.editableString
+        selectedCategoryId = expense.categoryId
+        selectedDate = expense.date
+        selectedTime = expense.time ?? Date()
+        hasTime = expense.time != nil
+        description = expense.transactionDescription ?? ""
+        notes = expense.notes ?? ""
+        transactionType = TransactionType(kind: expense.type)
+    }
+
+    private func setupShared(members: [GroupMember], currentUserId: UUID?, editing: GroupTransaction?) {
+        if let tx = editing {
+            let txAmount = tx.totalAmount
+            amount = txAmount.editableString
+            selectedCategory = tx.category
+            description = tx.description ?? ""
+            paidByUserId = tx.paidByUserId
+            selectedMembers = Set(tx.splits.map(\.userId))
+        } else {
+            paidByUserId = currentUserId
+            selectedMembers = Set(members.map(\.id))
         }
     }
 
@@ -200,7 +242,7 @@ enum SplitType: String, CaseIterable {
         )
     }
 
-    func displayName(for member: APIGroupMember) -> String {
+    func displayName(for member: GroupMember) -> String {
         member.username
     }
 
@@ -224,20 +266,20 @@ enum SplitType: String, CaseIterable {
     // MARK: - Save
 
     func save(completion: @escaping () -> Void) {
-        guard let amountValue = Double(amount), amountValue > 0 else {
+        guard let amountValue = parsedAmountValue, amountValue > 0 else {
             errorMessage = "Please enter a valid amount"
-            showError = true
             return
         }
 
-        // If editing a recurring-linked transaction and amount changed, ask the user
-        if case .personal = mode,
-           editingRecurringExpenseId != nil,
-           let original = originalAmount,
-           amountValue != original {
-            pendingSaveCompletion = completion
-            showRecurringAmountAlert = true
-            return
+        if case .personal = mode, editingRecurringExpenseId != nil {
+            let amountChanged = originalAmount.map { amountValue != $0 } ?? false
+            let categoryChanged = originalCategoryId.map { selectedCategoryId != $0 } ?? false
+            let typeChanged = originalType.map { transactionType != $0 } ?? false
+            if amountChanged || categoryChanged || typeChanged {
+                pendingAmountValue = amountValue
+                showRecurringAmountAlert = true
+                return
+            }
         }
 
         isSaving = true
@@ -246,18 +288,13 @@ enum SplitType: String, CaseIterable {
         case .personal:
             savePersonal(amountValue: amountValue, completion: completion)
         case .shared(let group, _, _, _, let onAdd):
-            saveShared(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
+            saveShared(amountValue: amountValue, groupId: group.id, onAdd: onAdd, completion: completion)
         }
     }
 
-    // MARK: - Private: personal save (unchanged logic)
+    // MARK: - Private: personal save
 
     private func savePersonal(amountValue: Double, completion: @escaping () -> Void) {
-        guard modelContext != nil else {
-            isSaving = false
-            return
-        }
-
         let calendar = Calendar.current
         let baseDate = selectedDate
         var expenseDate = calendar.startOfDay(for: baseDate)
@@ -269,36 +306,30 @@ enum SplitType: String, CaseIterable {
                                         of: baseDate) ?? baseDate
         }
 
-        let resolvedCategoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
-
         let transaction: Transaction
-        let action: String
+        let action: ChangeAction
 
-        // If recurring is toggled on, create the template first so we can link it atomically.
-        var recurringExpenseId: UUID? = nil
-        if isRecurring {
+        var recurringExpenseId: UUID? = editingRecurringExpenseId
+        if isRecurring && editingRecurringExpenseId == nil {
             let trimmedName = description.trimmingCharacters(in: .whitespaces)
-            let resolvedCategoryIdForRecurring = customCategories.first(where: { $0.name == selectedCategory })?.id
             let recurring = RecurringTransaction(
                 name: trimmedName,
                 amount: amountValue,
-                category: selectedCategory,
+                categoryId: selectedCategoryId,
                 frequency: recurringFrequency,
                 dayOfMonth: recurringFrequency == .monthly ? recurringDayOfMonth : nil,
                 startDate: baseDate,
                 endDate: recurringHasEndDate ? recurringEndDate : nil,
-                categoryId: resolvedCategoryIdForRecurring,
                 type: transactionType.kind
             )
-            persistence.modelContext?.insert(recurring)
+            persistence.modelContext.insert(recurring)
             do {
-                try persistence.saveRecurring(recurring, action: "create")
+                try persistence.save(recurring, action: .create)
                 AppLogger.data.info("Recurring transaction saved: \(recurring.id)")
                 recurringExpenseId = recurring.id
             } catch {
                 AppLogger.data.error("Failed to save recurring: \(error)")
                 errorMessage = "Failed to save recurring template"
-                showError = true
                 isSaving = false
                 return
             }
@@ -306,8 +337,8 @@ enum SplitType: String, CaseIterable {
 
         if case .personal(let existing) = mode, let existingExpense = existing {
             existingExpense.amount = amountValue
-            existingExpense.category = selectedCategory
-            existingExpense.categoryId = resolvedCategoryId
+            existingExpense.type = transactionType.kind
+            existingExpense.categoryId = selectedCategoryId
             existingExpense.date = expenseDate
             existingExpense.time = hasTime ? selectedTime : nil
             if isRecurring {
@@ -319,7 +350,7 @@ enum SplitType: String, CaseIterable {
             existingExpense.notes = notes.isEmpty ? nil : notes
             existingExpense.updatedAt = Date()
             transaction = existingExpense
-            action = "update"
+            action = .update
         } else {
             let resolvedDescription = isRecurring
                 ? description.trimmingCharacters(in: .whitespaces)
@@ -327,27 +358,24 @@ enum SplitType: String, CaseIterable {
             let expense = Transaction(
                 type: transactionType.kind,
                 amount: amountValue,
-                category: selectedCategory,
+                categoryId: selectedCategoryId,
                 date: expenseDate,
                 time: hasTime ? selectedTime : nil,
                 transactionDescription: resolvedDescription,
                 notes: notes.isEmpty ? nil : notes,
-                recurringExpenseId: recurringExpenseId,
-                
-                categoryId: resolvedCategoryId
+                recurringExpenseId: recurringExpenseId
             )
-            persistence.modelContext?.insert(expense)
+            persistence.modelContext.insert(expense)
             transaction = expense
-            action = "create"
+            action = .create
         }
 
         do {
-            try persistence.saveTransaction(transaction, action: action)
-            AppLogger.data.info("Expense saved: \(transaction.id) action=\(action)")
+            try persistence.save(transaction, action: action)
+            AppLogger.data.info("Expense saved: \(transaction.id) action=\(action.rawValue)")
         } catch {
             AppLogger.data.error("Failed to save expense: \(error)")
             errorMessage = "Failed to save expense"
-            showError = true
             isSaving = false
             return
         }
@@ -358,75 +386,61 @@ enum SplitType: String, CaseIterable {
 
     // MARK: - Recurring amount alert responses
 
-    /// Called when user chooses to update only this transaction (not the recurring template).
-    func saveThisTransactionOnly() {
-        showRecurringAmountAlert = false
-        guard let completion = pendingSaveCompletion else { return }
-        pendingSaveCompletion = nil
+    func saveThisTransactionOnly(completion: @escaping () -> Void) {
+        let amountValue = pendingAmountValue ?? 0
+        pendingAmountValue = nil
         isSaving = true
-        savePersonal(amountValue: Double(amount) ?? 0, completion: completion)
+        savePersonal(amountValue: amountValue, completion: completion)
     }
 
-    /// Called when user chooses to update this transaction AND the recurring template.
     func saveAlsoUpdatingRecurring(completion: @escaping () -> Void) {
-        showRecurringAmountAlert = false
-        pendingSaveCompletion = nil
-        if let recurringId = editingRecurringExpenseId,
-           let newAmount = Double(amount),
-           let ctx = persistence.modelContext {
+        let amountValue = pendingAmountValue ?? 0
+        pendingAmountValue = nil
+        if let recurringId = editingRecurringExpenseId {
+            let ctx = persistence.modelContext
             let descriptor = FetchDescriptor<RecurringTransaction>(
                 predicate: #Predicate { $0.id == recurringId && !$0.isSoftDeleted }
             )
             if let recurring = try? ctx.fetch(descriptor).first {
-                recurring.amount = newAmount
+                recurring.amount = amountValue
+                recurring.categoryId = selectedCategoryId
+                recurring.type = transactionType.kind
                 recurring.updatedAt = Date()
-                try? persistence.saveRecurring(recurring, action: "update")
+                try? persistence.save(recurring, action: .update)
             }
         }
         isSaving = true
-        savePersonal(amountValue: Double(amount) ?? 0, completion: completion)
+        savePersonal(amountValue: amountValue, completion: completion)
     }
 
     // MARK: - Private: shared save
 
     private func saveShared(
         amountValue: Double,
-        group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupTransaction) -> Void,
+        groupId: UUID,
+        onAdd: @escaping (GroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         if case .shared(_, _, _, let editing, _) = mode, let existing = editing {
-            saveSharedEdit(existing: existing, group: group, onAdd: onAdd, completion: completion)
+            saveSharedEdit(existing: existing, groupId: groupId, onAdd: onAdd, completion: completion)
         } else {
-            saveSharedCreate(amountValue: amountValue, group: group, onAdd: onAdd, completion: completion)
+            saveSharedCreate(amountValue: amountValue, groupId: groupId, onAdd: onAdd, completion: completion)
         }
     }
 
     private func saveSharedCreate(
         amountValue: Double,
-        group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupTransaction) -> Void,
+        groupId: UUID,
+        onAdd: @escaping (GroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         guard let paidBy = paidByUserId else {
             errorMessage = "Please select who paid"
-            showError = true
             isSaving = false
             return
         }
 
-        let splits: [APIGroupTransactionSplitInput]
-        if splitType == .equal {
-            let share = amountValue / Double(max(selectedMembers.count, 1))
-            splits = selectedMembers.map {
-                APIGroupTransactionSplitInput(userId: $0, amount: share)
-            }
-        } else {
-            splits = selectedMembers.compactMap { id in
-                guard let raw = customAmounts[id], let value = Double(raw) else { return nil }
-                return APIGroupTransactionSplitInput(userId: id, amount: value)
-            }
-        }
+        let splits = splitCalculator.buildSplits()
 
         let request = APICreateGroupTransactionRequest(
             paidByUserId: paidBy,
@@ -441,22 +455,21 @@ enum SplitType: String, CaseIterable {
 
         Task {
             do {
-                let expense = try await groupService.createGroupTransaction(request, groupId: group.id)
+                let expense = try await groupService.createGroupTransaction(request, groupId: groupId)
                 onAdd(expense)
                 isSaving = false
                 completion()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
-                showError = true
                 isSaving = false
             }
         }
     }
 
     private func saveSharedEdit(
-        existing: APIGroupTransaction,
-        group: APIGroupWithDetails,
-        onAdd: @escaping (APIGroupTransaction) -> Void,
+        existing: GroupTransaction,
+        groupId: UUID,
+        onAdd: @escaping (GroupTransaction) -> Void,
         completion: @escaping () -> Void
     ) {
         let trimmedDescription = description.trimmingCharacters(in: .whitespaces)
@@ -466,18 +479,19 @@ enum SplitType: String, CaseIterable {
             category: selectedCategory != existing.category ? selectedCategory : nil,
             date: selectedDate != existing.date ? selectedDate : nil,
             description: trimmedDescription != (existing.description ?? "") ? trimmedDescription : nil,
-            notes: trimmedNotes.isEmpty ? nil : (trimmedNotes != (existing.notes ?? "") ? trimmedNotes : nil)
+            notes: trimmedNotes.isEmpty ? nil : (trimmedNotes != (existing.notes ?? "") ? trimmedNotes : nil),
+            updatedAt: existing.updatedAt,
+            paidByUserId: paidByUserId != existing.paidByUserId ? paidByUserId : nil
         )
 
         Task {
             do {
-                let updated = try await groupService.updateGroupTransaction(request, groupId: group.id, transactionId: existing.id)
+                let updated = try await groupService.updateGroupTransaction(request, groupId: groupId, transactionId: existing.id)
                 onAdd(updated)
                 isSaving = false
                 completion()
             } catch {
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
-                showError = true
                 isSaving = false
             }
         }

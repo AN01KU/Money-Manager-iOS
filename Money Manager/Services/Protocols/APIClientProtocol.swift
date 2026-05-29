@@ -17,6 +17,9 @@ protocol APIClientProtocol: Sendable {
     func put<T: Decodable>(
         _ endpoint: MoneyManagerEndpoint, rawBody: Data
     ) async throws -> T
+    func patch<Req: Encodable, Res: Decodable>(
+        _ endpoint: MoneyManagerEndpoint, body: sending Req
+    ) async throws -> Res
     func patch<T: Decodable>(
         _ endpoint: MoneyManagerEndpoint, rawBody: Data
     ) async throws -> T

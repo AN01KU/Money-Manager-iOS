@@ -15,12 +15,12 @@ enum TransactionTypeFilter: String, CaseIterable {
     var showAddTransaction = false
     var showBudgetSheet = false
     var searchText = "" { didSet { if oldValue != searchText { recalculate() } } }
-    var selectedCategoryFilter: String? { didSet { if oldValue != selectedCategoryFilter { recalculate() } } }
+    var selectedCategoryFilter: UUID? { didSet { if oldValue != selectedCategoryFilter { recalculate() } } }
     var transactionTypeFilter: TransactionTypeFilter = .all { didSet { if oldValue != transactionTypeFilter { recalculate() } } }
 
     var filteredTransactions: [Transaction] = []
     var recentTransactions: [Transaction] = []
-    var currentBudget: MonthlyBudget?
+    var currentBudget: UserBudget?
     var dailyBudgetLimit: Double = 0
     var totalSpent: Double = 0
     var totalIncome: Double = 0
@@ -30,22 +30,19 @@ enum TransactionTypeFilter: String, CaseIterable {
     var netBalance: Double { totalIncome - totalSpent }
 
     private var allTransactions: [Transaction] = []
-    private var budgets: [MonthlyBudget] = []
-    private var customCategories: [CustomCategory] = []
-    private var categoryLookup: [String: CustomCategory] = [:]
-    var modelContext: ModelContext? {
-        get { persistence.modelContext }
-        set { persistence.modelContext = newValue }
-    }
-    let persistence: PersistenceService
+    private var userBudget: UserBudget?
+    private var customCategories: [Category] = []
+    private var categoryLookup: [UUID: Category] = [:]
+    var modelContext: ModelContext { persistence.modelContext }
+    @ObservationIgnored var persistence: PersistenceService
 
-    init(persistence: PersistenceService = PersistenceService()) {
+    init(persistence: PersistenceService = .testing) {
         self.persistence = persistence
     }
 
-    func update(allTransactions: [Transaction], budgets: [MonthlyBudget], customCategories: [CustomCategory]) {
+    func update(allTransactions: [Transaction], userBudget: UserBudget?, customCategories: [Category]) {
         self.allTransactions = allTransactions
-        self.budgets = budgets
+        self.userBudget = userBudget
         self.customCategories = customCategories
         self.categoryLookup = CategoryResolver.makeLookup(from: customCategories)
         recalculate()
@@ -53,53 +50,41 @@ enum TransactionTypeFilter: String, CaseIterable {
 
     func recalculate() {
         let calendar = Calendar.current
+        let interval = filterMode == .daily
+            ? calendar.dayInterval(for: selectedDate)
+            : calendar.monthInterval(for: selectedDate)
 
-        let dateFiltered: [Transaction]
-        if filterMode == .daily {
-            let startOfDay = calendar.startOfDay(for: selectedDate)
-            guard let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) else {
-                filteredTransactions = []
-                return
-            }
+        // date + isSoftDeleted filtering delegated to Spending.from
+        let spending = Spending.from(
+            transactions: allTransactions,
+            in: interval,
+            categoryLookup: categoryLookup
+        )
 
-            dateFiltered = allTransactions.filter { transaction in
-                !transaction.isSoftDeleted &&
-                transaction.date >= startOfDay &&
-                transaction.date <= endOfDay
-            }
+        // Apply category drill-down. Totals and recent list use this scope —
+        // before search/type filters, which are transient UI state.
+        let categoryFiltered: [Transaction]
+        if let categoryFilter = selectedCategoryFilter {
+            categoryFiltered = spending.filtered.filter { $0.categoryId == categoryFilter }
         } else {
-            guard
-                let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDate)),
-                let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-            else {
-                filteredTransactions = []
-                return
-            }
-
-            dateFiltered = allTransactions.filter { transaction in
-                !transaction.isSoftDeleted &&
-                transaction.date >= startOfMonth &&
-                transaction.date < firstDayNextMonth
-            }
+            categoryFiltered = spending.filtered
         }
 
-        var result = dateFiltered
+        // Totals reflect the date + category scope, not the search term or type filter.
+        totalSpent  = categoryFiltered.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
+        totalIncome = categoryFiltered.filter { $0.type == .income  }.reduce(0) { $0 + $1.amount }
+
+        // Recent list follows the category drill-down but ignores search and type filter.
+        recentTransactions = Array(categoryFiltered.prefix(8))
+
+        var result = categoryFiltered
 
         if !searchText.isEmpty {
-            result = result.filter { transaction in
-                transaction.category.localizedStandardContains(searchText) ||
-                (transaction.transactionDescription?.localizedStandardContains(searchText) ?? false) ||
-                (transaction.notes?.localizedStandardContains(searchText) ?? false)
+            result = result.filter {
+                let catName = categoryLookup[$0.categoryId]?.name ?? ""
+                return $0.matches(searchText: searchText, categoryName: catName)
             }
         }
-
-        if let categoryFilter = selectedCategoryFilter {
-            result = result.filter { $0.category == categoryFilter }
-        }
-
-        // Compute totals before applying type filter (so budget card is always accurate)
-        totalSpent = result.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
-        totalIncome = result.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
 
         switch transactionTypeFilter {
         case .all:      break
@@ -109,37 +94,36 @@ enum TransactionTypeFilter: String, CaseIterable {
 
         filteredTransactions = result
 
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        currentBudget = budgets.first { $0.year == year && $0.month == month }
+        currentBudget = userBudget?.limit != nil ? userBudget : nil
 
-        if filterMode == .daily, let budget = currentBudget {
+        if filterMode == .daily, let budget = currentBudget, let limit = budget.limit {
             let daysInMonth = calendar.range(of: .day, in: .month, for: selectedDate)?.count ?? 30
-            dailyBudgetLimit = budget.limit / Double(daysInMonth)
+            dailyBudgetLimit = limit / Double(daysInMonth)
         } else {
             dailyBudgetLimit = 0
         }
 
-        // For the category chart: use income when that filter is active, otherwise expenses
+        // Category chart: derive from categoryFiltered (before type/search filters).
         let categoryBase: [Transaction]
         let categoryTotal: Double
         if transactionTypeFilter == .income {
-            categoryBase = result  // already income-only at this point
+            categoryBase = categoryFiltered.filter { $0.type == .income }
             categoryTotal = totalIncome
         } else {
-            categoryBase = result.filter { $0.type == .expense }
+            categoryBase = categoryFiltered.filter { $0.type == .expense }
             categoryTotal = totalSpent
         }
 
-        let grouped = Dictionary(grouping: categoryBase, by: { $0.category })
+        let grouped = Dictionary(grouping: categoryBase, by: { $0.categoryId })
 
         if categoryTotal > 0 {
-            categorySpending = grouped.map { categoryName, transactions in
+            categorySpending = grouped.map { catId, transactions in
                 let amount = transactions.reduce(0) { $0 + $1.amount }
                 let percentage = Int((amount / categoryTotal) * 100)
-                let (icon, color) = resolveCategory(categoryName)
+                let (name, icon, color) = CategoryResolver.resolveAll(catId, lookup: categoryLookup)
                 return CategorySpending(
-                    categoryName: categoryName,
+                    categoryId: catId,
+                    categoryName: name,
                     icon: icon,
                     color: color,
                     amount: amount,
@@ -149,23 +133,10 @@ enum TransactionTypeFilter: String, CaseIterable {
         } else {
             categorySpending = []
         }
-
-        // Recent transactions: up to 8 from the filtered period, unaffected by type/search filters
-        recentTransactions = Array(dateFiltered.prefix(8))
     }
 
-    func ensureBudgetExists(defaultBudgetLimit: Double, modelContext: ModelContext) {
-        guard currentBudget == nil, defaultBudgetLimit > 0 else { return }
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        let budget = MonthlyBudget(year: year, month: month, limit: defaultBudgetLimit)
-        modelContext.insert(budget)
-        try? modelContext.save()
-    }
-
-    func filterByCategory(_ categoryName: String) {
-        selectedCategoryFilter = categoryName
+    func filterByCategory(_ categoryId: UUID) {
+        selectedCategoryFilter = categoryId
         selectedView = .daily
     }
 
@@ -181,12 +152,10 @@ enum TransactionTypeFilter: String, CaseIterable {
     func confirmDeleteTransaction() {
         guard let transaction = transactionToDelete else { return }
 
-        transaction.isSoftDeleted = true
-        transaction.updatedAt = Date()
         transactionToDelete = nil
 
         do {
-            try persistence.saveTransaction(transaction, action: "delete")
+            try persistence.save(transaction, action: .delete)
         } catch {
             AppLogger.data.error("Error deleting transaction: \(error)")
         }
@@ -198,7 +167,7 @@ enum TransactionTypeFilter: String, CaseIterable {
         transactionToDelete = nil
     }
 
-    func resolveCategory(_ categoryName: String) -> (icon: String, color: Color) {
-        CategoryResolver.resolve(categoryName, lookup: categoryLookup)
+    func resolveCategory(_ id: UUID) -> (icon: String, color: Color) {
+        CategoryResolver.resolve(id, lookup: categoryLookup)
     }
 }

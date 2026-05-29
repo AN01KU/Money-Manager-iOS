@@ -83,4 +83,25 @@ extension Date {
         formatter.timeStyle = .none
         return formatter.string(from: self)
     }
+
+    /// Formatted label for a recurring transaction's next occurrence date.
+    ///
+    /// Defaults to the device's current time zone and locale so the displayed
+    /// day matches what the user sees on their clock — the backend already
+    /// emits `next_occurrence` in the user's timezone, so we must not double
+    /// shift by formatting in UTC. The arguments are exposed so unit tests
+    /// can pin a fixed timezone fixture.
+    func formattedNextOccurrence(
+        timeZone: TimeZone = .current,
+        locale: Locale = .current
+    ) -> String {
+        formatted(
+            Date.FormatStyle(
+                date: .abbreviated,
+                time: .omitted,
+                locale: locale,
+                timeZone: timeZone
+            )
+        )
+    }
 }

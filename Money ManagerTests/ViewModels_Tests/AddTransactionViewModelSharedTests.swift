@@ -12,28 +12,29 @@ struct AddTransactionViewModelSharedTests {
 
     // MARK: - Helpers
 
-    private func makeMember(id: UUID = UUID(), username: String = "alice") -> APIGroupMember {
-        APIGroupMember(id: id, email: "\(username)@example.com", username: username, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), username: String = "alice") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: "\(username)@example.com", username: username, joinedAt: Date()))
     }
 
-    private func makeGroup(id: UUID = UUID(), members: [APIGroupMember] = []) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: [])
+    private func makeGroup(id: UUID = UUID(), members: [GroupMember] = []) -> SplitGroup {
+        SplitGroup(id: id, name: "Test Group", createdBy: UUID(), createdAt: Date(), members: members, balances: [], settlements: [])
     }
 
-    private func makeGroupTransaction(id: UUID = UUID(), paidBy: UUID, amount: Double, splits: [APIGroupTransactionSplit] = []) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeGroupTransaction(id: UUID = UUID(), paidBy: UUID, amount: Double, splits: [APIGroupTransactionSplit] = []) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: paidBy,
             totalAmount: amount, category: "Food", date: Date(),
             description: "Dinner", notes: nil, isDeleted: false,
             createdAt: Date(), updatedAt: Date(), splits: splits
         )
+        return try! GroupTransaction(from: dto)
     }
 
     private func sharedMode(
-        group: APIGroupWithDetails,
-        members: [APIGroupMember],
+        group: SplitGroup,
+        members: [GroupMember],
         currentUserId: UUID? = nil,
-        editing: APIGroupTransaction? = nil
+        editing: GroupTransaction? = nil
     ) -> AddTransactionMode {
         .shared(group: group, members: members, currentUserId: currentUserId, editing: editing, onAdd: { _ in })
     }
@@ -289,18 +290,34 @@ struct AddTransactionViewModelSharedTests {
 
     // MARK: - saveShared: equal split
 
+    private func makeCreateService(groupId: UUID) -> GroupService {
+        let client = MockAPIClient()
+        client.postHandler = { endpoint, _ in
+            if case .groupTransactions = endpoint {
+                return APIGroupTransaction(
+                    id: UUID(), groupId: groupId, paidByUserId: UUID(),
+                    totalAmount: 100, category: "Food", date: Date(),
+                    description: "Dinner", notes: nil, isDeleted: false,
+                    createdAt: Date(), updatedAt: Date(), splits: []
+                )
+            }
+            throw MockAPIClient.MockError.notConfigured
+        }
+        return GroupService(apiClient: client)
+    }
+
     @Test func testSaveSharedWithEqualSplitCallsGroupService() async {
         let alice = makeMember()
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice, bob])
-        var addedTransaction: APIGroupTransaction?
+        let service = makeCreateService(groupId: group.id)
+        var addedTransaction: GroupTransaction?
         let mode = AddTransactionMode.shared(
             group: group, members: [alice, bob],
             currentUserId: alice.id, editing: nil,
             onAdd: { addedTransaction = $0 }
         )
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.amount = "100"
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
@@ -308,22 +325,20 @@ struct AddTransactionViewModelSharedTests {
         vm.selectedMembers = [alice.id, bob.id]
         vm.splitType = .equal
 
-        var completed = false
-        vm.save { completed = true }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
 
-        try? await Task.sleep(nanoseconds: 100_000_000)
-
-        #expect(completed == true)
         #expect(addedTransaction != nil)
         #expect(addedTransaction?.totalAmount == 100)
     }
 
     @Test func testSaveSharedFailsWhenNoPaidBy() {
         let alice = makeMember()
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice])
+        let service = makeCreateService(groupId: group.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice], currentUserId: alice.id, editing: nil, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.amount = "100"
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
@@ -334,16 +349,16 @@ struct AddTransactionViewModelSharedTests {
         vm.save { completed = true }
 
         #expect(completed == false)
-        #expect(vm.showError == true)
+        #expect(vm.errorMessage != nil)
     }
 
     @Test func testSaveSharedWithCustomSplitBuildsCorrectRequest() async {
         let alice = makeMember()
         let bob = makeMember(username: "bob")
-        let mock = MockGroupService.fresh()
         let group = makeGroup(members: [alice, bob])
+        let service = makeCreateService(groupId: group.id)
         let mode = AddTransactionMode.shared(group: group, members: [alice, bob], currentUserId: alice.id, editing: nil, onAdd: { _ in })
-        let vm = AddTransactionViewModel(mode: mode, groupService: mock)
+        let vm = AddTransactionViewModel(mode: mode, groupService: service)
         vm.amount = "100"
         vm.selectedCategory = "Food"
         vm.description = "Dinner"
@@ -352,10 +367,8 @@ struct AddTransactionViewModelSharedTests {
         vm.splitType = .custom
         vm.customAmounts = [alice.id: "70", bob.id: "30"]
 
-        var completed = false
-        vm.save { completed = true }
-
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        #expect(completed == true)
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            vm.save { cont.resume() }
+        }
     }
 }

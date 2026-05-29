@@ -28,6 +28,22 @@ struct APIIntegrationTests {
         abs(a - b) < 0.001
     }
 
+    /// Returns a predefined category key that is visible (not hidden) on the server
+    /// and not already overridden by the current user, so override tests start clean.
+    private func pickAvailablePredefinedKey() async throws -> APIPredefinedCategory {
+        let predefined: APIListResponse<APIPredefinedCategory> = try await AppAPIClient.shared.get(.raw("/predefined-categories"))
+        let userCategories: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let overriddenKeys = Set(userCategories.data.compactMap(\.predefinedKey))
+
+        guard let candidate = predefined.data.first(where: {
+            $0.isHidden != true && !overriddenKeys.contains($0.key)
+        }) else {
+            Issue.record("No available predefined category to use for override test")
+            throw CancellationError()
+        }
+        return candidate
+    }
+
     /// Generates a unique, lowercase test email. Always use this instead of inline UUID strings
     /// so email case is consistent with what the backend stores after normalization.
     private func makeTestEmail() -> String {
@@ -95,7 +111,142 @@ struct APIIntegrationTests {
         #expect(response.reason == nil)
     }
 
+    // MARK: - Predefined Categories Tests
+
+    @Test("GET /predefined-categories requires no auth and returns all categories")
+    func testPredefinedCategoriesNoAuth() async throws {
+        // This endpoint is public — call it without a token
+        AppAPIClient.shared.setTestToken(nil)
+        defer { AppAPIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken) }
+
+        await delay(200)
+
+        let response: APIListResponse<APIPredefinedCategory> = try await AppAPIClient.shared.get(.raw("/predefined-categories"))
+
+        #expect(!response.data.isEmpty)
+    }
+
+    @Test("GET /predefined-categories returns kebab-case keys")
+    func testPredefinedCategoriesHaveKebabCaseKeys() async throws {
+        AppAPIClient.shared.setTestToken(nil)
+        defer { AppAPIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken) }
+
+        await delay(200)
+
+        let response: APIListResponse<APIPredefinedCategory> = try await AppAPIClient.shared.get(.raw("/predefined-categories"))
+
+        for category in response.data {
+            // Keys must be lowercase kebab-case — no spaces, no uppercase
+            #expect(!category.key.isEmpty, "category \(category.name) has empty key")
+            #expect(category.key == category.key.lowercased(), "key \(category.key) contains uppercase")
+            #expect(!category.key.contains(" "), "key \(category.key) contains spaces")
+        }
+    }
+
+    @Test("GET /predefined-categories includes food-dining")
+    func testPredefinedCategoriesIncludesFoodDining() async throws {
+        AppAPIClient.shared.setTestToken(nil)
+        defer { AppAPIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken) }
+
+        await delay(200)
+
+        let response: APIListResponse<APIPredefinedCategory> = try await AppAPIClient.shared.get(.raw("/predefined-categories"))
+
+        let foodDining = response.data.first { $0.key == "food-dining" }
+        #expect(foodDining != nil)
+        #expect(foodDining?.name.isEmpty == false)
+        #expect(foodDining?.icon.isEmpty == false)
+        #expect(foodDining?.color.isEmpty == false)
+    }
+
+    @Test("GET /predefined-categories response shape has required fields")
+    func testPredefinedCategoriesResponseShape() async throws {
+        AppAPIClient.shared.setTestToken(nil)
+        defer { AppAPIClient.shared.setTestToken(Self.authToken.isEmpty ? nil : Self.authToken) }
+
+        await delay(200)
+
+        let response: APIListResponse<APIPredefinedCategory> = try await AppAPIClient.shared.get(.raw("/predefined-categories"))
+
+        guard let first = response.data.first else {
+            Issue.record("No predefined categories returned")
+            return
+        }
+
+        #expect(!first.key.isEmpty)
+        #expect(!first.name.isEmpty)
+        #expect(!first.icon.isEmpty)
+        #expect(!first.color.isEmpty)
+        // id, createdAt, updatedAt are decoded by the struct — if decoding succeeded the fields exist
+    }
+
     // MARK: - Category Tests
+
+    @Test("GET /categories returns key field on each category")
+    mutating func testCategoryListReturnsKeyField() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+
+        for category in response.data {
+            #expect(!category.key.isEmpty, "category \(category.name) has empty key")
+        }
+    }
+
+    @Test("GET /categories predefined rows have kebab-case keys")
+    mutating func testCategoryListPredefinedRowsHaveKebabKeys() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+
+        let predefinedRows = response.data.filter { $0.isPredefined == true }
+        for row in predefinedRows {
+            #expect(row.key == row.key.lowercased(), "predefined key \(row.key) has uppercase")
+            #expect(!row.key.contains(" "), "predefined key \(row.key) contains spaces")
+        }
+    }
+
+    @Test("Create custom category returns non-empty key")
+    mutating func testCategoryCreateReturnsKey() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let request = APICreateCategoryRequest(
+            name: "KeyTest \(UUID().uuidString.prefix(8))",
+            icon: "shopping",
+            color: "#1ABC9C",
+            isHidden: nil,
+            predefinedKey: nil
+        )
+        let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+
+        #expect(!response.key.isEmpty)
+    }
+
+    @Test("Create custom category key persists in list response")
+    mutating func testCategoryKeyPersistsInList() async throws {
+        try await ensureAuthenticated()
+        await delay(200)
+
+        let request = APICreateCategoryRequest(
+            name: "KeyPersist \(UUID().uuidString.prefix(8))",
+            icon: "gifts",
+            color: "#8E44AD",
+            isHidden: nil,
+            predefinedKey: nil
+        )
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        #expect(!created.key.isEmpty)
+
+        await delay(200)
+
+        let list: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let found = list.data.first { $0.id == created.id }
+        #expect(found != nil)
+        #expect(found?.key == created.key)
+    }
 
     @Test("Create custom category returns correct fields")
     mutating func testCategoryCreate() async throws {
@@ -103,15 +254,13 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateCategoryRequest(
-            id: nil,
             name: "Test Cat \(UUID().uuidString.prefix(8))",
-            icon: "star.circle.fill",
+            icon: "pets",
             color: "#FF5733",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
-        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         #expect(response.name == request.name)
         #expect(response.icon == request.icon)
@@ -126,8 +275,8 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        // Simulate the client sending a predefined override (e.g. user renamed Food & Dining)
-        // Backend should store this as an override row with isPredefined=true
+        let predefined = try await pickAvailablePredefinedKey()
+
         struct APIPredefinedOverrideRequest: Codable {
             let id: UUID?
             let name: String
@@ -136,58 +285,34 @@ struct APIIntegrationTests {
             let predefined_key: String
         }
 
+        let overrideName = "Override \(predefined.name)"
         let request = APIPredefinedOverrideRequest(
             id: nil,
-            name: "Eating Out",
-            icon: "fork.knife.circle.fill",
-            color: "#FF6B6B",
-            predefined_key: "foodDining"
+            name: overrideName,
+            icon: predefined.icon,
+            color: predefined.color,
+            predefined_key: predefined.key
         )
-        let response: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let response: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
-        #expect(response.name == "Eating Out")
-        #expect(response.isPredefined == true)
-        #expect(response.predefinedKey == "foodDining")
+        #expect(response.name == overrideName)
+        #expect(response.predefinedKey == predefined.key)
+        // Clean up so subsequent tests see a fresh state
+        let _: APIMessageResponse = try await AppAPIClient.shared.deleteMessage(.raw("/categories/\(response.id)"))
     }
 
-    @Test("Fresh user gets exactly 15 predefined categories with no custom ones")
-    mutating func testCategoryListFreshUserGetsPredefinedDefaults() async throws {
-        // Sign up a brand-new user — no customisations yet
-        await delay(200)
-        let email = makeTestEmail()
-        let username = "user_\(UUID().uuidString.prefix(8))"
-        let signupRequest = APISignupRequest(email: email, username: username, password: testPassword, inviteCode: testInviteCode)
-        let signupResponse: APIAuthResponse = try await AppAPIClient.shared.post(.raw("/auth/signup"), body: signupRequest)
-        AppAPIClient.shared.setTestToken(signupResponse.token)
-        AppAPIClient.shared.setTestSyncSessionID(signupResponse.syncSessionId)
-
-        await delay(200)
-
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
-
-        // New architecture: no DB seeding — backend returns 15 predefined categories in-memory
-        #expect(response.data.count == 15)
-        #expect(response.data.allSatisfy { $0.isPredefined == true })
-        #expect(response.data.allSatisfy { $0.predefinedKey != nil })
-
-        // Cleanup
-        try await AppAPIClient.shared.delete(.raw("/me"))
-        AppAPIClient.shared.setTestToken(Self.authToken)
-        AppAPIClient.shared.setTestSyncSessionID(Self.authSyncSessionID)
-    }
-
-    @Test("List categories returns created custom categories")
+@Test("List categories returns created custom categories")
     mutating func testCategoryListAfterCreating() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
         let name = "ListTest \(UUID().uuidString.prefix(8))"
-        let request = APICreateCategoryRequest(id: nil, name: name, icon: "star.circle.fill", color: "#4ECDC4", isHidden: nil, isPredefined: nil, predefinedKey: nil)
-        let _: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let request = APICreateCategoryRequest(name: name, icon: "travel", color: "#4ECDC4", isHidden: nil, predefinedKey: nil)
+        let _: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
 
         #expect(response.data.contains(where: { $0.name == name }))
     }
@@ -198,19 +323,17 @@ struct APIIntegrationTests {
         await delay(200)
 
         let request = APICreateCategoryRequest(
-            id: nil,
             name: "Shape Test \(UUID().uuidString.prefix(8))",
-            icon: "tag.circle.fill",
+            icon: "education",
             color: "#8E44AD",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
-        let response: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let response: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         let found = response.data.first(where: { $0.id == created.id })
 
         #expect(found != nil)
@@ -225,24 +348,22 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateCategoryRequest(
-            id: nil,
             name: "Update Test \(UUID().uuidString.prefix(8))",
-            icon: "star.fill",
+            icon: "music",
             color: "#FF5733",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         let updateName = "Updated \(UUID().uuidString.prefix(4))"
-        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "heart.fill", color: nil, isHidden: nil)
-        let updated: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: updateRequest)
+        let updateRequest = APIUpdateCategoryRequest(name: updateName, icon: "gaming", color: nil, isHidden: nil)
+        let updated: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: updateRequest)
 
         #expect(updated.name == updateName)
-        #expect(updated.icon == "heart.fill")
+        #expect(updated.icon == "gaming")
     }
 
     @Test("Update category can hide and unhide")
@@ -251,28 +372,26 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateCategoryRequest(
-            id: nil,
             name: "Hide Test \(UUID().uuidString.prefix(8))",
-            icon: "eye.fill",
+            icon: "savings",
             color: "#45B7D1",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
         // Hide it
         let hideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: true)
-        let hidden: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: hideRequest)
+        let hidden: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: hideRequest)
         #expect(hidden.isHidden == true)
 
         await delay(200)
 
         // Unhide it
         let unhideRequest = APIUpdateCategoryRequest(name: nil, icon: nil, color: nil, isHidden: false)
-        let restored: APICustomCategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: unhideRequest)
+        let restored: APICategory = try await AppAPIClient.shared.patch(.raw("/categories/\(created.id)"), body: unhideRequest)
         #expect(restored.isHidden == false)
     }
 
@@ -282,15 +401,13 @@ struct APIIntegrationTests {
         await delay(200)
 
         let createRequest = APICreateCategoryRequest(
-            id: nil,
             name: "Delete Me \(UUID().uuidString.prefix(8))",
-            icon: "trash.fill",
+            icon: "taxes",
             color: "#FF5733",
             isHidden: nil,
-            isPredefined: nil,
             predefinedKey: nil
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: createRequest)
 
         await delay(200)
 
@@ -298,7 +415,7 @@ struct APIIntegrationTests {
 
         await delay(200)
 
-        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let categories: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
@@ -307,7 +424,8 @@ struct APIIntegrationTests {
         try await ensureAuthenticated()
         await delay(200)
 
-        // First create a predefined override
+        let predefined = try await pickAvailablePredefinedKey()
+
         struct APIPredefinedOverrideRequest: Codable {
             let id: UUID?
             let name: String
@@ -316,14 +434,15 @@ struct APIIntegrationTests {
             let predefined_key: String
         }
 
+        // POST upserts: creates the override or resurrects a soft-deleted one.
         let request = APIPredefinedOverrideRequest(
             id: nil,
-            name: "Custom Transport Name",
-            icon: "car.circle.fill",
-            color: "#4ECDC4",
-            predefined_key: "transport"
+            name: "Override \(predefined.name)",
+            icon: predefined.icon,
+            color: predefined.color,
+            predefined_key: predefined.key
         )
-        let created: APICustomCategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
+        let created: APICategory = try await AppAPIClient.shared.post(.raw("/categories"), body: request)
 
         await delay(200)
 
@@ -333,60 +452,53 @@ struct APIIntegrationTests {
         await delay(200)
 
         // Override row should be gone
-        let categories: APIListResponse<APICustomCategory> = try await AppAPIClient.shared.get(.raw("/categories"))
+        let categories: APIListResponse<APICategory> = try await AppAPIClient.shared.get(.raw("/categories"))
         #expect(!categories.data.contains(where: { $0.id == created.id }))
     }
 
     // MARK: - Budget Tests
 
-    @Test("Create budget returns 200/201")
-    mutating func testBudgetCreate() async throws {
+    @Test("Set budget returns 200")
+    mutating func testBudgetSet() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
-        let request = APICreateBudgetRequest(id: nil, year: 2026, month: 12, limit: 5000.00)
-        let response: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
+        let request = APISetBudgetRequest(limit: 8000.00)
+        let response: APIUserBudget = try await AppAPIClient.shared.put(.raw("/me/budget"), body: request)
 
-        #expect(compareAmount(response.limit, request.limit))
+        #expect(response.limit != nil)
+        if let limit = response.limit {
+            #expect(compareAmount(limit, 8000))
+        }
     }
 
-    @Test("List budgets returns data array")
-    mutating func testBudgetList() async throws {
+    @Test("Get budget returns current value")
+    mutating func testBudgetGet() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
-        let response: APIListResponse<APIMonthlyBudget> = try await AppAPIClient.shared.get(.raw("/budgets"))
+        let response: APIUserBudget = try await AppAPIClient.shared.get(.raw("/me/budget"))
 
-        #expect(!response.data.isEmpty)
+        // Budget may or may not be set; just verify the response decodes correctly
+        _ = response
     }
 
-    @Test("Update budget modifies limit")
-    mutating func testBudgetUpdate() async throws {
+    @Test("Clear budget sets limit to null")
+    mutating func testBudgetClear() async throws {
         try await ensureAuthenticated()
         await delay(200)
 
-        let createRequest = APICreateBudgetRequest(id: nil, year: 2026, month: 9, limit: 1000.00)
-        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: createRequest)
+        // First set a budget
+        let setRequest = APISetBudgetRequest(limit: 5000.00)
+        let _: APIUserBudget = try await AppAPIClient.shared.put(.raw("/me/budget"), body: setRequest)
 
         await delay(200)
 
-        let updateRequest = APIUpdateBudgetRequest(year: nil, month: nil, limit: 1500.00)
-        let updated: APIMonthlyBudget = try await AppAPIClient.shared.patch(.raw("/budgets/\(created.id)"), body: updateRequest)
+        // Then clear it
+        let clearRequest = APISetBudgetRequest(limit: nil)
+        let cleared: APIUserBudget = try await AppAPIClient.shared.put(.raw("/me/budget"), body: clearRequest)
 
-        #expect(compareAmount(updated.limit, 1500))
-    }
-
-    @Test("Delete budget removes it")
-    mutating func testBudgetDelete() async throws {
-        try await ensureAuthenticated()
-        await delay(200)
-
-        let request = APICreateBudgetRequest(id: nil, year: 2025, month: 12, limit: 999.00)
-        let created: APIMonthlyBudget = try await AppAPIClient.shared.post(.raw("/budgets"), body: request)
-
-        await delay(200)
-
-        try await AppAPIClient.shared.delete(.raw("/budgets/\(created.id)"))
+        #expect(cleared.limit == nil)
     }
 
     // MARK: - Recurring Transaction Tests
@@ -401,7 +513,7 @@ struct APIIntegrationTests {
             id: nil,
             name: "Netflix \(UUID().uuidString.prefix(4))",
             amount: 15.99,
-            category: "Entertainment",
+            category: "entertainment",
             frequency: "monthly",
             dayOfMonth: 15,
             daysOfWeek: nil,
@@ -409,7 +521,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
 
         let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
@@ -428,7 +540,7 @@ struct APIIntegrationTests {
             id: nil,
             name: "Gym \(UUID().uuidString.prefix(4))",
             amount: 50.00,
-            category: "Health & Medical",
+            category: "health-medical",
             frequency: "weekly",
             dayOfMonth: nil,
             daysOfWeek: [1, 3, 5],
@@ -436,7 +548,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
 
         let response: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: request)
@@ -466,7 +578,7 @@ struct APIIntegrationTests {
             id: nil,
             name: "Get Test \(UUID().uuidString.prefix(4))",
             amount: 5.00,
-            category: "Other",
+            category: "other",
             frequency: "monthly",
             dayOfMonth: 20,
             daysOfWeek: nil,
@@ -474,7 +586,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
         let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
@@ -495,7 +607,7 @@ struct APIIntegrationTests {
             id: nil,
             name: "Update Test \(UUID().uuidString.prefix(4))",
             amount: 10.00,
-            category: "Entertainment",
+            category: "entertainment",
             frequency: "monthly",
             dayOfMonth: 5,
             daysOfWeek: nil,
@@ -503,7 +615,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
         let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
@@ -513,7 +625,7 @@ struct APIIntegrationTests {
             name: nil, amount: 12.00, category: nil, frequency: nil,
             dayOfMonth: nil, daysOfWeek: nil, startDate: nil, endDate: nil,
             isActive: false, notes: nil,
-            type: "expense"
+            type: .expense
         )
         let updated: APIRecurringTransaction = try await AppAPIClient.shared.patch(.raw("/recurring-transactions/\(created.id)"), body: updateRequest)
 
@@ -531,7 +643,7 @@ struct APIIntegrationTests {
             id: nil,
             name: "Delete Test \(UUID().uuidString.prefix(4))",
             amount: 8.00,
-            category: "Other",
+            category: "other",
             frequency: "monthly",
             dayOfMonth: 10,
             daysOfWeek: nil,
@@ -539,7 +651,7 @@ struct APIIntegrationTests {
             endDate: nil,
             isActive: true,
             notes: nil,
-            type: "expense"
+            type: .expense
         )
         let created: APIRecurringTransaction = try await AppAPIClient.shared.post(.raw("/recurring-transactions"), body: createRequest)
 
@@ -557,9 +669,9 @@ struct APIIntegrationTests {
 
         let request = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 25.50,
-            category: "Food & Dining",
+            category: "food-dining",
             date: Date(),
             time: nil,
             description: "Test lunch",
@@ -571,7 +683,7 @@ struct APIIntegrationTests {
 
         #expect(compareAmount(response.amount, request.amount))
         #expect(response.category == request.category)
-        #expect(response.type == "expense")
+        #expect(response.type == .expense)
         #expect(response.groupTransactionId == nil)
     }
 
@@ -582,9 +694,9 @@ struct APIIntegrationTests {
 
         let request = APICreateTransactionRequest(
             id: nil,
-            type: "income",
+            type: .income,
             amount: 5000.00,
-            category: "Work & Professional",
+            category: "salary-income",
             date: Date(),
             time: nil,
             description: "Monthly salary",
@@ -595,7 +707,7 @@ struct APIIntegrationTests {
         let response: APITransaction = try await AppAPIClient.shared.post(.raw("/transactions"), body: request)
 
         #expect(compareAmount(response.amount, request.amount))
-        #expect(response.type == "income")
+        #expect(response.type == .income)
     }
 
     @Test("Create transaction with notes and time")
@@ -605,9 +717,9 @@ struct APIIntegrationTests {
 
         let request = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 45.00,
-            category: "Shopping",
+            category: "shopping",
             date: Date(),
             time: ISO8601DateFormatter().date(from: "2026-03-22T14:30:00Z"),
             description: "Groceries",
@@ -642,7 +754,7 @@ struct APIIntegrationTests {
             .queryParameters(["type": "expense"])
             .response()
 
-        #expect(response.data.allSatisfy { $0.type == "expense" })
+        #expect(response.data.allSatisfy { $0.type == .expense })
     }
 
     @Test("List transactions filtered by type=income")
@@ -655,7 +767,7 @@ struct APIIntegrationTests {
             .queryParameters(["type": "income"])
             .response()
 
-        #expect(response.data.allSatisfy { $0.type == "income" })
+        #expect(response.data.allSatisfy { $0.type == .income })
     }
 
     @Test("Get transaction by id")
@@ -665,9 +777,9 @@ struct APIIntegrationTests {
 
         let createRequest = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 100.00,
-            category: "Transport",
+            category: "transport",
             date: Date(),
             time: nil,
             description: "Taxi",
@@ -681,7 +793,7 @@ struct APIIntegrationTests {
         let response: APITransaction = try await AppAPIClient.shared.get(.raw("/transactions/\(created.id)"))
 
         #expect(response.id == created.id)
-        #expect(response.type == "expense")
+        #expect(response.type == .expense)
     }
 
     @Test("Update transaction modifies data")
@@ -691,9 +803,9 @@ struct APIIntegrationTests {
 
         let createRequest = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 50.00,
-            category: "Food & Dining",
+            category: "food-dining",
             date: Date(),
             time: nil,
             description: "Before update",
@@ -726,9 +838,9 @@ struct APIIntegrationTests {
 
         let createRequest = APICreateTransactionRequest(
             id: nil,
-            type: "expense",
+            type: .expense,
             amount: 75.00,
-            category: "Shopping",
+            category: "shopping",
             date: Date(),
             time: nil,
             description: "To be deleted",
@@ -770,7 +882,7 @@ struct APIIntegrationTests {
         let txRequest = APICreateGroupTransactionRequest(
             paidByUserId: member.id,
             totalAmount: 90.00,
-            category: "Food & Dining",
+            category: "food-dining",
             date: Date(),
             description: "Group dinner",
             notes: nil,
@@ -785,7 +897,6 @@ struct APIIntegrationTests {
         )
 
         #expect(compareAmount(response.totalAmount, 90.00))
-        #expect(response.category == "Food & Dining")
         #expect(response.paidByUserId == member.id)
         #expect(!response.splits.isEmpty)
     }
@@ -809,7 +920,7 @@ struct APIIntegrationTests {
         let txRequest = APICreateGroupTransactionRequest(
             paidByUserId: member.id,
             totalAmount: 30.00,
-            category: "Transport",
+            category: "transport",
             date: Date(),
             description: "Cab ride",
             notes: nil,
@@ -1002,7 +1113,7 @@ struct APIIntegrationTests {
         let txReq = APICreateGroupTransactionRequest(
             paidByUserId: member.id,
             totalAmount: 50.00,
-            category: "Food & Dining",
+            category: "food-dining",
             date: Date(),
             description: "Cascade test tx",
             notes: nil,

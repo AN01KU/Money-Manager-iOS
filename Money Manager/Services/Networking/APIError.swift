@@ -16,10 +16,19 @@ enum APIError: Error, LocalizedError, Equatable {
     case notFound
     case conflict
     case staleWrite          // 409 with code "STALE_WRITE" — server has a newer version
+    case overrideAlreadyExists  // 409 OVERRIDE_ALREADY_EXISTS
+    case predefinedNotFound  // 404 PREDEFINED_NOT_FOUND
+    case invalidField(String)  // 400 INVALID_ICON / INVALID_COLOR
     case syncSessionInvalid(reason: String)
     case serverError
     case transientError      // 502 — server-side blip; client should back off and retry
     case unknown
+    case idOwnedByAnotherUser   // 409 ID_OWNED_BY_ANOTHER_USER
+    case idOwnedByAnotherGroup  // 409 ID_OWNED_BY_ANOTHER_GROUP
+    case mixedCurrencySettlement // 400 MIXED_CURRENCY_SETTLEMENT
+    case mixedCurrencyGroupTx   // 400 MIXED_CURRENCY_GROUP_TX
+    case addMemberFailed        // 400 add_member_failed
+    case recurringFrequencyFieldMissing(String) // 400 — required field for new frequency absent; string is the frequency name
     case missingTestData(String)
     
     var errorDescription: String? {
@@ -44,6 +53,12 @@ enum APIError: Error, LocalizedError, Equatable {
             return "Conflict detected. Data will be synced."
         case .staleWrite:
             return "A newer version of this item exists on the server."
+        case .overrideAlreadyExists:
+            return "An override for this category already exists."
+        case .predefinedNotFound:
+            return "This predefined category is no longer available."
+        case .invalidField(let field):
+            return "Invalid \(field). Please choose a different one."
         case .syncSessionInvalid(let reason):
             return "Sync session rejected: \(reason)"
         case .serverError:
@@ -52,6 +67,24 @@ enum APIError: Error, LocalizedError, Equatable {
             return "Server temporarily unavailable. Will retry shortly."
         case .unknown:
             return "An unknown error occurred"
+        case .idOwnedByAnotherUser:
+            return "This item belongs to another user and cannot be modified."
+        case .idOwnedByAnotherGroup:
+            return "This item belongs to another group and cannot be modified."
+        case .mixedCurrencySettlement:
+            return "Settlements must be between members using the same currency."
+        case .mixedCurrencyGroupTx:
+            return "All members in a group transaction must use the same currency."
+        case .addMemberFailed:
+            return "Failed to add member to the group. Please try again."
+        case .recurringFrequencyFieldMissing(let freq):
+            if freq == "weekly" {
+                return "Please select at least one day of the week."
+            } else if freq == "monthly" {
+                return "Please select a day of the month."
+            } else {
+                return "Please fill in the required field for the selected frequency."
+            }
         case .missingTestData(let context):
             return "Missing test data: \(context)"
         }
@@ -65,10 +98,22 @@ enum APIError: Error, LocalizedError, Equatable {
              (.notFound, .notFound),
              (.conflict, .conflict),
              (.staleWrite, .staleWrite),
+             (.predefinedNotFound, .predefinedNotFound),
              (.serverError, .serverError),
              (.transientError, .transientError),
              (.unknown, .unknown):
             return true
+        case (.overrideAlreadyExists, .overrideAlreadyExists),
+             (.idOwnedByAnotherUser, .idOwnedByAnotherUser),
+             (.idOwnedByAnotherGroup, .idOwnedByAnotherGroup),
+             (.mixedCurrencySettlement, .mixedCurrencySettlement),
+             (.mixedCurrencyGroupTx, .mixedCurrencyGroupTx),
+             (.addMemberFailed, .addMemberFailed):
+            return true
+        case let (.recurringFrequencyFieldMissing(lF), .recurringFrequencyFieldMissing(rF)):
+            return lF == rF
+        case let (.invalidField(lF), .invalidField(rF)):
+            return lF == rF
         case let (.httpError(lCode, lMsg), .httpError(rCode, rMsg)):
             return lCode == rCode && lMsg == rMsg
         case (.decodingError, .decodingError),
@@ -85,6 +130,19 @@ enum APIError: Error, LocalizedError, Equatable {
     }
 }
 
+enum ServerErrorCode: String {
+    case staleWrite = "STALE_WRITE"
+    case overrideAlreadyExists = "OVERRIDE_ALREADY_EXISTS"
+    case predefinedNotFound = "PREDEFINED_NOT_FOUND"
+    case invalidIcon = "INVALID_ICON"
+    case invalidColor = "INVALID_COLOR"
+    case idOwnedByAnotherUser = "ID_OWNED_BY_ANOTHER_USER"
+    case idOwnedByAnotherGroup = "ID_OWNED_BY_ANOTHER_GROUP"
+    case mixedCurrencySettlement = "MIXED_CURRENCY_SETTLEMENT"
+    case mixedCurrencyGroupTx = "MIXED_CURRENCY_GROUP_TX"
+    case addMemberFailed = "add_member_failed"
+}
+
 extension APIError {
     init(from httpResponse: HTTPURLResponse, data: Data?) {
         let message = Self.parseErrorMessage(from: data)
@@ -96,15 +154,31 @@ extension APIError {
             } else {
                 self = .unauthorized
             }
+        case 400:
+            switch ServerErrorCode(rawValue: Self.parseErrorCode(from: data) ?? "") {
+            case .invalidIcon:       self = .invalidField("icon")
+            case .invalidColor:      self = .invalidField("color")
+            case .mixedCurrencySettlement: self = .mixedCurrencySettlement
+            case .mixedCurrencyGroupTx:    self = .mixedCurrencyGroupTx
+            case .addMemberFailed:   self = .addMemberFailed
+            default:                 self = .httpError(statusCode: 400, message: message)
+            }
         case 404:
-            self = .notFound
+            switch ServerErrorCode(rawValue: Self.parseErrorCode(from: data) ?? "") {
+            case .predefinedNotFound: self = .predefinedNotFound
+            default:                  self = .notFound
+            }
         case 409:
             if let reason = Self.parseSyncSessionReason(from: data) {
                 self = .syncSessionInvalid(reason: reason)
-            } else if Self.parseErrorCode(from: data) == "STALE_WRITE" {
-                self = .staleWrite
             } else {
-                self = .conflict
+                switch ServerErrorCode(rawValue: Self.parseErrorCode(from: data) ?? "") {
+                case .staleWrite:             self = .staleWrite
+                case .overrideAlreadyExists:  self = .overrideAlreadyExists
+                case .idOwnedByAnotherUser:   self = .idOwnedByAnotherUser
+                case .idOwnedByAnotherGroup:  self = .idOwnedByAnotherGroup
+                default:                      self = .conflict
+                }
             }
         case 502:
             // Backend signals a transient DB blip. Client must NOT orphan its
@@ -145,4 +219,5 @@ extension APIError {
         else { return nil }
         return json["code"] as? String
     }
+
 }

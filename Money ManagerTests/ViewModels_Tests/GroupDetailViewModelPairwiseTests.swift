@@ -9,25 +9,86 @@ struct GroupDetailViewModelPairwiseTests {
 
     // MARK: - Helpers
 
-    private func makeGroup(id: UUID = UUID()) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: "Test", createdBy: UUID(), createdAt: Date(), members: [], balances: [])
+    private func makeGroup(id: UUID = UUID()) -> SplitGroup {
+        SplitGroup(id: id, name: "Test", createdBy: UUID(), createdAt: Date(), members: [], balances: [], settlements: [])
     }
 
-    private func makeMember(id: UUID = UUID(), email: String = "u@example.com") -> APIGroupMember {
-        APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date())
+    private func makeMember(id: UUID = UUID(), email: String = "u@example.com") -> GroupMember {
+        GroupMember(from: APIGroupMember(id: id, email: email, username: email.components(separatedBy: "@").first ?? email, joinedAt: Date()))
     }
 
-    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
-        APIGroupBalance(userId: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> GroupBalance {
+        GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
-    private func makeTransaction(id: UUID = UUID(), totalAmount: Double, paidBy: UUID = UUID()) -> APIGroupTransaction {
-        APIGroupTransaction(
+    private func makeTransaction(id: UUID = UUID(), totalAmount: Double, paidBy: UUID = UUID()) -> GroupTransaction {
+        let dto = APIGroupTransaction(
             id: id, groupId: UUID(), paidByUserId: paidBy,
             totalAmount: totalAmount, category: "Food", date: Date(),
             description: "tx", notes: nil, isDeleted: false,
             createdAt: Date(), updatedAt: Date(), splits: []
         )
+        return try! GroupTransaction(from: dto)
+    }
+
+    /// Builds a GroupService backed by a MockAPIClient.
+    /// - stubbedGroupDetails: returned for GET .group — used by reload after edits/deletes
+    /// - stubbedTransactions: returned for GET .groupTransactions
+    /// - deleteGroupTxError: error to throw on deleteMessage(.groupTransaction)
+    /// - deleteGroupTxCount: closure returning the number of deleteGroupTransaction calls made
+    private func makeService(
+        groupId: UUID = UUID(),
+        stubbedMembers: [GroupMember] = [],
+        stubbedBalances: [GroupBalance] = [],
+        stubbedTransactions: [GroupTransaction] = [],
+        deleteGroupTxError: Error? = nil
+    ) -> (GroupService, MockAPIClient, deleteGroupTxCount: () -> Int) {
+        let client = MockAPIClient()
+        var deleteCount = 0
+
+        let memberDTOs = stubbedMembers.map { m in
+            APIGroupMember(id: m.id, email: m.email, username: m.username, joinedAt: Date())
+        }
+        let balanceDTOs = stubbedBalances.map { b in
+            APIGroupBalance(userId: b.userId, amount: b.amount)
+        }
+        let txDTOs = stubbedTransactions.map { tx in
+            APIGroupTransaction(
+                id: tx.id, groupId: groupId, paidByUserId: tx.paidByUserId,
+                totalAmount: tx.totalAmount, category: tx.category, date: tx.date,
+                description: tx.description, notes: tx.notes, isDeleted: false,
+                createdAt: tx.date, updatedAt: tx.date, splits: []
+            )
+        }
+
+        client.getHandler = { endpoint in
+            switch endpoint {
+            case .group(let id):
+                let body = APIGroupDetailsBody(
+                    id: id, name: "Test", createdBy: UUID(), createdAt: Date(),
+                    members: memberDTOs, balances: balanceDTOs, settlements: nil
+                )
+                return APIGroupDetails(group: body, isMember: true)
+            case .groupTransactions:
+                return APIListResponse(data: txDTOs)
+            case .groupMembers:
+                return APIListResponse(data: memberDTOs)
+            default:
+                throw MockAPIClient.MockError.notConfigured
+            }
+        }
+        client.deleteMessageHandler = { endpoint in
+            switch endpoint {
+            case .groupTransaction:
+                deleteCount += 1
+                if let err = deleteGroupTxError { throw err }
+                return APIMessageResponse(message: "ok")
+            default:
+                throw MockAPIClient.MockError.notConfigured
+            }
+        }
+
+        return (GroupService(apiClient: client), client, { deleteCount })
     }
 
     // MARK: - pairwiseDebts: no balances
@@ -164,7 +225,8 @@ struct GroupDetailViewModelPairwiseTests {
     // MARK: - transactionEdited
 
     @Test func testTransactionEditedReplacesExistingTransaction() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let txId = UUID()
         let old = makeTransaction(id: txId, totalAmount: 100)
         let updated = makeTransaction(id: UUID(), totalAmount: 200, paidBy: UUID())
@@ -177,7 +239,8 @@ struct GroupDetailViewModelPairwiseTests {
     }
 
     @Test func testTransactionEditedInsertsAtTopWhenOldNotFound() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let existing = makeTransaction(totalAmount: 50)
         vm.transactions = [existing]
         let old = makeTransaction(totalAmount: 99) // not in list
@@ -189,25 +252,33 @@ struct GroupDetailViewModelPairwiseTests {
         #expect(vm.transactions.count == 2)
     }
 
-    @Test func testTransactionEditedRecalculatesBalances() {
+    @Test func testTransactionEditedTriggersReload() async {
+        let groupId = UUID()
         let alice = makeMember()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
-        vm.members = [alice]
+        let (service, _, _) = makeService(
+            groupId: groupId,
+            stubbedMembers: [alice],
+            stubbedBalances: [makeBalance(userId: alice.id, amount: 50)]
+        )
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         let old = makeTransaction(totalAmount: 100, paidBy: alice.id)
+        let updated = makeTransaction(totalAmount: 200, paidBy: alice.id)
         vm.transactions = [old]
 
-        let updated = makeTransaction(totalAmount: 200, paidBy: alice.id)
         vm.transactionEdited(replacing: old, with: updated)
+        try? await Task.sleep(nanoseconds: 200_000_000)
 
-        // balances should reflect the new transaction
+        // After reload, balances should come from server
         let balance = vm.balances.first(where: { $0.userId == alice.id })
         #expect(balance != nil)
+        #expect(abs((balance?.amount ?? 0) - 50) < 0.01)
     }
 
     // MARK: - deleteTransaction
 
     @Test func testDeleteTransactionRemovesItFromList() {
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
+        let (service, _, _) = makeService()
+        let vm = GroupDetailViewModel(group: makeGroup(), groupService: service)
         let tx = makeTransaction(totalAmount: 100)
         vm.transactions = [tx]
 
@@ -216,29 +287,30 @@ struct GroupDetailViewModelPairwiseTests {
         #expect(vm.transactions.isEmpty)
     }
 
-    @Test func testDeleteTransactionRecalculatesBalances() {
+    @Test func testDeleteTransactionTriggersReload() async {
+        let groupId = UUID()
         let alice = makeMember()
         let bob = makeMember()
-        let vm = GroupDetailViewModel(group: makeGroup(), groupService: MockGroupService.fresh())
-        vm.members = [alice, bob]
+        let (service, _, _) = makeService(
+            groupId: groupId,
+            stubbedMembers: [alice, bob]
+        )
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         let tx = makeTransaction(totalAmount: 100, paidBy: alice.id)
         vm.transactions = [tx]
 
         vm.deleteTransaction(tx)
+        try? await Task.sleep(nanoseconds: 200_000_000)
 
-        // After deletion, transactions empty → all balances should be 0
-        for balance in vm.balances {
-            #expect(abs(balance.amount) < 0.01)
-        }
+        // After reload, transactions should reflect server state (empty in mock)
+        #expect(vm.transactions.isEmpty)
     }
 
     @Test func testDeleteTransactionRestoresOnServiceFailure() async {
-        let mock = MockGroupService.fresh()
         struct DeleteError: Error {}
-        mock.deleteError = DeleteError()
-
         let groupId = UUID()
-        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: mock)
+        let (service, _, _) = makeService(groupId: groupId, deleteGroupTxError: DeleteError())
+        let vm = GroupDetailViewModel(group: makeGroup(id: groupId), groupService: service)
         let tx = makeTransaction(totalAmount: 100)
         vm.transactions = [tx]
 

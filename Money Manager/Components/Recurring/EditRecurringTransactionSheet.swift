@@ -6,34 +6,15 @@ struct EditRecurringTransactionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.authService) private var authService
     @Environment(\.changeQueueManager) private var changeQueueManager
-    @Query(sort: \CustomCategory.name) private var customCategories: [CustomCategory]
+    @Environment(\.networkMonitor) private var networkMonitor
+    @Query(sort: \Category.name) private var customCategories: [Category]
 
     @Bindable var recurring: RecurringTransaction
 
-    @State private var name: String = ""
-    @State private var amount: String = ""
-    @State private var selectedCategory: String = ""
-    @State private var transactionType: TransactionKind = .expense
-    @State private var frequency: RecurringFrequency = .monthly
-    @State private var startDate: Date = Date()
-    @State private var hasEndDate: Bool = false
-    @State private var endDate: Date = Date()
-    @State private var dayOfMonth: Int = 1
-    @State private var notes: String = ""
-    @State private var showCategoryPicker = false
-    @State private var showError = false
-    @State private var errorMessage = ""
+    @State private var viewModel = EditRecurringTransactionViewModel()
     @State private var categoryTapped = 0
-    @State private var saveSuccess = 0
 
-    private let frequencies = RecurringFrequency.allCases
-
-    private var isValid: Bool {
-        guard let amountValue = Double(amount), amountValue > 0 else {
-            return false
-        }
-        return !name.trimmingCharacters(in: .whitespaces).isEmpty && !selectedCategory.isEmpty
-    }
+    private let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
     var body: some View {
         NavigationStack {
@@ -44,7 +25,7 @@ struct EditRecurringTransactionSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        TextField("e.g., Netflix, Rent", text: $name)
+                        TextField("e.g., Netflix, Rent", text: $viewModel.name)
                             .textInputAutocapitalization(.sentences)
                             .accessibilityIdentifier("recurring.name-field")
                     }
@@ -55,7 +36,7 @@ struct EditRecurringTransactionSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        TextField("0.00", text: $amount)
+                        TextField("0.00", text: $viewModel.amount)
                             .keyboardType(.decimalPad)
                             .font(.title2)
                             .fontWeight(.semibold)
@@ -70,11 +51,11 @@ struct EditRecurringTransactionSheet: View {
 
                         Button(action: {
                             categoryTapped += 1
-                            showCategoryPicker = true
+                            viewModel.showCategoryPicker = true
                         }) {
                             HStack {
-                                if !selectedCategory.isEmpty {
-                                    Text(selectedCategory)
+                                if !viewModel.selectedCategoryName.isEmpty {
+                                    Text(viewModel.selectedCategoryName)
                                 } else {
                                     Text("Select Category")
                                         .foregroundStyle(.secondary)
@@ -84,7 +65,7 @@ struct EditRecurringTransactionSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(AppColors.inputBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .sensoryFeedback(.impact(weight: .light), trigger: categoryTapped)
@@ -93,7 +74,7 @@ struct EditRecurringTransactionSheet: View {
                 }
 
                 Section {
-                    Picker("Type", selection: $transactionType) {
+                    Picker("Type", selection: $viewModel.transactionType) {
                         ForEach(TransactionKind.allCases, id: \.self) { kind in
                             Text(kind.rawValue.capitalized).tag(kind)
                         }
@@ -107,36 +88,78 @@ struct EditRecurringTransactionSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Picker("Frequency", selection: $frequency) {
-                            ForEach(frequencies, id: \.self) { freq in
+                        Picker("Frequency", selection: $viewModel.frequency) {
+                            ForEach(viewModel.frequencies, id: \.self) { freq in
                                 Text(freq.rawValue.capitalized).tag(freq)
                             }
                         }
                         .pickerStyle(.segmented)
+                        .onChange(of: viewModel.frequency) { _, _ in
+                            viewModel.validateFrequency()
+                        }
                     }
                     .padding(.vertical, 8)
 
-                    if frequency == .monthly {
-                        Picker("Day of Month", selection: $dayOfMonth) {
+                    if viewModel.frequency == .monthly {
+                        Picker("Day of Month", selection: $viewModel.dayOfMonth) {
                             ForEach(1...28, id: \.self) { day in
                                 Text("\(day)").tag(day)
                             }
                         }
+                        .onChange(of: viewModel.dayOfMonth) { _, _ in
+                            viewModel.validateFrequency()
+                        }
                     }
 
-                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                    if viewModel.frequency == .weekly {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Days of Week")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 8) {
+                                ForEach(0..<7, id: \.self) { index in
+                                    let selected = viewModel.daysOfWeek.contains(index)
+                                    Button(weekdays[index]) {
+                                        if selected {
+                                            viewModel.daysOfWeek.removeAll { $0 == index }
+                                        } else {
+                                            viewModel.daysOfWeek.append(index)
+                                            viewModel.daysOfWeek.sort()
+                                        }
+                                        viewModel.validateFrequency()
+                                    }
+                                    .font(.caption)
+                                    .fontWeight(selected ? .semibold : .regular)
+                                    .foregroundStyle(selected ? Color.white : Color.primary)
+                                    .frame(minWidth: 36, minHeight: 36)
+                                    .background(selected ? Color.accentColor : AppColors.chipBackground)
+                                    .clipShape(Circle())
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+
+                    if let freqErr = viewModel.frequencyError {
+                        Text(freqErr)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+
+                    DatePicker("Start Date", selection: $viewModel.startDate, displayedComponents: .date)
                         .datePickerStyle(.compact)
 
-                    Toggle("Set End Date", isOn: $hasEndDate)
+                    Toggle("Set End Date", isOn: $viewModel.hasEndDate)
 
-                    if hasEndDate {
-                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    if viewModel.hasEndDate {
+                        DatePicker("End Date", selection: $viewModel.endDate, in: viewModel.startDate..., displayedComponents: .date)
                             .datePickerStyle(.compact)
                     }
                 }
 
                 Section("Details") {
-                    TextField("Notes (optional)", text: $notes, axis: .vertical)
+                    TextField("Notes (optional)", text: $viewModel.notes, axis: .vertical)
                         .lineLimit(3...6)
                         .textInputAutocapitalization(.sentences)
                 }
@@ -157,93 +180,56 @@ struct EditRecurringTransactionSheet: View {
                         save()
                     }
                     .fontWeight(.semibold)
-                    .disabled(!isValid)
+                    .disabled(!viewModel.isValid)
                     .accessibilityIdentifier("recurring.save-button")
                 }
             }
-            .sheet(isPresented: $showCategoryPicker) {
-                CategoryPickerView(selectedCategory: $selectedCategory)
+            .sheet(isPresented: $viewModel.showCategoryPicker) {
+                CategoryPickerView(selectedCategoryId: $viewModel.selectedCategoryId)
             }
-            .alert("Error", isPresented: $showError) {
+            .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text(errorMessage)
+                Text(viewModel.errorMessage)
             }
             .onAppear {
-                loadData()
+                viewModel.load(from: recurring, categories: customCategories)
+            }
+            .onChange(of: customCategories) { _, newValue in
+                viewModel.customCategories = newValue
             }
         }
-    }
-
-    private func loadData() {
-        name = recurring.name
-        amount = recurring.amount.editableString
-        selectedCategory = recurring.category
-        transactionType = recurring.type
-        frequency = recurring.frequency
-        startDate = recurring.startDate
-        hasEndDate = recurring.endDate != nil
-        endDate = recurring.endDate ?? Date()
-        dayOfMonth = recurring.dayOfMonth ?? 1
-        notes = recurring.notes ?? ""
     }
 
     private func save() {
-        guard let amountValue = Double(amount), amountValue > 0 else {
-            errorMessage = "Amount must be greater than 0"
-            showError = true
-            return
-        }
-
-        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
-            errorMessage = "Please enter a name"
-            showError = true
-            return
-        }
-
-        guard !selectedCategory.isEmpty else {
-            errorMessage = "Please select a category"
-            showError = true
-            return
-        }
-
-        recurring.name = name.trimmingCharacters(in: .whitespaces)
-        recurring.amount = amountValue
-        recurring.category = selectedCategory
-        recurring.categoryId = customCategories.first(where: { $0.name == selectedCategory })?.id
-        recurring.type = transactionType
-        recurring.frequency = frequency
-        recurring.startDate = startDate
-        recurring.dayOfMonth = frequency == .monthly ? dayOfMonth : nil
-        recurring.endDate = hasEndDate ? endDate : nil
-        recurring.notes = notes.isEmpty ? nil : notes
-        recurring.updatedAt = Date()
+        guard viewModel.apply(to: recurring, categories: customCategories) else { return }
 
         do {
             try modelContext.save()
 
-            let payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
+            let payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest(categories: customCategories))
             changeQueueManager.enqueue(
-                entityType: "recurring",
-                entityID: recurring.id,
-                action: "update",
-                endpoint: "/recurring-transactions",
-                httpMethod: "PATCH",
-                payload: payload,
+                PendingChangeDraft(
+                    entityType: .recurring,
+                    entityID: recurring.id,
+                    action: .update,
+                    endpoint: "/recurring-transactions",
+                    httpMethod: .patch,
+                    payload: payload
+                ),
                 context: modelContext
             )
 
-            if NetworkMonitor.shared.isConnected {
+            if networkMonitor.isConnected {
                 Task {
                     await changeQueueManager.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
                 }
             }
 
-            saveSuccess += 1
             dismiss()
         } catch {
-            errorMessage = "Failed to save: \(error.localizedDescription)"
-            showError = true
+            viewModel.errorMessage = "Failed to save: \(error.localizedDescription)"
+            viewModel.showError = true
         }
     }
 }

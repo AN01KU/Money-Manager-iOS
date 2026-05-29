@@ -14,21 +14,16 @@ struct OrphanedQueueTests {
     // MARK: - Setup
 
     private func makeContext() throws -> ModelContext {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(
-            for: PendingChange.self, OrphanedChange.self,
-            configurations: config
-        )
-        return ModelContext(container)
+        ModelContext(try makeTestContainer())
     }
 
-    private func insertPendingChange(in context: ModelContext, entityType: String = "transaction") -> PendingChange {
-        let change = PendingChange(
+    private func insertPendingChange(in context: ModelContext, entityType: EntityType = .transaction) -> ChangeRecord {
+        let change = ChangeRecord(
             entityType: entityType,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/transactions",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: nil
         )
         context.insert(change)
@@ -37,16 +32,16 @@ struct OrphanedQueueTests {
     }
 
     private func insertOrphanedChange(orphanedAt: Date, in context: ModelContext) {
-        let orphan = OrphanedChange(
-            entityType: "transaction",
+        let orphan = ChangeRecord(
+            entityType: .transaction,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/transactions",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: nil,
-            createdAt: Date()
+            status: .orphaned,
+            orphanedAt: orphanedAt
         )
-        orphan.orphanedAt = orphanedAt
         context.insert(orphan)
         try? context.save()
     }
@@ -62,8 +57,8 @@ struct OrphanedQueueTests {
 
         manager.orphanAll(context: context)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(pending.isEmpty)
         #expect(orphaned.count == 2)
     }
@@ -76,7 +71,7 @@ struct OrphanedQueueTests {
 
         manager.orphanAll(context: context)
 
-        let pending = try context.fetch(FetchDescriptor<PendingChange>())
+        let pending = try context.fetch(makeDescriptor(statusRaw: "pending"))
         #expect(pending.isEmpty)
     }
 
@@ -87,7 +82,7 @@ struct OrphanedQueueTests {
 
         manager.orphanAll(context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.isEmpty)
     }
 
@@ -96,12 +91,12 @@ struct OrphanedQueueTests {
         let context = try makeContext()
         let manager = ChangeQueueManager()
         let payload = "test-payload".data(using: .utf8)!
-        let change = PendingChange(
-            entityType: "budget",
+        let change = ChangeRecord(
+            entityType: .budget,
             entityID: UUID(),
-            action: "create",
+            action: .create,
             endpoint: "/budgets",
-            httpMethod: "POST",
+            httpMethod: .post,
             payload: payload
         )
         context.insert(change)
@@ -109,11 +104,11 @@ struct OrphanedQueueTests {
 
         manager.orphanAll(context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.count == 1)
-        #expect(orphaned.first?.entityType == "budget")
+        #expect(orphaned.first?.entityType == EntityType.budget.rawValue)
         #expect(orphaned.first?.payload == payload)
-        #expect(orphaned.first?.httpMethod == "POST")
+        #expect(orphaned.first?.httpMethod == HTTPMethod.post.rawValue)
     }
 
     // MARK: - purgeExpiredOrphans
@@ -127,7 +122,7 @@ struct OrphanedQueueTests {
 
         manager.purgeExpiredOrphans(olderThan: 7, context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.isEmpty)
     }
 
@@ -140,7 +135,7 @@ struct OrphanedQueueTests {
 
         manager.purgeExpiredOrphans(olderThan: 7, context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.count == 1)
     }
 
@@ -155,7 +150,7 @@ struct OrphanedQueueTests {
 
         manager.purgeExpiredOrphans(olderThan: 7, context: context)
 
-        let orphaned = try context.fetch(FetchDescriptor<OrphanedChange>())
+        let orphaned = try context.fetch(makeDescriptor(statusRaw: "orphaned"))
         #expect(orphaned.count == 1)
         #expect(orphaned.first?.orphanedAt == oneDayAgo)
     }

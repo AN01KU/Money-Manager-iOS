@@ -28,19 +28,15 @@ public extension ProcessInfo {
     }
     
     var useMockServices: Bool {
-        return arguments.contains(LaunchArguments.useMockServices.rawValue) || isRunningTests
+        return arguments.contains(LaunchArguments.useMockServices.rawValue)
     }
-    
+
     var skipOnboarding: Bool {
         return arguments.contains(LaunchArguments.skipOnboarding.rawValue)
     }
-    
+
     var resetOnboarding: Bool {
         return arguments.contains(LaunchArguments.resetOnboarding.rawValue)
-    }
-    
-    var isRunningTests: Bool {
-        return environment["XCTestConfigurationFilePath"] != nil
     }
 
     var isScreenshotMode: Bool {

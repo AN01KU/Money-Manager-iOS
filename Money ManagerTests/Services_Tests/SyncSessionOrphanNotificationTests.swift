@@ -8,38 +8,68 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
+/// Tests that SyncService posts `.syncSessionOrphaned` when preflight returns `.invalid`.
+/// The notification must originate from SyncService's invalid-preflight branch —
+/// not from a manual NotificationCenter.post in the test.
 @MainActor
+@Suite(.serialized)
 struct SyncSessionOrphanNotificationTests {
 
-    private func makeContext() throws -> ModelContext {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(
-            for: PendingChange.self, OrphanedChange.self,
-            configurations: config
-        )
-        return ModelContext(container)
+    // MARK: - Helpers
+
+    private func makeContainer() throws -> ModelContainer {
+        try makeTestContainer()
     }
 
-    private func insertPendingChange(in context: ModelContext) {
-        let change = PendingChange(
-            entityType: "transaction",
-            entityID: UUID(),
-            action: "create",
-            endpoint: "/transactions",
-            httpMethod: "POST",
-            payload: nil
-        )
-        context.insert(change)
-        try? context.save()
+    /// MockAPIClient that returns an invalid preflight response (simulates expired sync session).
+    private func mockWithInvalidPreflight() -> MockAPIClient {
+        let mock = MockAPIClient()
+        mock.postHandler = { _, _ in
+            APISyncPreflightResponse(valid: false, reason: "SYNC_SESSION_EXPIRED")
+        }
+        mock.getHandler = { endpoint in
+            switch endpoint {
+            case .predefinedCategories:
+                return APIListResponse<APIPredefinedCategory>(data: [])
+            case .syncCategories:
+                return APIListResponse<APICategory>(data: [])
+            case .getBudget:
+                return APIUserBudget(limit: nil)
+            case .syncRecurring:
+                return APIListResponse<APIRecurringTransaction>(data: [])
+            case .syncTransactions:
+                return APIPaginatedResponse<APITransaction>(
+                    data: [],
+                    pagination: .init(limit: 100, offset: 0, total: 0)
+                )
+            default:
+                throw MockAPIClient.MockError.notConfigured
+            }
+        }
+        return mock
     }
 
     // MARK: - Tests
 
+    /// The notification must fire because SyncService's invalid-preflight branch posts it.
+    /// If that branch is removed, this test fails.
     @Test
     func testOrphanAllPostsSyncSessionOrphanedNotification() async throws {
-        let context = try makeContext()
-        let manager = ChangeQueueManager()
-        insertPendingChange(in: context)
+        let container = try makeContainer()
+        let mock = mockWithInvalidPreflight()
+
+        MockAuthService.shared.reset()
+        let svc = SyncService(
+            api: mock,
+            changeQueue: ChangeQueueManager(),
+            networkMonitor: MockNetworkMonitor(isConnected: true),
+            authService: MockAuthService.shared,
+            container: container
+        )
+
+        // Store a sync session ID so runPreflight actually calls the API
+        SessionStore.shared.saveSyncSessionID(UUID())
+        defer { SessionStore.shared.clearSyncSessionID() }
 
         var received = false
         let observer = NotificationCenter.default.addObserver(
@@ -49,32 +79,12 @@ struct SyncSessionOrphanNotificationTests {
         ) { _ in received = true }
         defer { NotificationCenter.default.removeObserver(observer) }
 
-        // Simulate what SyncService does when preflight fails
-        manager.orphanAll(context: context)
-        NotificationCenter.default.post(name: .syncSessionOrphaned, object: nil)
+        // Drive the invalid-preflight path — SyncService posts .syncSessionOrphaned
+        await svc.syncOnLaunch()
 
-        // Give main queue a cycle to deliver
+        // Give the main queue one cycle to deliver the notification
         await Task.yield()
 
         #expect(received == true)
-    }
-
-    @Test
-    func testEmptyQueueOrphanDoesNotPostNotification() throws {
-        let context = try makeContext()
-        let manager = ChangeQueueManager()
-
-        // orphanAll on empty queue — SyncService only posts if changes were actually moved
-        let pendingBefore = (try? context.fetch(FetchDescriptor<PendingChange>()))?.count ?? 0
-        manager.orphanAll(context: context)
-
-        let orphanedAfter = (try? context.fetch(FetchDescriptor<OrphanedChange>()))?.count ?? 0
-
-        // If queue was empty, no changes should be orphaned
-        if pendingBefore == 0 {
-            #expect(orphanedAfter == 0)
-        }
-        // Notification posting is guarded in SyncService (not ChangeQueueManager directly),
-        // so we verify the precondition: orphanAll on empty queue produces no orphans.
     }
 }

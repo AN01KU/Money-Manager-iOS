@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct NoBudgetCard: View {
-    let selectedMonth: Date
     let onSetBudget: () -> Void
     
     var body: some View {
@@ -20,7 +19,7 @@ struct NoBudgetCard: View {
             action: onSetBudget
         )
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .accessibilityElement(children: .contain)
@@ -30,5 +29,5 @@ struct NoBudgetCard: View {
 }
 
 #Preview {
-    NoBudgetCard(selectedMonth: Date(), onSetBudget: {})
+    NoBudgetCard(onSetBudget: {})
 }

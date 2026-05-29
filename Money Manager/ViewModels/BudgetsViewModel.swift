@@ -3,64 +3,52 @@ import SwiftData
 
 @MainActor
 @Observable class BudgetsViewModel {
-    var selectedMonth: Date = Date()
     var showBudgetSheet = false
+    var referenceDate: Date = Date()
 
     var allTransactions: [Transaction] = []
-    var budgets: [MonthlyBudget] = []
-    var modelContext: ModelContext?
+    /// The single per-user budget row fetched from SwiftData.
+    var userBudget: UserBudget?
 
-    var currentMonthTransactions: [Transaction] {
+    @ObservationIgnored var persistence: PersistenceService = .testing
+
+    private var monthInterval: DateInterval? {
         let calendar = Calendar.current
         guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)),
             let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-        else { return [] }
-
-        return allTransactions.filter { transaction in
-            !transaction.isSoftDeleted &&
-            transaction.type == .expense &&
-            transaction.date >= startOfMonth &&
-            transaction.date < firstDayNextMonth
-        }
+        else { return nil }
+        return DateInterval(start: startOfMonth, end: firstDayNextMonth)
     }
 
-    var currentBudget: MonthlyBudget? {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: selectedMonth)
-        let month = calendar.component(.month, from: selectedMonth)
-        return budgets.first { $0.year == year && $0.month == month }
+    private var spending: Spending {
+        guard let interval = monthInterval else { return Spending(income: 0, expense: 0, byCategory: [:], filtered: []) }
+        return Spending.from(transactions: allTransactions, in: interval)
     }
 
-    var totalSpent: Double {
-        currentMonthTransactions.reduce(0) { $0 + $1.amount }
+    var currentMonthTransactions: [Transaction] {
+        spending.filtered.filter { $0.type == .expense }
     }
+
+    var budgetLimit: Double? { userBudget?.limit }
+
+    var totalSpent: Double { NSDecimalNumber(decimal: spending.expense).doubleValue }
 
     var remainingBudget: Double {
-        guard let budget = currentBudget else { return 0 }
-        return max(0, budget.limit - totalSpent)
+        guard let limit = budgetLimit else { return 0 }
+        return max(0, limit - totalSpent)
     }
 
     var budgetPercentage: Int {
-        guard let budget = currentBudget, budget.limit > 0 else { return 0 }
-        return Int((totalSpent / budget.limit) * 100.0)
+        guard let limit = budgetLimit, limit > 0 else { return 0 }
+        return Int((totalSpent / limit) * 100.0)
     }
 
     var daysRemaining: Int {
-        let calendar = Calendar.current
-        let today = Date()
-        guard
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)),
-            let firstDayNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
-        else { return 0 }
-
-        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
-            let startOfToday = calendar.startOfDay(for: today)
-            // Distance from start of today to start of next month gives full remaining days
-            let daysLeft = calendar.dateComponents([.day], from: startOfToday, to: firstDayNextMonth).day ?? 0
-            return max(0, daysLeft)
-        }
-        return 0
+        guard let interval = monthInterval else { return 0 }
+        let startOfToday = Calendar.current.startOfDay(for: referenceDate)
+        let daysLeft = Calendar.current.dateComponents([.day], from: startOfToday, to: interval.end).day ?? 0
+        return max(0, daysLeft)
     }
 
     var dailyAverage: Double {
@@ -68,63 +56,112 @@ import SwiftData
         return remainingBudget / Double(daysRemaining + 1)
     }
 
-    /// Days elapsed so far in the selected month (1-based, capped to today if current month).
     private var daysElapsed: Int {
-        let calendar = Calendar.current
-        let today = Date()
-        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonth)) else { return 1 }
-        if calendar.isDate(today, equalTo: selectedMonth, toGranularity: .month) {
-            return max(1, (calendar.dateComponents([.day], from: startOfMonth, to: today).day ?? 0) + 1)
-        }
-        // Past month — use full month length
-        let range = calendar.range(of: .day, in: .month, for: selectedMonth)
-        return range?.count ?? 30
+        guard let interval = monthInterval else { return 1 }
+        return max(1, (Calendar.current.dateComponents([.day], from: interval.start, to: referenceDate).day ?? 0) + 1)
     }
 
-    /// Projected total spend at end of month based on current daily rate.
     var projectedMonthEnd: Double {
-        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: referenceDate)?.count ?? 30
         let dailyRate = totalSpent / Double(daysElapsed)
         let daysLeft = daysInMonth - daysElapsed
         return totalSpent + (dailyRate * Double(daysLeft))
     }
 
     var insightIcon: String {
-        guard let budget = currentBudget, budget.limit > 0 else { return "checkmark.circle.fill" }
-        if totalSpent >= budget.limit { return "exclamationmark.triangle.fill" }
-        if projectedMonthEnd > budget.limit { return "arrow.up.circle.fill" }
-        return "checkmark.circle.fill"
+        guard let limit = budgetLimit, limit > 0 else { return "checkmark.circle.fill" }
+        if totalSpent >= limit { return BudgetStatus.danger.icon }
+        if projectedMonthEnd > limit { return "arrow.up.circle.fill" }
+        return BudgetStatus.safe.icon
     }
 
     var insightColor: Color {
-        guard let budget = currentBudget, budget.limit > 0 else { return AppColors.positive }
-        if totalSpent >= budget.limit { return AppColors.expense }
-        if projectedMonthEnd > budget.limit { return AppColors.budgetCaution }
+        guard let limit = budgetLimit, limit > 0 else { return AppColors.positive }
+        if totalSpent >= limit { return BudgetStatus.danger.color }
+        if projectedMonthEnd > limit { return BudgetStatus.caution.color }
         return AppColors.positive
     }
 
-    /// Human-readable spending insight for the current budget period.
     var spendingInsight: String? {
-        guard let budget = currentBudget, budget.limit > 0 else { return nil }
-        // Only show for current month
-        guard Calendar.current.isDate(Date(), equalTo: selectedMonth, toGranularity: .month) else { return nil }
+        guard let limit = budgetLimit, limit > 0 else { return nil }
         guard daysElapsed > 1 else { return nil }
 
         let projected = projectedMonthEnd
-        let overspend = projected - budget.limit
+        let overspend = projected - limit
 
-        if totalSpent >= budget.limit {
+        if totalSpent >= limit {
             return "You've exceeded your budget"
         } else if overspend > 0 {
             return "At this rate you'll overspend by \(CurrencyFormatter.format(overspend))"
         } else {
-            return "On track — projected \(CurrencyFormatter.format(projected)) of \(CurrencyFormatter.format(budget.limit))"
+            return "On track — projected \(CurrencyFormatter.format(projected)) of \(CurrencyFormatter.format(limit))"
         }
     }
 
-    func configure(allTransactions: [Transaction], budgets: [MonthlyBudget], modelContext: ModelContext?) {
+    func configure(allTransactions: [Transaction], userBudget: UserBudget?) {
         self.allTransactions = allTransactions
-        self.budgets = budgets
-        self.modelContext = modelContext
+        self.userBudget = userBudget
+    }
+
+    // MARK: - Mutations
+
+    enum BudgetValidationError: Error, LocalizedError {
+        case zeroLimit
+
+        var errorDescription: String? {
+            switch self {
+            case .zeroLimit: return "Budget limit must be greater than zero"
+            }
+        }
+    }
+
+    /// Sets the per-user budget to `limit`. Enqueues a PUT /me/budget sync change.
+    func saveBudget(limit: Double) throws {
+        guard limit > 0 else { throw BudgetValidationError.zeroLimit }
+
+        let context = persistence.modelContext
+        let budget: UserBudget
+        let existing = try context.fetch(FetchDescriptor<UserBudget>()).first
+        if let existing {
+            existing.limit = limit
+            existing.updatedAt = Date()
+            budget = existing
+        } else {
+            let newBudget = UserBudget(limit: limit)
+            context.insert(newBudget)
+            budget = newBudget
+        }
+
+        let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: limit))
+        try persistence.saveAndSync(
+            entityType: .budget,
+            entityID: budget.id,
+            action: .create,
+            endpoint: "/me/budget",
+            httpMethod: .put,
+            payload: payload
+        )
+    }
+
+    /// Clears the per-user budget by sending {"limit": null} to PUT /me/budget.
+    func clearBudget() throws {
+        let context = persistence.modelContext
+        let existing = try context.fetch(FetchDescriptor<UserBudget>()).first
+        if let existing {
+            existing.limit = nil
+            existing.updatedAt = Date()
+        } else {
+            context.insert(UserBudget(limit: nil))
+        }
+
+        let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: nil))
+        try persistence.saveAndSync(
+            entityType: .budget,
+            entityID: UserBudget.sentinelID,
+            action: .create,
+            endpoint: "/me/budget",
+            httpMethod: .put,
+            payload: payload
+        )
     }
 }

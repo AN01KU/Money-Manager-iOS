@@ -10,7 +10,7 @@ import Charts
 
 struct CategoryChart: View {
     let categorySpending: [CategorySpending]
-    var onCategoryTapped: ((String) -> Void)?
+    var onCategoryTapped: ((UUID) -> Void)?
     
     private var pieData: [CategorySpending] {
         let sorted = categorySpending.sorted { $0.amount > $1.amount }
@@ -21,6 +21,7 @@ struct CategoryChart: View {
         let othersAmount = rest.reduce(0) { $0 + $1.amount }
         let othersPercentage = rest.reduce(0) { $0 + $1.percentage }
         let others = CategorySpending(
+            categoryId: UUID(),
             categoryName: "Other",
             icon: "ellipsis.circle.fill",
             color: Color(hex: "#95A5A6"),
@@ -31,7 +32,8 @@ struct CategoryChart: View {
     }
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: AppConstants.UI.spacing20) {
+            // Donut chart card
             HStack(alignment: .top, spacing: 20) {
                 Chart(pieData) { spending in
                     SectorMark(
@@ -40,39 +42,39 @@ struct CategoryChart: View {
                         angularInset: 2
                     )
                     .foregroundStyle(spending.color)
-                    .opacity(0.8)
+                    .opacity(0.9)
                 }
-                .frame(width: 140, height: 140)
-                
-                VStack(alignment: .leading, spacing: 12) {
+                .frame(width: 130, height: 130)
+
+                VStack(alignment: .leading, spacing: 10) {
                     ForEach(pieData) { spending in
                         CategorySpendingRow(spending: spending)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            
+            .padding(AppConstants.UI.padding)
+            .background(AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
+
+            // Category breakdown card
             if !categorySpending.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(categorySpending) { spending in
                         Button {
-                            onCategoryTapped?(spending.categoryName)
+                            onCategoryTapped?(spending.categoryId)
                         } label: {
                             CategoryDetailRow(spending: spending, maxAmount: categorySpending.first?.amount ?? 1)
                         }
                         .buttonStyle(.plain)
-                        
+
                         if spending.id != categorySpending.last?.id {
-                            Divider()
-                                .padding(.leading, 52)
+                            Divider().padding(.leading, 64)
                         }
                     }
                 }
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .background(AppColors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
             }
         }
     }
@@ -112,61 +114,55 @@ struct CategoryDetailRow: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppConstants.UI.spacing12) {
             ZStack {
                 Circle()
-                    .fill(spending.color.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                
-                Image(systemName: spending.icon)
-                    .font(.body)
-                    .foregroundStyle(spending.color)
+                    .fill(spending.color.opacity(0.15))
+                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                AppIcon(name: spending.icon, size: AppConstants.UI.iconBadgeSize * 0.52, color: spending.color)
             }
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(spending.categoryName)
-                        .font(.subheadline)
+                        .font(AppTypography.body)
                         .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-                    
+                        .foregroundStyle(AppColors.label)
+
                     Spacer()
-                    
+
                     Text(CurrencyFormatter.format(spending.amount))
-                        .font(.subheadline)
+                        .font(AppTypography.body)
                         .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AppColors.label)
+
+                    AppIcon(name: AppIcons.UI.chevron, size: 14, color: AppColors.label3)
                 }
-                
+
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color(.systemGray4))
-                            .frame(height: 6)
-                        
+                            .fill(AppColors.surface2)
+                            .frame(height: 5)
                         Capsule()
                             .fill(spending.color)
-                            .frame(width: geometry.size.width * barFraction, height: 6)
+                            .frame(width: geometry.size.width * barFraction, height: 5)
                     }
                 }
-                .frame(height: 6)
+                .frame(height: 5)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, AppConstants.UI.padding)
+        .padding(.vertical, AppConstants.UI.spacing12)
     }
 }
 
 #Preview {
     ScrollView {
         CategoryChart(categorySpending: [
-            CategorySpending(categoryName: "Food & Dining", icon: "fork.knife.circle.fill", color: Color(hex: "#FF6B6B"), amount: 11308, percentage: 35),
-            CategorySpending(categoryName: "Transport", icon: "car.circle.fill", color: Color(hex: "#4ECDC4"), amount: 6490, percentage: 20),
-            CategorySpending(categoryName: "Shopping", icon: "bag.circle.fill", color: Color(hex: "#FFEAA7"), amount: 4200, percentage: 13),
-            CategorySpending(categoryName: "Entertainment", icon: "gamecontroller.circle.fill", color: Color(hex: "#BC6C25"), amount: 3500, percentage: 11),
-            CategorySpending(categoryName: "Utilities", icon: "bolt.square.fill", color: Color(hex: "#DDA15E"), amount: 2800, percentage: 9),
-            CategorySpending(categoryName: "Housing", icon: "house.circle.fill", color: Color(hex: "#45B7D1"), amount: 2100, percentage: 6),
-            CategorySpending(categoryName: "Other", icon: "ellipsis.circle.fill", color: Color(hex: "#95A5A6"), amount: 1952, percentage: 6)
+            CategorySpending(categoryId: UUID(), categoryName: "Food & Dining", icon: "fork.knife.circle.fill", color: Color(hex: "#FF6B6B"), amount: 11308, percentage: 35),
+            CategorySpending(categoryId: UUID(), categoryName: "Transport", icon: "car.circle.fill", color: Color(hex: "#4ECDC4"), amount: 6490, percentage: 20),
+            CategorySpending(categoryId: UUID(), categoryName: "Shopping", icon: "bag.circle.fill", color: Color(hex: "#FFEAA7"), amount: 4200, percentage: 13),
         ])
         .padding()
     }

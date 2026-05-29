@@ -2,25 +2,33 @@ import SwiftUI
 import SwiftData
 
 struct CategoryPickerRow: View {
-    let category: TransactionCategory
-    let selectedCategory: String
+    let category: Category
+    let selectedCategoryId: UUID
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: category.icon)
-                    .foregroundStyle(category.color)
-                    .frame(width: 30)
-                Text(category.name)
-                Spacer()
-                if selectedCategory == category.name {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(AppColors.accent)
-                }
+        HStack(spacing: AppConstants.UI.spacing12) {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: category.color).opacity(0.15))
+                    .frame(width: AppConstants.UI.iconBadgeSize, height: AppConstants.UI.iconBadgeSize)
+                AppIcon(name: category.icon,
+                        size: AppConstants.UI.iconBadgeSize * 0.52,
+                        color: Color(hex: category.color))
+            }
+            Text(category.name)
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.label)
+            Spacer()
+            if selectedCategoryId == category.id {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppColors.accent)
             }
         }
-        .foregroundStyle(.primary)
-        .accessibilityIdentifier(category.name)
+        .contentShape(Rectangle())
+        .onTapGesture { action() }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(category.name)
     }
 }

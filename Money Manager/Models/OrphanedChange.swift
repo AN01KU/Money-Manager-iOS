@@ -42,3 +42,25 @@ final class OrphanedChange {
         self.orphanedAt = Date()
     }
 }
+
+extension OrphanedChange {
+    convenience init(
+        entityType: EntityType,
+        entityID: UUID,
+        action: ChangeAction,
+        endpoint: String,
+        httpMethod: HTTPMethod,
+        payload: Data?,
+        createdAt: Date
+    ) {
+        self.init(
+            entityType: entityType.rawValue,
+            entityID: entityID,
+            action: action.rawValue,
+            endpoint: endpoint,
+            httpMethod: httpMethod.rawValue,
+            payload: payload,
+            createdAt: createdAt
+        )
+    }
+}

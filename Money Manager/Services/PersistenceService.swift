@@ -9,133 +9,128 @@ import SwiftData
 @MainActor
 final class PersistenceService {
 
-    var modelContext: ModelContext?
+    let modelContext: ModelContext
     private let changeQueue: ChangeQueueManagerProtocol
+    private let authService: AuthServiceProtocol
+    private let networkMonitor: any NetworkMonitorProtocol
 
-    init(changeQueue: ChangeQueueManagerProtocol = changeQueueManager) {
+    init(
+        modelContext: ModelContext,
+        authService: AuthServiceProtocol,
+        networkMonitor: any NetworkMonitorProtocol,
+        changeQueue: ChangeQueueManagerProtocol
+    ) {
+        self.modelContext = modelContext
+        self.authService = authService
+        self.networkMonitor = networkMonitor
         self.changeQueue = changeQueue
     }
 
     // MARK: - Save + Sync
 
     func saveAndSync(
-        entityType: String,
+        entityType: EntityType,
         entityID: UUID,
-        action: String,
+        action: ChangeAction,
         endpoint: String,
-        httpMethod: String,
+        httpMethod: HTTPMethod,
         payload: Data?
     ) throws {
-        guard let modelContext else {
-            AppLogger.data.error("saveAndSync: modelContext not set for \(entityType) \(action)")
-            return
-        }
         try modelContext.save()
 
         changeQueue.enqueue(
-            entityType: entityType,
-            entityID: entityID,
-            action: action,
-            endpoint: endpoint,
-            httpMethod: httpMethod,
-            payload: payload,
+            PendingChangeDraft(
+                entityType: entityType,
+                entityID: entityID,
+                action: action,
+                endpoint: endpoint,
+                httpMethod: httpMethod,
+                payload: payload
+            ),
             context: modelContext
         )
 
-        if NetworkMonitor.shared.isConnected {
+        if networkMonitor.isConnected {
             Task {
                 await changeQueue.replayAll(context: modelContext, isAuthenticated: authService.isAuthenticated)
             }
         }
     }
 
-    // MARK: - Entity-specific helpers
+    // MARK: - Generic save<T>
 
-    func saveTransaction(_ transaction: Transaction, action: String) throws {
-        let httpMethod: String
+    /// Saves any LocalSyncableEntity and enqueues the corresponding change record.
+    /// Old entity-specific save methods coexist; call sites migrate in subsequent issues.
+    func save<T: LocalSyncableEntity & PersistentModel>(_ entity: T, action: ChangeAction) throws {
+        let httpMethod: HTTPMethod
         let payload: Data?
 
         switch action {
-        case "create":
-            httpMethod = "POST"
-            payload = try? AppAPIClient.apiEncoder.encode(transaction.toCreateRequest())
-        case "update":
-            httpMethod = "PATCH"
-            payload = try? AppAPIClient.apiEncoder.encode(transaction.toUpdateRequest())
-        case "delete":
-            httpMethod = "DELETE"
+        case .create:
+            httpMethod = .post
+            payload = try entity.createRequestPayload()
+        case .update:
+            httpMethod = .patch
+            payload = try entity.updateRequestPayload()
+        case .delete:
+            httpMethod = .delete
             payload = nil
-        default:
-            return
+            if let softDeletable = entity as? any SoftDeletableEntity {
+                softDeletable.isSoftDeleted = true
+                softDeletable.updatedAt = Date()
+            }
         }
 
         try saveAndSync(
-            entityType: "transaction",
-            entityID: transaction.id,
+            entityType: T.entityType,
+            entityID: entity.id,
             action: action,
-            endpoint: "/transactions",
-            httpMethod: httpMethod,
-            payload: payload
-        )
-    }
-
-    func saveRecurring(_ recurring: RecurringTransaction, action: String) throws {
-        let httpMethod: String
-        let payload: Data?
-
-        switch action {
-        case "create":
-            httpMethod = "POST"
-            payload = try? AppAPIClient.apiEncoder.encode(recurring.toCreateRequest())
-        case "update":
-            httpMethod = "PATCH"
-            payload = try? AppAPIClient.apiEncoder.encode(recurring.toUpdateRequest())
-        case "delete":
-            httpMethod = "DELETE"
-            payload = nil
-        default:
-            return
-        }
-
-        try saveAndSync(
-            entityType: "recurring",
-            entityID: recurring.id,
-            action: action,
-            endpoint: "/recurring-transactions",
-            httpMethod: httpMethod,
-            payload: payload
-        )
-    }
-
-    func saveCategory(_ category: CustomCategory, action: String) throws {
-        let httpMethod: String
-        let payload: Data?
-
-        switch action {
-        case "create":
-            httpMethod = "POST"
-            payload = try? AppAPIClient.apiEncoder.encode(category.toCreateRequest())
-        case "update":
-            httpMethod = "PATCH"
-            payload = try? AppAPIClient.apiEncoder.encode(category.toUpdateRequest())
-        case "delete":
-            httpMethod = "DELETE"
-            payload = nil
-        default:
-            return
-        }
-
-        try saveAndSync(
-            entityType: "category",
-            entityID: category.id,
-            action: action,
-            endpoint: "/categories",
+            endpoint: T.endpoint,
             httpMethod: httpMethod,
             payload: payload
         )
     }
 
     func save() throws {
-        try modelContext?.save()
+        try modelContext.save()
+    }
+
+    // MARK: - Enqueue-only helpers (no modelContext.save — caller already inserted the entity)
+
+    func enqueueUserBudget(_ budget: UserBudget, context: ModelContext) {
+        guard let payload = try? AppAPIClient.apiEncoder.encode(APISetBudgetRequest(limit: budget.limit)) else { return }
+        changeQueue.enqueue(
+            PendingChangeDraft(entityType: .budget, entityID: budget.id, action: .create,
+                               endpoint: "/me/budget", httpMethod: .put, payload: payload),
+            context: context
+        )
+    }
+
+    /// Enqueues a DELETE for a category row that has already been removed from the context.
+    func deleteCategory(id: UUID) throws {
+        try saveAndSync(
+            entityType: .category, entityID: id, action: .delete,
+            endpoint: "/categories", httpMethod: .delete, payload: nil
+        )
     }
 }
+
+// MARK: - Debug/Preview helpers
+
+#if DEBUG
+extension PersistenceService {
+    /// A shared in-memory PersistenceService for use in SwiftUI previews, tests,
+    /// and VM default-argument values. Never used in production builds.
+    @MainActor static let testing: PersistenceService = {
+        let schema = Schema(SchemaV3.models)
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        return PersistenceService(
+            modelContext: container.mainContext,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
+        )
+    }()
+}
+#endif

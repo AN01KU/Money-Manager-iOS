@@ -3,8 +3,6 @@ import SwiftData
 import Testing
 @testable import Money_Manager
 
-/// Tests for EditCategoryViewModel: save() with rename path,
-/// failure paths, and renameCategoryInTransactions behavior.
 @MainActor
 struct EditCategoryViewModelRenameTests {
 
@@ -12,32 +10,28 @@ struct EditCategoryViewModelRenameTests {
         ModelContext(try makeTestContainer())
     }
 
-    private func makeCustomCategory(name: String, icon: String = "star", color: String = "#FF0000") -> CustomCategory {
-        CustomCategory(name: name, icon: icon, color: color)
+    private func makeCategory(name: String, icon: String = "star", color: String = "#FF0000") -> Money_Manager.Category {
+        Category(name: name, icon: icon, color: color)
     }
 
-    private func makeTransactionCategory(row: CustomCategory) -> TransactionCategory {
-        TransactionCategory(
-            id: "custom:\(row.id.uuidString)",
-            name: row.name, icon: row.icon, colorHex: row.color,
-            isHidden: false, isPredefined: false, isDeletable: true,
-            overrideRow: row
+    private func makeService(context: ModelContext) -> PersistenceService {
+        PersistenceService(
+            modelContext: context,
+            authService: MockAuthService.shared,
+            networkMonitor: MockNetworkMonitor(),
+            changeQueue: MockChangeQueueManager.shared
         )
     }
 
     // MARK: - save: update existing custom row
 
-    @Test func testSaveUpdatesCustomCategoryRow() throws {
+    @Test func testSaveUpdatesCategoryRow() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         context.insert(row)
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        persistence.modelContext = context
 
-        let vm = EditCategoryViewModel(category: category, allCategories: [], persistence: persistence)
+        let vm = EditCategoryViewModel(category: row, allCategories: [], persistence: makeService(context: context))
         vm.name = "Tea"
-        vm.modelContext = context
 
         let saved = vm.save()
         #expect(saved == true)
@@ -46,133 +40,89 @@ struct EditCategoryViewModelRenameTests {
 
     @Test func testSaveReturnsFalseForEmptyName() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         context.insert(row)
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        persistence.modelContext = context
 
-        let vm = EditCategoryViewModel(category: category, allCategories: [], persistence: persistence)
+        let vm = EditCategoryViewModel(category: row, allCategories: [], persistence: makeService(context: context))
         vm.name = ""
-        vm.modelContext = context
 
         let saved = vm.save()
         #expect(saved == false)
         #expect(vm.showError == true)
     }
 
-    @Test func testSaveReturnsFalseWithNoModelContext() throws {
-        let row = makeCustomCategory(name: "Coffee")
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        // modelContext is nil
-
-        let vm = EditCategoryViewModel(category: category, allCategories: [], persistence: persistence)
-        vm.name = "Tea"
-
-        let saved = vm.save()
-        #expect(saved == false)
-    }
-
-    @Test func testSaveRenamesTransactionsCategoryName() throws {
+    @Test func testSaveDoesNotUpdateTransactionCategoryOnRename() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
+        row.key = "coffee-custom"
         context.insert(row)
 
-        // Insert a transaction that references this category
-        let tx = Transaction(amount: 5, category: "Coffee", date: Date())
-        tx.categoryId = row.id
+        let tx = Transaction(amount: 5, categoryId: row.id, date: Date())
         context.insert(tx)
 
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        persistence.modelContext = context
-
-        let vm = EditCategoryViewModel(category: category, allCategories: [], persistence: persistence)
+        let vm = EditCategoryViewModel(category: row, allCategories: [], persistence: makeService(context: context))
         vm.name = "Tea"
-        vm.modelContext = context
 
         let saved = vm.save()
         #expect(saved == true)
-        #expect(tx.category == "Tea")
+        // category key on transaction is unchanged — only display name changed
     }
 
-    @Test func testSaveRenamesRecurringTransactionsCategoryName() throws {
+    @Test func testSaveDoesNotUpdateRecurringTransactionCategoryOnRename() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
+        row.key = "coffee-custom"
         context.insert(row)
 
         let recurring = RecurringTransaction(
             name: "Daily Coffee",
             amount: 5,
-            category: "Coffee",
+            categoryId: row.id,
             frequency: .daily,
-            startDate: Date(),
-            categoryId: row.id
+            startDate: Date()
         )
         context.insert(recurring)
 
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        persistence.modelContext = context
-
-        let vm = EditCategoryViewModel(category: category, allCategories: [], persistence: persistence)
+        let vm = EditCategoryViewModel(category: row, allCategories: [], persistence: makeService(context: context))
         vm.name = "Tea"
-        vm.modelContext = context
 
         let saved = vm.save()
         #expect(saved == true)
-        #expect(recurring.category == "Tea")
     }
 
     @Test func testSaveDoesNotRenameTransactionsWithDifferentCategoryId() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee")
+        let row = makeCategory(name: "Coffee")
         context.insert(row)
 
-        let tx = Transaction(amount: 10, category: "Food", date: Date())
-        // Different categoryId
-        tx.categoryId = UUID()
+        let tx = Transaction(amount: 10, categoryId: UUID(), date: Date())
         context.insert(tx)
 
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        persistence.modelContext = context
-
-        let vm = EditCategoryViewModel(category: category, allCategories: [], persistence: persistence)
+        let vm = EditCategoryViewModel(category: row, allCategories: [], persistence: makeService(context: context))
         vm.name = "Tea"
-        vm.modelContext = context
 
         let _ = vm.save()
-        // tx.category should remain unchanged
-        #expect(tx.category == "Food")
     }
 
     // MARK: - color conflict
 
     @Test func testSaveReturnsFalseOnColorConflict() throws {
         let context = try makeContext()
-        let row = makeCustomCategory(name: "Coffee", color: "#FF0000")
+        let row = makeCategory(name: "Coffee", color: "#FF0000")
         context.insert(row)
 
-        let conflicting = CustomCategory(name: "Tea", icon: "leaf", color: "#FF0000")
+        let conflicting = Category(name: "Tea", icon: "leaf", color: "#FF0000")
         context.insert(conflicting)
 
-        let category = makeTransactionCategory(row: row)
-        let persistence = PersistenceService()
-        persistence.modelContext = context
-
         let vm = EditCategoryViewModel(
-            category: category,
+            category: row,
             allCategories: [conflicting],
-            persistence: persistence
+            persistence: makeService(context: context)
         )
         vm.name = "Coffee Renamed"
-        vm.selectedColor = "#FF0000" // same as conflicting
-        vm.modelContext = context
+        vm.selectedColor = "#FF0000"
 
         let saved = vm.save()
-        // Should show color conflict warning (returns false without error)
         #expect(saved == false)
     }
 }

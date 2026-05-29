@@ -13,32 +13,33 @@ struct GroupsListViewModelExtendedTests {
         id: UUID = UUID(),
         name: String = "Test Group",
         createdBy: UUID = UUID(),
-        balances: [APIGroupBalance] = []
-    ) -> APIGroupWithDetails {
-        APIGroupWithDetails(id: id, name: name, createdBy: createdBy, createdAt: Date(), members: [], balances: balances)
+        balances: [GroupBalance] = []
+    ) -> SplitGroup {
+        SplitGroup(id: id, name: name, createdBy: createdBy, createdAt: Date(), members: [], balances: balances, settlements: [])
     }
 
-    private func makeBalance(userId: UUID, amount: Double) -> APIGroupBalance {
-        APIGroupBalance(userId: userId, amount: amount)
+    private func makeBalance(userId: UUID, amount: Double) -> GroupBalance {
+        GroupBalance(from: APIGroupBalance(userId: userId, amount: amount))
     }
 
-    private func makeTransaction(id: UUID = UUID(), description: String = "tx", date: Date = Date()) -> APIGroupTransaction {
-        APIGroupTransaction(
-            id: id, groupId: UUID(), paidByUserId: UUID(),
-            totalAmount: 10, category: "Food", date: date,
-            description: description, notes: nil, isDeleted: false,
-            createdAt: date, updatedAt: Date(), splits: []
-        )
+    private func makeTransaction(id: UUID = UUID(), description: String = "tx", date: Date = Date()) -> ActivityTransaction {
+        ActivityTransaction(id: id, date: date, description: description, category: "Food", totalAmount: 10, paidByUserId: UUID())
     }
 
-    private func makeSettlement(id: UUID = UUID(), fromUser: UUID = UUID(), toUser: UUID = UUID(), date: Date = Date()) -> APISettlement {
-        APISettlement(id: id, groupId: UUID(), fromUser: fromUser, toUser: toUser, amount: 20, notes: nil, createdAt: date)
+    private func makeSettlement(id: UUID = UUID(), fromUser: UUID = UUID(), toUser: UUID = UUID(), date: Date = Date()) -> ActivitySettlement {
+        ActivitySettlement(id: id, date: date, fromUserId: fromUser, toUserId: toUser, amount: 20, fromName: "Alice", toName: "Bob")
+    }
+
+    private func makeEmptyService() -> GroupService {
+        let client = MockAPIClient()
+        client.getHandler = { _ in throw MockAPIClient.MockError.notConfigured }
+        return GroupService(apiClient: client)
     }
 
     // MARK: - setCurrentUser
 
     @Test func testSetCurrentUserUpdatesCurrentUserId() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         let uid = UUID()
         vm.setCurrentUser(uid)
         // netBalance should now use this user ID
@@ -47,7 +48,7 @@ struct GroupsListViewModelExtendedTests {
     }
 
     @Test func testSetCurrentUserToNilResetsToZeroBalance() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         let uid = UUID()
         vm.setCurrentUser(uid)
         vm.setCurrentUser(nil)
@@ -59,7 +60,7 @@ struct GroupsListViewModelExtendedTests {
 
     @Test func testNetBalanceSumsAcrossMultipleGroups() {
         let uid = UUID()
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh(), currentUserId: uid)
+        let vm = GroupsListViewModel(groupService: makeEmptyService(), currentUserId: uid)
         vm.groups = [
             makeGroup(balances: [makeBalance(userId: uid, amount: 30)]),
             makeGroup(balances: [makeBalance(userId: uid, amount: -10)]),
@@ -71,14 +72,14 @@ struct GroupsListViewModelExtendedTests {
     @Test func testNetBalanceIgnoresOtherUsersBalances() {
         let uid = UUID()
         let other = UUID()
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh(), currentUserId: uid)
+        let vm = GroupsListViewModel(groupService: makeEmptyService(), currentUserId: uid)
         vm.groups = [makeGroup(balances: [makeBalance(userId: other, amount: 100)])]
         #expect(vm.netBalance == 0)
     }
 
     @Test func testNetBalanceReturnsZeroWhenGroupHasNoBalanceForUser() {
         let uid = UUID()
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh(), currentUserId: uid)
+        let vm = GroupsListViewModel(groupService: makeEmptyService(), currentUserId: uid)
         vm.groups = [makeGroup(balances: [])]
         #expect(vm.netBalance == 0)
     }
@@ -87,14 +88,14 @@ struct GroupsListViewModelExtendedTests {
 
     @Test func testUserBalanceReturnsCorrectAmountForCurrentUser() {
         let uid = UUID()
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh(), currentUserId: uid)
+        let vm = GroupsListViewModel(groupService: makeEmptyService(), currentUserId: uid)
         let group = makeGroup(balances: [makeBalance(userId: uid, amount: 75)])
         #expect(abs(vm.userBalance(for: group) - 75) < 0.01)
     }
 
     @Test func testUserBalanceReturnsNegativeAmountWhenOwing() {
         let uid = UUID()
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh(), currentUserId: uid)
+        let vm = GroupsListViewModel(groupService: makeEmptyService(), currentUserId: uid)
         let group = makeGroup(balances: [makeBalance(userId: uid, amount: -30)])
         #expect(abs(vm.userBalance(for: group) - (-30)) < 0.01)
     }
@@ -111,7 +112,7 @@ struct GroupsListViewModelExtendedTests {
     @Test func testActivityItemSettlementIdMatchesSettlementId() {
         let sid = UUID()
         let settlement = makeSettlement(id: sid)
-        let item = ActivityItem.settlement(settlement, groupName: "Trip", memberMap: [:])
+        let item = ActivityItem.settlement(settlement, groupName: "Trip")
         #expect(item.id == sid)
     }
 
@@ -119,7 +120,7 @@ struct GroupsListViewModelExtendedTests {
 
     @Test func testGroupedActivityGroupsByDayKey() {
         let uid = UUID()
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh(), currentUserId: uid)
+        let vm = GroupsListViewModel(groupService: makeEmptyService(), currentUserId: uid)
 
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.startOfDay(for: Date()))!
         let tx1 = makeTransaction(date: yesterday)
@@ -136,7 +137,7 @@ struct GroupsListViewModelExtendedTests {
     }
 
     @Test func testGroupedActivityTodaySection() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         let tx = makeTransaction(date: Date())
         vm.recentActivity = [.transaction(tx, groupName: "Trip")]
         let sections = vm.groupedActivity
@@ -145,7 +146,7 @@ struct GroupsListViewModelExtendedTests {
     }
 
     @Test func testGroupedActivityTodaySectionSortedFirst() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         let txToday = makeTransaction(date: Date())
         let txYesterday = makeTransaction(date: yesterday)
@@ -158,7 +159,7 @@ struct GroupsListViewModelExtendedTests {
     }
 
     @Test func testGroupedActivityEmptyWhenNoActivity() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         vm.recentActivity = []
         #expect(vm.groupedActivity.isEmpty)
     }
@@ -166,17 +167,17 @@ struct GroupsListViewModelExtendedTests {
     // MARK: - filteredActivity - settlement matching
 
     @Test func testFilteredActivityDoesNotMatchSettlementByNonGroupName() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         let settlement = makeSettlement()
-        vm.recentActivity = [.settlement(settlement, groupName: "Trip", memberMap: [:])]
+        vm.recentActivity = [.settlement(settlement, groupName: "Trip")]
         vm.searchText = "zzz"
         #expect(vm.filteredActivity.isEmpty)
     }
 
     @Test func testFilteredActivityMatchesSettlementByGroupName() {
-        let vm = GroupsListViewModel(groupService: MockGroupService.fresh())
+        let vm = GroupsListViewModel(groupService: makeEmptyService())
         let settlement = makeSettlement()
-        vm.recentActivity = [.settlement(settlement, groupName: "Vacation", memberMap: [:])]
+        vm.recentActivity = [.settlement(settlement, groupName: "Vacation")]
         vm.searchText = "vacation"
         #expect(vm.filteredActivity.count == 1)
     }

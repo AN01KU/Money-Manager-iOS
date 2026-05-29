@@ -13,40 +13,40 @@ struct NetBalanceCard: View {
     private var isSettled: Bool { netBalance == 0 }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: AppConstants.UI.spacing12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your Net Balance")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(AppTypography.subhead)
+                        .foregroundStyle(AppColors.label2)
                     Text(CurrencyFormatter.format(abs(netBalance), showDecimals: true))
-                        .font(.system(.title, design: .rounded))
-                        .fontWeight(.bold)
-                        .foregroundStyle(isSettled ? .primary : (isOwed ? AppColors.positive : AppColors.expense))
+                        .font(AppTypography.amountHero)
+                        .foregroundStyle(isSettled ? AppColors.label : (isOwed ? AppColors.positive : AppColors.expense))
                 }
                 Spacer()
                 ZStack {
                     Circle()
-                        .fill(isSettled ? AppColors.graySubtle : (isOwed ? AppColors.positive.opacity(0.12) : AppColors.expense.opacity(0.12)))
+                        .fill(isSettled ? AppColors.surface2 : (isOwed ? AppColors.positive.opacity(0.15) : AppColors.expense.opacity(0.15)))
                         .frame(width: 48, height: 48)
-                    Image(systemName: isSettled ? "checkmark" : (isOwed ? "arrow.down.left" : "arrow.up.right"))
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(isSettled ? .secondary : (isOwed ? AppColors.positive : AppColors.expense))
+                    AppIcon(
+                        name: isSettled ? AppIcons.UI.check : (isOwed ? AppIcons.UI.export : AppIcons.UI.back),
+                        size: 22,
+                        color: isSettled ? AppColors.label2 : (isOwed ? AppColors.positive : AppColors.expense)
+                    )
                 }
             }
             HStack {
                 Text(isSettled ? "All settled up" : (isOwed ? "You are owed overall" : "You owe overall"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(AppTypography.subhead)
+                    .foregroundStyle(AppColors.label2)
                 Spacer()
                 Text("\(groupCount) group\(groupCount == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(AppTypography.subhead)
+                    .foregroundStyle(AppColors.label2)
             }
         }
-        .padding()
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(.rect(cornerRadius: 12))
+        .padding(AppConstants.UI.padding)
+        .background(AppColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppConstants.UI.cornerRadius))
     }
 }

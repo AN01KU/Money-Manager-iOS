@@ -3,20 +3,16 @@ import SwiftData
 
 struct CategoryPickerView: View {
     @Environment(\.dismiss) var dismiss
-    @Binding var selectedCategory: String
-    @Query private var overrides: [CustomCategory]
+    @Binding var selectedCategoryId: UUID
+    @Query private var allCategories: [Category]
     @State private var selectionToggled = 0
 
-    private var categories: [TransactionCategory] {
-        TransactionCategory.merge(overrides: overrides)
+    private var visibleCustom: [Category] {
+        allCategories.filter { !$0.isPredefined && !$0.isHidden }
     }
 
-    private var visibleCustom: [TransactionCategory] {
-        categories.filter { !$0.isPredefined && !$0.isHidden }
-    }
-
-    private var visiblePredefined: [TransactionCategory] {
-        categories.filter { $0.isPredefined && !$0.isHidden }
+    private var visiblePredefined: [Category] {
+        allCategories.filter { $0.isPredefined && !$0.isHidden }
     }
 
     var body: some View {
@@ -24,9 +20,9 @@ struct CategoryPickerView: View {
             if !visibleCustom.isEmpty {
                 Section("Your Categories") {
                     ForEach(visibleCustom) { category in
-                        CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
+                        CategoryPickerRow(category: category, selectedCategoryId: selectedCategoryId) {
                             selectionToggled += 1
-                            selectedCategory = category.name
+                            selectedCategoryId = category.id
                             dismiss()
                         }
                         .sensoryFeedback(.selection, trigger: selectionToggled)
@@ -36,12 +32,13 @@ struct CategoryPickerView: View {
 
             Section("Default Categories") {
                 ForEach(visiblePredefined) { category in
-                    CategoryPickerRow(category: category, selectedCategory: selectedCategory) {
+                    CategoryPickerRow(category: category, selectedCategoryId: selectedCategoryId) {
                         selectionToggled += 1
-                        selectedCategory = category.name
+                        selectedCategoryId = category.id
                         dismiss()
                     }
                     .sensoryFeedback(.selection, trigger: selectionToggled)
+                    .accessibilityIdentifier("category-picker.\(category.key)")
                 }
             }
         }

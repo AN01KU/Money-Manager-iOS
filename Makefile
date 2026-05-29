@@ -23,7 +23,7 @@ BUILD_DIR := $(shell xcodebuild build \
 APP_PATH = $(BUILD_DIR)/Money Manager.app
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
 
-.PHONY: build test test-unit test-ui test-api test-one coverage clean screenshots screenshot-one _export-screenshots
+.PHONY: build test test-unit test-ui test-api test-one test-ui-one coverage clean screenshots screenshot-one _export-screenshots
 
 build:
 	xcodebuild build \
@@ -54,6 +54,11 @@ test-one:
 	@echo "Usage: make test-one TEST=BackupViewModelTests"
 	rm -rf $(TEST_RESULTS)
 	$(XCODEBUILD_TEST) -only-testing:"Money ManagerTests/$(TEST)"
+
+test-ui-one:
+	@echo "Usage: make test-ui-one TEST=AddTransactionTests"
+	rm -rf $(TEST_RESULTS)
+	$(XCODEBUILD_TEST) -only-testing:"Money ManagerUITests/$(TEST)"
 
 coverage:
 	xcrun xccov view --report $(TEST_RESULTS) 2>/dev/null | head -10
