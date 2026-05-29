@@ -76,7 +76,12 @@ final class RecurringTransactionPullHandler: CollectionPullHandler {
         changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .recurring, context: context)
         purge(remote, locals: locals, context: context)
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            AppLogger.sync.error("[\(self.entityLabel)] context.save failed: \(error)")
+            throw error
+        }
     }
 
     // MARK: - Private
@@ -186,7 +191,12 @@ final class TransactionPullHandler: CollectionPullHandler {
         changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .transaction, context: context)
         purge(fetched, locals: locals, context: context)
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            AppLogger.sync.error("[\(self.entityLabel)] context.save failed: \(error)")
+            throw error
+        }
     }
 
     // MARK: - Private
@@ -311,7 +321,12 @@ final class PredefinedCategoryPullHandler: SingletonPullHandler {
 
         upsert(remote, locals: allLocals, context: context)
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            AppLogger.sync.error("[\(self.entityLabel)] context.save failed: \(error)")
+            throw error
+        }
     }
 
     // MARK: - Private
@@ -412,7 +427,12 @@ final class UserBudgetPullHandler: SingletonPullHandler {
         }
 
         changeQueue.removeStaleChanges(for: [UserBudget.sentinelID], entityType: .budget, context: context)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            AppLogger.sync.error("[\(self.entityLabel)] context.save failed: \(error)")
+            throw error
+        }
         AppLogger.sync.debug("[UserBudgetPullHandler] limit=\(remote.limit.map { "\($0)" } ?? "nil")")
     }
 }
@@ -446,7 +466,12 @@ final class CategoryPullHandler: CollectionPullHandler {
         changeQueue.removeStaleChanges(for: serverWonIDs, entityType: .category, context: context)
         purge(remote, locals: locals, context: context)
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            AppLogger.sync.error("[\(self.entityLabel)] context.save failed: \(error)")
+            throw error
+        }
     }
 
     // MARK: - Private
